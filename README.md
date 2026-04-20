@@ -24,7 +24,7 @@ This project is a production-inspired streaming system designed to solve three f
 
 ## 🧠 Core Insight
 
-> One event stream, two semantic worlds
+> One event stream, two semantic worlds  
 > The same data, interpreted under different system semantics
 
 - Transactional Pipeline → state transition  
@@ -125,46 +125,73 @@ A production-inspired streaming system focused on:
 
 ```text
 streaming-system-compass/
-├── src/                # Core system logic
-│   ├── pipeline/       # Transactional & analytical pipelines
-│   ├── storage/        # Database interactions
-│   └── compass/        # Invariant validation system
-├── chaos_engine/       # Failure injection system
-│   └── scenarios/      # Chaos scenarios (partial commit, etc.)
-├── experiments/        # Demo scripts for showcasing behavior
-├── streaming_patterns/ # Algorithm → system mapping
+├── src/                # Semantic core and execution logic
+│   ├── core/           # Transactional domain core (first implementation focus)
+│   ├── pipeline/       # Transactional / projection / analytical flows
+│   ├── storage/        # Persistence abstractions
+│   └── compass/        # Invariant validation and semantic governance
+├── chaos_engine/       # Failure injection and adversarial testing
+├── experiments/        # Demo scripts and isolated experiments
+├── docs/               # Architecture notes, roadmaps, boundary notes, postmortems
+├── tests/              # Unit / integration / replay / invariant / chaos tests
 ├── README.md
 └── .gitignore
 ```
 
 ---
 
+## 🧩 Implementation Strategy
+
+The implementation begins from the **transactional semantic core** under `src/core/order/`.
+
+This means the project does **not** start from chaos injection or analytics first.  
+Instead, it starts by defining:
+
+- domain event semantics  
+- aggregate rules  
+- state transitions  
+- proof / provenance structure  
+- core transactional invariants  
+
+Everything else grows around this core:
+
+- `storage/` persists and replays the core history  
+- `pipeline/` executes transactional and projection flows  
+- `compass/` validates semantic correctness  
+- `chaos_engine/` stress-tests whether the mechanisms inside `src/` survive adversarial conditions  
+
+---
+
 ## 🧭 Roadmap
 
 ### Phase 1 — Deterministic Transactional Core
-- Event processing pipeline
-- Idempotent state projection
-- Offset management
+- transactional domain core
+- event generation and replay
+- idempotent event processing
+- write-side consistency baseline
 
-### Phase 2 — Failure Handling & Chaos Injection
-- Partial commit recovery
-- Poison message handling (DLQ)
-- Out-of-order event buffering
+### Phase 2 — Event Truth Validation
+- proof-carrying event structure
+- event-level Compass validation
+- transition truth checking before persistence
 
-### Phase 3 — Compass (Invariant Engine)
-- Runtime invariant validation
-- Semantic violation detection
-- Policy-driven enforcement
+### Phase 3 — Projection Runtime
+- incremental projection worker
+- projection state store
+- checkpoint / offset handling
+- replay and rebuild flow
 
-### Phase 4 — Analytical Pipeline
-- Event-time processing
-- Windowed aggregation
-- Lateness-aware handling
+### Phase 4 — State-Level Compass Verification
+- projected state invariants
+- checkpoint validation
+- replay vs incremental consistency checks
+- semantic runtime verification
 
-### Phase 5 — Advanced System Evolution
-- Drift detection
-- Adaptive failure policies
-- Distributed scaling
+### Phase 5 — Analytical Pipeline & Chaos Hardening
+- event-time processing
+- windowed aggregation
+- lateness-aware handling
+- adversarial failure validation through chaos scenarios
 
 ---
 
@@ -174,13 +201,14 @@ This repository is being built incrementally toward the full system design descr
 
 Current focus:
 - repository structure
-- project specification
-- architecture definition
+- domain boundary definition
+- transactional semantic core under `src/core/order/`
 
 Next implementation milestone:
-- minimal transactional projection flow
-- idempotent event processing
-- partial commit failure demo
+- minimal order event model
+- aggregate state transition logic
+- event store and idempotency baseline
+- first Compass transition validation path
 
 ---
 
@@ -189,4 +217,5 @@ Next implementation milestone:
 This project focuses on system correctness under failure,  
 not just successful execution under ideal conditions.
 
-
+The main logic of correctness lives in `src/`.  
+`chaos_engine/` exists to test whether those correctness mechanisms can survive real failure conditions.
