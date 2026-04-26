@@ -1,5 +1,7 @@
 # Boundary Note: Event Store Module
 
+[← Back to Boundary Notes Index](README.md)
+
 ## Purpose
 
 This module defines the persistence boundary for append-only event history.

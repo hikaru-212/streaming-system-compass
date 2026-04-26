@@ -1,5 +1,7 @@
 # Boundary Note: Projection Module
 
+[← Back to Boundary Notes Index](README.md)
+
 ## Purpose
 
 This module defines how accepted event history is transformed into read-side state.

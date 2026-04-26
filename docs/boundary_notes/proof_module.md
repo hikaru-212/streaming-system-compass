@@ -1,5 +1,7 @@
 # Boundary Note: Proof Module
 
+[← Back to Boundary Notes Index](README.md)
+
 ## Purpose
 
 This module defines the proof / provenance claim attached to an event.

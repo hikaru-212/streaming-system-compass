@@ -1,6 +1,6 @@
 # 🧭 Streaming System + Compass
 
-> ⚠️ This project is under active development. See "Current Status" for progress.
+> ⚠️ This project is under active development. See [Current Status](#-current-status) for progress.
 
 A failure-aware streaming system with invariant-driven correctness,  
 validated through chaos engineering.
@@ -12,13 +12,13 @@ validated through chaos engineering.
 This project is a production-inspired streaming system designed to solve three fundamental problems:
 
 1. **Transactional Correctness**  
-   Ensure state transitions are logically valid
+   Ensure state transitions are logically valid.
 
 2. **Analytical Observability**  
-   Extract insights from streaming data
+   Extract insights from streaming data.
 
 3. **Failure Resilience under Adversarial Conditions**  
-   Maintain correctness even under failures
+   Maintain correctness even under failures.
 
 ---
 
@@ -27,8 +27,8 @@ This project is a production-inspired streaming system designed to solve three f
 > One event stream, two semantic worlds  
 > The same data, interpreted under different system semantics
 
-- Transactional Pipeline → state transition  
-- Analytical Pipeline → statistical signal  
+- Transactional Pipeline → state transition
+- Analytical Pipeline → statistical signal
 
 ---
 
@@ -36,78 +36,110 @@ This project is a production-inspired streaming system designed to solve three f
 
 ```mermaid
 flowchart TD
-    A[Event Producers] --> B[Event Log - Kafka style]
+    %% Write-Side / Transactional Path
+    A[Commands / Requests] --> B[Transactional Pipeline]
+    B --> C[Compass Layer 1<br/>Transition Truth Validation]
+    C --> D{Concurrency / Admission Gate}
 
-    B --> C[Transactional Pipeline]
-    B --> D[Analytical Pipeline]
+    D -- Accepted --> E[(Event Log / Immutable History)]
+    D -- Rejected / Conflict --> R[Reject / Retry Flow]
 
-    C --> E[State Projection]
-    C --> F[Compass Validation]
+    %% Read-Side / Projection and Analytics
+    E --> F[Projection Pipeline]
+    E --> G[Analytical Pipeline]
 
-    D --> G[Aggregation / Analytics]
+    F --> H[Derived Runtime State]
+    H --> I[Compass Layer 2<br/>Runtime State Validation]
+
+    G --> J[Aggregation / Analytics]
 ```
+
+This architecture separates:
+
+- **write-side admission**, where candidate events must pass semantic validation and concurrency-safe persistence
+- **accepted immutable history**, where admitted events become the durable source of truth
+- **read-side derivation**, where projection and analytics interpret the accepted event stream under different goals
+- **runtime verification**, where Compass later validates projected state and governance outcomes
 
 ---
 
 ## ⚙️ Core Concepts
 
-- Event-driven architecture  
-- Immutable event log (source of truth)  
-- State = derived projection  
-- Invariant-driven validation (Compass)  
+- Event-driven architecture
+- Immutable event log as accepted history
+- State as derived projection
+- Invariant-driven validation through Compass
+- Version-based admission and deterministic replay
+- Clear separation between idempotency, concurrency control, and semantic validation
 
 ---
 
-## 🔐 Compass (Invariant System)
+## 🔐 Compass: Semantic Validation and Governance
 
 > Invariant = State Compression + Contract
 
-This allows the system to validate correctness using minimal observable state.
+Compass is the semantic validation layer of the system.
 
-The system enforces:
+It begins with event-level transition truth validation and evolves toward runtime state verification and governance.
 
-- Valid state transitions  
-- Continuous ordering  
-- Deterministic replay  
+At a high level:
+
+- **Compass Layer 1** validates whether a candidate event truthfully follows accepted history.
+- **Compass Layer 2** validates whether projected runtime state remains semantically correct.
+- **Compass governance** later decides how the system should respond to violations.
+
+Compass does not replace concurrency control.
+
+Instead:
+
+- Compass decides whether a candidate event is semantically trustworthy.
+- The admission gate decides whether that candidate can still become the next accepted fact.
+- Idempotency decides whether the external request has already been processed.
 
 ---
 
-## 💣 Chaos Engineering (Key Feature)
+## 💣 Chaos Engineering
 
-This system is validated through failure injection, including:
+This system is intended to be validated through failure injection, including:
 
-- Poison messages  
-- Partial commit failures  
-- Out-of-order events  
-- Race conditions  
-- Network jitter  
-- Backpressure  
+- poison messages
+- partial commit failures
+- duplicate events
+- out-of-order events
+- race conditions
+- network jitter
+- backpressure
 
-These scenarios are not theoretical — they are actively simulated and validated.
+Chaos scenarios do not define correctness.
+
+They test whether the correctness mechanisms inside `src/` survive adversarial runtime conditions.
 
 ---
 
 ## 🎯 Key Principle
 
-> A system is not correct because it works  
-> A system is correct because it survives failure
+> A system is not correct because it works.  
+> A system is correct because it survives failure.
 
 ---
 
 ## 🧪 What This Project Demonstrates
 
-- Deterministic state recovery  
-- Idempotent event processing  
-- Failure-aware system design  
-- Runtime invariant validation  
+- Deterministic state recovery
+- Idempotent request handling
+- Concurrency-safe event admission
+- Failure-aware system design
+- Runtime invariant validation
+- Clear separation between domain legality, transition truth, admission continuity, and retry safety
 
 ---
 
 ## ❌ This is NOT
 
-- A CRUD system  
-- A simple ETL pipeline  
-- An AWS deployment demo  
+- A CRUD system
+- A simple ETL pipeline
+- An AWS deployment demo
+- A dashboard-first analytics project
 
 ---
 
@@ -115,9 +147,11 @@ These scenarios are not theoretical — they are actively simulated and validate
 
 A production-inspired streaming system focused on:
 
-- correctness  
-- reliability  
-- failure modeling  
+- correctness
+- reliability
+- failure modeling
+- semantic validation
+- replayable state reconstruction
 
 ---
 
@@ -126,13 +160,13 @@ A production-inspired streaming system focused on:
 ```text
 streaming-system-compass/
 ├── src/                # Semantic core and execution logic
-│   ├── core/           # Transactional domain core (first implementation focus)
+│   ├── core/           # Transactional domain core
 │   ├── pipeline/       # Transactional / projection / analytical flows
 │   ├── storage/        # Persistence abstractions
-│   └── compass/        # Invariant validation and semantic governance
+│   └── compass/        # Semantic validation and governance
 ├── chaos_engine/       # Failure injection and adversarial testing
 ├── experiments/        # Demo scripts and isolated experiments
-├── docs/               # Architecture notes, roadmaps, boundary notes, postmortems
+├── docs/               # Architecture notes, ADRs, domain specs, boundary notes, roadmaps, postmortems
 ├── tests/              # Unit / integration / replay / invariant / chaos tests
 ├── README.md
 └── .gitignore
@@ -140,57 +174,108 @@ streaming-system-compass/
 
 ---
 
+## 📚 Documentation
+
+The full documentation index starts at [docs/README.md](docs/README.md).
+
+Key documentation areas:
+
+- [Architecture Notes](docs/architecture/README.md) — subsystem architecture and runtime boundaries
+- [Architecture Decision Records](docs/adr/README.md) — major design decisions and trade-offs
+- [Domain Specifications](docs/domain/README.md) — versioned business rules and domain semantics
+- [Boundary Notes](docs/boundary_notes/README.md) — module ownership and responsibility boundaries
+- [Roadmaps](docs/roadmap/README.md) — implementation sequencing and system evolution
+- [Postmortems](docs/postmortems/README.md) — design lessons and boundary reflections
+
+### Recommended Reading Order
+
+1. [High-Level Architecture](docs/architecture/high_level_architecture.md)
+2. [Transactional Core](docs/architecture/transactional_core.md)
+3. [Order Domain v1 Rules](docs/domain/order_domain_v1_rules.md)
+4. [Stateless Registry and Concurrency Strategy Boundary](docs/adr/0001_registry_stateless_and_concurrency_strategy.md)
+5. [Concurrency Control, Idempotency, and Retry Safety](docs/adr/0003_concurrency_idempotency_and_retry_safety.md)
+6. [Intent-Aware Validation Dispatch for Compass Runtime](docs/adr/0002_intent_aware_validation_dispatch.md)
+7. [Compass Layers](docs/architecture/compass_layers.md)
+8. [Projection Pipeline](docs/architecture/projection_pipeline.md)
+9. [Implementation Roadmap](docs/roadmap/implementation_roadmap.md)
+10. [Compass Runtime Roadmap](docs/roadmap/compass_runtime_roadmap.md)
+11. [Boundary Notes](docs/boundary_notes/README.md)
+12. [Postmortems](docs/postmortems/README.md)
+
+This order starts from the top-level system shape, then moves into write-side semantics, domain rules, transactional safety decisions, Compass validation architecture, projection evolution, and implementation sequencing.
+
+---
+
 ## 🧩 Implementation Strategy
 
 The implementation begins from the **transactional semantic core** under `src/core/order/`.
 
-This means the project does **not** start from chaos injection or analytics first.  
+This means the project does **not** start from chaos injection, dashboards, analytics, or cloud deployment.
+
 Instead, it starts by defining:
 
-- domain event semantics  
-- aggregate rules  
-- state transitions  
-- proof / provenance structure  
-- core transactional invariants  
+- domain event semantics
+- aggregate rules
+- state transitions
+- proof / provenance structure
+- idempotency boundary
+- concurrency-safe admission boundary
+- core transactional invariants
 
 Everything else grows around this core:
 
-- `storage/` persists and replays the core history  
-- `pipeline/` executes transactional and projection flows  
-- `compass/` validates semantic correctness  
-- `chaos_engine/` stress-tests whether the mechanisms inside `src/` survive adversarial conditions  
+- `storage/` persists accepted history and protects version continuity
+- `pipeline/` executes transactional and projection flows
+- `compass/` validates semantic correctness
+- `chaos_engine/` stress-tests whether mechanisms inside `src/` survive adversarial conditions
 
 ---
 
 ## 🧭 Roadmap
 
 ### Phase 1 — Deterministic Transactional Core
+
 - transactional domain core
 - event generation and replay
-- idempotent event processing
+- idempotent request handling
+- concurrency-safe admission / conditional persistence
 - write-side consistency baseline
 
 ### Phase 2 — Event Truth Validation
+
 - proof-carrying event structure
 - event-level Compass validation
 - transition truth checking before persistence
+- validation dispatch and basic `ALLOW` / `BLOCK` policy
 
 ### Phase 3 — Projection Runtime
+
 - incremental projection worker
 - projection state store
 - checkpoint / offset handling
 - replay and rebuild flow
+- crash recovery semantics
 
 ### Phase 4 — State-Level Compass Verification
+
 - projected state invariants
 - checkpoint validation
 - replay vs incremental consistency checks
 - semantic runtime verification
 
-### Phase 5 — Analytical Pipeline & Chaos Hardening
+### Phase 5 — Analytical Pipeline
+
 - event-time processing
 - windowed aggregation
 - lateness-aware handling
+- statistical materialization
+
+### Phase 6 — Governance and Chaos Hardening
+
+- advanced governance policy actions
+- warning / quarantine / audit behavior
+- evidence logging
+- semantic alerts
 - adversarial failure validation through chaos scenarios
 
 ---
@@ -200,22 +285,48 @@ Everything else grows around this core:
 This repository is being built incrementally toward the full system design described above.
 
 Current focus:
-- repository structure
-- domain boundary definition
+
+- finalizing documentation boundaries before implementation
 - transactional semantic core under `src/core/order/`
+- domain rules for the minimal `INIT -> CREATED -> PAID` order model
+- write-side safety boundaries: idempotency, concurrency-safe admission, and event truth validation
 
 Next implementation milestone:
-- minimal order event model
-- aggregate state transition logic
-- event store and idempotency baseline
-- first Compass transition validation path
+
+- implement the minimal order event model
+- implement aggregate state transition logic
+- implement event store and idempotency baseline
+- implement concurrency-safe admission / expected-version persistence
+- integrate the first Compass transition validation path
+- convert domain rules into executable tests
+
+---
+
+## 🧪 Development Note
+
+This repository currently follows a documentation-first development approach.
+
+The architecture, ADRs, domain rules, and boundary notes were written before the main transactional implementation to make ownership, invariants, and failure boundaries explicit.
+
+The next phase is to convert these documented rules into executable code and tests under:
+
+- `src/core/order/`
+- `src/storage/`
+- `src/pipeline/transactional/`
+- `src/compass/transition/`
+
+This note is intentionally conservative: the documentation records design intent and implementation boundaries, while executable correctness will be established through code and tests as the implementation progresses.
 
 ---
 
 ## 📌 Author Note
 
-This project focuses on system correctness under failure,  
-not just successful execution under ideal conditions.
+This project focuses on system correctness under failure, not just successful execution under ideal conditions.
 
-The main logic of correctness lives in `src/`.  
+The main logic of correctness lives in `src/`.
+
 `chaos_engine/` exists to test whether those correctness mechanisms can survive real failure conditions.
+
+The documentation follows one main principle:
+
+> Explain the boundary before explaining the implementation.

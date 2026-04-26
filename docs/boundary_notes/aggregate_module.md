@@ -1,5 +1,7 @@
 # Boundary Note: Aggregate Module
 
+[← Back to Boundary Notes Index](README.md)
+
 ## Purpose
 
 This module defines the domain decision-maker of the transactional core.

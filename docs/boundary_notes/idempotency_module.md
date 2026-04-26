@@ -1,5 +1,7 @@
 # Boundary Note: Idempotency Module
 
+[← Back to Boundary Notes Index](README.md)
+
 ## Purpose
 
 This module defines the boundary for request-level duplicate protection.

@@ -1,4 +1,7 @@
 # Order Domain v1 Business Rules
+
+[← Back to Domains Index](README.md)
+
 ## Scope: `INIT -> CREATED -> PAID`
 
 This document defines the domain-level business rules for the current minimal write-side model.

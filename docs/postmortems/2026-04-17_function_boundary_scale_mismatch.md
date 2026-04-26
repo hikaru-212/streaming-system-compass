@@ -1,5 +1,7 @@
 # Postmortem: Scale Mismatch in Reading Function Boundaries
 
+[← Back to Postmortems Index](README.md)
+
 ## 1. Context
 
 While reading and refining the event-sourcing code in this project, I repeatedly got stuck on seemingly small questions such as:

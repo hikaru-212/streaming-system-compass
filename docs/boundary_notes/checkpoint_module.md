@@ -1,5 +1,7 @@
 # Boundary Note: Checkpoint Module
 
+[← Back to Boundary Notes Index](README.md)
+
 ## Purpose
 
 This module defines the persistence boundary for runtime processing progress.

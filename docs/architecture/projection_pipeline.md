@@ -1,4 +1,5 @@
 # Projection Pipeline
+[← Back to Architectures Index](README.md)
 
 ## Purpose
 
@@ -62,7 +63,10 @@ Expected responsibilities:
 - recover after restart
 
 ### Stage 3: Verified Projection Runtime
+
 A projection pipeline whose results are also semantically checked.
+
+This corresponds to [Compass Layer 2: Runtime State / Projection Validation](compass_layers.md#layer-2-runtime-state--projection-validation).
 
 Expected additions:
 - state invariant validation
@@ -136,7 +140,7 @@ This keeps the projection layer stable and focused.
 
 ## Future Role of Compass in Projection
 
-Compass will later validate projection results at a higher layer.
+Compass will later validate projection results at a higher layer: [Compass Layer 2: Runtime State / Projection Validation](compass_layers.md#layer-2-runtime-state--projection-validation).
 
 This may include:
 - projected state legality

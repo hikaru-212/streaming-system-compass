@@ -1,5 +1,7 @@
 # Decision Note: Why Transition Correctness Came Before Full Domain Invariants
 
+[← Back to Domains Index](README.md)
+
 ## Purpose
 
 This note explains an intentional design decision made during the early phase of the project:

@@ -1,4 +1,5 @@
 # Transactional Core
+[← Back to Architectures Index](README.md)
 
 ## Purpose
 
@@ -109,13 +110,18 @@ The intended write-side flow is:
 3. load or create aggregate
 4. replay historical events if needed
 5. produce candidate event
-6. validate transition truth
-7. persist accepted event
-8. apply event to aggregate state
+6. validate transition truth through Compass
+7. admit event through concurrency gate / conditional persistence
+8. apply accepted event to aggregate state
 9. return result
 
 This is the first semantic runtime loop of the system.
 
+The key distinction is:
+
+- Compass validation decides whether the candidate event is semantically trustworthy.
+- The concurrency / admission boundary decides whether the candidate event can still become the next accepted fact.
+  
 ---
 
 ## Key Invariants

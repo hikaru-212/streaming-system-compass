@@ -1,4 +1,5 @@
 # High-Level Architecture
+[← Back to Architectures Index](README.md)
 
 ## Purpose
 

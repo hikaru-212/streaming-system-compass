@@ -1,14 +1,16 @@
 # Boundary Notes
 
+[← Back to Docs Home](../README.md)
+
 ## Purpose
 
-This folder contains boundary notes for the core modules of the project.
+This folder contains boundary notes for the core modules and cross-cutting boundaries of the project.
 
 These notes are not meant to replace implementation or architecture documents.  
 Their purpose is narrower and more practical:
 
-- clarify what each module is responsible for
-- clarify what each module is **not** responsible for
+- clarify what each module or boundary is responsible for
+- clarify what each module or boundary is **not** responsible for
 - reduce semantic confusion during implementation
 - preserve design intent as the codebase grows
 
@@ -43,6 +45,8 @@ Boundary notes are especially useful when asking questions such as:
 - Why does this layer validate but not persist?
 - Why does projection ignore some event metadata?
 - Why is proof used in transition validation but not in projection logic?
+- Why does concurrency control not replace Compass validation?
+- Why does Compass validation not replace persistence admission?
 
 These are not merely coding-style questions.  
 They are boundary questions.
@@ -60,8 +64,9 @@ These notes are **not** intended to be:
 
 Those concerns belong elsewhere:
 
-- architecture → `docs/architecture/`
-- roadmap → `docs/roadmap/`
+- architecture → [`docs/architecture/`](../architecture/README.md)
+- ADRs → [`docs/adr/`](../adr/README.md)
+- roadmap → [`docs/roadmap/`](../roadmap/README.md)
 - code → `src/`
 - tests → `tests/`
 
@@ -69,16 +74,18 @@ Those concerns belong elsewhere:
 
 ## Current Notes
 
-This folder currently includes notes for the most important early-stage boundaries:
+This folder currently includes notes for the most important early-stage module and cross-cutting boundaries:
 
-- `event_module.md`
-- `proof_module.md`
-- `aggregate_module.md`
-- `event_store_module.md`
-- `idempotency_module.md`
-- `registry_module.md`
-- `projection_module.md`
-- `checkpoint_module.md`
+- [Event Module Boundary](event_module.md)
+- [Proof Module Boundary](proof_module.md)
+- [Aggregate Module Boundary](aggregate_module.md)
+- [Event Store Module Boundary](event_store_module.md)
+- [Idempotency Module Boundary](idempotency_module.md)
+- [Registry Module Boundary](registry_module.md)
+- [Concurrency Boundary](concurrency_boundary.md)
+- [Projection Module Boundary](projection_module.md)
+- [Checkpoint Module Boundary](checkpoint_module.md)
+- [Compass Layer Boundary](compass_layer_boundary.md)
 
 These were prioritized because they directly affect the first implementation stages of the project.
 
@@ -88,14 +95,16 @@ These were prioritized because they directly affect the first implementation sta
 
 A practical reading order is:
 
-1. `event_module.md`
-2. `proof_module.md`
-3. `aggregate_module.md`
-4. `event_store_module.md`
-5. `idempotency_module.md`
-6. `registry_module.md`
-7. `projection_module.md`
-8. `checkpoint_module.md`
+1. [Event Module Boundary](event_module.md)
+2. [Proof Module Boundary](proof_module.md)
+3. [Aggregate Module Boundary](aggregate_module.md)
+4. [Event Store Module Boundary](event_store_module.md)
+5. [Idempotency Module Boundary](idempotency_module.md)
+6. [Registry Module Boundary](registry_module.md)
+7. [Concurrency Boundary](concurrency_boundary.md)
+8. [Projection Module Boundary](projection_module.md)
+9. [Checkpoint Module Boundary](checkpoint_module.md)
+10. [Compass Layer Boundary](compass_layer_boundary.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -105,8 +114,10 @@ This roughly follows the intended semantic development order of the project:
 - define persistence boundaries
 - define request safety boundaries
 - define orchestration boundaries
+- define concurrency / admission boundaries
 - define state-derivation boundaries
 - define runtime progress boundaries
+- define semantic validation layers
 
 ---
 
@@ -114,19 +125,22 @@ This roughly follows the intended semantic development order of the project:
 
 These notes should be read together with:
 
-- `src/core/order/README.md`
-- `src/storage/README.md`
-- `src/pipeline/README.md`
-- `src/compass/README.md`
-- `docs/architecture/transactional_core.md`
-- `docs/architecture/compass_layers.md`
-- `docs/roadmap/implementation_roadmap.md`
+- [Order Core README](../../src/core/order/README.md)
+- [Storage README](../../src/storage/README.md)
+- [Pipeline README](../../src/pipeline/README.md)
+- [Compass README](../../src/compass/README.md)
+- [Transactional Core](../architecture/transactional_core.md)
+- [Compass Layers](../architecture/compass_layers.md)
+- [Projection Pipeline](../architecture/projection_pipeline.md)
+- [Implementation Roadmap](../roadmap/implementation_roadmap.md)
+- [Concurrency Control, Idempotency, and Retry Safety](../adr/0003_concurrency_idempotency_and_retry_safety.md)
 
 A good rule of thumb is:
 
 - if you are confused about **what the system is trying to become**, read the roadmap
 - if you are confused about **how the major layers relate**, read the architecture docs
-- if you are confused about **what one module should or should not do**, read the boundary notes
+- if you are confused about **why a decision was made**, read the ADRs
+- if you are confused about **what one module or boundary should or should not do**, read the boundary notes
 
 ---
 
@@ -150,4 +164,4 @@ This keeps implementation aligned with the system’s semantic design rather tha
 
 This folder is a practical design aid.
 
-It exists to make module boundaries explicit before they become accidental.
+It exists to make module and cross-cutting boundaries explicit before they become accidental.

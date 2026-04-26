@@ -1,5 +1,7 @@
 # Boundary Note: Event Module
 
+[← Back to Boundary Notes Index](README.md)
+
 ## Purpose
 
 This module defines the canonical event format used across the system.
