@@ -1,5 +1,8 @@
 # ADR 0002: Intent-Aware Validation Dispatch for Compass Runtime
 
+[← Back to Architecture Decision Records Index](README.md)
+
+
 ## Status
 
 Proposed

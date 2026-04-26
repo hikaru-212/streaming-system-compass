@@ -1,5 +1,8 @@
 # ADR 0002 Evolution Note
 
+[← Back to Architecture Decision Records Index](README.md)
+
+
 This note records how ADR 0002 evolved before being committed as the current version.
 
 Its purpose is not to preserve every intermediate wording choice, but to preserve the key design shifts that shaped the final document.

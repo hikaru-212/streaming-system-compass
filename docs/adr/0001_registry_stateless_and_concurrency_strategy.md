@@ -1,4 +1,7 @@
-# ADR: Stateless Registry and Concurrency Strategy Boundary
+# ADR 0001: Stateless Registry and Concurrency Strategy Boundary
+
+[← Back to Architecture Decision Records Index](README.md)
+
 
 ## Status
 
