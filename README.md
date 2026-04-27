@@ -334,11 +334,21 @@ This note is intentionally conservative: the documentation records design intent
 
 ---
 
+## 📄 Notice and Usage
+
+This repository is shared as a personal design research project and professional portfolio.
+
+No open-source license has been granted yet. All rights are reserved unless a license is added later.
+
+For usage, redistribution, attribution, and permission details, see [NOTICE.md](NOTICE.md).
+
+---
+
 ## 📌 Author Note
 
 This project focuses on system correctness under failure, not just successful execution under ideal conditions.
 
-The main logic of correctness lives in `src`.
+The main logic of correctness lives in `src/`.
 
 `chaos_engine/` exists to test whether those correctness mechanisms can survive real failure conditions.
 
