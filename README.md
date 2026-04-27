@@ -166,7 +166,7 @@ streaming-system-compass/
 │   └── compass/        # Semantic validation and governance
 ├── chaos_engine/       # Failure injection and adversarial testing
 ├── experiments/        # Demo scripts and isolated experiments
-├── docs/               # Architecture notes, ADRs, domain specs, boundary notes, roadmaps, postmortems
+├── docs/               # Philosophy, architecture notes, ADRs, domain specs, boundary notes, roadmaps, postmortems
 ├── tests/              # Unit / integration / replay / invariant / chaos tests
 ├── README.md
 └── .gitignore
@@ -180,12 +180,25 @@ The full documentation index starts at [docs/README.md](docs/README.md).
 
 Key documentation areas:
 
+- [Design Philosophy](docs/philosophy/README.md) — mental models behind IBO, Core / Enabler separation, and Compass-style semantic alignment
 - [Architecture Notes](docs/architecture/README.md) — subsystem architecture and runtime boundaries
 - [Architecture Decision Records](docs/adr/README.md) — major design decisions and trade-offs
 - [Domain Specifications](docs/domain/README.md) — versioned business rules and domain semantics
 - [Boundary Notes](docs/boundary_notes/README.md) — module ownership and responsibility boundaries
 - [Roadmaps](docs/roadmap/README.md) — implementation sequencing and system evolution
 - [Postmortems](docs/postmortems/README.md) — design lessons and boundary reflections
+
+### Design Philosophy
+
+This project is guided by a small set of mental models:
+
+- **Input / Bridge / Output (IBO)** for reasoning across function, pipeline, and system scales
+- **Core / Enabler separation** for distinguishing business meaning from reliability mechanisms
+- **Map / Compass alignment** for adapting static design to runtime disturbance
+
+These notes are collected in [Design Philosophy](docs/philosophy/README.md).
+
+They are not implementation proof. They explain the reasoning model behind the architecture, while executable correctness belongs in `src/` and `tests/`.
 
 ### Recommended Reading Order
 
@@ -203,6 +216,8 @@ Key documentation areas:
 12. [Postmortems](docs/postmortems/README.md)
 
 This order starts from the top-level system shape, then moves into write-side semantics, domain rules, transactional safety decisions, Compass validation architecture, projection evolution, and implementation sequencing.
+
+For the mental models behind the architecture, see [Design Philosophy](docs/philosophy/README.md), especially the notes on IBO and Core / Enabler separation.
 
 ---
 
@@ -323,7 +338,7 @@ This note is intentionally conservative: the documentation records design intent
 
 This project focuses on system correctness under failure, not just successful execution under ideal conditions.
 
-The main logic of correctness lives in `src/`.
+The main logic of correctness lives in `src`.
 
 `chaos_engine/` exists to test whether those correctness mechanisms can survive real failure conditions.
 

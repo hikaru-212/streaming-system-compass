@@ -4,7 +4,7 @@
 
 This directory contains the design documentation for **Streaming System + Compass**.
 
-The goal of this documentation set is not only to describe what the system does, but also to preserve the reasoning behind major architectural decisions, implementation sequencing, domain boundaries, module responsibilities, and lessons learned during development.
+The goal of this documentation set is not only to describe what the system does, but also to preserve the reasoning behind major architectural decisions, implementation sequencing, domain boundaries, module responsibilities, design philosophy, and lessons learned during development.
 
 ---
 
@@ -26,6 +26,8 @@ Recommended reading order:
 12. [Postmortems](postmortems/README.md)
 
 This order starts from the system-level architecture, then moves into the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, and finally module-boundary notes and postmortems.
+
+For the mental models behind the architecture, see [Design Philosophy](philosophy/README.md), especially the notes on IBO and Core / Enabler separation.
 
 The key progression is:
 
@@ -49,6 +51,7 @@ top-level system structure
 
 ```text
 docs/
+├── philosophy/        # Design philosophy and mental models
 ├── architecture/      # Subsystem-level architecture notes
 ├── adr/               # Architecture Decision Records
 ├── boundary_notes/    # Module ownership and responsibility boundaries
@@ -60,6 +63,22 @@ docs/
 ---
 
 ## Directory Purposes
+
+### [philosophy/](philosophy/README.md)
+
+Design philosophy and mental models behind the project.
+
+Use these documents when you want to understand:
+
+- how the project reasons about systems across different scales
+- why Input / Bridge / Output is used as a recurring mental model
+- why Core / Enabler separation matters
+- why Compass is treated as a semantic correction layer
+- how boundary clarity informs architecture, implementation, and debugging
+
+These notes are not implementation proof. They explain the reasoning model behind the architecture.
+
+---
 
 ### [architecture/](architecture/README.md)
 
@@ -148,6 +167,7 @@ Use these documents when you want to understand:
 
 | Question | Read |
 |---|---|
+| What mental models guide the project? | [Design Philosophy](philosophy/README.md) |
 | What is the whole system trying to become? | [Architecture Notes](architecture/README.md) and [Roadmaps](roadmap/README.md) |
 | What does this business state or event mean? | [Domain Specifications](domain/README.md) |
 | Why was this architecture direction chosen? | [ADRs](adr/README.md) |
