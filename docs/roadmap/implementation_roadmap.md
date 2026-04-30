@@ -11,6 +11,23 @@ It is a sequencing guide for building the system without losing semantic clarity
 
 ---
 
+## Current Position
+
+The project has now completed an initial executable baseline across:
+
+- transactional semantic core
+- accepted-history persistence and replay
+- request-level idempotency with replay/conflict distinction
+- optimistic admission with stale-write rejection
+- event-level Compass validation before persistence
+- executable baseline tests across unit, integration, semantic-case, and adversarial-history layers
+
+This means Stage 1 and Stage 2 now exist in runnable form at a baseline level.
+
+The next major focus is Stage 3: Projection Runtime.
+
+---
+
 ## Guiding Principle
 
 The project should evolve from:
@@ -66,6 +83,10 @@ A deterministic transactional baseline capable of:
 - preventing duplicate semantic effects
 - preventing stale writes through conditional admission
 
+### Status
+
+Implemented as the current write-side baseline.
+
 ---
 
 ## Stage 2: Event Truth Validation
@@ -89,8 +110,8 @@ Integrate the first Compass layer into the transactional path.
 ### Main Modules
 
 - `src/compass/transition/`
-- `src/compass/policy/` for basic enforcement policy
-- integration with transactional pipeline
+- validation runtime integration with transactional pipeline
+- runtime assembly through `src/bootstrap/`
 
 ### Deliverable
 
@@ -98,6 +119,10 @@ A write-side flow that can reject semantically inconsistent events before they e
 
 - semantic validation through Compass
 - conditional admission through the persistence / concurrency boundary
+
+### Status
+
+Implemented at a baseline level as the current Compass Layer 1 path.
 
 ---
 
@@ -125,6 +150,10 @@ Upgrade projection from replay helper into a real runtime subsystem.
 ### Deliverable
 
 A read-side runtime capable of incremental state derivation and restart recovery.
+
+### Current Note
+
+Replay helpers and replay-consistency tests already exist on the test side, but they are not yet the formal projection runtime.
 
 ---
 

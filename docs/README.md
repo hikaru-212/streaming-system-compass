@@ -6,6 +6,35 @@ This directory contains the design documentation for **Streaming System + Compas
 
 The goal of this documentation set is not only to describe what the system does, but also to preserve the reasoning behind major architectural decisions, implementation sequencing, domain boundaries, module responsibilities, design philosophy, and lessons learned during development.
 
+At the current stage, the documentation no longer represents only intended architecture.
+It now also serves as the reference frame for an initial executable baseline covering:
+
+- transactional write-side semantics
+- Compass Layer 1 transition-truth validation
+- write-side replay and admission boundaries
+- executable failure-path tests for selected invariants and adversarial cases
+
+---
+
+## Current Position
+
+The repository currently has an implemented baseline for:
+
+- transactional semantic core
+- accepted-history persistence and replay
+- request-level idempotency and replay/conflict distinction
+- optimistic admission for stale-write rejection
+- Compass Layer 1 validation before persistence
+- executable tests across unit, integration, semantic-case, and adversarial-baseline layers
+
+The next major implementation step is:
+
+- projection runtime
+- projection state storage
+- replay / rebuild flow
+- checkpoint semantics
+- eventual state-level Compass validation
+
 ---
 
 ## How to Read These Docs
@@ -143,7 +172,8 @@ Sequencing documents that describe implementation order and dependency structure
 
 Use these documents when you want to understand:
 
-- what should be built first
+- what has already been established
+- what should be built next
 - what depends on what
 - how the system should evolve across stages
 - which features are intentionally deferred
@@ -172,7 +202,7 @@ Use these documents when you want to understand:
 | What does this business state or event mean? | [Domain Specifications](domain/README.md) |
 | Why was this architecture direction chosen? | [ADRs](adr/README.md) |
 | Which module owns this responsibility? | [Boundary Notes](boundary_notes/README.md) |
-| What should be built next? | [Roadmaps](roadmap/README.md) |
+| What has already been built and what comes next? | [Roadmaps](roadmap/README.md) |
 | What mistake or confusion should not be repeated? | [Postmortems](postmortems/README.md) |
 
 ---

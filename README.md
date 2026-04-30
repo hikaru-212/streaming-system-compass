@@ -3,7 +3,7 @@
 > ⚠️ This project is under active development. See [Current Status](#-current-status) for progress.
 
 A failure-aware streaming system with invariant-driven correctness,  
-validated through chaos engineering.
+validated through executable tests and later hardened through chaos engineering.
 
 ---
 
@@ -125,11 +125,11 @@ They test whether the correctness mechanisms inside `src/` survive adversarial r
 
 ## 🧪 What This Project Demonstrates
 
-- Deterministic state recovery
-- Idempotent request handling
+- Deterministic state recovery from accepted history
+- Idempotent request handling with replay/conflict distinction
 - Concurrency-safe event admission
-- Failure-aware system design
-- Runtime invariant validation
+- Candidate-event semantic validation before persistence
+- Executable write-side invariants through tests
 - Clear separation between domain legality, transition truth, admission continuity, and retry safety
 
 ---
@@ -163,13 +163,39 @@ streaming-system-compass/
 │   ├── core/           # Transactional domain core
 │   ├── pipeline/       # Transactional / projection / analytical flows
 │   ├── storage/        # Persistence abstractions
-│   └── compass/        # Semantic validation and governance
+│   ├── compass/        # Semantic validation and governance
+│   └── bootstrap/      # Composition roots / runtime assembly
 ├── chaos_engine/       # Failure injection and adversarial testing
 ├── experiments/        # Demo scripts and isolated experiments
 ├── docs/               # Philosophy, architecture notes, ADRs, domain specs, boundary notes, roadmaps, postmortems
-├── tests/              # Unit / integration / replay / invariant / chaos tests
+├── tests/              # Unit, integration, replay, semantic-case, and adversarial baseline tests
 ├── README.md
 └── .gitignore
+```
+
+### Test Structure
+
+`tests/` is organized by test intent rather than only by source module:
+
+- `unit/` — module-level legality, invariant, and boundary tests
+- `integration/` — multi-boundary transactional flow tests
+- `semantic_cases/` — intentionally malformed candidate/history cases for Compass validation
+- `adversarial/` — replay, duplicate, out-of-order, and pre-chaos disturbance scenarios
+- `shared/` — shared replay helpers and common test-side utilities
+- `experiments/` — smoke tests for demo entry wiring
+
+### How to Run Tests
+
+Run the full test suite from the repository root:
+
+```bash
+pytest -v
+```
+
+Run a specific test directory:
+
+```bash
+pytest tests/integration -v
 ```
 
 ---
@@ -227,7 +253,7 @@ The implementation begins from the **transactional semantic core** under `src/co
 
 This means the project does **not** start from chaos injection, dashboards, analytics, or cloud deployment.
 
-Instead, it starts by defining:
+Instead, it starts by defining and implementing:
 
 - domain event semantics
 - aggregate rules
@@ -242,6 +268,7 @@ Everything else grows around this core:
 - `storage/` persists accepted history and protects version continuity
 - `pipeline/` executes transactional and projection flows
 - `compass/` validates semantic correctness
+- `bootstrap/` assembles concrete runtime wiring
 - `chaos_engine/` stress-tests whether mechanisms inside `src/` survive adversarial conditions
 
 ---
@@ -299,38 +326,54 @@ Everything else grows around this core:
 
 This repository is being built incrementally toward the full system design described above.
 
-Current focus:
+Current baseline completed:
 
-- finalizing documentation boundaries before implementation
 - transactional semantic core under `src/core/order/`
-- domain rules for the minimal `INIT -> CREATED -> PAID` order model
-- write-side safety boundaries: idempotency, concurrency-safe admission, and event truth validation
+- minimal `INIT -> CREATED -> PAID` write-side model
+- accepted-history event store and replay baseline
+- request-level idempotency with replay/conflict distinction
+- optimistic admission gate for append-time continuity protection
+- optimistic concurrency collision coverage for stale-write rejection
+- Compass Layer 1 transition-truth validation
+- multi-layer executable tests for transactional legality, replay safety, transition-truth checks, semantic-case and adversarial-history scenarios
+- runtime assembly through `src/bootstrap/`
+
+Current boundary of completion:
+
+- write-side transactional baseline is established
+- failure-path reasoning is now meaningfully executable through tests
+- read-side projection runtime is not yet implemented
 
 Next implementation milestone:
 
-- implement the minimal order event model
-- implement aggregate state transition logic
-- implement event store and idempotency baseline
-- implement concurrency-safe admission / expected-version persistence
-- integrate the first Compass transition validation path
-- convert domain rules into executable tests
+- build the first projection worker
+- introduce projection state storage and rebuild flow
+- define projection-side replay and checkpoint semantics
+- begin the physical read-side runtime split from the transactional runtime
 
 ---
 
 ## 🧪 Development Note
 
-This repository currently follows a documentation-first development approach.
+This repository began with a documentation-first development approach.
 
 The architecture, ADRs, domain rules, and boundary notes were written before the main transactional implementation to make ownership, invariants, and failure boundaries explicit.
 
-The next phase is to convert these documented rules into executable code and tests under:
+That documentation-first phase has now been translated into an initial executable baseline across:
 
 - `src/core/order/`
 - `src/storage/`
 - `src/pipeline/transactional/`
 - `src/compass/transition/`
+- `src/bootstrap/`
+- `tests/`
 
-This note is intentionally conservative: the documentation records design intent and implementation boundaries, while executable correctness will be established through code and tests as the implementation progresses.
+The repository remains intentionally conservative:
+
+- documentation defines semantic intent and ownership boundaries
+- `src/` implements the runtime logic
+- `tests/` makes selected invariants and failure paths executable
+- later phases will extend this baseline into projection runtime, state-level Compass checks, and adversarial hardening
 
 ---
 

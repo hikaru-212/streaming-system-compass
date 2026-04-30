@@ -15,7 +15,7 @@ Use roadmap documents to understand what should be built first, what depends on 
 | Document | Purpose |
 |---|---|
 | [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, state-level Compass verification, analytical pipeline, governance, and chaos hardening. |
-| [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path for merging the transactional baseline with Compass event-truth validation, then extending Compass toward projection and state-level runtime verification. |
+| [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current write-side Compass baseline toward projection runtime, state-level validation, and later governance. |
 
 ---
 
@@ -26,7 +26,7 @@ Use roadmap documents to understand what should be built first, what depends on 
 
 The implementation roadmap gives the global project sequence.
 
-The Compass runtime roadmap gives a more focused view of how Compass should evolve across write-side and read-side validation.
+The Compass runtime roadmap gives a more focused view of how Compass should evolve from the current write-side baseline toward projection runtime, read-side validation, and later governance behavior.
 
 ---
 

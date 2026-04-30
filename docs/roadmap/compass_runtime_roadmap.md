@@ -4,66 +4,68 @@
 
 ## 0. Current Position
 
-The project currently has two partially developed lines:
+The project now has an implemented write-side baseline that merges the two lines that were previously separate.
 
-### Line A: Transactional Event-Sourcing Baseline
+### Transactional Baseline Already Integrated
 
-This line already includes:
+The current executable path includes:
 
 - aggregate-based command handling
 - event generation
-- event store append
+- event store append through an admission boundary
 - aggregate replay / rehydration
 - idempotency handling
-- a demo-level projection function
+- proof embedded in each candidate event
+- transition validation through Compass Layer 1
+- basic validation dispatch and `ALLOW` / `BLOCK` policy
+- optimistic stale-write rejection at the admission boundary
 
-This provides a minimal transactional core.
+This means the original "merge the two lines" step is no longer a future target.
+It now exists as the current write-side baseline.
 
-### Line B: Compass Event Truth Prototype
+### Current Boundary
 
-This line already includes:
+What is already true:
 
-- proof embedded in each event
-- predecessor linkage (`prev_event_id`)
-- transition validation through `CompassRuntime`
-- accept / reject verdicts for incoming events
+- Compass can validate event claims before persistence
+- admission still owns version consistency and conditional persistence
+- aggregate state still mutates only through `apply(event)`
+- idempotency remains distinct from semantic validation
+- selected failure paths are executable through tests
 
-This provides an initial semantic validation mechanism at the event level.
+What is not yet true:
+
+- projection is not yet a real runtime subsystem
+- state-level Compass validation is not yet implemented
+- governance behavior is not yet richer than basic `ALLOW` / `BLOCK`
 
 ---
 
-## 1. Stage 1: Merge the Two Lines
+## 1. Stage 1: Write-Side Compass Baseline
 
 ### Goal
 
-Integrate event-level Compass validation into the transactional baseline.
+Establish a single write-side path where transactional execution and Compass Layer 1 already coexist.
 
-### Target Outcome
+### Achieved Outcome
 
-A write-side core where:
+The current baseline now supports:
 
 - aggregates produce events with proof
 - Compass validates event claims before persistence
-- validation dispatch can route the candidate event through the appropriate validation path
+- validation dispatch routes the candidate event through the active validation path
 - a basic validation policy converts validation results into `ALLOW` / `BLOCK`
 - the admission gate / event store still enforces version consistency
 - aggregate state is updated only through `apply(event)`
 - idempotency remains preserved
 
-### Key Questions
-
-- What exact fields should be included in `Proof`?
-- Which aggregate state is required to produce proof?
-- Should Compass validation happen before or after store append?
-- What minimal validation dispatch structure is needed for the first implementation?
-- What is the first `ALLOW` / `BLOCK` policy boundary?
-- How does Compass validation relate to the admission gate / conditional persistence?
-- How should rejected events be handled?
-- How should replay restore proof-related state such as `last_event_id`?
-
 ### Deliverable
 
 A single write-side path that is operational, semantically validated, and protected by conditional admission.
+
+### Status
+
+Completed at the baseline level.
 
 ---
 
@@ -71,12 +73,11 @@ A single write-side path that is operational, semantically validated, and protec
 
 ### Goal
 
-Replace the current fold-style demo projection with an actual projection pipeline.
+Replace the current replay-helper / demo-style projection logic with an actual projection pipeline.
 
 ### Why
 
-The current `project(events)` function is only a deterministic replay helper.  
-It is not yet a real projection layer.
+The current replay reduction logic is useful for replay-consistency testing, but it is not yet a real projection layer.
 
 ### Target Outcome
 
@@ -164,7 +165,7 @@ A semantic governance layer sitting above both write-side and read-side executio
 
 ### Stage 1
 
-Compass validates whether an event truthfully represents a legal transition, while the admission gate still protects accepted history through version consistency.
+Write-side Compass baseline already integrated with transactional execution and conditional admission.
 
 ### Stage 2
 

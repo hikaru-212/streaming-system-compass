@@ -1,5 +1,7 @@
 # Notice and Terms of Use
 
+[← Back to Project README](README.md)
+
 Copyright (c) 2026 Yen-Hua Chen. All rights reserved.
 
 This repository is a personal design research project and professional portfolio.
