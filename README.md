@@ -186,9 +186,11 @@ streaming-system-compass/
 
 ### How to Run Tests
 
-Run the full test suite from the repository root:
+
+From the repository root:
 
 ```bash
+pip install -r requirements.txt
 pytest -v
 ```
 
