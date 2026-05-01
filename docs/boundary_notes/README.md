@@ -47,6 +47,7 @@ Boundary notes are especially useful when asking questions such as:
 - Why is proof used in transition validation but not in projection logic?
 - Why does concurrency control not replace Compass validation?
 - Why does Compass validation not replace persistence admission?
+- Why is projection split into reducer and worker rather than one mixed component?
 
 These are not merely coding-style questions.  
 They are boundary questions.
@@ -84,10 +85,16 @@ This folder currently includes notes for the most important early-stage module a
 - [Registry Module Boundary](registry_module.md)
 - [Concurrency Boundary](concurrency_boundary.md)
 - [Projection Module Boundary](projection_module.md)
+- [Projection Runtime Boundary](projection_boundary.md)
 - [Checkpoint Module Boundary](checkpoint_module.md)
 - [Compass Layer Boundary](compass_layer_boundary.md)
 
 These were prioritized because they directly affect the first implementation stages of the project.
+
+Two projection-related notes are intentionally preserved:
+
+- **Projection Module Boundary** describes the external role of projection as a whole.
+- **Projection Runtime Boundary** describes the internal Stage 3 boundary between reducer, worker, projection store, and checkpoint store.
 
 ---
 
@@ -103,8 +110,9 @@ A practical reading order is:
 6. [Registry Module Boundary](registry_module.md)
 7. [Concurrency Boundary](concurrency_boundary.md)
 8. [Projection Module Boundary](projection_module.md)
-9. [Checkpoint Module Boundary](checkpoint_module.md)
-10. [Compass Layer Boundary](compass_layer_boundary.md)
+9. [Projection Runtime Boundary](projection_boundary.md)
+10. [Checkpoint Module Boundary](checkpoint_module.md)
+11. [Compass Layer Boundary](compass_layer_boundary.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -115,7 +123,8 @@ This roughly follows the intended semantic development order of the project:
 - define request safety boundaries
 - define orchestration boundaries
 - define concurrency / admission boundaries
-- define state-derivation boundaries
+- define projection as read-side derivation
+- define projection runtime internals
 - define runtime progress boundaries
 - define semantic validation layers
 

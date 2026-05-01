@@ -4,9 +4,10 @@
 
 This directory contains the design philosophy behind **Streaming System + Compass**.
 
-These notes are not ADRs, architecture specifications, or implementation documents. They explain the mental models that guide how the project separates meaning, execution, validation, reliability, and recovery.
+These notes are not ADRs, architecture specifications, or implementation documents. They explain the mental models and working methodology that guide how the project separates meaning, execution, validation, reliability, recovery, and implementation sequencing.
 
-The philosophy grew from practical debugging and data-engineering experience, then evolved into a broader system-design model.
+The philosophy in this repository did not begin as a formal software-design theory.
+It grew from practical debugging, self-directed system design, and repeated attempts to clarify what each layer should and should not own before implementation.
 
 ---
 
@@ -14,6 +15,7 @@ The philosophy grew from practical debugging and data-engineering experience, th
 
 | Document | Purpose |
 |---|---|
+| [Learning and Design Methodology](00_learning_and_design_methodology.md) | Explains the working method behind the project, including definition alignment, boundary clarification, documentation-first thinking, and AI-assisted defensive review before implementation. |
 | [IBO and Core/Enabler Origin](01_ibo_core_enabler_origin.md) | Records the original engineering insight behind Input–Bridge–Output and Core vs Enablers, starting from debugging and Airflow experience. |
 | [Unified Design Philosophy](02_unified_design_philosophy.md) | Extends IBO and Core/Enabler into a broader model of static blueprint, dynamic navigation, and disturbance recovery. |
 | [Core/Enabler as Semantic Fusion of SoC and DIP](03_core_enabler_soc_dip_fusion.md) | Connects the Core/Enabler model to traditional software architecture principles such as Separation of Concerns and Dependency Inversion. |
@@ -22,11 +24,18 @@ The philosophy grew from practical debugging and data-engineering experience, th
 
 ## Recommended Reading Order
 
-1. [IBO and Core/Enabler Origin](01_ibo_core_enabler_origin.md)
-2. [Unified Design Philosophy](02_unified_design_philosophy.md)
-3. [Core/Enabler as Semantic Fusion of SoC and DIP](03_core_enabler_soc_dip_fusion.md)
+1. [Learning and Design Methodology](00_learning_and_design_methodology.md)
+2. [IBO and Core/Enabler Origin](01_ibo_core_enabler_origin.md)
+3. [Unified Design Philosophy](02_unified_design_philosophy.md)
+4. [Core/Enabler as Semantic Fusion of SoC and DIP](03_core_enabler_soc_dip_fusion.md)
 
-This order matters because the philosophy did not begin as a formal software-design theory. It began from debugging, workflow friction, and the need to distinguish the work itself from the tools that protect or enable the work.
+This order matters because the philosophy in this repository has two layers:
+
+- first, how the project is actually learned, clarified, and implemented
+- second, the conceptual models that emerged from that process
+
+The methodology note comes first because it explains how unclear concepts are stabilized before implementation.  
+The later notes explain the philosophy that grew out of that discipline.
 
 ---
 
@@ -34,9 +43,10 @@ This order matters because the philosophy did not begin as a formal software-des
 
 | Philosophy Concept | Project Expression |
 |---|---|
+| Definition alignment before implementation | Boundary notes, ADRs, and staged implementation before code expansion |
 | Input → Bridge → Output | Command → Transactional Pipeline → Accepted Event / Derived State |
-| Core | Domain rules, aggregate legality, event semantics |
-| Enablers | Idempotency, validation, concurrency gate, projection, checkpointing |
+| Core | Domain rules, aggregate legality, event semantics, pure state transition logic |
+| Enablers | Idempotency, validation, concurrency gate, projection worker, checkpointing, recovery mechanisms |
 | Static Blueprint | README, architecture notes, ADRs, domain specifications |
 | Dynamic Navigation | retry safety, reload, projection verification, chaos hardening |
 | Compass | Runtime semantic correction and validation |
@@ -54,5 +64,6 @@ They explain why the project emphasizes:
 - semantic validation
 - failure-aware design
 - documentation before implementation
+- defensive review before coding
 
 The executable realization belongs in `src/`, and the formal architecture / decision records belong in the other `docs/` directories.

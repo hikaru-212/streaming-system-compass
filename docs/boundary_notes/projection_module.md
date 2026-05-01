@@ -8,6 +8,10 @@ This module defines how accepted event history is transformed into read-side sta
 
 Its role is to derive state from event streams, not to decide whether events are semantically admissible in the first place.
 
+This note describes the external boundary of the projection module.
+
+For the internal Stage 3 boundary between reducer, worker, projection store, and checkpoint store, see [Projection Boundary Note](projection_boundary.md).
+
 ---
 
 ## Responsible For
