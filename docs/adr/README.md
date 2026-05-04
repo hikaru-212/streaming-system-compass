@@ -23,6 +23,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0001 | [Stateless Registry and Concurrency Strategy Boundary](0001_registry_stateless_and_concurrency_strategy.md) | Accepted | Defines the stateless registry baseline and concurrency strategy boundary. |
 | 0002 | [Intent-Aware Validation Dispatch for Compass Runtime](0002_intent_aware_validation_dispatch.md) | Proposed | Defines the future Compass validation dispatch model. |
 | 0003 | [Concurrency Control, Idempotency, and Retry Safety](0003_concurrency_idempotency_and_retry_safety.md) | Proposed | Defines write-side safety under concurrency, retries, and ambiguous commits. |
+| 0004 | [Why Compass Split into Two Layers](0004_why_compass_split_into_two_layers.md) | Accepted | Records why Compass evolved from a single runtime-verification idea into a two-layer architecture separating event-entry truth validation from state-level runtime verification. |
 
 ---
 
@@ -41,11 +42,14 @@ Recommended order:
 1. [Stateless Registry and Concurrency Strategy Boundary](0001_registry_stateless_and_concurrency_strategy.md) — establishes the stateless registry and future concurrency-strategy boundary.
 2. [Concurrency Control, Idempotency, and Retry Safety](0003_concurrency_idempotency_and_retry_safety.md) — expands the transactional safety model around concurrency, idempotency, retry behavior, reload, high-contention trade-offs, and future side-effect boundaries.
 3. [Intent-Aware Validation Dispatch for Compass Runtime](0002_intent_aware_validation_dispatch.md) — explains the future Compass runtime validation dispatch model.
-4. [ADR 0002 Evolution Note](0002_evolution_note.md) — optional supporting note that preserves how ADR 0002 evolved before reaching its current form.
+4. [Why Compass Split into Two Layers](0004_why_compass_split_into_two_layers.md) — explains why Compass could not remain a single-layer runtime verifier and had to split into write-side event-entry validation and read-side state/runtime verification.
+5. [ADR 0002 Evolution Note](0002_evolution_note.md) — optional supporting note that preserves how ADR 0002 evolved before reaching its current form.
 
 ADR 0001 and ADR 0003 are closely related because both concern the transactional write-side path.
 
 ADR 0002 is related to Compass runtime validation and should be read after the transactional baseline is understood.
+
+ADR 0004 should be read after the write-side baseline and Compass validation context are understood, because it explains why Compass could not remain only a projection- or runtime-level verifier.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -85,6 +89,7 @@ Recommended pattern:
 0001_registry_stateless_and_concurrency_strategy.md
 0002_intent_aware_validation_dispatch.md
 0003_concurrency_idempotency_and_retry_safety.md
+0004_why_compass_split_into_two_layers.md
 ```
 
 Evolution or supporting notes may be kept as separate files:

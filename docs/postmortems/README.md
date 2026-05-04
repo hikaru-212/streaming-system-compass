@@ -29,7 +29,8 @@ Postmortems help preserve:
 
 | Document | Purpose |
 |---|---|
-| [2026-04-17_function_boundary_scale_mismatch](2026-04-17_function_boundary_scale_mismatch.md) | Explains a recurring confusion caused by reading function parameters before identifying module roles, ownership boundaries, and architectural scale. |
+| [function_boundary_scale_mismatch](function_boundary_scale_mismatch.md) | Explains a recurring confusion caused by reading function parameters before identifying module roles, ownership boundaries, and architectural scale. |
+| [from_projection_concerns_to_event_truth](from_projection_concerns_to_event_truth.md) | Records the design shift from focusing mainly on projection/runtime problems to treating event-source correctness and accepted-history entry as a more foundational concern. |
 
 ---
 

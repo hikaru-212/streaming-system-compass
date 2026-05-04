@@ -42,32 +42,35 @@ The next major implementation step is:
 Recommended reading order:
 
 1. [High-Level Architecture](architecture/high_level_architecture.md)
-2. [Transactional Core](architecture/transactional_core.md)
-3. [Order Domain v1 Rules](domain/order_domain_v1_rules.md)
-4. [Stateless Registry and Concurrency Strategy Boundary](adr/0001_registry_stateless_and_concurrency_strategy.md)
-5. [Concurrency Control, Idempotency, and Retry Safety](adr/0003_concurrency_idempotency_and_retry_safety.md)
-6. [Intent-Aware Validation Dispatch for Compass Runtime](adr/0002_intent_aware_validation_dispatch.md)
-7. [Compass Layers](architecture/compass_layers.md)
-8. [Projection Pipeline](architecture/projection_pipeline.md)
-9. [Implementation Roadmap](roadmap/implementation_roadmap.md)
-10. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
-11. [Boundary Notes](boundary_notes/README.md)
-12. [Postmortems](postmortems/README.md)
+2. [Learning and Design Methodology](philosophy/00_learning_and_design_methodology.md)
+3. [Transactional Core](architecture/transactional_core.md)
+4. [Order Domain v1 Rules](domain/order_domain_v1_rules.md)
+5. [Stateless Registry and Concurrency Strategy Boundary](adr/0001_registry_stateless_and_concurrency_strategy.md)
+6. [Concurrency Control, Idempotency, and Retry Safety](adr/0003_concurrency_idempotency_and_retry_safety.md)
+7. [Intent-Aware Validation Dispatch for Compass Runtime](adr/0002_intent_aware_validation_dispatch.md)
+8. [Why Compass Split into Two Layers](adr/0004_why_compass_split_into_two_layers.md)
+9. [Compass Layers](architecture/compass_layers.md)
+10. [Projection Pipeline](architecture/projection_pipeline.md)
+11. [Implementation Roadmap](roadmap/implementation_roadmap.md)
+12. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
+13. [Boundary Notes](boundary_notes/README.md)
+14. [Postmortems](postmortems/README.md)
 
-This order starts from the system-level architecture, then moves into the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, and finally module-boundary notes and postmortems.
+This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, and finally module-boundary notes and postmortems.
 
-For the mental models behind the architecture, see [Design Philosophy](philosophy/README.md), especially the notes on IBO and Core / Enabler separation.
+For the mental models and working methodology behind the architecture, see [Design Philosophy](philosophy/README.md), especially the notes on learning/design methodology, IBO, and Core / Enabler separation.
 
 The key progression is:
 
 ```text
 top-level system structure
+→ learning/design methodology
 → transactional semantic core
 → domain rules
 → stateless registry boundary
 → concurrency / retry safety
 → validation dispatch mechanism
-→ Compass validation layers
+→ Compass layer evolution
 → projection runtime
 → implementation sequencing
 → boundary clarification
@@ -95,17 +98,18 @@ docs/
 
 ### [philosophy/](philosophy/README.md)
 
-Design philosophy and mental models behind the project.
+Design philosophy and working methodology behind the project.
 
 Use these documents when you want to understand:
 
 - how the project reasons about systems across different scales
+- how the repository is learned, clarified, and implemented
 - why Input / Bridge / Output is used as a recurring mental model
 - why Core / Enabler separation matters
 - why Compass is treated as a semantic correction layer
 - how boundary clarity informs architecture, implementation, and debugging
 
-These notes are not implementation proof. They explain the reasoning model behind the architecture.
+These notes are not implementation proof. They explain the reasoning model and working method behind the architecture.
 
 ---
 
@@ -197,7 +201,7 @@ Use these documents when you want to understand:
 
 | Question | Read |
 |---|---|
-| What mental models guide the project? | [Design Philosophy](philosophy/README.md) |
+| What mental models and working method guide the project? | [Design Philosophy](philosophy/README.md) |
 | What is the whole system trying to become? | [Architecture Notes](architecture/README.md) and [Roadmaps](roadmap/README.md) |
 | What does this business state or event mean? | [Domain Specifications](domain/README.md) |
 | Why was this architecture direction chosen? | [ADRs](adr/README.md) |
