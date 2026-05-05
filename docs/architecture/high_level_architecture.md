@@ -1,4 +1,5 @@
 # High-Level Architecture
+
 [← Back to Architectures Index](README.md)
 
 ## Purpose
@@ -13,9 +14,9 @@ The goal is not to explain every implementation detail, but to define the major 
 
 This project is a production-inspired streaming system focused on three concerns:
 
-1. transactional correctness  
-2. analytical observability  
-3. failure resilience under adversarial conditions  
+1. transactional correctness
+2. analytical observability
+3. failure resilience under adversarial conditions
 
 The system is designed around the idea that correctness is not just successful execution, but semantic survival under failure.
 
@@ -25,12 +26,12 @@ The system is designed around the idea that correctness is not just successful e
 
 > One event stream, two semantic worlds.
 
-The same event history is interpreted under two different execution goals:
+The same accepted event history is interpreted under two different execution goals:
 
-- the **transactional world**, where events drive state transitions
-- the **analytical world**, where events become statistical or observational signals
+- the **transactional world**, where events drive domain state transitions and accepted-history truth
+- the **analytical / observational world**, where events become read-side state, statistical signal, or operational evidence
 
-This allows a single event log to support both correctness-oriented and analytics-oriented processing.
+This allows one accepted history to support both correctness-oriented and analytics-oriented processing.
 
 ---
 
@@ -73,7 +74,7 @@ Defines persistence boundaries.
 
 This is where the system answers:
 
-- how event history is appended and loaded
+- how accepted history is appended and loaded
 - how idempotency records are stored
 - how projection state is persisted
 - how checkpoints / offsets are tracked
@@ -88,8 +89,8 @@ Defines runtime movement.
 
 This is where the system answers:
 
-- how commands become events
-- how events are admitted
+- how commands become candidate events
+- how candidate events are admitted into accepted history
 - how aggregates are rehydrated
 - how projections are executed
 - how analytical flows consume the event stream
@@ -104,11 +105,14 @@ Defines semantic validation and governance.
 
 This is where the system answers:
 
-- whether an event truthfully represents a legal transition
-- whether projected state remains semantically valid
+- whether a candidate event truthfully represents a legal transition before persistence
+- whether projected state remains semantically valid after derivation
 - whether violations should be accepted, warned, rejected, or quarantined
 
 Compass is the semantic checking layer of the system.
+
+At the current baseline, the implemented focus is still the write-side transition-truth layer.  
+The later state-level/runtime verification layer remains part of the intended evolution.
 
 ---
 
@@ -135,11 +139,12 @@ It tests whether the correctness mechanisms in `src/` actually survive real fail
 At a high level, the system evolves in this order:
 
 1. define transactional domain semantics
-2. define how events are persisted and replayed
+2. define how accepted history is persisted and replayed
 3. define how commands flow through the transactional pipeline
-4. define how Compass validates event truth and state correctness
-5. define projection and analytical pipelines
-6. pressure the whole system using chaos scenarios
+4. define how Compass validates event truth before persistence
+5. define projection and read-side runtime execution
+6. later validate projected/runtime state semantics
+7. pressure the whole system using chaos scenarios
 
 This sequencing reflects the design philosophy of the project:
 
@@ -158,12 +163,13 @@ Instead, the implementation starts from:
 
 - transactional semantic core
 - event truth validation
-- projection/runtime correctness
+- projection/runtime baseline correctness
 
 Only after those are stable does the system expand toward:
 
+- persistent storage-backed runtime behavior
 - analytical processing
-- governance policies
+- richer governance policies
 - chaos hardening
 - broader failure modeling
 

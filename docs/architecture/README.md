@@ -17,7 +17,7 @@ Use these documents to understand how the system is structured and why each subs
 | [High-Level Architecture](high_level_architecture.md) | Defines the top-level system structure and major layer responsibilities. |
 | [Transactional Core](transactional_core.md) | Defines the write-side semantic baseline and transactional flow. |
 | [Compass Layers](compass_layers.md) | Defines Compass as layered semantic validation and governance. |
-| [Projection Pipeline](projection_pipeline.md) | Defines the evolution from replay helper to runtime projection worker. |
+| [Projection Pipeline](projection_pipeline.md) | Defines the evolution from a replay helper to a Stage 3 baseline projection runtime built around reducer, worker, state persistence, and checkpoint progression. |
 
 ---
 
@@ -33,9 +33,9 @@ This order reflects the dependency structure of the project:
 ```text
 top-level system structure
 → transactional truth
-→ event-level validation
+→ write-side transition-truth validation
 → projected runtime state
-→ state-level validation
+→ state-level runtime validation
 ```
 
 ---
@@ -50,7 +50,9 @@ For example:
 
 - `high_level_architecture.md` explains how the major system layers relate to one another.
 - `transactional_core.md` explains what the transactional core is.
+- `compass_layers.md` explains what the layered Compass architecture is.
 - `adr/0003_concurrency_idempotency_and_retry_safety.md` explains a specific decision inside the transactional write-side path.
+- `adr/0004_why_compass_split_into_two_layers.md` explains why Compass evolved from a single runtime-verification idea into two layers.
 
 Both are important, but they answer different questions.
 

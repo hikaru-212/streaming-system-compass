@@ -1,4 +1,5 @@
 # Transactional Core
+
 [← Back to Architectures Index](README.md)
 
 ## Purpose
@@ -6,7 +7,7 @@
 This document describes the transactional core of the system.
 
 The transactional core is the first major implementation milestone of the project.  
-It is the part of the system responsible for producing semantically valid domain events and preserving a deterministic event history.
+It is the part of the system responsible for producing semantically valid domain events and preserving a deterministic accepted history.
 
 ---
 
@@ -47,9 +48,11 @@ This is enough to form a minimal write-side semantic loop.
 ## Main Modules
 
 ### `src/core/order/`
+
 Defines the order-domain semantics.
 
 Main responsibilities:
+
 - `OrderEvent`
 - `Proof`
 - `OrderAggregate`
@@ -58,21 +61,25 @@ Main responsibilities:
 
 ---
 
-### `src/storage/event_store/`
-Defines how event history is appended and loaded.
+### `src/storage/event_store.py`
+
+Defines how accepted history is appended and loaded.
 
 Main responsibilities:
+
 - append event
 - load event stream
 - get last event
-- enforce version continuity at persistence boundary
+- enforce version continuity at the persistence boundary
 
 ---
 
-### `src/storage/idempotency_store/`
+### `src/storage/idempotency_store.py`
+
 Defines request-level retry protection.
 
 Main responsibilities:
+
 - detect previously processed requests
 - return previous result if needed
 - persist request-to-event mapping
@@ -80,9 +87,11 @@ Main responsibilities:
 ---
 
 ### `src/pipeline/transactional/`
+
 Defines the write-side runtime flow.
 
 Main responsibilities:
+
 - command handling
 - aggregate loading / creation
 - replay
@@ -92,9 +101,11 @@ Main responsibilities:
 ---
 
 ### `src/compass/transition/`
+
 Defines event-level semantic admission checks.
 
 Main responsibilities:
+
 - validate event truth
 - compare proof claim against actual prior history
 - reject semantically inconsistent candidate events
@@ -121,7 +132,7 @@ The key distinction is:
 
 - Compass validation decides whether the candidate event is semantically trustworthy.
 - The concurrency / admission boundary decides whether the candidate event can still become the next accepted fact.
-  
+
 ---
 
 ## Key Invariants
@@ -142,12 +153,16 @@ The transactional core is expected to preserve at least the following:
 At the current stage, the transactional core should be understood as a **semantic baseline**, not yet a production-distributed infrastructure.
 
 That means:
+
 - in-memory implementations are acceptable early on
 - projection can remain a simple replay helper at first
 - analytical processing can wait
 - chaos scenarios can be simulated later
 
 What matters first is that the transactional semantics are explicit, deterministic, and testable.
+
+At the same time, the current boundaries are intended to support later evolution toward durable persistence-backed implementations.
+That future evolution should strengthen storage semantics without changing the ownership boundaries of the transactional core itself.
 
 ---
 
@@ -161,6 +176,7 @@ At this stage, the transactional core does not fully solve:
 - distributed coordination
 - full governance policy actions
 - chaos hardening at scale
+- durable storage semantics across restart / persistence-backed implementations
 
 Those come later, after the core itself is clear.
 
@@ -183,4 +199,4 @@ If the transactional core is weak, the rest of the project becomes difficult to 
 
 The transactional core is where the project first becomes semantically real.
 
-It is the smallest part of the system that must already be coherent before streaming, analytics, failure modeling, and governance can be meaningfully layered on top.
+It is the smallest part of the system that must already be coherent before streaming, analytics, failure modeling, governance, and later persistence-backed evolution can be meaningfully layered on top.
