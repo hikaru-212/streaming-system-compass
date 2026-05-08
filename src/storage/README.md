@@ -1,6 +1,8 @@
 # Storage Layer
 
-This module provides the persistence abstractions that surround the transactional semantic core.
+[← Back to src README](../README.md)
+
+This module provides the persistence abstractions that surround both the transactional semantic core and the Stage 3 baseline projection runtime.
 
 It does **not** define domain meaning by itself.  
 Instead, it preserves, retrieves, and checkpoints the semantic artifacts produced by the core and used by the pipeline.
@@ -11,12 +13,12 @@ Instead, it preserves, retrieves, and checkpoints the semantic artifacts produce
 
 The purpose of this module is to provide storage boundaries for:
 
-- event history
+- accepted event history
 - idempotency records
 - projection state
 - projection checkpoints / offsets
 
-This layer exists so that domain logic does not need to directly depend on concrete persistence details.
+This layer exists so that domain logic and runtime orchestration do not need to directly depend on concrete persistence details.
 
 ---
 
@@ -31,12 +33,12 @@ This module is responsible for:
 - checkpoint / offset persistence
 - future database-backed implementations
 
-Typical submodules may include:
+Typical submodules or files may include:
 
-- `event_store/`
-- `idempotency_store/`
-- `projection_store/`
-- `checkpoint_store/`
+- `event_store.py`
+- `idempotency_store.py`
+- `projection_store.py`
+- `checkpoint_store.py`
 
 ---
 
@@ -47,15 +49,15 @@ This module is **not** responsible for:
 - deciding whether an event is domain-legitimate
 - deciding the next sequence or next state
 - validating semantic transition truth
-- running projection workers
+- running transactional or projection workers
 - defining governance policies
 - injecting failures
 
 Those responsibilities belong to:
 
-- `src/core/`
-- `src/pipeline/`
-- `src/compass/`
+- [core/](../core/README.md)
+- [pipeline/](../pipeline/README.md)
+- [compass/](../compass/README.md)
 - `chaos_engine/`
 
 ---
@@ -67,31 +69,38 @@ This layer should be viewed as a **persistence boundary**, not as the owner of b
 In other words:
 
 - the core decides what an event means
-- storage preserves that event history
+- storage preserves accepted history and runtime progress
 - the pipeline executes around it
 - Compass validates it
+
+Storage is not the semantic source of truth.
+It is the boundary that preserves and restores semantic artifacts across time.
 
 ---
 
 ## Main Storage Boundaries
 
-### `event_store/`
-Stores the append-only event history.
+### `event_store.py`
+
+Stores the append-only accepted history.
 
 Typical responsibilities:
+
 - append event
 - load event stream
 - get last event
 - enforce version continuity at the persistence boundary
 
-This is the most important storage abstraction in the early stage of the project.
+This is the most important storage abstraction in the early stage of the project because accepted history is the foundation of replay and projection.
 
 ---
 
-### `idempotency_store/`
+### `idempotency_store.py`
+
 Stores request-level processing records.
 
 Typical responsibilities:
+
 - check whether a request has already been processed
 - retrieve previous result for retries
 - persist request-to-result mapping
@@ -100,40 +109,55 @@ This supports retry safety and duplicate request handling.
 
 ---
 
-### `projection_store/`
+### `projection_store.py`
+
 Stores materialized read-side state.
 
 Typical responsibilities:
+
 - save projected state
 - load projected state
 - update projection results incrementally
 
-This is more important after the projection layer becomes a real worker.
+At the current stage, this now exists as part of the Stage 3 baseline projection runtime in a deterministic in-memory form.
 
 ---
 
-### `checkpoint_store/`
+### `checkpoint_store.py`
+
 Stores consumer position / projection progress.
 
 Typical responsibilities:
+
 - save last processed offset or sequence
 - restore projection progress after restart
 - support replay / rebuild boundaries
 
-This becomes important when projection evolves beyond demo-level replay.
+At the current stage, this also now exists as part of the Stage 3 baseline projection runtime in a deterministic in-memory form.
 
 ---
 
 ## Current Implementation Scope
 
-At the current stage, the immediate focus is:
+At the current stage, this module now supports both:
 
-1. `event_store`
-2. `idempotency_store`
+1. write-side persistence boundaries
+   - `event_store.py`
+   - `idempotency_store.py`
 
-These are enough to support the first transactional baseline.
+2. Stage 3 baseline read-side persistence boundaries
+   - `projection_store.py`
+   - `checkpoint_store.py`
 
-`projection_store` and `checkpoint_store` are intentionally reserved for the next stage, once the projection pipeline becomes a real runtime component rather than a simple replay helper.
+This means the storage layer is no longer only write-side focused.
+
+However, the current read-side storage baseline remains intentionally limited:
+
+- projection state persistence is still in-memory
+- checkpoint persistence is still in-memory
+- durable database-backed semantics are not yet implemented
+
+Those are the next major storage-evolution target.
 
 ---
 
@@ -141,16 +165,16 @@ These are enough to support the first transactional baseline.
 
 Each storage concern should ideally expose:
 
-- a minimal abstract interface
+- a minimal abstract boundary or protocol where useful
 - an in-memory implementation for early development
 - a future database-backed implementation
 
 Example progression:
 
-- `in_memory.py` first
-- `postgres.py` later
+- in-memory baseline first
+- `postgres.py` or equivalent later
 
-This allows the semantic core to stabilize before infrastructure becomes more complex.
+This allows the semantic core and baseline runtime behavior to stabilize before infrastructure becomes more complex.
 
 ---
 
@@ -159,13 +183,20 @@ This allows the semantic core to stabilize before infrastructure becomes more co
 This module directly supports:
 
 ### `src/core/order/`
-As the persistence boundary for order events and replay.
+
+As the persistence boundary for accepted history and deterministic replay.
 
 ### `src/pipeline/transactional/`
+
 As the write-side execution path that needs event append and idempotency storage.
 
 ### `src/compass/transition/`
-As the source of actual event history used to validate predecessor claims and version continuity.
+
+As the source of actual accepted history used to validate predecessor claims and version continuity.
+
+### `src/pipeline/projection/`
+
+As the Stage 3 baseline read-side path that now depends on projection-state and checkpoint persistence boundaries.
 
 ---
 
@@ -173,14 +204,22 @@ As the source of actual event history used to validate predecessor claims and ve
 
 Later, this module will also support:
 
-### `src/pipeline/projection/`
-For projection state and checkpoint persistence.
+### persistence-backed transactional flow
+
+For durable accepted-history and idempotency semantics across restart.
+
+### persistence-backed projection flow
+
+For durable projection-state and checkpoint semantics across restart.
 
 ### `src/compass/state/`
+
 For comparing runtime projected state against replayed or checkpointed state.
 
 ### `chaos_engine/`
+
 For testing how storage-related guarantees behave under:
+
 - partial commit
 - delayed writes
 - duplicate delivery
@@ -190,17 +229,20 @@ For testing how storage-related guarantees behave under:
 
 ## Key Invariants
 
-At this stage, the main storage-related invariants include:
+At the current stage, the main storage-related invariants include:
 
 - event streams must remain append-only
 - event version progression must remain continuous
 - idempotency records must be stable across retries
-- persisted history must support deterministic replay
+- persisted accepted history must support deterministic replay
+- projection state must remain consistent with processed history in the current in-memory baseline
+- checkpoint position must reflect actual baseline projection progress
 
 Later invariants will include:
 
-- projection state must match processed history
-- checkpoint position must reflect actual progress
+- persistence-backed replay and incremental state must remain equivalent
+- durable checkpoint position must survive restart correctly
+- write-side and read-side persistence semantics must remain mutually consistent
 
 ---
 
@@ -208,21 +250,24 @@ Later invariants will include:
 
 If reading this module from scratch, the recommended order is:
 
-1. `event_store/`
-2. `idempotency_store/`
-3. `projection_store/`
-4. `checkpoint_store/`
+1. `event_store.py`
+2. `idempotency_store.py`
+3. `projection_store.py`
+4. `checkpoint_store.py`
 
-This reflects the intended evolution:
+This reflects the current project evolution:
 
 - transactional persistence first
-- read-side persistence later
+- baseline read-side persistence second
+- durable storage evolution next
 
 ---
 
 ## Summary
 
 This module does not define semantic truth.  
-It defines where semantic truth is persisted, recovered, and tracked.
+It defines where semantic truth and runtime progress are persisted, recovered, and tracked.
 
 If the core is the system's semantic source, storage is the memory boundary that preserves that source across time.
+
+

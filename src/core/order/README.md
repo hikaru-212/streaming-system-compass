@@ -1,5 +1,7 @@
 # Order Domain Core
 
+[← Back to core README](../README.md)
+
 This module is the semantic starting point of the project.
 
 At the current stage of development, the system begins here rather than from:

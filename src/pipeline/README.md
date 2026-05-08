@@ -1,5 +1,7 @@
 # Pipeline Layer
 
+[← Back to src README](../README.md)
+
 This module defines how events and state transitions move through the system.
 
 If `src/core/` defines semantic meaning, and `src/storage/` preserves history, then `src/pipeline/` defines the execution flow built around them.
@@ -30,11 +32,11 @@ This module is responsible for:
 - projection execution flow
 - analytical event-processing flow
 
-Typical submodules may include:
+Current and planned submodules include:
 
 - `transactional/`
 - `projection/`
-- `analytical/`
+- `analytical/` (planned later)
 
 ---
 
@@ -50,9 +52,9 @@ This module is **not** responsible for:
 
 Those responsibilities belong to:
 
-- `src/core/`
-- `src/storage/`
-- `src/compass/`
+- [core/](../core/README.md)
+- [storage/](../storage/README.md)
+- [compass/](../compass/README.md)
 - `chaos_engine/`
 
 ---
@@ -74,17 +76,19 @@ In short:
 
 - core defines meaning
 - pipeline defines movement
-- storage preserves movement
+- storage preserves movement and progress
 - Compass checks whether movement remains semantically correct
 
 ---
 
 ## Main Pipeline Boundaries
 
-### `transactional/`
+### [transactional/](transactional/)
+
 Defines the write-side transactional flow.
 
 Typical responsibilities:
+
 - handle incoming commands
 - coordinate idempotency checks
 - call aggregate logic
@@ -93,48 +97,72 @@ Typical responsibilities:
 - apply accepted events to in-memory aggregate state
 - rebuild aggregate state through replay
 
-This is the first pipeline segment to implement.
+This is the first pipeline segment that was implemented.
+
+For the higher-level write-side design, see:
+
+- [Transactional Core](../../docs/architecture/transactional_core.md)
 
 ---
 
-### `projection/`
+### [projection/](projection/)
+
 Defines the read-side projection flow.
 
 Typical responsibilities:
-- consume events from a stream or history
+
+- consume events from accepted history
 - incrementally build materialized state
 - persist projection state
 - track checkpoints / offsets
-- recover after restart
-- rebuild projections through replay if necessary
+- recover through replay / rebuild
+- enforce baseline sequencing assumptions
 
-This should eventually replace the current demo-level fold function.
+At the current stage, a Stage 3 baseline projection runtime now exists in deterministic in-memory form, built around:
+
+- a pure reducer
+- a checkpoint-aware worker
+- projection-state persistence boundary
+- checkpoint persistence boundary
+- replay / rebuild through the same runtime path
+
+For the higher-level projection design, see:
+
+- [Projection Pipeline](../../docs/architecture/projection_pipeline.md)
+- [Projection Boundary](../../docs/boundary_notes/projection_boundary.md)
 
 ---
 
-### `analytical/`
-Defines the analytical interpretation of the same event stream.
+### `analytical/` (planned)
 
-Typical responsibilities:
+Defines the future analytical interpretation of the same event stream.
+
+Typical responsibilities may later include:
+
 - event-time processing
 - aggregation
 - windows
 - lateness handling
 - analytical metrics or statistical views
 
-This layer should be built after the transactional and projection flows are stable.
+This layer is intentionally deferred until the transactional and projection baselines are stronger.
 
 ---
 
 ## Current Implementation Scope
 
-At the current stage, the immediate focus is:
+At the current stage, the implemented focus now includes:
 
-1. `transactional/`
-2. later `projection/`
-3. much later `analytical/`
+1. [transactional/](transactional/)
+2. [projection/](projection/)
 
-The reason is simple:
+while:
+
+1. `analytical/`
+
+remains a later stage.
+
+The reason is still the same:
 
 - transactional flow establishes correctness of event admission and persistence
 - projection flow establishes correctness of state derivation
@@ -158,24 +186,37 @@ The first important pipeline path is:
 
 This is the minimum runtime path of the transactional system.
 
+That write-side path now exists as the current baseline.
+
 ---
 
 ## Projection Flow as the Second Milestone
 
-After the transactional path is stable, the projection path should evolve from:
+After the transactional path became stable, the projection path evolved from:
 
 - a demo-level replay helper
 
 into:
 
-- a real projection worker with state persistence and checkpointing
+- a baseline projection runtime with worker / reducer separation
 
-Key goals include:
+The current Stage 3 baseline now supports:
+
 - incremental application
 - replayability
-- crash recovery
-- duplicate tolerance strategy
-- projection-state correctness
+- checkpoint-aware sequencing
+- deterministic replay / rebuild through the same runtime path
+
+However, it still does **not yet** include:
+
+- persistent storage-backed semantics
+- advanced recovery logic
+- out-of-order buffering
+- DLQ handling
+- watermark semantics
+- multi-worker coordination
+
+Those concerns are intentionally deferred until after the durable persistence baseline is introduced.
 
 ---
 
@@ -184,12 +225,15 @@ Key goals include:
 This module directly connects:
 
 ### `src/core/order/`
+
 For event production and aggregate rehydration.
 
 ### `src/storage/`
+
 For event persistence, idempotency storage, projection state, and checkpointing.
 
 ### `src/compass/transition/`
+
 For validating whether candidate events are admissible.
 
 ---
@@ -198,11 +242,18 @@ For validating whether candidate events are admissible.
 
 Later, this module will also connect heavily with:
 
+### persistence-backed storage evolution
+
+To strengthen write-side and read-side restart semantics beyond the current in-memory baseline.
+
 ### `src/compass/state/`
+
 To validate projection correctness and checkpoint semantics.
 
 ### `chaos_engine/`
+
 To test how pipeline behavior survives:
+
 - out-of-order delivery
 - duplicate events
 - poison messages
@@ -214,14 +265,16 @@ To test how pipeline behavior survives:
 
 ## Key Invariants
 
-At this stage, the main pipeline-related invariants include:
+At the current stage, the main pipeline-related invariants include:
 
 - transactional event admission must preserve domain legality
 - replay must rebuild aggregate state deterministically
-- projection must produce state consistent with processed event history
+- projection must produce state consistent with processed accepted history
 - projection progress must align with actual consumed sequence or offset
+- replay / rebuild must follow the same baseline projection semantics as incremental processing
 
 Later analytical invariants may include:
+
 - window boundaries are respected
 - lateness handling remains semantically consistent
 
@@ -233,9 +286,9 @@ If reading this module from scratch, the recommended order is:
 
 1. `transactional/`
 2. `projection/`
-3. `analytical/`
+3. `analytical/` later
 
-This reflects the intended implementation order of the system.
+This reflects the current implementation order of the system.
 
 ---
 

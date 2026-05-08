@@ -1,8 +1,10 @@
 # Compass Layer
 
-This module defines the semantic validation and governance logic of the system.
+[← Back to src README](../README.md)
 
-If `src/core/` defines meaning, and `src/pipeline/` executes meaning, then `src/compass/` exists to check whether that meaning remains valid under runtime conditions.
+This module defines the semantic validation and later governance logic of the system.
+
+If `src/core/` defines meaning, and `src/pipeline/` executes meaning, then `src/compass/` exists to check whether that meaning remains semantically trustworthy under runtime conditions.
 
 ---
 
@@ -17,7 +19,7 @@ It is designed to answer questions such as:
 - Does replayed state match incrementally derived state?
 - Should a violation be accepted, warned, rejected, or quarantined?
 
-Compass is therefore not just a validator.  
+Compass is therefore not just a validator.
 It is the beginning of a semantic runtime governance layer.
 
 ---
@@ -33,12 +35,12 @@ This module is responsible for:
 - semantic policy classification
 - evidence / violation reporting
 
-Typical submodules may include:
+Current and planned submodules may include:
 
 - `transition/`
-- `state/`
-- `policy/`
-- `evidence/`
+- `state/` (later)
+- `policy/` (later)
+- `evidence/` (later)
 
 ---
 
@@ -54,9 +56,9 @@ This module is **not** responsible for:
 
 Those responsibilities belong to:
 
-- `src/core/`
-- `src/storage/`
-- `src/pipeline/`
+- [core/](../core/README.md)
+- [storage/](../storage/README.md)
+- [pipeline/](../pipeline/README.md)
 - `chaos_engine/`
 
 ---
@@ -81,74 +83,106 @@ This reflects the broader project principle:
 
 ---
 
-## Compass Layers
+## Current Project Boundary
 
-### `transition/`
-This is the first Compass layer.
+At the current stage, Compass is strongest in **Layer 1 / transition truth validation**.
 
-It validates whether an event truthfully represents a legal transition from the state it claims to follow.
+This means the repository already has an implemented baseline for:
 
-Typical checks may include:
-- sequence continuity
-- predecessor identity
-- proof consistency
-- transition legality
+- proof-carrying candidate events
+- predecessor / claimed-history validation
+- validation dispatch
+- basic `ALLOW` / `BLOCK` policy
+- semantic validation before accepted-history persistence
 
-This is the most immediate Compass implementation target.
+What is **not yet** implemented:
+
+- full state-level Compass Layer 2 runtime validation
+- checkpoint semantic verification as a concrete runtime subsystem
+- richer governance behavior such as warning, quarantine, audit workflow, or evidence-driven policy actions
+
+So Compass should currently be read as:
+
+- **implemented at Layer 1 baseline**
+- **planned at Layer 2 and governance layers**
 
 ---
 
-### `state/`
-This is the second Compass layer.
+## Compass Layers
 
-It validates whether state derived through projection or replay remains semantically correct.
+### `transition/`
+
+This is the first Compass layer, and it is the current implemented baseline.
+
+It validates whether a candidate event truthfully represents a legal transition from the state it claims to follow.
 
 Typical checks may include:
+
+- sequence continuity claims
+- predecessor identity claims
+- proof consistency
+- transition legality
+
+This is currently the most concrete and important Compass implementation in the repository.
+
+---
+
+### `state/` (later)
+
+This is the second Compass layer.
+
+It will validate whether state derived through projection or replay remains semantically correct.
+
+Typical checks may include:
+
 - projected version consistency
 - projected state invariants
 - replay vs incremental consistency
 - checkpoint correctness
 
 Example semantic violations may include:
-- if current state is `SHIPPED` and an event behaves like `PAYMENT_ADJUSTED`, the projected state may violate the intended order lifecycle
+
+- if current state is `SHIPPED` and a later event behaves like `PAYMENT_ADJUSTED`, the projected state may violate the intended order lifecycle
 - if `paid_amount != total_amount` while state ∈ {`PAID`, `SHIPPED`}, the runtime state may be semantically inconsistent
 
-This layer becomes important after projection evolves into a real runtime worker.
+This layer becomes important after the Stage 3 projection runtime baseline evolves beyond deterministic in-memory execution and into persistence-backed runtime semantics.
 
 ---
 
-### `policy/`
+### `policy/` (later)
+
 This layer determines how semantic violations are handled.
 
 Typical actions may include:
+
 - ACCEPT
 - WARN
 - REJECT
 - QUARANTINE
 
 It may also include:
+
 - violation classification
 - evidence reporting
 - audit records
 - downstream action triggers
 
-### Future Work
-- policy-driven validation
-- dynamic rule injection
-- failure classification
-
 This is where Compass stops being only a validator and becomes a semantic governance mechanism.
 
 ---
 
-### `evidence/`
+### `evidence/` (later)
+
 This layer structures how validation results are recorded and surfaced.
 
 Typical responsibilities:
+
 - Compass result formats
 - evidence records
 - audit-friendly validation output
 - semantic violation logging
+
+This becomes more important when governance behavior becomes richer than basic validation enforcement.
 
 ---
 
@@ -176,7 +210,7 @@ Its purpose is to strengthen event-level semantic admission by allowing Compass 
 - claimed previous version
 - claimed previous status
 
-against actual event history.
+against actual accepted history.
 
 This is useful when event truth itself needs stronger validation.
 
@@ -191,21 +225,34 @@ In that sense:
 
 ---
 
-## Current Project Focus
+## Current Focus and Next Step
 
-The immediate Compass focus should be:
+The implemented Compass focus is currently:
 
 1. transition truth validation
 2. later state-level validation
 3. later policy and governance behavior
 
+The next step is **not** to jump directly into governance.
+
+The nearer path is:
+
+- strengthen the Stage 3 runtime through persistent storage evolution
+- then build more meaningful Layer 2 / state-level validation on top of that stronger runtime baseline
+
 This order is intentional.
 
 The system should first decide:
+
 - what counts as a trustworthy event
 
+then strengthen:
+
+- how runtime state is persisted and replayed
+
 before it attempts to decide:
-- whether downstream state remains semantically correct over time
+
+- how richer semantic governance should behave
 
 ---
 
@@ -232,8 +279,8 @@ This evolution matches the broader direction of the project.
 Compass is best understood as a layered semantic defense system.
 
 - Layer 1 protects event truth
-- Layer 2 protects runtime state correctness
-- Layer 3 governs system response to semantic violations
+- Layer 2 will protect runtime state correctness
+- later policy / evidence layers will govern system response to semantic violations
 
-This layered view keeps Compass aligned with both transactional correctness and long-term streaming-runtime governance.
-
+At the current stage, only the first layer is implemented as a concrete baseline.
+The later layers remain intentionally deferred.
