@@ -7,6 +7,74 @@ validated through executable tests and later hardened through chaos engineering.
 
 ---
 
+## TL;DR
+
+This is **not** a CRUD or ETL portfolio demo.
+
+It is a production-inspired streaming-system project focused on:
+
+- **accepted-history-first correctness**
+- **semantic validation before persistence**
+- **orthogonal idempotency / concurrency boundaries**
+- **replay-safe projection runtime design**
+
+The project currently has:
+
+- a completed write-side transactional baseline
+- Compass Layer 1 transition-truth validation
+- a Stage 3 baseline projection runtime with reducer / worker separation
+- executable tests defending both write-side and read-side baseline semantics
+
+The next major step is:
+
+- **persistent storage baseline**
+- followed later by **state-level Compass validation**
+
+---
+
+## Guide for Reviewers
+
+If you only have a short amount of time:
+
+- **1 minute**
+  - read [Current Status](#-current-status)
+  - scan the [High-Level Architecture](docs/architecture/high_level_architecture.md)
+
+- **3 minutes**
+  - read [Why Compass Split into Two Layers](docs/adr/0004_why_compass_split_into_two_layers.md)
+  - read [Projection Pipeline](docs/architecture/projection_pipeline.md)
+
+- **5 minutes**
+  - read [Projection Boundary](docs/boundary_notes/projection_boundary.md)
+  - read [Transactional Core](docs/architecture/transactional_core.md)
+  - scan `tests/` and the Stage 3 projection worker / reducer path
+
+If you want to understand how the repository thinks rather than only what it implements:
+
+- read [Learning and Design Methodology](docs/philosophy/00_learning_and_design_methodology.md)
+- read [Postmortems](docs/postmortems/README.md)
+
+---
+
+## Sharp Project Highlights
+
+- **Accepted-history-first design**  
+  Candidate events are not trusted merely because they can be written. Accepted history is protected by semantic validation and admission boundaries.
+
+- **Layered semantic defense**  
+  Compass is intentionally split into write-side transition-truth validation and later runtime state validation.
+
+- **Orthogonal idempotency and concurrency boundaries**  
+  Retry safety and stale-write protection are treated as different problems, not collapsed into one mechanism.
+
+- **Replay-safe projection baseline**  
+  The Stage 3 projection runtime uses reducer / worker separation and replay / rebuild through the same runtime path.
+
+- **Documentation as architecture memory**  
+  ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
+
+---
+
 ## 🔥 Project Positioning
 
 This project is a production-inspired streaming system designed to solve three fundamental problems:
@@ -130,7 +198,9 @@ They test whether the correctness mechanisms inside `src/` survive adversarial r
 - Concurrency-safe event admission
 - Candidate-event semantic validation before persistence
 - Executable write-side invariants through tests
-- Clear separation between domain legality, transition truth, admission continuity, and retry safety
+- Stage 3 baseline read-side projection runtime with reducer / worker separation
+- Replay-safe projection state derivation with checkpoint-aware sequencing
+- Clear separation between domain legality, transition truth, admission continuity, retry safety, and read-side derivation
 
 ---
 
@@ -173,19 +243,7 @@ streaming-system-compass/
 └── .gitignore
 ```
 
-### Test Structure
-
-`tests/` is organized by test intent rather than only by source module:
-
-- `unit/` — module-level legality, invariant, and boundary tests
-- `integration/` — multi-boundary transactional flow tests
-- `semantic_cases/` — intentionally malformed candidate/history cases for Compass validation
-- `adversarial/` — replay, duplicate, out-of-order, and pre-chaos disturbance scenarios
-- `shared/` — shared replay helpers and common test-side utilities
-- `experiments/` — smoke tests for demo entry wiring
-
 ### How to Run Tests
-
 
 From the repository root:
 
@@ -208,7 +266,7 @@ The full documentation index starts at [docs/README.md](docs/README.md).
 
 Key documentation areas:
 
-- [Design Philosophy](docs/philosophy/README.md) — mental models behind IBO, Core / Enabler separation, and Compass-style semantic alignment
+- [Design Philosophy](docs/philosophy/README.md) — working methodology and mental models behind IBO, Core / Enabler separation, and Compass-style semantic alignment
 - [Architecture Notes](docs/architecture/README.md) — subsystem architecture and runtime boundaries
 - [Architecture Decision Records](docs/adr/README.md) — major design decisions and trade-offs
 - [Domain Specifications](docs/domain/README.md) — versioned business rules and domain semantics
@@ -231,21 +289,23 @@ They are not implementation proof. They explain the reasoning model behind the a
 ### Recommended Reading Order
 
 1. [High-Level Architecture](docs/architecture/high_level_architecture.md)
-2. [Transactional Core](docs/architecture/transactional_core.md)
-3. [Order Domain v1 Rules](docs/domain/order_domain_v1_rules.md)
-4. [Stateless Registry and Concurrency Strategy Boundary](docs/adr/0001_registry_stateless_and_concurrency_strategy.md)
-5. [Concurrency Control, Idempotency, and Retry Safety](docs/adr/0003_concurrency_idempotency_and_retry_safety.md)
-6. [Intent-Aware Validation Dispatch for Compass Runtime](docs/adr/0002_intent_aware_validation_dispatch.md)
-7. [Compass Layers](docs/architecture/compass_layers.md)
-8. [Projection Pipeline](docs/architecture/projection_pipeline.md)
-9. [Implementation Roadmap](docs/roadmap/implementation_roadmap.md)
-10. [Compass Runtime Roadmap](docs/roadmap/compass_runtime_roadmap.md)
-11. [Boundary Notes](docs/boundary_notes/README.md)
-12. [Postmortems](docs/postmortems/README.md)
+2. [Learning and Design Methodology](docs/philosophy/00_learning_and_design_methodology.md)
+3. [Transactional Core](docs/architecture/transactional_core.md)
+4. [Order Domain v1 Rules](docs/domain/order_domain_v1_rules.md)
+5. [Stateless Registry and Concurrency Strategy Boundary](docs/adr/0001_registry_stateless_and_concurrency_strategy.md)
+6. [Concurrency Control, Idempotency, and Retry Safety](docs/adr/0003_concurrency_idempotency_and_retry_safety.md)
+7. [Intent-Aware Validation Dispatch for Compass Runtime](docs/adr/0002_intent_aware_validation_dispatch.md)
+8. [Why Compass Split into Two Layers](docs/adr/0004_why_compass_split_into_two_layers.md)
+9. [Compass Layers](docs/architecture/compass_layers.md)
+10. [Projection Pipeline](docs/architecture/projection_pipeline.md)
+11. [Implementation Roadmap](docs/roadmap/implementation_roadmap.md)
+12. [Compass Runtime Roadmap](docs/roadmap/compass_runtime_roadmap.md)
+13. [Boundary Notes](docs/boundary_notes/README.md)
+14. [Postmortems](docs/postmortems/README.md)
 
-This order starts from the top-level system shape, then moves into write-side semantics, domain rules, transactional safety decisions, Compass validation architecture, projection evolution, and implementation sequencing.
+This order starts from the top-level system shape, then moves into working methodology, write-side semantics, domain rules, transactional safety decisions, Compass validation architecture, projection evolution, and implementation sequencing.
 
-For the mental models behind the architecture, see [Design Philosophy](docs/philosophy/README.md), especially the notes on IBO and Core / Enabler separation.
+For the mental models behind the architecture, see [Design Philosophy](docs/philosophy/README.md), especially the notes on learning/design methodology, IBO, and Core / Enabler separation.
 
 ---
 
@@ -294,11 +354,11 @@ Everything else grows around this core:
 
 ### Phase 3 — Projection Runtime
 
-- incremental projection worker
+- pure reducer
+- checkpoint-aware projection worker
 - projection state store
 - checkpoint / offset handling
 - replay and rebuild flow
-- crash recovery semantics
 
 ### Phase 4 — State-Level Compass Verification
 
@@ -337,21 +397,29 @@ Current baseline completed:
 - optimistic admission gate for append-time continuity protection
 - optimistic concurrency collision coverage for stale-write rejection
 - Compass Layer 1 transition-truth validation
-- multi-layer executable tests for transactional legality, replay safety, transition-truth checks, semantic-case and adversarial-history scenarios
 - runtime assembly through `src/bootstrap/`
+- Stage 3 baseline projection runtime:
+  - pure reducer
+  - checkpoint-aware worker
+  - in-memory projection state store
+  - in-memory checkpoint store
+  - replay / rebuild baseline
+- executable tests across transactional legality, replay safety, transition-truth checks, semantic-case scenarios, adversarial histories, and Stage 3 baseline projection behavior
 
 Current boundary of completion:
 
 - write-side transactional baseline is established
-- failure-path reasoning is now meaningfully executable through tests
-- read-side projection runtime is not yet implemented
+- read-side projection baseline now exists in a deterministic in-memory form
+- failure-path reasoning is meaningfully executable across both write-side and Stage 3 baseline read-side paths
+- persistent storage-backed runtime behavior is not yet implemented
+- state-level Compass Layer 2 validation is not yet implemented
 
 Next implementation milestone:
 
-- build the first projection worker
-- introduce projection state storage and rebuild flow
-- define projection-side replay and checkpoint semantics
-- begin the physical read-side runtime split from the transactional runtime
+- introduce a persistent storage baseline, starting from durable write-side and read-side store evolution
+- validate replay / rebuild behavior against persistence-backed state
+- prepare the path toward Stage 4 state-level Compass validation
+- defer advanced runtime concerns such as DLQ, buffering, watermark semantics, and multi-worker coordination until after durable baseline semantics are clear
 
 ---
 
@@ -361,11 +429,12 @@ This repository began with a documentation-first development approach.
 
 The architecture, ADRs, domain rules, and boundary notes were written before the main transactional implementation to make ownership, invariants, and failure boundaries explicit.
 
-That documentation-first phase has now been translated into an initial executable baseline across:
+That documentation-first phase has now been translated into an executable baseline across:
 
 - `src/core/order/`
 - `src/storage/`
 - `src/pipeline/transactional/`
+- `src/pipeline/projection/`
 - `src/compass/transition/`
 - `src/bootstrap/`
 - `tests/`
@@ -373,9 +442,10 @@ That documentation-first phase has now been translated into an initial executabl
 The repository remains intentionally conservative:
 
 - documentation defines semantic intent and ownership boundaries
-- `src/` implements the runtime logic
-- `tests/` makes selected invariants and failure paths executable
-- later phases will extend this baseline into projection runtime, state-level Compass checks, and adversarial hardening
+- `src/` implements runtime logic
+- `tests/` make selected invariants and failure paths executable
+- the current Stage 3 baseline remains intentionally minimal and in-memory
+- later phases will extend this baseline toward durable persistence, state-level Compass checks, and adversarial hardening
 
 ---
 
