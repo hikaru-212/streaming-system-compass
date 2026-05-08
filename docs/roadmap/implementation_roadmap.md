@@ -13,18 +13,19 @@ It is a sequencing guide for building the system without losing semantic clarity
 
 ## Current Position
 
-The project has now completed an initial executable baseline across:
+The project has now completed an executable baseline across:
 
 - transactional semantic core
 - accepted-history persistence and replay
 - request-level idempotency with replay/conflict distinction
 - optimistic admission with stale-write rejection
 - event-level Compass validation before persistence
-- executable baseline tests across unit, integration, semantic-case, and adversarial-history layers
+- Stage 3 baseline projection runtime in a deterministic in-memory form
+- executable baseline tests across unit, integration, semantic-case, adversarial-history, and Stage 3 projection-baseline layers
 
-This means Stage 1 and Stage 2 now exist in runnable form at a baseline level.
+This means Stage 1 and Stage 2 are complete at a baseline level, and Stage 3 now exists in a minimal executable form.
 
-The next major focus is Stage 3: Projection Runtime.
+The next major focus is to strengthen the Stage 3 baseline through persistent storage-backed evolution before moving into advanced runtime complexity.
 
 ---
 
@@ -37,12 +38,13 @@ The project should evolve from:
 3. concurrency-safe admission
 4. event truth validation
 5. projection/runtime correctness
-6. analytical extension
-7. adversarial hardening
+6. durable persistence semantics
+7. analytical extension
+8. adversarial hardening
 
 This order is intentional.
 
-The system should not attempt to solve chaos, analytics, or distributed complexity before its semantic core and write-side safety boundaries are clear.
+The system should not attempt to solve chaos, analytics, or distributed complexity before its semantic core, write-side safety boundaries, and baseline runtime semantics are clear.
 
 ---
 
@@ -68,8 +70,8 @@ Establish the write-side meaning of the system.
 ### Main Modules
 
 - `src/core/order/`
-- `src/storage/event_store/`
-- `src/storage/idempotency_store/`
+- `src/storage/event_store.py`
+- `src/storage/idempotency_store.py`
 - `src/pipeline/transactional/`
 
 ### Deliverable
@@ -139,21 +141,57 @@ Upgrade projection from replay helper into a real runtime subsystem.
 - projection store
 - checkpoint store
 - replay / rebuild flow
-- crash recovery semantics
 
 ### Main Modules
 
 - `src/pipeline/projection/`
-- `src/storage/projection_store/`
-- `src/storage/checkpoint_store/`
+- `src/storage/projection_store.py`
+- `src/storage/checkpoint_store.py`
 
 ### Deliverable
 
-A read-side runtime capable of incremental state derivation and restart recovery.
+A read-side runtime capable of incremental state derivation and replay / rebuild through the same runtime path.
+
+### Status
+
+Implemented at a deterministic in-memory baseline level.
 
 ### Current Note
 
-Replay helpers and replay-consistency tests already exist on the test side, but they are not yet the formal projection runtime.
+The current Stage 3 baseline already establishes:
+
+- reducer / worker separation
+- projection-state and checkpoint-store separation
+- replay-safe projection sequencing
+- deterministic in-memory replay / rebuild behavior
+
+However, it does not yet establish durable storage-backed runtime semantics.
+
+---
+
+## Stage 3.5: Persistent Storage Baseline
+
+### Goal
+
+Move the current write-side and read-side baseline from in-memory persistence toward durable storage-backed semantics.
+
+### Why
+
+The next meaningful step after the Stage 3 in-memory baseline is not advanced runtime complexity first.
+
+It is persistent storage evolution, because restart semantics, durable replay, and persistence-backed correctness should be clarified before adding DLQ, buffering, watermarking, or multi-worker coordination.
+
+### Main Work
+
+- durable event-store evolution
+- durable idempotency-store evolution
+- durable projection-state store
+- durable checkpoint store
+- replay / rebuild validation against persistence-backed state
+
+### Deliverable
+
+A storage-backed baseline that preserves the existing semantic boundaries while strengthening runtime durability.
 
 ---
 
@@ -247,7 +285,11 @@ Event truth validation with basic validation dispatch and enforcement policy
 
 ### Stage 3
 
-Projection runtime
+Projection runtime baseline
+
+### Stage 3.5
+
+Persistent storage baseline
 
 ### Stage 4
 
@@ -280,5 +322,7 @@ However, the semantic dependency order should still be respected:
 - conditional admission before accepted history is trusted
 - validation before advanced governance
 - accepted history before projection runtime
+- projection runtime baseline before persistent storage baseline
+- persistent storage baseline before advanced runtime concerns
 - projection runtime before state-level Compass
 - core correctness before chaos hardening

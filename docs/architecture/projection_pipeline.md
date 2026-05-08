@@ -6,60 +6,67 @@
 
 This document describes the intended evolution of the projection layer.
 
-At the current stage of the project, projection is still only a simplified replay helper.  
-It is not yet a true runtime projection pipeline.
+At the current stage of the project, projection is no longer only a replay helper.  
+A minimal Stage 3 baseline projection runtime now exists, but it is still intentionally narrow and in-memory.
 
-This document exists to clarify that distinction and to define the next implementation path toward a real projection runtime.
+This document exists to clarify that distinction and to define the next implementation path toward a more durable and verified projection runtime.
 
 ---
 
 ## Current Situation
 
-The current projection logic can replay a sequence of events and reconstruct a state-like object.
+The projection layer now has a minimal executable runtime baseline.
 
-This is useful for:
+This baseline already supports:
 
-- deterministic replay demonstrations
-- validating event ordering assumptions
-- testing simple state reconstruction
+- pure deterministic state reduction
+- checkpoint-aware worker sequencing
+- in-memory projection state storage
+- in-memory checkpoint storage
+- replay / rebuild through the same worker + reducer path
 
-However, this is still only a **demo-level replay helper**, not a real projection subsystem.
+This is enough to establish a real Stage 3 baseline.
+
+However, the projection subsystem is still intentionally limited.
 
 It does not yet establish:
 
-- a formal projection worker
 - persistent projection state storage
-- checkpoint / offset progression
-- replay / rebuild runtime behavior
-- a stable boundary between pure reduction and runtime orchestration
+- durable checkpoint semantics across restart
+- advanced recovery logic
+- out-of-order buffering
+- DLQ routing
+- watermark-based timing semantics
+- state-level Compass Layer 2 validation
 
 ---
 
-## Why the Current Projection Is Not Enough
+## Why the Current Projection Is Still Not Enough
 
-A true projection pipeline should answer questions such as:
+A stronger projection pipeline should eventually answer questions such as:
 
-- how are accepted events consumed incrementally?
-- how is projection state persisted?
-- how is processing progress tracked across restarts?
-- how do replay and incremental processing share the same semantics?
-- how should sequence progression be enforced at runtime?
-- how can projection be rebuilt from accepted history?
+- how are accepted events consumed incrementally across durable restarts?
+- how is projection state persisted beyond in-memory lifetime?
+- how is processing progress tracked safely across restarts?
+- how do replay and incremental processing remain equivalent under persistent storage?
+- how should more complex runtime issues such as disorder, lateness, or recovery be handled?
 
-A simple pure function over a list of events does not yet answer these runtime questions.
+The current Stage 3 baseline is sufficient for deterministic baseline correctness, but not yet for durable or production-like runtime semantics.
 
 ---
 
 ## Intended Projection Evolution
 
-Projection in this project currently exists only in a simplified replay-helper form.
+Projection in this project originally existed only in a simplified replay-helper form.
 
-The next major target in the project roadmap is **Stage 3: Projection Runtime**.  
-Within that stage, the projection subsystem should evolve through the following baseline steps.
+The current major milestone in the project roadmap is **Stage 3: Projection Runtime**.  
+That stage now exists at a baseline level.
 
-### Current Form: Replay Helper
+The next steps should evolve from that baseline rather than skipping directly into advanced runtime complexity.
 
-A deterministic fold over event history.
+### Earlier Form: Replay Helper
+
+Before the Stage 3 baseline, projection existed mainly as a deterministic fold over event history.
 
 Used for:
 
@@ -67,34 +74,32 @@ Used for:
 - correctness checks
 - early testing
 
-This form already exists in simplified form.
+That earlier form is still important as historical context, but it is no longer the current boundary.
 
 ---
 
-### Next Target: Stage 3 Projection Runtime
+### Current Baseline: Stage 3 Projection Runtime
 
-This is the next major implementation target in the overall project roadmap.
-
-It should be built incrementally through the following baseline steps.
+The current baseline is built around the following implemented steps.
 
 #### Step 3.1: Pure Deterministic Reducer
 
-The first goal is to establish a pure reducer that:
+A pure reducer now exists that:
 
 - consumes accepted `OrderEvent`
 - transforms projected state deterministically
 - remains side-effect free
 - enforces exact-next-sequence semantics locally
 
-This step should answer:
+This baseline establishes:
 
-- what is the next projected state?
-- what local state-transition invariants must hold?
-- which event fields are actually necessary for derivation?
+- what the next projected state should be
+- which local transition invariants belong to pure reduction
+- which event fields are actually required for derivation
 
 #### Step 3.2: Checkpoint-Aware Worker Baseline
 
-The second goal is to introduce a minimal runtime worker that:
+A minimal runtime worker now exists that:
 
 - loads checkpoint / offset
 - loads current projected state
@@ -103,31 +108,45 @@ The second goal is to introduce a minimal runtime worker that:
 - saves projected state
 - advances checkpoint
 
-This step should answer:
+This baseline establishes:
 
-- how is projection run incrementally?
-- how is processing progress separated from business state?
-- how do replay and live processing share the same runtime path?
+- how projection runs incrementally
+- how processing progress remains separate from business state
+- how replay and live processing share the same runtime path
 
 #### Step 3.3: In-Memory Stores and Replay / Rebuild Baseline
 
-The third goal is to support the baseline runtime path with minimal persistence abstractions:
+The current baseline is supported by minimal persistence abstractions:
 
 - in-memory projection state store
 - in-memory checkpoint store
 - replay / rebuild using the same worker + reducer path
 
-This step should answer:
+This baseline establishes:
 
-- can projected state be rebuilt from accepted history?
-- does replay follow the same semantics as incremental processing?
-- is the projection baseline deterministic enough to serve as the foundation for later recovery logic?
+- that projected state can be rebuilt from accepted history
+- that replay follows the same semantics as incremental processing
+- that the projection baseline is deterministic enough to support later persistence and recovery work
+
+---
+
+### Next Target: Persistent Projection Runtime Baseline
+
+After the in-memory Stage 3 baseline, the next projection target is not DLQ or buffering first.
+
+The next priority should be a persistent baseline that introduces:
+
+- durable projection state storage
+- durable checkpoint storage
+- replay / rebuild validation against persistence-backed state
+
+This is the next meaningful step because storage durability and restart semantics should be clarified before advanced runtime complexity is introduced.
 
 ---
 
 ### Later Target: Stage 4 Verified Projection Runtime
 
-Only after the Stage 3 baseline path is stable should the projection pipeline move into a verified runtime stage.
+Only after the Stage 3 baseline path and persistent storage semantics are stable should the projection pipeline move into a verified runtime stage.
 
 This corresponds to [Compass Layer 2: Runtime State / Projection Validation](compass_layers.md#layer-2-runtime-state--projection-validation).
 
@@ -140,9 +159,9 @@ Expected additions include:
 
 ---
 
-## Main Components of the Stage 3 Baseline
+## Main Components of the Current Stage 3 Baseline
 
-The first runtime baseline is expected to include:
+The current runtime baseline includes:
 
 - `reducer.py`
 - `worker.py`
@@ -161,13 +180,13 @@ Incremental event consumption and runtime sequencing.
 
 ### `projection_store.py`
 
-Persistence of projected read-side state.
+Persistence boundary for projected read-side state.
 
 ### `checkpoint_store.py`
 
-Persistence of processing progress metadata.
+Persistence boundary for processing progress metadata.
 
-Additional wrappers or later-stage modules may be introduced after the baseline runtime path is stable, but they are intentionally deferred for now.
+Additional wrappers or later-stage modules may be introduced after the baseline runtime path and persistence semantics are stable, but they are intentionally deferred for now.
 
 ---
 
@@ -175,7 +194,7 @@ Additional wrappers or later-stage modules may be introduced after the baseline 
 
 Projection sits after event admission and event persistence.
 
-It should consume only **accepted event history**.
+It consumes only **accepted event history**.
 
 This means:
 
@@ -205,9 +224,9 @@ This keeps the projection layer stable and focused.
 
 ---
 
-## First Baseline Scope
+## Current Baseline Scope
 
-The first projection runtime baseline intentionally does **not yet** include:
+The current Stage 3 projection runtime intentionally does **not yet** include:
 
 - out-of-order buffering
 - pending queues
@@ -217,11 +236,11 @@ The first projection runtime baseline intentionally does **not yet** include:
 - distributed multi-worker coordination
 - state-level Compass Layer 2 validation
 
-These concerns are real, but they do not belong to the first runtime baseline.
+These concerns are real, but they do not belong to the current baseline.
 
-The initial goal is narrower:
+The current goal is narrower:
 
-> establish a deterministic, replay-safe, checkpoint-aware projection baseline before introducing more complex physical runtime behavior.
+> establish a deterministic, replay-safe, checkpoint-aware projection baseline before introducing durable storage semantics or more complex physical runtime behavior.
 
 ---
 
@@ -245,14 +264,14 @@ Projection validation happens after events have been consumed into runtime state
 
 ## Summary
 
-Projection in this project should be understood as a planned runtime subsystem, not just a helper function.
+Projection in this project should be understood as a runtime subsystem whose Stage 3 baseline now exists in minimal form.
 
-The current replay-style implementation is useful as a stepping stone, but the next implementation target is a Stage 3 baseline projection runtime built around:
+The current baseline is built around:
 
 - a pure reducer
 - a checkpoint-aware worker
-- projected state persistence
-- checkpoint persistence
+- projected state persistence boundaries
+- checkpoint persistence boundaries
 - replay / rebuild through the same runtime path
 
-Only after that baseline is stable should the project expand toward buffering, recovery hardening, and state-level Compass validation.
+The next step is to strengthen this baseline through durable persistence-backed evolution before introducing more advanced runtime concerns such as buffering, watermarking, or state-level Compass validation.

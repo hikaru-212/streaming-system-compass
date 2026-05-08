@@ -4,11 +4,11 @@
 
 ## 0. Current Position
 
-The project now has an implemented write-side baseline that merges the two lines that were previously separate.
+The project now has an implemented write-side baseline and a minimal Stage 3 read-side projection baseline.
 
 ### Transactional Baseline Already Integrated
 
-The current executable path includes:
+The current executable write-side path includes:
 
 - aggregate-based command handling
 - event generation
@@ -23,6 +23,19 @@ The current executable path includes:
 This means the original "merge the two lines" step is no longer a future target.
 It now exists as the current write-side baseline.
 
+### Projection Baseline Now Exists
+
+The current read-side baseline now includes:
+
+- a pure projection reducer
+- a checkpoint-aware projection worker
+- in-memory projection state storage
+- in-memory checkpoint storage
+- replay / rebuild through the same worker + reducer path
+
+This means projection is no longer only a replay helper.
+A minimal Stage 3 baseline projection runtime now exists.
+
 ### Current Boundary
 
 What is already true:
@@ -31,21 +44,51 @@ What is already true:
 - admission still owns version consistency and conditional persistence
 - aggregate state still mutates only through `apply(event)`
 - idempotency remains distinct from semantic validation
-- selected failure paths are executable through tests
+- Stage 3 projection baseline now exists in deterministic in-memory form
+- selected failure paths are executable through tests on both write-side and Stage 3 baseline read-side paths
 
 What is not yet true:
 
-- projection is not yet a real runtime subsystem
+- persistent storage-backed runtime behavior is not yet implemented
 - state-level Compass validation is not yet implemented
 - governance behavior is not yet richer than basic `ALLOW` / `BLOCK`
+- advanced runtime concerns such as DLQ, buffering, watermarking, or multi-worker coordination are not yet in scope
 
 ---
 
-## 1. Stage 1: Write-Side Compass Baseline
+## 1. Stage 1: Transactional Semantic Core
 
 ### Goal
 
-Establish a single write-side path where transactional execution and Compass Layer 1 already coexist.
+Establish the write-side semantic baseline of the system.
+
+### Achieved Outcome
+
+The current baseline now supports:
+
+- aggregate-based command handling
+- candidate-event generation
+- accepted-history replay / rehydration
+- event-store append through an admission boundary
+- optimistic stale-write rejection at the persistence boundary
+- idempotency handling
+- aggregate mutation only through `apply(event)`
+
+### Deliverable
+
+A write-side transactional path that is deterministic, replayable, and protected by conditional admission.
+
+### Status
+
+Completed at the baseline level.
+
+---
+
+## 2. Stage 2: Event Truth Validation
+
+### Goal
+
+Integrate Compass Layer 1 into the transactional path.
 
 ### Achieved Outcome
 
@@ -69,42 +112,79 @@ Completed at the baseline level.
 
 ---
 
-## 2. Stage 2: Upgrade Demo Projection into a Real Projection Worker
+## 3. Stage 3: Projection Runtime Baseline
 
 ### Goal
 
-Replace the current replay-helper / demo-style projection logic with an actual projection pipeline.
+Replace the earlier replay-helper / demo-style projection logic with a real baseline projection runtime.
 
 ### Why
 
-The current replay reduction logic is useful for replay-consistency testing, but it is not yet a real projection layer.
+The earlier replay reduction logic was useful for replay-consistency testing, but it was not yet a runtime projection subsystem.
 
-### Target Outcome
+### Achieved Outcome
 
-A projection subsystem with:
+The current Stage 3 baseline now includes:
 
-- event consumption flow
+- reducer / worker separation
+- event consumption flow in minimal baseline form
 - incremental projection updates
 - projection state store
 - offset / checkpoint tracking
-- duplicate handling strategy
-- failure / retry behavior
-
-### Key Questions
-
-- What is the projection input contract?
-- Where is projection state stored?
-- How are consumer offsets tracked?
-- How does the projection recover after crash or restart?
-- How are duplicate or out-of-order events handled?
+- replay / rebuild through the same runtime path
 
 ### Deliverable
 
-A read-side pipeline that behaves like a real projection worker.
+A read-side pipeline that behaves like a real projection worker in a deterministic in-memory baseline form.
+
+### Status
+
+Completed at the baseline level.
+
+### Current Limitation
+
+The current Stage 3 baseline does **not yet** include:
+
+- persistent storage-backed runtime behavior
+- advanced recovery logic
+- out-of-order buffering
+- DLQ handling
+- watermark semantics
+- distributed multi-worker coordination
+
+Those are intentionally deferred.
 
 ---
 
-## 3. Stage 3: Add Projection / State-Level Compass Verification
+## 3.5 Next Step: Persistent Storage Baseline
+
+### Goal
+
+Strengthen the current write-side and read-side runtime baselines through durable persistence-backed semantics.
+
+### Why
+
+The next meaningful step after the in-memory projection baseline is not advanced runtime complexity first.
+
+It is persistent storage evolution, because restart semantics, durable replay, and persistence-backed correctness should be clarified before DLQ, buffering, watermarking, or multi-worker coordination are introduced.
+
+### Target Outcome
+
+A persistence-backed runtime baseline with:
+
+- durable event-store evolution
+- durable idempotency-store evolution
+- durable projection-state store
+- durable checkpoint store
+- replay / rebuild validation against persistence-backed state
+
+### Deliverable
+
+A storage-backed baseline that preserves the current semantic boundaries while strengthening runtime durability.
+
+---
+
+## 4. Stage 4: Add Projection / State-Level Compass Verification
 
 ### Goal
 
@@ -113,6 +193,8 @@ Move Compass beyond event admission and into runtime state verification.
 ### Why
 
 Even if every event is individually valid, the projection process can still drift or fail.
+
+That risk becomes even more important once the runtime moves beyond purely in-memory baseline behavior and into persistence-backed semantics.
 
 ### Target Outcome
 
@@ -136,7 +218,7 @@ A true runtime verification layer for state evolution.
 
 ---
 
-## 4. Stage 4: Move from Validation to Governance
+## 5. Stage 5: Move from Validation to Governance
 
 ### Goal
 
@@ -153,7 +235,7 @@ Support for advanced governance behavior:
 - auditability and recovery workflows
 
 Basic `ALLOW` / `BLOCK` enforcement belongs to the earlier validation dispatch path.  
-Stage 4 focuses on richer governance actions after validation becomes observable and policy-driven.
+Stage 5 focuses on richer governance actions after validation becomes observable and policy-driven.
 
 ### Deliverable
 
@@ -161,20 +243,28 @@ A semantic governance layer sitting above both write-side and read-side executio
 
 ---
 
-## 5. Summary of Intended Evolution
+## 6. Summary of Intended Evolution
 
 ### Stage 1
 
-Write-side Compass baseline already integrated with transactional execution and conditional admission.
+Transactional semantic core establishes the deterministic write-side baseline.
 
 ### Stage 2
 
-Projection becomes a real pipeline rather than a replay helper.
+Event truth validation integrates Compass Layer 1 into transactional execution and conditional admission.
 
 ### Stage 3
 
-Compass validates whether projected state remains semantically correct.
+Projection runtime baseline now exists as a real deterministic in-memory runtime path rather than only a replay helper.
+
+### Stage 3.5
+
+Persistent storage baseline strengthens write-side and read-side runtime durability.
 
 ### Stage 4
+
+Compass validates whether projected state remains semantically correct.
+
+### Stage 5
 
 Compass becomes a runtime governance framework rather than just a validator.

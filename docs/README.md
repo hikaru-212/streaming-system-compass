@@ -7,11 +7,12 @@ This directory contains the design documentation for **Streaming System + Compas
 The goal of this documentation set is not only to describe what the system does, but also to preserve the reasoning behind major architectural decisions, implementation sequencing, domain boundaries, module responsibilities, design philosophy, and lessons learned during development.
 
 At the current stage, the documentation no longer represents only intended architecture.
-It now also serves as the reference frame for an initial executable baseline covering:
+It now also serves as the reference frame for an executable baseline covering:
 
 - transactional write-side semantics
 - Compass Layer 1 transition-truth validation
 - write-side replay and admission boundaries
+- Stage 3 baseline projection runtime in deterministic in-memory form
 - executable failure-path tests for selected invariants and adversarial cases
 
 ---
@@ -25,15 +26,16 @@ The repository currently has an implemented baseline for:
 - request-level idempotency and replay/conflict distinction
 - optimistic admission for stale-write rejection
 - Compass Layer 1 validation before persistence
-- executable tests across unit, integration, semantic-case, and adversarial-baseline layers
+- Stage 3 baseline projection runtime with reducer / worker separation
+- in-memory projection state and checkpoint persistence boundaries
+- executable tests across unit, integration, semantic-case, adversarial-baseline, and Stage 3 projection-baseline layers
 
 The next major implementation step is:
 
-- projection runtime
-- projection state storage
-- replay / rebuild flow
-- checkpoint semantics
-- eventual state-level Compass validation
+- persistent storage baseline
+- durable write-side and read-side store evolution
+- replay / rebuild validation against persistence-backed state
+- later Stage 4 state-level Compass validation
 
 ---
 
@@ -71,8 +73,9 @@ top-level system structure
 → concurrency / retry safety
 → validation dispatch mechanism
 → Compass layer evolution
-→ projection runtime
-→ implementation sequencing
+→ projection runtime baseline
+→ persistent storage evolution
+→ state-level validation
 → boundary clarification
 → postmortem lessons
 ```
