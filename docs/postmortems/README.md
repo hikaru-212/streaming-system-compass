@@ -23,6 +23,8 @@ Postmortems help preserve:
 - debugging lessons
 - reusable design heuristics
 - explicit differences between current project scope and enterprise-style documentation expectations
+- key learning transitions between architecture stages
+- transitions where a previously "natural" guarantee turns out to require explicit design
 
 ---
 
@@ -33,6 +35,7 @@ Postmortems help preserve:
 | [function_boundary_scale_mismatch](function_boundary_scale_mismatch.md) | Explains a recurring confusion caused by reading function parameters before identifying module roles, ownership boundaries, and architectural scale. |
 | [from_projection_concerns_to_event_truth](from_projection_concerns_to_event_truth.md) | Records the design shift from focusing mainly on projection/runtime problems to treating event-source correctness and accepted-history entry as a more foundational concern. |
 | [docs_vs_enterprise_design_docs](docs_vs_enterprise_design_docs.md) | Clarifies why the current repository documents emphasize semantic completeness and boundary clarity first, rather than pretending to already be a full enterprise operational design doc. |
+| [from_in_memory_correctness_to_durable_consistency](from_in_memory_correctness_to_durable_consistency.md) | Explains why durable persistence is not just a backend replacement: once state must survive across time and restart, guarantees that felt natural in the in-memory world are no longer free. |
 
 ---
 
@@ -45,6 +48,7 @@ Use postmortems when you want to understand:
 - what design habit should be avoided
 - what reusable reading or debugging method emerged from the mistake
 - why the current repository intentionally documents some things in greater semantic depth while still deferring full enterprise-operational realism
+- how one architectural stage exposed the need for the next stage
 
 ---
 

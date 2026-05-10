@@ -48,6 +48,7 @@ Boundary notes are especially useful when asking questions such as:
 - Why does concurrency control not replace Compass validation?
 - Why does Compass validation not replace persistence admission?
 - Why is projection split into reducer and worker rather than one mixed component?
+- Why does transactional consistency not mean boundary merge?
 
 These are not merely coding-style questions.  
 They are boundary questions.
@@ -75,7 +76,7 @@ Those concerns belong elsewhere:
 
 ## Current Notes
 
-This folder currently includes notes for the most important early-stage module and cross-cutting boundaries:
+This folder currently includes notes for the most important module and cross-cutting boundaries of the project:
 
 - [Event Module Boundary](event_module.md)
 - [Proof Module Boundary](proof_module.md)
@@ -88,13 +89,18 @@ This folder currently includes notes for the most important early-stage module a
 - [Projection Runtime Boundary](projection_boundary.md)
 - [Checkpoint Module Boundary](checkpoint_module.md)
 - [Compass Layer Boundary](compass_layer_boundary.md)
+- [Persistence Boundary](persistence_boundary.md)
 
-These were prioritized because they directly affect the first implementation stages of the project.
+These were prioritized because they directly affect the main implementation stages of the project.
 
 Two projection-related notes are intentionally preserved:
 
 - **Projection Module Boundary** describes the external role of projection as a whole.
 - **Projection Runtime Boundary** describes the internal Stage 3 boundary between reducer, worker, projection store, and checkpoint store.
+
+The persistence-related note is also intentionally separate:
+
+- **Persistence Boundary** explains how durable storage should be introduced without collapsing the boundaries between event store, idempotency store, projection state, and checkpoint progress.
 
 ---
 
@@ -113,6 +119,7 @@ A practical reading order is:
 9. [Projection Runtime Boundary](projection_boundary.md)
 10. [Checkpoint Module Boundary](checkpoint_module.md)
 11. [Compass Layer Boundary](compass_layer_boundary.md)
+12. [Persistence Boundary](persistence_boundary.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -127,6 +134,7 @@ This roughly follows the intended semantic development order of the project:
 - define projection runtime internals
 - define runtime progress boundaries
 - define semantic validation layers
+- define durable-world persistence discipline
 
 ---
 
@@ -141,8 +149,10 @@ These notes should be read together with:
 - [Transactional Core](../architecture/transactional_core.md)
 - [Compass Layers](../architecture/compass_layers.md)
 - [Projection Pipeline](../architecture/projection_pipeline.md)
+- [Persistent Storage Baseline](../architecture/persistent_storage_baseline.md)
 - [Implementation Roadmap](../roadmap/implementation_roadmap.md)
 - [Concurrency Control, Idempotency, and Retry Safety](../adr/0003_concurrency_idempotency_and_retry_safety.md)
+- [Persistent Storage Baseline Strategy](../adr/0005_persistent_storage_baseline_strategy.md)
 
 A good rule of thumb is:
 
