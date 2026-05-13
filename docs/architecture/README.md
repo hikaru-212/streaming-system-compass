@@ -19,6 +19,7 @@ Use these documents to understand how the system is structured and why each subs
 | [Compass Layers](compass_layers.md) | Defines Compass as layered semantic validation and governance. |
 | [Projection Pipeline](projection_pipeline.md) | Defines the evolution from a replay helper to a Stage 3 baseline projection runtime built around reducer, worker, state persistence, and checkpoint progression. |
 | [Persistent Storage Baseline](persistent_storage_baseline.md) | Defines Stage 3.5 as the durable persistence extension of the current in-memory baseline, including write-side-first and read-side-second evolution. |
+| [Write-Side Schema Baseline](write_side_schema_baseline.md) | Defines the first durable write-side schema baseline for `events` and `idempotency_records`, including semantic fingerprint evolution and transaction grouping rationale. |
 
 ---
 
@@ -29,6 +30,7 @@ Use these documents to understand how the system is structured and why each subs
 3. [Compass Layers](compass_layers.md)
 4. [Projection Pipeline](projection_pipeline.md)
 5. [Persistent Storage Baseline](persistent_storage_baseline.md)
+6. [Write-Side Schema Baseline](write_side_schema_baseline.md)
 
 This order reflects the dependency structure of the project:
 
@@ -38,6 +40,7 @@ top-level system structure
 → write-side transition-truth validation
 → projected runtime state
 → durable persistence evolution
+→ durable write-side schema hardening
 → later state-level runtime validation
 ```
 
@@ -56,9 +59,11 @@ For example:
 - `compass_layers.md` explains what the layered Compass architecture is.
 - `projection_pipeline.md` explains how projection evolved into a Stage 3 baseline runtime path.
 - `persistent_storage_baseline.md` explains how the project should move from in-memory correctness into durable persistence-backed execution.
+- `write_side_schema_baseline.md` explains how the durable write-side schema should be shaped before implementation grows larger.
 - `adr/0003_concurrency_idempotency_and_retry_safety.md` explains a specific decision inside the transactional write-side path.
 - `adr/0004_why_compass_split_into_two_layers.md` explains why Compass evolved from a single runtime-verification idea into two layers.
 - `adr/0005_persistent_storage_baseline_strategy.md` explains why Stage 3.5 should prioritize PostgreSQL-backed durable persistence before more advanced runtime concerns.
+- `adr/0006_use_decimal_for_money_values_before_durable_persistence.md` explains why exact decimal money representation should be introduced before durable persistence grows larger.
 
 Both are important, but they answer different questions.
 

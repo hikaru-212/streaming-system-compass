@@ -25,6 +25,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0003 | [Concurrency Control, Idempotency, and Retry Safety](0003_concurrency_idempotency_and_retry_safety.md) | Proposed | Defines write-side safety under concurrency, retries, and ambiguous commits. |
 | 0004 | [Why Compass Split into Two Layers](0004_why_compass_split_into_two_layers.md) | Accepted | Records why the project evolved from a single runtime-verification idea into layered Compass validation. |
 | 0005 | [Persistent Storage Baseline Strategy](0005_persistent_storage_baseline_strategy.md) | Proposed | Defines why the next stage after the in-memory Stage 3 baseline should be a PostgreSQL-backed persistent storage baseline. |
+| 0006 | [Use Decimal for Money Values Before Durable Persistence](0006_use_decimal_for_money_values_before_durable_persistence.md) | Proposed | Defines why money-like values should move from `float` to `Decimal` before the durable write-side baseline grows larger. |
 
 ---
 
@@ -46,6 +47,7 @@ Recommended order:
 4. [ADR 0002 Evolution Note](0002_evolution_note.md) — optional supporting note that preserves how ADR 0002 evolved before reaching its current form.
 5. [Why Compass Split into Two Layers](0004_why_compass_split_into_two_layers.md) — explains why the project moved from one runtime-verification intuition to a layered Compass structure.
 6. [Persistent Storage Baseline Strategy](0005_persistent_storage_baseline_strategy.md) — explains why the next stage should prioritize durable persistence before advanced runtime complexity.
+7. [Use Decimal for Money Values Before Durable Persistence](0006_use_decimal_for_money_values_before_durable_persistence.md) — explains why exact money representation should be corrected before durable persistence expands further.
 
 ADR 0001 and ADR 0003 are closely related because both concern the transactional write-side path.
 
@@ -54,6 +56,8 @@ ADR 0002 is related to Compass runtime validation and should be read after the t
 ADR 0004 is related to the evolution from event-level validation to state-level validation.
 
 ADR 0005 is related to the transition from the current in-memory baseline into durable persistence-backed execution.
+
+ADR 0006 is related to money representation hardening before the write-side durable baseline grows larger.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -95,6 +99,7 @@ Recommended pattern:
 0003_concurrency_idempotency_and_retry_safety.md
 0004_why_compass_split_into_two_layers.md
 0005_persistent_storage_baseline_strategy.md
+0006_use_decimal_for_money_values_before_durable_persistence.md
 ```
 
 Evolution or supporting notes may be kept as separate files:
