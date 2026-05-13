@@ -205,6 +205,61 @@ It is the stage where the architecture is tested against a world in which partia
 
 ---
 
+## Why Semantic Fingerprint Becomes Necessary
+
+One important clarification emerged during this transition:
+
+the project already had idempotency reasoning in the in-memory stage.
+
+That means the logical distinction was already present:
+
+- same request + same intent → replay
+- same request + different intent → conflict
+
+So the persistence stage did **not** invent the idea of intent comparison.
+
+What changed was the environment in which that comparison had to survive.
+
+In the in-memory stage, intent comparison could remain relatively local because it still lived inside:
+
+- one running process
+- one current control flow
+- one immediate runtime context
+- one currently loaded command / state world
+
+That meant some semantic understanding could remain partly implicit.
+
+But once the system moved toward durability, that implicit context could no longer be relied on.
+
+After restart, retry, timeout, or later re-reading of stored facts, the system can no longer depend on:
+
+- the original command object
+- the original call stack
+- temporary local reasoning
+- "I know what this meant because I am still inside the same flow"
+
+That context disappears.
+
+So the system must replace implicit runtime intent with an explicit durable representation.
+
+That is why `semantic_fingerprint` becomes necessary.
+
+`semantic_fingerprint` is not the intent itself.
+
+It is the durable, stable, comparable signature of the semantic basis of that intent.
+
+In short:
+
+- in-memory idempotency can remain a runtime-local semantic check
+- durable idempotency must become a cross-time semantic identity check
+
+That is the real reason persistence makes intent handling feel heavier.
+
+The logic is not fundamentally new.
+What changed is that the same logic must now survive time, restart, and durable comparison.
+
+---
+
 ## Reusable Lesson
 
 A useful engineering rule emerged from this transition:

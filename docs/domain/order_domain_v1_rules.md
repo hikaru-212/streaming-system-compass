@@ -247,15 +247,22 @@ In v1, zero-amount orders are intentionally not modeled.
 
 ---
 
-## Rule C3.1 — Monetary values must not rely on floating-point semantics in final production design
-Money should ultimately use:
+## Rule C3.1 — Monetary values use exact decimal semantics
+Money should use:
 
 - `Decimal`
 - or smallest-unit integer representation (for example cents)
 
-Using `float` is acceptable only as a temporary simplification during the skeleton phase.
+The current project direction adopts `Decimal` as the baseline money representation, as formalized in ADR 0006.
 
-If `float` is used in v1 code, that should be treated as an explicit technical debt, not as the intended long-term semantic representation.
+This is required to preserve:
+
+- exact money semantics
+- replay trust
+- semantic fingerprint stability
+- future durable persistence correctness
+
+Earlier float-based handling should be treated only as resolved skeleton-phase technical debt, not as part of the intended domain design.
 
 ---
 
@@ -297,6 +304,8 @@ A prior accepted result may be replayed **only if** the retried request is seman
 If the same `request_id` is reused with a different payload, the system must reject the request as an idempotency conflict rather than blindly replay the prior result.
 
 This rule belongs to the orchestration / idempotency layer, not to the aggregate.
+
+In later durable implementations, this semantic identity may be represented through a stable semantic fingerprint derived from the command's semantic basis.
 
 ### Why this rule exists
 Without this rule, a malformed or tampered retry such as:
@@ -444,6 +453,8 @@ This rule belongs to the orchestration/idempotency layer.
 A prior accepted result may be replayed only if the retried request payload is semantically identical to the original request payload associated with that `request_id`.
 
 If payload differs, the request must be rejected as an idempotency conflict.
+
+In later durable implementations, this semantic identity may be represented through a stable semantic fingerprint derived from the command's semantic basis.
 
 This avoids replaying a prior result into a semantically different caller context.
 
