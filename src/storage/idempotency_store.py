@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Dict
+from decimal import Decimal
 
 from src.core.order.enums import CommandType
 from src.core.order.events import OrderEvent
@@ -20,7 +21,7 @@ class RequestSignature:
     request_id: str
     command_type: CommandType
     order_id: str
-    amount: float
+    amount: Decimal
 
 
 @dataclass(frozen=True)

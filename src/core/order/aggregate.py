@@ -1,4 +1,7 @@
 from typing import Optional
+from decimal import Decimal
+
+from src.core.common.money import ensure_positive_money
 
 from .enums import EventType, OrderStatus
 from .events import OrderEvent
@@ -40,8 +43,8 @@ class OrderAggregate:
         self.order_id = order_id
         self.current_version = 0
         self.status = OrderStatus.INIT
-        self.total_amount = 0.0
-        self.paid_amount = 0.0
+        self.total_amount = Decimal("0.00")
+        self.paid_amount = Decimal("0.00")
         self.last_event_id: Optional[str] = None
 
     @staticmethod
@@ -56,19 +59,8 @@ class OrderAggregate:
         if not request_id or not request_id.strip():
             raise ValueError("request_id must not be empty")
 
-    @staticmethod
-    def _require_positive_amount(amount: float, field_name: str = "amount") -> None:
-        """
-        Positive-money rule for the current v1 model.
 
-        Current v1 explicitly does NOT allow:
-        - zero amount
-        - negative amount
-        """
-        if amount <= 0:
-            raise ValueError(f"{field_name} must be positive")
-
-    def create(self, request_id: str, total_amount: float) -> OrderEvent:
+    def create(self, request_id: str, total_amount: Decimal) -> OrderEvent:
         """
         Command legality for create.
 
@@ -79,7 +71,7 @@ class OrderAggregate:
         - CREATED.amount defines total_amount in v1
         """
         self._require_non_empty_request_id(request_id)
-        self._require_positive_amount(total_amount, "total_amount")
+        normalized_total_amount = ensure_positive_money(total_amount)
 
         if self.status != OrderStatus.INIT:
             raise ValueError("Already created")
@@ -99,11 +91,11 @@ class OrderAggregate:
             order_id=self.order_id,
             sequence=next_version,
             event_type=EventType.CREATED,
-            amount=total_amount,
+            amount=normalized_total_amount,
             proof=proof,
         )
 
-    def pay(self, request_id: str, payment_amount: float) -> OrderEvent:
+    def pay(self, request_id: str, payment_amount: Decimal) -> OrderEvent:
         """
         Command legality for pay.
 
@@ -115,17 +107,17 @@ class OrderAggregate:
         - therefore payment_amount must equal total_amount
         """
         self._require_non_empty_request_id(request_id)
-        self._require_positive_amount(payment_amount, "payment_amount")
+        normalized_payment_amount = ensure_positive_money(payment_amount)
 
         if self.status == OrderStatus.PAID:
             raise ValueError("Order is already paid")
         elif self.status == OrderStatus.INIT:
             raise ValueError("Cannot pay before order is created")
 
-        if payment_amount != self.total_amount:
+        if normalized_payment_amount != self.total_amount:
             raise ValueError(
                 f"v1 full-payment rule violated: pay amount must equal total_amount "
-                f"(got {payment_amount}, expected {self.total_amount})"
+                f"(got {normalized_payment_amount}, expected {self.total_amount})"
             )
 
         next_version = self.current_version + 1
@@ -141,7 +133,7 @@ class OrderAggregate:
             order_id=self.order_id,
             sequence=next_version,
             event_type=EventType.PAID,
-            amount=payment_amount,
+            amount=normalized_payment_amount,
             proof=proof,
         )
 
