@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from src.storage.event_store import EventStore
@@ -36,7 +37,7 @@ class TestEventStoreAppend:
             order_id="order-123",
             sequence=2,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=1,
@@ -55,7 +56,7 @@ class TestEventStoreAppend:
             order_id="order-123",
             sequence=99,
             event_type=EventType.CREATED,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.INIT,
                 prev_version=0,

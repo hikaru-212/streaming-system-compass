@@ -50,19 +50,21 @@ def parse_money(value: MoneyInput) -> Decimal:
             "float is not allowed for money input; use Decimal, str, or int"
         )
     
-    try:
-        if isinstance(value, Decimal):
-            result = value
-        elif isinstance(value, int):
-            result = Decimal(value)
-        elif isinstance(value, str):
+    
+    if isinstance(value, Decimal):
+        result = value
+    elif isinstance(value, int):
+        result = Decimal(value)
+    elif isinstance(value, str):
+        try:
             result = Decimal(value.strip())
-        else:
-            raise MoneyValidationError(
-                f"unsupported type for money input: {type(value).__name__}"
-            )
-    except (InvalidOperation, ValueError) as exc:
-        raise MoneyValidationError(f"invalid money input: {value!r}") from exc
+        except (InvalidOperation, ValueError) as exc:
+            raise MoneyValidationError(f"invalid money input: {value!r}") from exc
+    else:
+        raise MoneyValidationError(
+            f"unsupported type for money input: {type(value).__name__}"
+        )
+
     
     if result.is_nan():
         raise MoneyValidationError("NaN is not a valid money value")

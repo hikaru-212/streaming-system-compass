@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from src.compass.transition.validators import FullProofValidator, NoOpValidator
@@ -71,7 +72,7 @@ class TestFullProofValidatorFailures:
             order_id="order-123",
             sequence=99,
             event_type=EventType.CREATED,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.INIT,
                 prev_version=0,
@@ -98,7 +99,7 @@ class TestFullProofValidatorFailures:
             order_id="order-123",
             sequence=2,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=1,
@@ -125,7 +126,7 @@ class TestFullProofValidatorFailures:
             order_id="order-123",
             sequence=2,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=999,
@@ -152,7 +153,7 @@ class TestFullProofValidatorFailures:
             order_id="order-123",
             sequence=1,
             event_type=EventType.CREATED,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,   # 故意錯
                 prev_version=0,
@@ -179,7 +180,7 @@ class TestFullProofValidatorFailures:
             order_id="order-123",
             sequence=2,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.INIT,   # 故意錯
                 prev_version=1,
@@ -206,7 +207,7 @@ class TestFullProofValidatorFailures:
             order_id="order-123",
             sequence=1,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=0,
