@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.core.order.aggregate import OrderAggregate
 from src.pipeline.transactional.registry import OrderRegistry
 from src.pipeline.transactional.admission import OptimisticVersionGate
@@ -45,8 +47,8 @@ class TestTransactionFlowCreatePay:
     def test_create_then_pay_end_to_end(self):
         registry = build_registry()
 
-        created = registry.handle_create("create-001", "order-123", 100.0)
-        paid = registry.handle_pay("pay-001", "order-123", 100.0)
+        created = registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        paid = registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         assert created.sequence == 1
         assert paid.sequence == 2
@@ -59,8 +61,8 @@ class TestTransactionFlowCreatePay:
     def test_replay_history_reconstructs_final_state(self):
         registry = build_registry()
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        registry.handle_pay("pay-001", "order-123", 100.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         history = registry.store.load("order-123")
 
@@ -69,15 +71,15 @@ class TestTransactionFlowCreatePay:
             aggregate.apply(event)
 
         assert aggregate.status == OrderStatus.PAID
-        assert aggregate.total_amount == 100.0
-        assert aggregate.paid_amount == 100.0
+        assert aggregate.total_amount == Decimal("100.00")
+        assert aggregate.paid_amount == Decimal("100.00")
         assert aggregate.current_version == 2
 
     def test_store_last_event_matches_paid_event(self):
         registry = build_registry()
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        paid = registry.handle_pay("pay-001", "order-123", 100.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        paid = registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         last = registry.store.last_event("order-123")
 

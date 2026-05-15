@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.compass.transition.validators import FullProofValidator
 from src.compass.transition.types import ValidationContext, ValidationVerdict
 from src.core.order.enums import EventType, OrderStatus
@@ -18,7 +20,7 @@ class TestPrevVersionMismatchCases:
             order_id="order-123",
             sequence=2,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=999,  # deliberate mismatch
@@ -50,7 +52,7 @@ class TestPrevVersionMismatchCases:
             order_id="order-123",
             sequence=1,
             event_type=EventType.CREATED,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.INIT,
                 prev_version=5,   # deliberate mismatch

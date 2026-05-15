@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from src.core.order.enums import EventType, OrderStatus
@@ -15,7 +16,7 @@ def make_event(
     order_id: str,
     sequence: int,
     event_type: EventType,
-    amount: float,
+    amount: Decimal,
 ) -> OrderEvent:
     # Projection should not depend on proof internals,
     # but accepted write-side events still carry proof in the current core model.
@@ -38,8 +39,8 @@ def test_build_empty_projection_state():
 
     assert state.order_id == "order-123"
     assert state.status == OrderStatus.INIT
-    assert state.total_amount == 0.0
-    assert state.paid_amount == 0.0
+    assert state.total_amount == Decimal("0.00")
+    assert state.paid_amount == Decimal("0.00")
     assert state.version == 0
 
 
@@ -50,14 +51,14 @@ def test_reduce_created_from_init():
         order_id="order-123",
         sequence=1,
         event_type=EventType.CREATED,
-        amount=100.0,
+        amount=Decimal("100.00"),
     )
 
     next_state = reduce_order_event(state, event)
 
     assert next_state.status == OrderStatus.CREATED
-    assert next_state.total_amount == 100.0
-    assert next_state.paid_amount == 0.0
+    assert next_state.total_amount == Decimal("100.00")
+    assert next_state.paid_amount == Decimal("0.00")
     assert next_state.version == 1
 
 
@@ -69,7 +70,7 @@ def test_reduce_paid_from_created():
             order_id="order-123",
             sequence=1,
             event_type=EventType.CREATED,
-            amount=100.0,
+            amount=Decimal("100.00"),
         ),
     )
 
@@ -78,14 +79,14 @@ def test_reduce_paid_from_created():
         order_id="order-123",
         sequence=2,
         event_type=EventType.PAID,
-        amount=100.0,
+        amount=Decimal("100.00"),
     )
 
     next_state = reduce_order_event(created_state, paid_event)
 
     assert next_state.status == OrderStatus.PAID
-    assert next_state.total_amount == 100.0
-    assert next_state.paid_amount == 100.0
+    assert next_state.total_amount == Decimal("100.00")
+    assert next_state.paid_amount == Decimal("100.00")
     assert next_state.version == 2
 
 
@@ -96,7 +97,7 @@ def test_reduce_raises_on_order_id_mismatch():
         order_id="order-999",
         sequence=1,
         event_type=EventType.CREATED,
-        amount=100.0,
+        amount=Decimal("100.00"),
     )
 
     with pytest.raises(ValueError, match="order_id mismatch"):
@@ -110,7 +111,7 @@ def test_reduce_raises_on_sequence_gap():
         order_id="order-123",
         sequence=2,
         event_type=EventType.CREATED,
-        amount=100.0,
+        amount=Decimal("100.00"),
     )
 
     with pytest.raises(ValueError, match="sequence violation"):
@@ -125,7 +126,7 @@ def test_reduce_raises_on_invalid_paid_amount():
             order_id="order-123",
             sequence=1,
             event_type=EventType.CREATED,
-            amount=100.0,
+            amount=Decimal("100.00"),
         ),
     )
 
@@ -134,7 +135,7 @@ def test_reduce_raises_on_invalid_paid_amount():
         order_id="order-123",
         sequence=2,
         event_type=EventType.PAID,
-        amount=50.0,
+        amount=Decimal("50.00"),
     )
 
     with pytest.raises(ValueError, match="amount mismatch"):

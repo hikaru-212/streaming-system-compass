@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.core.order.aggregate import OrderAggregate
 from src.core.order.enums import EventType, OrderStatus
 from src.core.order.events import OrderEvent
@@ -12,7 +14,7 @@ class TestBrokenContinuityHistories:
             order_id="order-123",
             sequence=3,  # gap: missing sequence 2
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=1,
@@ -37,7 +39,7 @@ class TestBrokenContinuityHistories:
             order_id="order-123",
             sequence=3,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=1,

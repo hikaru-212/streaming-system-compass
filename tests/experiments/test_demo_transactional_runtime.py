@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.pipeline.transactional.registry import OrderRegistry
 
 
@@ -14,8 +16,8 @@ def test_demo_registry_can_run_create_and_pay_flow():
 
     registry = build_demo_registry()
 
-    created = registry.handle_create("create-001", "order-123", 100.0)
-    paid = registry.handle_pay("pay-001", "order-123", 100.0)
+    created = registry.handle_create("create-001", "order-123", Decimal("100.00"))
+    paid = registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
     assert created.sequence == 1
     assert paid.sequence == 2
@@ -31,8 +33,8 @@ def test_demo_registry_create_retry_replays_prior_event():
 
     registry = build_demo_registry()
 
-    first = registry.handle_create("create-001", "order-123", 100.0)
-    second = registry.handle_create("create-001", "order-123", 100.0)
+    first = registry.handle_create("create-001", "order-123", Decimal("100.00"))
+    second = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
     assert second == first
 

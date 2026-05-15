@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.core.order.aggregate import OrderAggregate
 from src.core.order.state import OrderState
 from src.core.order.enums import OrderStatus
@@ -47,8 +49,8 @@ class TestReplayConsistency:
     def test_replayed_aggregate_matches_reducer_snapshot(self):
         registry = build_registry()
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        registry.handle_pay("pay-001", "order-123", 100.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         history = registry.store.load("order-123")
 
@@ -77,8 +79,8 @@ class TestReplayConsistency:
         snapshot = OrderState(
             order_id="order-123",
             status=OrderStatus.CREATED,
-            total_amount=100.0,
-            paid_amount=0.0,
+            total_amount=Decimal("100.00"),
+            paid_amount=Decimal("0.00"),
             version=1,
         )
 

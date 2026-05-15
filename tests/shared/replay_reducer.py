@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Iterable
 
 from src.core.order.enums import OrderStatus
@@ -21,8 +22,8 @@ def reduce_history_to_state(history: Iterable[OrderEvent]) -> OrderState:
     current_state = OrderState(
         order_id="unknown",
         status=OrderStatus.INIT,
-        total_amount=0.0,
-        paid_amount=0.0,
+        total_amount=Decimal("0.00"),
+        paid_amount=Decimal("0.00"),
         version=0,
     )
 
@@ -39,7 +40,7 @@ def reduce_history_to_state(history: Iterable[OrderEvent]) -> OrderState:
                 order_id=event.order_id,
                 status=OrderStatus.CREATED,
                 total_amount=event.amount,
-                paid_amount=0.0,
+                paid_amount=Decimal("0.00"),
                 version=event.sequence,
             )
         elif event.event_type.value == "paid":
