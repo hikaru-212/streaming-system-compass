@@ -14,7 +14,10 @@ from src.compass.transition.runtime import (
     ValidationRuntime,
 )
 from src.compass.transition.types import ValidationMode
-from tests.shared.replay_reducer import reduce_history_to_state
+from src.pipeline.projection.reducer import (
+    build_empty_projection_state,
+    reduce_order_event,
+)
 
 
 def build_registry() -> OrderRegistry:
@@ -58,7 +61,9 @@ class TestReplayConsistency:
         for event in history:
             aggregate.apply(event)
 
-        snapshot = reduce_history_to_state(history)
+        snapshot = build_empty_projection_state("order-123")
+        for event in history:
+            snapshot = reduce_order_event(snapshot, event)
 
         assert snapshot.order_id == aggregate.order_id
         assert snapshot.status == aggregate.status
@@ -70,10 +75,12 @@ class TestReplayConsistency:
         broken_history = [paid_event]  # sequence=2 directly, deliberately broken
 
         try:
-            reduce_history_to_state(broken_history)
+            snapshot = build_empty_projection_state("order-123")
+            for event in broken_history:
+                snapshot = reduce_order_event(snapshot, event)
             assert False, "Expected ValueError for broken replay sequence"
         except ValueError as exc:
-            assert "Broken sequence" in str(exc)
+            assert "sequence violation" in str(exc)
 
     def test_order_state_snapshot_is_immutable(self):
         snapshot = OrderState(

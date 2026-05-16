@@ -4,7 +4,10 @@ from src.core.order.aggregate import OrderAggregate
 from src.core.order.enums import EventType, OrderStatus
 from src.core.order.events import OrderEvent
 from src.core.order.proofs import Proof
-from tests.shared.replay_reducer import reduce_history_to_state
+from src.pipeline.projection.reducer import (
+    build_empty_projection_state,
+    reduce_order_event,
+)
 
 
 class TestBrokenContinuityHistories:
@@ -50,7 +53,9 @@ class TestBrokenContinuityHistories:
         history = [created_event, gap_event]
 
         try:
-            reduce_history_to_state(history)
+            state = build_empty_projection_state("order-123")
+            for event in history:
+                state = reduce_order_event(state, event)
             assert False, "Expected replay reduction with sequence gap to fail"
         except ValueError as exc:
-            assert "Broken sequence" in str(exc)
+            assert "sequence violation" in str(exc)
