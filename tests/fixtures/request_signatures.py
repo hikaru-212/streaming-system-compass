@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from src.core.order.enums import CommandType
@@ -7,7 +8,7 @@ from src.storage.idempotency_store import RequestSignature
 def build_create_signature(
     request_id: str = "create-001",
     order_id: str = "order-123",
-    amount: float = 100.0,
+    amount: Decimal = Decimal("100.00"),
 ) -> RequestSignature:
     return RequestSignature(
         request_id=request_id,
@@ -20,7 +21,7 @@ def build_create_signature(
 def build_pay_signature(
     request_id: str = "pay-001",
     order_id: str = "order-123",
-    amount: float = 100.0,
+    amount: Decimal = Decimal("100.00"),
 ) -> RequestSignature:
     return RequestSignature(
         request_id=request_id,

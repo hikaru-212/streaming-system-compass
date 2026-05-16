@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from decimal import Decimal
 
 from .enums import OrderStatus
 
@@ -21,6 +22,6 @@ class OrderState:
     """
     order_id: str
     status: OrderStatus
-    total_amount: float
-    paid_amount: float
+    total_amount: Decimal
+    paid_amount: Decimal
     version: int

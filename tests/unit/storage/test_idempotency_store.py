@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.storage.idempotency_store import (
     IdempotencyProvider,
     IdempotencyVerdict,
@@ -14,7 +16,7 @@ class TestIdempotencyProvider:
             request_id="create-001",
             command_type=CommandType.CREATE,
             order_id="order-123",
-            amount=100.0,
+            amount=Decimal("100.00"),
         )
 
         decision = provider.check(signature)
@@ -29,7 +31,7 @@ class TestIdempotencyProvider:
             request_id="create-001",
             command_type=CommandType.CREATE,
             order_id="order-123",
-            amount=100.0,
+            amount=Decimal("100.00"),
         )
         provider.record(signature, created_event)
 
@@ -47,7 +49,7 @@ class TestIdempotencyProvider:
             request_id="pay-001",
             command_type=CommandType.PAY,
             order_id="order-123",
-            amount=100.0,
+            amount=Decimal("100.00"),
         )
         provider.record(original, created_event)
 
@@ -55,7 +57,7 @@ class TestIdempotencyProvider:
             request_id="pay-001",
             command_type=CommandType.PAY,
             order_id="order-123",
-            amount=10.0,
+            amount=Decimal("10.00"),
         )
 
         decision = provider.check(changed)
@@ -71,7 +73,7 @@ class TestIdempotencyProvider:
             request_id="pay-001",
             command_type=CommandType.PAY,
             order_id="order-123",
-            amount=100.0,
+            amount=Decimal("100.00"),
         )
         provider.record(original, created_event)
 
@@ -79,7 +81,7 @@ class TestIdempotencyProvider:
             request_id="pay-001",
             command_type=CommandType.PAY,
             order_id="order-999",
-            amount=100.0,
+            amount=Decimal("100.00"),
         )
 
         decision = provider.check(changed)
@@ -93,7 +95,7 @@ class TestIdempotencyProvider:
             request_id="same-001",
             command_type=CommandType.CREATE,
             order_id="order-123",
-            amount=100.0,
+            amount=Decimal("100.00"),
         )
         provider.record(original, created_event)
 
@@ -101,7 +103,7 @@ class TestIdempotencyProvider:
             request_id="same-001",
             command_type=CommandType.PAY,
             order_id="order-123",
-            amount=100.0,
+            amount=Decimal("100.00"),
         )
 
         decision = provider.check(changed)

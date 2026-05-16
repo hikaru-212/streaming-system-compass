@@ -1,4 +1,5 @@
 from __future__ import annotations
+from decimal import Decimal
 
 from src.core.order.enums import EventType, OrderStatus
 from src.core.order.events import OrderEvent
@@ -16,8 +17,8 @@ def build_empty_projection_state(order_id: str) -> OrderState:
     return OrderState(
         order_id=order_id,
         status=OrderStatus.INIT,
-        total_amount=0.0,
-        paid_amount=0.0,
+        total_amount=Decimal("0.00"),
+        paid_amount=Decimal("0.00"),
         version=0,
     )
 
@@ -69,7 +70,7 @@ def reduce_order_event(current_state: OrderState, event: OrderEvent) -> OrderSta
             order_id=current_state.order_id,
             status=OrderStatus.CREATED,
             total_amount=event.amount,
-            paid_amount=0.0,
+            paid_amount=Decimal("0.00"),
             version=event.sequence,
         )
 

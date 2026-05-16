@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.core.order.enums import EventType, OrderStatus, CommandType
 from src.core.order.events import OrderEvent
 from src.core.order.proofs import Proof
@@ -50,7 +52,7 @@ class TestRegistryWithCompass:
     def test_valid_create_still_passes_with_real_compass(self):
         registry = build_registry_with_real_compass()
 
-        result = registry.handle_create("create-001", "order-123", 100.0)
+        result = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         assert result.sequence == 1
         history = registry.store.load("order-123")
@@ -60,8 +62,8 @@ class TestRegistryWithCompass:
     def test_valid_pay_still_passes_with_real_compass(self):
         registry = build_registry_with_real_compass()
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        result = registry.handle_pay("pay-001", "order-123", 100.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        result = registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         assert result.sequence == 2
         history = registry.store.load("order-123")
@@ -71,7 +73,7 @@ class TestRegistryWithCompass:
     def test_compass_blocks_candidate_with_wrong_prev_event_id(self):
         registry = build_registry_with_real_compass()
 
-        created = registry.handle_create("create-001", "order-123", 100.0)
+        created = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         aggregate, history = registry._rehydrate_aggregate("order-123")
         actual_prev_event = history[-1]
@@ -82,7 +84,7 @@ class TestRegistryWithCompass:
             order_id="order-123",
             sequence=2,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=1,
@@ -103,7 +105,7 @@ class TestRegistryWithCompass:
     def test_compass_blocks_candidate_with_wrong_prev_version(self):
         registry = build_registry_with_real_compass()
 
-        created = registry.handle_create("create-001", "order-123", 100.0)
+        created = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         aggregate, history = registry._rehydrate_aggregate("order-123")
         actual_prev_event = history[-1]
@@ -114,7 +116,7 @@ class TestRegistryWithCompass:
             order_id="order-123",
             sequence=2,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=999,   # 故意錯
@@ -135,7 +137,7 @@ class TestRegistryWithCompass:
     def test_compass_blocks_candidate_with_wrong_prev_status_claim(self):
         registry = build_registry_with_real_compass()
 
-        created = registry.handle_create("create-001", "order-123", 100.0)
+        created = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         aggregate, history = registry._rehydrate_aggregate("order-123")
         actual_prev_event = history[-1]
@@ -146,7 +148,7 @@ class TestRegistryWithCompass:
             order_id="order-123",
             sequence=2,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.INIT,   # 故意錯
                 prev_version=1,
@@ -174,7 +176,7 @@ class TestRegistryWithCompass:
         """
         registry = build_registry_with_real_compass()
 
-        created = registry.handle_create("create-001", "order-123", 100.0)
+        created = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         aggregate, history = registry._rehydrate_aggregate("order-123")
         actual_prev_event = history[-1]
@@ -185,7 +187,7 @@ class TestRegistryWithCompass:
             order_id="order-123",
             sequence=99,   # 故意 stale / broken sequence
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.CREATED,
                 prev_version=1,
@@ -211,7 +213,7 @@ class TestRegistryWithCompass:
         """
         registry = build_registry_with_real_compass()
 
-        created = registry.handle_create("create-001", "order-123", 100.0)
+        created = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         aggregate, history = registry._rehydrate_aggregate("order-123")
         actual_prev_event = history[-1]
@@ -222,7 +224,7 @@ class TestRegistryWithCompass:
             order_id="order-123",
             sequence=2,
             event_type=EventType.PAID,
-            amount=100.0,
+            amount=Decimal("100.00"),
             proof=Proof(
                 prev_status=OrderStatus.INIT,   # 故意錯
                 prev_version=1,
@@ -239,7 +241,7 @@ class TestRegistryWithCompass:
                 request_id="pay-001",
                 command_type=CommandType.PAY,
                 order_id="order-123",
-                amount=100.0,
+                amount=Decimal("100.00"),
             )
         )
         assert idem_decision.verdict == IdempotencyVerdict.MISS

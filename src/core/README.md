@@ -26,7 +26,7 @@ This layer exists so that the rest of the system can depend on stable semantic m
 
 ```text
 src/core/
-├── common/   # shared semantic types or helpers used across domain modules
+├── common/   # shared semantic primitives such as exact money handling
 └── order/    # order-domain semantic core
 ```
 
@@ -34,7 +34,7 @@ src/core/
 
 ## Directory Guide
 
-### `common/`
+### [common/](common/)
 
 Shared semantic building blocks.
 
@@ -45,7 +45,8 @@ This area is appropriate for items that are:
 - still part of semantic meaning rather than infrastructure detail
 
 At the current stage, this area remains intentionally small.
-It should grow only when genuinely shared semantic building blocks emerge.
+
+The first concrete example is `money.py`, which provides exact decimal money parsing, normalization, and durable string conversion for the current v1 domain.
 
 This layer should remain small and disciplined.
 It should not become a dumping ground for generic helpers.

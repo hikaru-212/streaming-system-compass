@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from src.compass.transition.types import (
@@ -79,8 +80,8 @@ class TestRegistryHelpers:
 
         assert len(history) == 2
         assert aggregate.status.name == "PAID"
-        assert aggregate.total_amount == 100.0
-        assert aggregate.paid_amount == 100.0
+        assert aggregate.total_amount == Decimal("100.00")
+        assert aggregate.paid_amount == Decimal("100.00")
         assert aggregate.current_version == 2
 
     def test_build_validation_context_uses_rehydrated_aggregate_state(self, empty_store, created_event):
@@ -116,12 +117,12 @@ class TestHandleCreate:
             gate=OptimisticVersionGate(empty_store),
         )
 
-        result = registry.handle_create("create-001", "order-123", 100.0)
+        result = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         assert result.request_id == "create-001"
         assert result.order_id == "order-123"
         assert result.sequence == 1
-        assert result.amount == 100.0
+        assert result.amount == Decimal("100.00")
 
         history = empty_store.load("order-123")
         assert len(history) == 1
@@ -141,8 +142,8 @@ class TestHandleCreate:
             gate=OptimisticVersionGate(empty_store),
         )
 
-        first = registry.handle_create("create-001", "order-123", 100.0)
-        second = registry.handle_create("create-001", "order-123", 100.0)
+        first = registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        second = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         assert second == first
         history = empty_store.load("order-123")
@@ -162,8 +163,8 @@ class TestHandleCreate:
             gate=OptimisticVersionGate(empty_store),
         )
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        conflict = registry.handle_create("create-001", "order-123", 10.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        conflict = registry.handle_create("create-001", "order-123", Decimal("10.00"))
 
         assert conflict.verdict == IdempotencyVerdict.CONFLICT
         history = empty_store.load("order-123")
@@ -183,7 +184,7 @@ class TestHandleCreate:
             gate=OptimisticVersionGate(empty_store),
         )
 
-        result = registry.handle_create("create-001", "order-123", 100.0)
+        result = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         assert result.action == EnforcementAction.BLOCK
         assert empty_store.load("order-123") == []
@@ -204,7 +205,7 @@ class TestHandleCreate:
             gate=FakeGateReject(),
         )
 
-        result = registry.handle_create("create-001", "order-123", 100.0)
+        result = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         assert result.verdict == AdmissionVerdict.REJECTED
         assert empty_store.load("order-123") == []
@@ -214,7 +215,7 @@ class TestHandleCreate:
                 request_id="create-001",
                 command_type=CommandType.CREATE,
                 order_id="order-123",
-                amount=100.0,
+                amount=Decimal("100.00"),
             )
         )
         assert decision.verdict == IdempotencyVerdict.MISS
@@ -231,12 +232,12 @@ class TestHandlePay:
             gate=OptimisticVersionGate(empty_store),
         )
 
-        created = registry.handle_create("create-001", "order-123", 100.0)
-        paid = registry.handle_pay("pay-001", "order-123", 100.0)
+        created = registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        paid = registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         assert created.sequence == 1
         assert paid.sequence == 2
-        assert paid.amount == 100.0
+        assert paid.amount == Decimal("100.00")
 
         history = empty_store.load("order-123")
         assert len(history) == 2
@@ -256,9 +257,9 @@ class TestHandlePay:
             gate=OptimisticVersionGate(empty_store),
         )
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        first = registry.handle_pay("pay-001", "order-123", 100.0)
-        second = registry.handle_pay("pay-001", "order-123", 100.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        first = registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
+        second = registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         assert second == first
         history = empty_store.load("order-123")
@@ -278,10 +279,10 @@ class TestHandlePay:
             gate=OptimisticVersionGate(empty_store),
         )
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        registry.handle_pay("pay-001", "order-123", 100.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
-        conflict = registry.handle_pay("pay-001", "order-123", 10.0)
+        conflict = registry.handle_pay("pay-001", "order-123", Decimal("10.00"))
 
         assert conflict.verdict == IdempotencyVerdict.CONFLICT
 
@@ -299,8 +300,8 @@ class TestHandlePay:
             gate=OptimisticVersionGate(empty_store),
         )
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        registry.handle_pay("pay-001", "order-123", 100.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         with pytest.raises(ValueError, match="Order is already paid"):
-            registry.handle_pay("pay-002", "order-123", 100.0)
+            registry.handle_pay("pay-002", "order-123", Decimal("100.00"))

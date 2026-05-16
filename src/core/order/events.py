@@ -1,6 +1,10 @@
 from dataclasses import dataclass
+from decimal import Decimal
 import time
 import uuid
+
+
+from src.core.common.money import normalize_money
 
 from .enums import EventType
 from .proofs import Proof
@@ -27,7 +31,7 @@ class OrderEvent:
     order_id: str
     sequence: int
     event_type: EventType
-    amount: float
+    amount: Decimal
     occurred_at_ms: int
     proof: Proof
 
@@ -37,7 +41,7 @@ class OrderEvent:
         order_id: str,
         sequence: int,
         event_type: EventType,
-        amount: float,
+        amount: Decimal,
         proof: Proof,
     ) -> "OrderEvent":
         """
@@ -47,10 +51,6 @@ class OrderEvent:
         - event creation should stay a materialization step
         - business legality should remain in aggregate methods
         - sequence truth should not be decided by external callers
-
-        Technical debt note:
-        - amount currently uses float only as a skeleton-phase simplification
-        - money should eventually use Decimal or smallest-unit integers
         """
         return OrderEvent(
             event_id=uuid.uuid4().hex,
@@ -58,7 +58,7 @@ class OrderEvent:
             order_id=order_id,
             sequence=sequence,
             event_type=event_type,
-            amount=amount,
+            amount=normalize_money(amount),
             occurred_at_ms=int(time.time() * 1000),
             proof=proof,
         )

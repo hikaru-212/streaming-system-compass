@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from src.core.order.enums import EventType, OrderStatus
@@ -18,7 +19,7 @@ def make_event(
     order_id: str,
     sequence: int,
     event_type: EventType,
-    amount: float,
+    amount: Decimal,
     prev_status: OrderStatus,
     prev_version: int,
 ) -> OrderEvent:
@@ -55,7 +56,7 @@ def test_worker_applies_created_event_and_advances_checkpoint():
         order_id="order-123",
         sequence=1,
         event_type=EventType.CREATED,
-        amount=100.0,
+        amount=Decimal("100.00"),
         prev_status=OrderStatus.INIT,
         prev_version=0,
     )
@@ -79,7 +80,7 @@ def test_worker_skips_already_consumed_offset():
         order_id="order-123",
         sequence=1,
         event_type=EventType.CREATED,
-        amount=100.0,
+        amount=Decimal("100.00"),
         prev_status=OrderStatus.INIT,
         prev_version=0,
     )
@@ -100,7 +101,7 @@ def test_worker_skips_already_projected_sequence_but_advances_offset():
         order_id="order-123",
         sequence=1,
         event_type=EventType.CREATED,
-        amount=100.0,
+        amount=Decimal("100.00"),
         prev_status=OrderStatus.INIT,
         prev_version=0,
     )
@@ -111,7 +112,7 @@ def test_worker_skips_already_projected_sequence_but_advances_offset():
         order_id="order-123",
         sequence=1,
         event_type=EventType.CREATED,
-        amount=100.0,
+        amount=Decimal("100.00"),
         prev_status=OrderStatus.INIT,
         prev_version=0,
     )
@@ -131,7 +132,7 @@ def test_worker_raises_on_future_sequence_gap():
         order_id="order-123",
         sequence=2,
         event_type=EventType.CREATED,
-        amount=100.0,
+        amount=Decimal("100.00"),
         prev_status=OrderStatus.INIT,
         prev_version=0,
     )
@@ -148,7 +149,7 @@ def test_worker_replay_uses_same_runtime_path():
         order_id="order-123",
         sequence=1,
         event_type=EventType.CREATED,
-        amount=100.0,
+        amount=Decimal("100.00"),
         prev_status=OrderStatus.INIT,
         prev_version=0,
     )
@@ -157,7 +158,7 @@ def test_worker_replay_uses_same_runtime_path():
         order_id="order-123",
         sequence=2,
         event_type=EventType.PAID,
-        amount=100.0,
+        amount=Decimal("100.00"),
         prev_status=OrderStatus.CREATED,
         prev_version=1,
     )

@@ -1,4 +1,5 @@
 from typing import Optional, Tuple, List
+from decimal import Decimal
 
 from src.core.order.aggregate import OrderAggregate
 from src.core.order.enums import CommandType, EventType, OrderStatus
@@ -109,7 +110,7 @@ class OrderRegistry:
 
         return None
 
-    def handle_create(self, request_id: str, order_id: str, amount: float):
+    def handle_create(self, request_id: str, order_id: str, amount: Decimal):
         """
         End-to-end write-side flow for create command.
 
@@ -154,7 +155,7 @@ class OrderRegistry:
 
         return new_event
 
-    def handle_pay(self, request_id: str, order_id: str, amount: float):
+    def handle_pay(self, request_id: str, order_id: str, amount: Decimal):
         """
         End-to-end write-side flow for pay command.
         """

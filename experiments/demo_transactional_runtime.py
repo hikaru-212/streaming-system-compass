@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.bootstrap.build_transactional_runtime import build_transactional_runtime
 
 
@@ -19,16 +21,16 @@ def main() -> None:
     registry = build_demo_registry()
 
     print("---- create ----")
-    print(registry.handle_create("create-001", "order-123", 100.0))
+    print(registry.handle_create("create-001", "order-123", Decimal("100.00")))
 
     print("---- pay ----")
-    print(registry.handle_pay("pay-001", "order-123", 100.0))
+    print(registry.handle_pay("pay-001", "order-123", Decimal("100.00")))
 
     print("---- retry same pay request ----")
-    print(registry.handle_pay("pay-001", "order-123", 100.0))
+    print(registry.handle_pay("pay-001", "order-123", Decimal("100.00")))
 
     print("---- same request_id, different payload -> conflict ----")
-    print(registry.handle_pay("pay-001", "order-123", 10.0))
+    print(registry.handle_pay("pay-001", "order-123", Decimal("10.00")))
 
 
 if __name__ == "__main__":

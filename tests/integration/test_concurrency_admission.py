@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from src.pipeline.transactional.registry import OrderRegistry
 from src.pipeline.transactional.admission import OptimisticVersionGate, AdmissionVerdict
 from src.storage.event_store import EventStore
@@ -45,17 +47,17 @@ class TestConcurrencyAdmission:
         registry = build_registry()
 
         # establish version=1 baseline
-        registry.handle_create("create-001", "order-123", 100.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         # worker A reads version=1
         agg_a, history_a = registry._rehydrate_aggregate("order-123")
         context_a = registry._build_validation_context(agg_a, history_a[-1])
-        event_a = agg_a.pay("pay-worker-a", 100.0)
+        event_a = agg_a.pay("pay-worker-a", Decimal("100.00"))
 
         # worker B reads the same version=1 before A commits
         agg_b, history_b = registry._rehydrate_aggregate("order-123")
         context_b = registry._build_validation_context(agg_b, history_b[-1])
-        event_b = agg_b.pay("pay-worker-b", 100.0)
+        event_b = agg_b.pay("pay-worker-b", Decimal("100.00"))
 
         # semantic truth still passes for both candidates against their local read context
         decision_a = registry.validation_runtime.decide(event_a, context_a)
@@ -85,7 +87,7 @@ class TestConcurrencyAdmission:
                 request_id="pay-worker-b",
                 command_type=CommandType.PAY,
                 order_id="order-123",
-                amount=100.0,
+                amount=Decimal("100.00"),
             )
         )
         assert idem_decision.verdict == IdempotencyVerdict.MISS

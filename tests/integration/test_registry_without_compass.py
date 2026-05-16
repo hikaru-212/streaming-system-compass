@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from src.pipeline.transactional.registry import OrderRegistry
@@ -45,8 +46,8 @@ class TestRegistryWithoutCompass:
     def test_create_and_pay_still_run_without_compass(self):
         registry = build_registry_without_compass()
 
-        created = registry.handle_create("create-001", "order-123", 100.0)
-        paid = registry.handle_pay("pay-001", "order-123", 100.0)
+        created = registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        paid = registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         assert created.sequence == 1
         assert paid.sequence == 2
@@ -57,8 +58,8 @@ class TestRegistryWithoutCompass:
     def test_idempotency_replay_still_works_without_compass(self):
         registry = build_registry_without_compass()
 
-        first = registry.handle_create("create-001", "order-123", 100.0)
-        second = registry.handle_create("create-001", "order-123", 100.0)
+        first = registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        second = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
         assert second == first
         history = registry.store.load("order-123")
@@ -67,8 +68,8 @@ class TestRegistryWithoutCompass:
     def test_payload_conflict_still_works_without_compass(self):
         registry = build_registry_without_compass()
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        conflict = registry.handle_create("create-001", "order-123", 10.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        conflict = registry.handle_create("create-001", "order-123", Decimal("10.00"))
 
         assert hasattr(conflict, "verdict")
         assert conflict.verdict.value == "conflict"
@@ -85,8 +86,8 @@ class TestRegistryWithoutCompass:
         """
         registry = build_registry_without_compass()
 
-        registry.handle_create("create-001", "order-123", 100.0)
-        registry.handle_pay("pay-001", "order-123", 100.0)
+        registry.handle_create("create-001", "order-123", Decimal("100.00"))
+        registry.handle_pay("pay-001", "order-123", Decimal("100.00"))
 
         with pytest.raises(ValueError, match="Order is already paid"):
-            registry.handle_pay("pay-002", "order-123", 100.0)
+            registry.handle_pay("pay-002", "order-123", Decimal("100.00"))

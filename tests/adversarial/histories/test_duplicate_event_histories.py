@@ -1,6 +1,8 @@
 from src.core.order.aggregate import OrderAggregate
-from tests.shared.replay_reducer import reduce_history_to_state
-
+from src.pipeline.projection.reducer import (
+    build_empty_projection_state,
+    reduce_order_event,
+)
 
 class TestDuplicateEventHistories:
     def test_aggregate_replay_fails_on_duplicate_created_event(self, created_event):
@@ -19,7 +21,9 @@ class TestDuplicateEventHistories:
         history = [created_event, created_event]
 
         try:
-            reduce_history_to_state(history)
+            state = build_empty_projection_state("order-123")
+            for event in history:
+                state = reduce_order_event(state, event)
             assert False, "Expected duplicate event replay reduction to fail"
         except ValueError as exc:
-            assert "Broken sequence" in str(exc)
+            assert "sequence violation" in str(exc)

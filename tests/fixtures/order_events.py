@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 
 from src.core.order.enums import EventType, OrderStatus
@@ -8,7 +9,7 @@ from src.core.order.proofs import Proof
 def build_created_event(
     request_id: str = "create-001",
     order_id: str = "order-123",
-    amount: float = 100.0,
+    amount: Decimal = Decimal("100.00"),
 ) -> OrderEvent:
     return OrderEvent.create(
         request_id=request_id,
@@ -27,7 +28,7 @@ def build_created_event(
 def build_paid_event(
     created_event: OrderEvent,
     request_id: str = "pay-001",
-    amount: float = 100.0,
+    amount: Decimal = Decimal("100.00"),
 ) -> OrderEvent:
     return OrderEvent.create(
         request_id=request_id,
