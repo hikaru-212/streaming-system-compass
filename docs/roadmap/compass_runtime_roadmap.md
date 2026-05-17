@@ -4,7 +4,11 @@
 
 ## 0. Current Position
 
-The project now has an implemented write-side baseline and a minimal Stage 3 read-side projection baseline.
+The project now has:
+
+- an implemented write-side baseline
+- a minimal Stage 3 read-side projection baseline
+- a completed Stage 3.5A exact-money hardening step before durable persistence
 
 ### Transactional Baseline Already Integrated
 
@@ -36,6 +40,17 @@ The current read-side baseline now includes:
 This means projection is no longer only a replay helper.
 A minimal Stage 3 baseline projection runtime now exists.
 
+### Stage 3.5A Is Now Complete
+
+The project has now also completed the pre-persistence exact-money hardening step:
+
+- Decimal-based money semantics replaced earlier float-based handling
+- fixtures / unit / integration / semantic / adversarial / demo paths were aligned
+- projection replay consistency now uses the formal projection reducer path
+- the temporary replay helper has been retired
+
+This means the next persistence work can proceed from an exact-money baseline rather than from ambiguous float semantics.
+
 ### Current Boundary
 
 What is already true:
@@ -45,12 +60,16 @@ What is already true:
 - aggregate state still mutates only through `apply(event)`
 - idempotency remains distinct from semantic validation
 - Stage 3 projection baseline now exists in deterministic in-memory form
+- Stage 3.5A exact-money hardening is complete
 - selected failure paths are executable through tests on both write-side and Stage 3 baseline read-side paths
 
 What is not yet true:
 
 - persistent storage-backed runtime behavior is not yet implemented
+- durable write-side schema and transactional durability are not yet implemented
+- durable read-side storage is not yet implemented
 - state-level Compass validation is not yet implemented
+- structured semantic outcome families are not yet implemented
 - governance behavior is not yet richer than basic `ALLOW` / `BLOCK`
 - advanced runtime concerns such as DLQ, buffering, watermarking, or multi-worker coordination are not yet in scope
 
@@ -156,54 +175,121 @@ Those are intentionally deferred.
 
 ---
 
-## 3.5 Next Step: Persistent Storage Baseline
+## 3.5A: Exact-Money Hardening Before Durable Persistence
 
 ### Goal
 
-Strengthen the current write-side and read-side runtime baselines through durable persistence-backed semantics.
+Ensure that money-like values are exact before durable persistence is introduced more deeply.
 
 ### Why
 
-The next meaningful step after the in-memory projection baseline is not advanced runtime complexity first.
+Persistence-backed replay, idempotency comparison, projection state, and later schema design should not be built on float-based ambiguity.
 
-It is persistent storage evolution, because restart semantics, durable replay, and persistence-backed correctness should be clarified before DLQ, buffering, watermarking, or multi-worker coordination are introduced.
+### Achieved Outcome
 
-### Target Outcome
+The current baseline now includes:
 
-A persistence-backed runtime baseline with:
-
-- durable event-store evolution
-- durable idempotency-store evolution
-- durable projection-state store
-- durable checkpoint store
-- replay / rebuild validation against persistence-backed state
+- shared money primitive / helper logic
+- Decimal-based money semantics across write-side and projection paths
+- aligned fixtures / tests across unit, integration, semantic, adversarial, and demo layers
+- formal projection reducer path as the only replay reduction truth path
 
 ### Deliverable
 
-A storage-backed baseline that preserves the current semantic boundaries while strengthening runtime durability.
+An exact-money baseline that can safely support Stage 3.5B write-side durability work.
+
+### Status
+
+Completed.
 
 ---
 
-## 4. Stage 4: Add Projection / State-Level Compass Verification
+## 3.5B Next Step: Durable Write-Side Baseline
 
 ### Goal
 
-Move Compass beyond event admission and into runtime state verification.
+Strengthen the current write-side baseline through durable persistence-backed semantics.
+
+### Why
+
+The next meaningful step after Stage 3.5A is not advanced runtime complexity first.
+
+It is durable write-side evolution, because accepted-history durability, idempotency durability, append-only event history shape, and transaction grouping must be clarified before durable read-side evolution or richer runtime governance.
+
+### Target Outcome
+
+A persistence-backed write-side baseline with:
+
+- durable event-store evolution
+- durable idempotency-store evolution
+- write-side schema and migration definition
+- exact money durability
+- transaction grouping for event append + idempotency write
+- replay / conflict validation against persistence-backed state
+
+### Deliverable
+
+A storage-backed write-side baseline that preserves current semantic boundaries while strengthening durable write-side truth.
+
+### Status
+
+Next.
+
+---
+
+## 3.5C Later Step: Durable Read-Side Baseline
+
+### Goal
+
+Strengthen the current read-side projection baseline through durable persistence-backed semantics.
+
+### Why
+
+After the write-side durable baseline is clear, the read-side can safely evolve toward:
+
+- durable projection-state storage
+- durable checkpoint storage
+- persistence-backed replay / rebuild validation
+
+### Target Outcome
+
+A persistence-backed projection baseline with:
+
+- durable projection-state store
+- durable checkpoint store
+- replay / rebuild validation against persistence-backed read-side state
+
+### Deliverable
+
+A storage-backed read-side baseline that preserves replay-safe projection behavior across restart and rebuild.
+
+### Status
+
+Planned after Stage 3.5B.
+
+---
+
+## 4. Stage 4: Runtime Semantic Validation and Outcome Structuring
+
+### Goal
+
+Move Compass beyond simple event admission and into structured runtime semantic outcomes.
 
 ### Why
 
 Even if every event is individually valid, the projection process can still drift or fail.
 
-That risk becomes even more important once the runtime moves beyond purely in-memory baseline behavior and into persistence-backed semantics.
+By the time durability work is complete, the next meaningful step is not only to detect runtime semantic failure, but also to express it in a structured form that can later support shared outcome families and minimal trust evaluation.
 
 ### Target Outcome
 
-A second Compass layer that validates:
+A runtime semantic layer that can:
 
-- projected version correctness
-- projected state invariants
-- consistency between replayed state and incrementally projected state
-- semantic correctness at checkpoint boundaries
+- validate projection-state correctness
+- compare replayed state against incrementally projected state
+- emit structured semantic outcomes instead of relying only on ad-hoc exceptions
+- begin aligning Layer 1 and Layer 2 around a common outcome family
+- prepare the ground for later trust verdict simulation
 
 ### Candidate Invariants
 
@@ -214,11 +300,46 @@ A second Compass layer that validates:
 
 ### Deliverable
 
-A true runtime verification layer for state evolution.
+A true runtime semantic layer for state evolution, together with the first structured runtime semantic outcomes.
+
+### Status
+
+Planned after durable write-side and read-side baselines.
 
 ---
 
-## 5. Stage 5: Move from Validation to Governance
+## 5. Stage 5: Reviewer-Facing Demo and System Story
+
+### Goal
+
+Turn the implemented system into a clear, demo-ready, reviewer-facing milestone.
+
+### Why
+
+By this point the project should not only validate truth internally.  
+It should also explain its system value clearly to reviewers, hiring managers, and future open-source readers.
+
+### Target Outcome
+
+A demo-ready system story that can show:
+
+- Layer 1 rejection of invalid event truth
+- Layer 2 detection of invalid runtime / projection truth
+- structured semantic outcomes
+- optional minimal layered trust simulation if ready
+- rebuild / replay / recovery value in a concise reviewer-friendly flow
+
+### Deliverable
+
+A demo, packaging, and documentation milestone that makes the system legible in a short review window.
+
+### Status
+
+Planned after Stage 4 becomes coherent enough to demonstrate.
+
+---
+
+## 6. Stage 6: Move from Validation to Governance
 
 ### Goal
 
@@ -233,17 +354,22 @@ Support for advanced governance behavior:
 - semantic alerts
 - drift classification
 - auditability and recovery workflows
+- later richer trust-aware action gating
 
 Basic `ALLOW` / `BLOCK` enforcement belongs to the earlier validation dispatch path.  
-Stage 5 focuses on richer governance actions after validation becomes observable and policy-driven.
+This later stage focuses on richer governance actions after semantic outcomes and reviewer-facing demos are already coherent.
 
 ### Deliverable
 
 A semantic governance layer sitting above both write-side and read-side execution.
 
+### Status
+
+Future work.
+
 ---
 
-## 6. Summary of Intended Evolution
+## 7. Summary of Intended Evolution
 
 ### Stage 1
 
@@ -257,14 +383,26 @@ Event truth validation integrates Compass Layer 1 into transactional execution a
 
 Projection runtime baseline now exists as a real deterministic in-memory runtime path rather than only a replay helper.
 
-### Stage 3.5
+### Stage 3.5A
 
-Persistent storage baseline strengthens write-side and read-side runtime durability.
+Exact-money hardening is complete and now protects future persistence work from float-based ambiguity.
+
+### Stage 3.5B
+
+Durable write-side baseline strengthens accepted-history and idempotency durability.
+
+### Stage 3.5C
+
+Durable read-side baseline strengthens projection-state and checkpoint durability.
 
 ### Stage 4
 
-Compass validates whether projected state remains semantically correct.
+Compass evolves into runtime semantic validation and structured outcome generation.
 
 ### Stage 5
 
-Compass becomes a runtime governance framework rather than just a validator.
+The system becomes a clear reviewer-facing demo and portfolio-ready story.
+
+### Stage 6
+
+Compass grows from validation into richer governance.

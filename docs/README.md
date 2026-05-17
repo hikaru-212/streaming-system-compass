@@ -13,6 +13,7 @@ It now also serves as the reference frame for an executable baseline covering:
 - Compass Layer 1 transition-truth validation
 - write-side replay and admission boundaries
 - Stage 3 baseline projection runtime in deterministic in-memory form
+- Stage 3.5A exact-money hardening before durable persistence
 - executable failure-path tests for selected invariants and adversarial cases
 
 ---
@@ -28,14 +29,15 @@ The repository currently has an implemented baseline for:
 - Compass Layer 1 validation before persistence
 - Stage 3 baseline projection runtime with reducer / worker separation
 - in-memory projection state and checkpoint persistence boundaries
+- Stage 3.5A decimal / money hardening before durable persistence
+- formal projection reducer path as the only replay-reduction truth path
 - executable tests across unit, integration, semantic-case, adversarial-baseline, and Stage 3 projection-baseline layers
 
-The next major implementation step is:
+The next major implementation steps are:
 
-- persistent storage baseline
-- durable write-side and read-side store evolution
-- replay / rebuild validation against persistence-backed state
-- later Stage 4 state-level Compass validation
+- Stage 3.5B durable write-side baseline
+- Stage 3.5C durable read-side baseline
+- later Stage 4 runtime semantic validation and outcome structuring
 
 ---
 
@@ -74,8 +76,10 @@ top-level system structure
 → validation dispatch mechanism
 → Compass layer evolution
 → projection runtime baseline
-→ persistent storage evolution
-→ state-level validation
+→ exact-money hardening before durable persistence
+→ durable write-side baseline
+→ durable read-side baseline
+→ runtime semantic validation and outcome structuring
 → boundary clarification
 → postmortem lessons
 ```

@@ -36,6 +36,7 @@ Postmortems help preserve:
 | [from_projection_concerns_to_event_truth](from_projection_concerns_to_event_truth.md) | Records the design shift from focusing mainly on projection/runtime problems to treating event-source correctness and accepted-history entry as a more foundational concern. |
 | [docs_vs_enterprise_design_docs](docs_vs_enterprise_design_docs.md) | Clarifies why the current repository documents emphasize semantic completeness and boundary clarity first, rather than pretending to already be a full enterprise operational design doc. |
 | [from_in_memory_correctness_to_durable_consistency](from_in_memory_correctness_to_durable_consistency.md) | Explains why durable persistence is not just a backend replacement: once state must survive across time and restart, guarantees that felt natural in the in-memory world are no longer free. |
+| [from_git_sync_to_db_immutability](from_git_sync_to_db_immutability.md) | Records how a Git local/remote synchronization confusion exposed a deeper distributed-systems lesson: Python-side guarantees such as `frozen=True` and append-only history must be explicitly re-declared at the database boundary. |
 
 ---
 

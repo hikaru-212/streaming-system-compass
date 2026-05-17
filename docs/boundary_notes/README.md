@@ -90,6 +90,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Checkpoint Module Boundary](checkpoint_module.md)
 - [Compass Layer Boundary](compass_layer_boundary.md)
 - [Persistence Boundary](persistence_boundary.md)
+- [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
 
@@ -98,9 +99,10 @@ Two projection-related notes are intentionally preserved:
 - **Projection Module Boundary** describes the external role of projection as a whole.
 - **Projection Runtime Boundary** describes the internal Stage 3 boundary between reducer, worker, projection store, and checkpoint store.
 
-The persistence-related note is also intentionally separate:
+The persistence-related notes are also intentionally separate:
 
 - **Persistence Boundary** explains how durable storage should be introduced without collapsing the boundaries between event store, idempotency store, projection state, and checkpoint progress.
+- **Stage 3.5B Write-Side Schema Translation Note** explains how Python-side guarantees such as `frozen=True`, append-only accepted history, and exact money semantics should be translated into database-side physical constraints before durable write-side implementation begins.
 
 ---
 
@@ -120,6 +122,7 @@ A practical reading order is:
 10. [Checkpoint Module Boundary](checkpoint_module.md)
 11. [Compass Layer Boundary](compass_layer_boundary.md)
 12. [Persistence Boundary](persistence_boundary.md)
+13. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -135,6 +138,7 @@ This roughly follows the intended semantic development order of the project:
 - define runtime progress boundaries
 - define semantic validation layers
 - define durable-world persistence discipline
+- define how Python-side semantic guarantees are restated at the database boundary
 
 ---
 
@@ -150,6 +154,7 @@ These notes should be read together with:
 - [Compass Layers](../architecture/compass_layers.md)
 - [Projection Pipeline](../architecture/projection_pipeline.md)
 - [Persistent Storage Baseline](../architecture/persistent_storage_baseline.md)
+- [Write-Side Schema Baseline](../architecture/write_side_schema_baseline.md)
 - [Implementation Roadmap](../roadmap/implementation_roadmap.md)
 - [Concurrency Control, Idempotency, and Retry Safety](../adr/0003_concurrency_idempotency_and_retry_safety.md)
 - [Persistent Storage Baseline Strategy](../adr/0005_persistent_storage_baseline_strategy.md)
