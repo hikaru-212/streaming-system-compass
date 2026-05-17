@@ -22,6 +22,7 @@ The project has now completed an executable baseline across:
 - event-level Compass validation before persistence
 - Stage 3 baseline projection runtime in a deterministic in-memory form
 - Stage 3.5A decimal / money hardening before durable persistence
+- ADR 0008 event identity lifecycle decision before durable write-side persistence
 - executable baseline tests across unit, integration, semantic-case, adversarial-history, and Stage 3 projection-baseline layers
 
 This means:
@@ -30,6 +31,7 @@ This means:
 - Stage 2 is complete at a baseline level
 - Stage 3 exists as a minimal executable read-side runtime baseline
 - Stage 3.5A is now complete as the pre-persistence money / exact-value hardening step
+- pre-Stage 3.5B event identity semantics are now documented as a boundary decision
 
 The next major focus is:
 
@@ -53,10 +55,11 @@ The project should evolve from:
 4. event truth validation
 5. projection/runtime correctness
 6. exact durable money semantics
-7. durable persistence semantics
-8. runtime semantic outcomes
-9. demo / packaging value
-10. governance and adversarial hardening
+7. candidate / accepted event identity boundary cleanup
+8. durable persistence semantics
+9. runtime semantic outcomes
+10. demo / packaging value
+11. governance and adversarial hardening
 
 This order is intentional.
 
@@ -235,6 +238,18 @@ After Stage 3.5A, the next meaningful step is not durable read-side storage firs
 
 It is durable write-side evolution, because accepted-history durability, idempotency durability, transaction grouping, and append-only event-store semantics must be clarified before the rest of the runtime grows larger.
 
+### Pre-Implementation Cleanup
+
+Before durable write-side code expands, the current in-memory boundary names should be aligned with ADR 0008:
+
+- `ValidationResult.event_id` should become `candidate_event_id`
+- admission results should distinguish `candidate_event_id` from `accepted_event_id`
+- `ConcurrencyGate.admit()` and `EventStore.append()` should name their input as `candidate_event`
+- registry-local event variables should use `candidate_event` until admission succeeds
+- idempotency replay should remain documented as returning a previously accepted event, not a new candidate
+
+This is not a core model refactor. It preserves the current pre-allocated `OrderEvent.event_id` design while making the lifecycle boundary explicit before PostgreSQL-backed persistence is introduced.
+
 ### Main Work
 
 - durable event-store evolution
@@ -243,6 +258,7 @@ It is durable write-side evolution, because accepted-history durability, idempot
 - transaction grouping for event append + idempotency write
 - durable replay / conflict classification support
 - persistence-backed write-side tests
+- preservation of candidate / accepted event identity semantics in storage-facing code
 
 ### Deliverable
 
@@ -465,6 +481,7 @@ However, the semantic dependency order should still be respected:
 - accepted history before projection runtime
 - projection runtime baseline before durable persistence baseline
 - exact money semantics before durable event / idempotency persistence
+- candidate / accepted event identity naming before durable write-side schema expansion
 - write-side durable baseline before read-side durable baseline
 - durable runtime baseline before richer runtime semantic outcomes
 - runtime semantic outcomes before full reviewer-facing demo packaging

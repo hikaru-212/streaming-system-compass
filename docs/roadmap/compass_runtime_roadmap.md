@@ -9,6 +9,7 @@ The project now has:
 - an implemented write-side baseline
 - a minimal Stage 3 read-side projection baseline
 - a completed Stage 3.5A exact-money hardening step before durable persistence
+- a documented pre-Stage 3.5B event identity lifecycle decision in ADR 0008
 
 ### Transactional Baseline Already Integrated
 
@@ -51,6 +52,17 @@ The project has now also completed the pre-persistence exact-money hardening ste
 
 This means the next persistence work can proceed from an exact-money baseline rather than from ambiguous float semantics.
 
+### Pre-Stage 3.5B Identity Boundary Cleanup
+
+Before implementing the durable write-side baseline, the project records one additional boundary decision in ADR 0008:
+
+- `event_id` may be pre-allocated when an event-shaped candidate is created
+- before append, that identity should be treated as `candidate_event_id`
+- after successful append to the event log, the same value may be referenced as `accepted_event_id`
+- event-log membership, not UUID allocation, grants accepted-history status
+
+This does not change the core event model. It is a naming and boundary-alignment cleanup before durable persistence expands the write-side storage contract.
+
 ### Current Boundary
 
 What is already true:
@@ -61,6 +73,7 @@ What is already true:
 - idempotency remains distinct from semantic validation
 - Stage 3 projection baseline now exists in deterministic in-memory form
 - Stage 3.5A exact-money hardening is complete
+- ADR 0008 now documents the candidate/accepted event identity lifecycle rule before Stage 3.5B
 - selected failure paths are executable through tests on both write-side and Stage 3 baseline read-side paths
 
 What is not yet true:
@@ -226,6 +239,7 @@ A persistence-backed write-side baseline with:
 - exact money durability
 - transaction grouping for event append + idempotency write
 - replay / conflict validation against persistence-backed state
+- candidate / accepted event identity naming preserved across validation, admission, event-store, and future outcome boundaries
 
 ### Deliverable
 
