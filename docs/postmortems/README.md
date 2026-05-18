@@ -25,6 +25,7 @@ Postmortems help preserve:
 - explicit differences between current project scope and enterprise-style documentation expectations
 - key learning transitions between architecture stages
 - transitions where a previously "natural" guarantee turns out to require explicit design
+- transitions where an earlier failure representation becomes insufficient for later governance reasoning
 
 ---
 
@@ -37,6 +38,7 @@ Postmortems help preserve:
 | [docs_vs_enterprise_design_docs](docs_vs_enterprise_design_docs.md) | Clarifies why the current repository documents emphasize semantic completeness and boundary clarity first, rather than pretending to already be a full enterprise operational design doc. |
 | [from_in_memory_correctness_to_durable_consistency](from_in_memory_correctness_to_durable_consistency.md) | Explains why durable persistence is not just a backend replacement: once state must survive across time and restart, guarantees that felt natural in the in-memory world are no longer free. |
 | [from_git_sync_to_db_immutability](from_git_sync_to_db_immutability.md) | Records how a Git local/remote synchronization confusion exposed a deeper distributed-systems lesson: Python-side guarantees such as `frozen=True` and append-only history must be explicitly re-declared at the database boundary. |
+| [from_exception_strings_to_governable_outcomes](from_exception_strings_to_governable_outcomes.md) | Explains why generic exception strings are insufficient for layered trust reasoning, and why structured semantic outcomes become the necessary bridge toward governance-ready action safety. |
 
 ---
 
@@ -50,6 +52,7 @@ Use postmortems when you want to understand:
 - what reusable reading or debugging method emerged from the mistake
 - why the current repository intentionally documents some things in greater semantic depth while still deferring full enterprise-operational realism
 - how one architectural stage exposed the need for the next stage
+- why a design transition became necessary before a later architecture layer could be meaningful
 
 ---
 
