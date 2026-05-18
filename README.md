@@ -76,6 +76,9 @@ If you want to understand how the repository thinks rather than only what it imp
 - **Exact-money pre-persistence hardening**  
   Stage 3.5A completed the migration from float-based money handling to Decimal-based semantics before durable persistence work expands.
 
+- **Structured failure reasoning before governance**  
+  The project now preserves the transition from generic exception-based failures toward structured semantic outcomes as the bridge to later layered trust and action-safety reasoning.
+
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
 
@@ -436,7 +439,7 @@ Next implementation milestone:
 
 - Stage 3.5B durable write-side baseline
 - Stage 3.5C durable read-side baseline
-- later Stage 4 runtime semantic validation and outcome structuring
+- later Stage 4 runtime semantic validation and outcome structuring, including the transition from exception-based failures toward structured semantic outcomes
 - defer advanced runtime concerns such as DLQ, buffering, watermark semantics, and multi-worker coordination until after durable baseline semantics are clear
 
 ---
@@ -489,3 +492,4 @@ The main logic of correctness lives in `src/`.
 The documentation follows one main principle:
 
 > Explain the boundary before explaining the implementation.
+

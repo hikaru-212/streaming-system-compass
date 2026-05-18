@@ -37,7 +37,7 @@ The next major implementation steps are:
 
 - Stage 3.5B durable write-side baseline
 - Stage 3.5C durable read-side baseline
-- later Stage 4 runtime semantic validation and outcome structuring
+- later Stage 4 runtime semantic validation and outcome structuring, including the transition from generic exception-based failures toward governance-ready semantic outcome models
 
 ---
 
@@ -80,6 +80,7 @@ top-level system structure
 → durable write-side baseline
 → durable read-side baseline
 → runtime semantic validation and outcome structuring
+→ structured semantic failure outcomes
 → boundary clarification
 → postmortem lessons
 ```
@@ -201,6 +202,7 @@ Use these documents when you want to understand:
 - what boundary mistake occurred
 - what reusable lesson should be preserved
 - how future implementation should avoid similar mistakes
+- why a later architecture stage required a previous failure representation to become more structured first
 
 ---
 
