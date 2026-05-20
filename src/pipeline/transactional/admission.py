@@ -26,7 +26,8 @@ class AdmissionResult:
     """
     verdict: AdmissionVerdict
     reason: str
-    event_id: str
+    candidate_event_id: str
+    accepted_event_id: str | None
 
 
 @runtime_checkable
@@ -44,7 +45,7 @@ class ConcurrencyGate(Protocol):
     - pessimistic lock-based gate
     - test fake gate
     """
-    def admit(self, event: OrderEvent, expected_current_version: int) -> AdmissionResult:
+    def admit(self, candidate_event: OrderEvent, expected_current_version: int) -> AdmissionResult:
         ...
 
 
@@ -61,18 +62,20 @@ class OptimisticVersionGate:
     def __init__(self, store: EventStore):
         self.store = store
 
-    def admit(self, event: OrderEvent, expected_current_version: int) -> AdmissionResult:
+    def admit(self, candidate_event: OrderEvent, expected_current_version: int) -> AdmissionResult:
         try:
-            self.store.append(event, expected_current_version)
+            self.store.append(candidate_event, expected_current_version)
         except ValueError as exc:
             return AdmissionResult(
                 verdict=AdmissionVerdict.REJECTED,
                 reason=f"Admission rejected by optimistic version gate: {exc}",
-                event_id=event.event_id,
+                candidate_event_id=candidate_event.event_id,
+                accepted_event_id=None,
             )
 
         return AdmissionResult(
             verdict=AdmissionVerdict.ADMITTED,
             reason="Event admitted by optimistic version gate",
-            event_id=event.event_id,
+            candidate_event_id=candidate_event.event_id,
+            accepted_event_id=candidate_event.event_id,
         )

@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - feat/stage3.5b-write-side-durable-baseline
+  push:
+    branches:
+      - main # Also monitor pushes to main.
+      - refactor/event-identity-boundary-cleanup
+      - feat/stage3.5b-write-side-durable-baseline
+
+jobs:
+  test:
+    name: Run Semantic Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4 # Use the stable v4 checkout action.
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip" # Enable pip caching to speed up future runs.
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov # Install pytest and coverage support.
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Lint with Flake8 (Optional but Recommended)
+        run: |
+          pip install flake8
+          # Fail only on syntax errors and undefined names.
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Pytest with PYTHONPATH
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          # Run the test suite.
+          pytest -v

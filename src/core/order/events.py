@@ -13,18 +13,27 @@ from .proofs import Proof
 @dataclass(frozen=True)
 class OrderEvent:
     """
-    Immutable event fact for the order stream.
+    Immutable event-shaped data for the order stream.
 
     Important boundary:
     - this class materializes event data
     - it does NOT decide domain legality
     - it does NOT decide next sequence
     - it does NOT validate truth against accepted history
+    - it does NOT decide whether the event has become accepted history
+
+    Identity lifecycle:
+    - event_id is assigned when an event-shaped candidate is created.
+    - before append, this value should be interpreted as candidate_event_id.
+    - after successful append to the event log, the same value may be referenced as accepted_event_id.
+    - event_id alone does not imply accepted history.
+    - only presence in the event log grants accepted-event status.
 
     Those responsibilities live in:
     - aggregate -> command legality / sequence / proof generation
     - Compass Layer 1 -> truth validation
     - admission gate -> append-time continuity protection
+    - event store -> accepted-history membership
     """
     event_id: str
     request_id: str
