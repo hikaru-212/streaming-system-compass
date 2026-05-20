@@ -44,7 +44,20 @@ The write-side currently behaves as an append-only accepted event log:
 - replay reconstructs state from accepted history
 - old accepted events are not rewritten in place
 
-### 1.3 Idempotency distinction
+### 1.3 Candidate / accepted identity boundary
+
+The current design pre-allocates `OrderEvent.event_id` when an event-shaped candidate is created.
+
+After ADR 0008, the interpretation is:
+
+- before append, the value should be treated as `candidate_event_id`
+- after successful append into accepted history, the same value may be referenced as `accepted_event_id`
+- `event_id` alone does not imply accepted history
+- event-log membership grants accepted-event status
+
+This boundary must carry into the database schema.
+
+### 1.4 Idempotency distinction
 
 The current system distinguishes:
 
@@ -52,9 +65,10 @@ The current system distinguishes:
 - conflict / same request identifier but different semantic meaning
 
 This means idempotency is not “duplicate request text.”
+
 It is semantic identity.
 
-### 1.4 Admission ordering and version consistency
+### 1.5 Admission ordering and version consistency
 
 The write-side already requires:
 
@@ -63,7 +77,7 @@ The write-side already requires:
 - admitted history consistency
 - replay-safe sequencing
 
-### 1.5 Exact money semantics
+### 1.6 Exact money semantics
 
 Stage 3.5A completed migration from `float` to `Decimal`.
 
@@ -89,12 +103,14 @@ The real problem is:
 > how to preserve existing write-side semantic guarantees after crossing from Python memory into a durable storage process
 
 That means database design must not merely store data.
+
 It must help preserve:
 
 - append-only event truth
 - no rewrite of accepted history
 - exact money storage
 - stable stream identity
+- candidate / accepted event identity distinction
 - transactional coupling between event append and idempotency record write
 
 ---
@@ -118,6 +134,7 @@ This note uses that translation method.
 |---|---|
 | `frozen=True` accepted event object | accepted event row should not be updated after insertion |
 | append-only accepted event history | event table should allow insert growth, not in-place rewrite of old accepted rows |
+| candidate vs accepted event identity | persisted event table should use accepted-history naming such as `accepted_event_id` |
 | stream identity by order + sequence | durable identity such as `(order_id, sequence)` must be protected |
 | replay from accepted history | ordered reads must reconstruct history deterministically |
 | Decimal money semantics | exact durable numeric representation must be used |
@@ -140,7 +157,7 @@ The event table must be the durable representation of:
 
 - admitted events only
 - append-only accepted history
-- replayable event stream for one aggregate / order
+- replayable event stream for one order
 
 ### 5.2 Minimum required properties
 
@@ -151,6 +168,7 @@ The event table must support:
 - deterministic replay by sequence
 - durable storage of exact event facts
 - durable storage of proof / metadata needed by the chosen write-side model
+- durable distinction between accepted history and rejected candidate events
 
 ### 5.3 Important non-goal
 
@@ -159,6 +177,7 @@ The event table should not become:
 - a mutable current-state table
 - a place where accepted history is edited retroactively
 - a hidden compensation mechanism through row mutation
+- an audit table for rejected candidates
 
 If past accepted history must change, that should happen through new events or controlled migration strategy, not casual row rewrite.
 
@@ -169,16 +188,17 @@ If past accepted history must change, that should happen through new events or c
 In Python, `frozen=True` protects event objects from in-place mutation.
 
 In PostgreSQL, no direct equivalent exists automatically.
+
 So Stage 3.5B must approximate the same meaning through physical controls.
 
 ### 6.1 Primary expectation
 
-For accepted event rows, the runtime write-side application role should normally have:
+For accepted event rows, the runtime write-side application path should normally behave as if it only has:
 
 - `SELECT`
 - `INSERT`
 
-and should normally not have:
+and should normally not rely on:
 
 - `UPDATE`
 - `DELETE`
@@ -189,18 +209,34 @@ If runtime code can freely update accepted event rows, then the event log stops 
 
 That would violate the write-side model.
 
-### 6.3 Constraint of this approach
+### 6.3 Why permissions should not be first
 
 Permission restriction is not the whole story.
-It protects against many accidental or ordinary mutation paths, but schema design still matters too.
 
-So the durable analogue of `frozen=True` is not one feature.
+The first Stage 3.5B baseline should prioritize:
+
+- schema shape
+- repository API
+- transaction semantics
+- tests
+
+A concrete runtime DB role / privilege model can be implemented as a later hardening step after the minimal durable loop works.
+
+This avoids making early database setup harder before the basic persistence semantics are proven.
+
+### 6.4 Combined durable analogue
+
+The durable analogue of `frozen=True` is not one feature.
+
 It is a combination of:
 
-- permission model
 - append-only application discipline
 - durable stream identity constraints
-- explicit replay usage model
+- exact storage representation
+- transaction boundary
+- tests
+- later permission hardening
+- optional trigger-based immutability hardening
 
 ---
 
@@ -250,10 +286,11 @@ Without durable stream identity:
 - append-only shape becomes unstable
 - duplicate or overwritten sequence slots could corrupt accepted history
 
-### 8.3 Relation to event_id
+### 8.3 Relation to event identity
 
-A globally unique `event_id` is still useful.
-But `event_id` alone is not enough to preserve stream ordering semantics.
+A globally unique `accepted_event_id` is still useful.
+
+But `accepted_event_id` alone is not enough to preserve stream ordering semantics.
 
 The write-side model cares not only that an event exists, but also that it occupies the correct place in one stream.
 
@@ -262,6 +299,7 @@ The write-side model cares not only that an event exists, but also that it occup
 ## 9. Money Storage Requirements
 
 Stage 3.5A already established exact money semantics in Python.
+
 Stage 3.5B must preserve that work durably.
 
 ### 9.1 Durable goal
@@ -275,7 +313,8 @@ This means avoiding float / approximate numeric representations.
 The storage strategy should use an exact representation such as:
 
 - SQL `NUMERIC(...)`
-- or an exact string representation when embedded in structured payloads
+- exact canonical decimal strings when constructing semantic fingerprints
+- exact string representation when embedded in structured JSON payloads
 
 ### 9.3 Why this matters
 
@@ -296,7 +335,7 @@ A key Stage 3.5B schema question is:
 
 > Which event facts should be hard columns, and which should remain in payload?
 
-This note does not fully decide that yet, but it clarifies the decision principle.
+This note clarifies the decision principle.
 
 ### 10.1 Hard columns are justified when
 
@@ -307,6 +346,7 @@ A field is needed for:
 - filtering / debugging / operational visibility
 - stable write-side safety queries
 - stable future durability semantics
+- foreign-key or uniqueness constraints
 
 ### 10.2 Payload is justified when
 
@@ -321,13 +361,15 @@ A field is:
 
 For the event table, likely hard columns include:
 
+- `accepted_event_id`
 - `order_id`
 - `sequence`
 - `event_type`
-- `event_id`
 - `request_id`
-- timestamps relevant to persistence / insertion
-- possibly `amount` if money comparability and visibility are important at the SQL layer
+- `amount`
+- `occurred_at_ms`
+- proof predecessor fields needed for traceability
+- persistence timestamp
 
 This should be finalized in the schema draft.
 
@@ -336,6 +378,7 @@ This should be finalized in the schema draft.
 ## 11. Idempotency Table: Why It Must Be Written Together
 
 The write-side does not only persist accepted events.
+
 It also persists idempotency decisions.
 
 This creates one of the most important Stage 3.5B requirements:
@@ -380,8 +423,9 @@ The database can help with:
 
 - durable uniqueness boundaries
 - transaction atomicity
-- conditional update / insert logic
+- conditional insert logic
 - row-level persistence semantics
+- foreign-key integrity
 
 ### 12.2 What still remains an application concern
 
@@ -392,8 +436,10 @@ The application still owns:
 - proof evaluation
 - admission orchestration
 - meaning of stale write vs semantic conflict
+- idempotency replay / conflict classification
 
 The database strengthens the physical boundary.
+
 It does not replace domain meaning.
 
 ---
@@ -403,26 +449,34 @@ It does not replace domain meaning.
 Before implementation, the following questions should be answered explicitly.
 
 ### Event history table
+
 - what is the durable primary identity?
 - what ordering key defines replay truth?
 - which columns are hard columns vs payload?
 - how is exact money stored?
 - what columns are required for debugging / operational visibility?
+- what does the table name communicate about domain scope?
 
 ### Idempotency table
+
 - what uniquely identifies a request at the durable boundary?
 - what semantic identity must be stored so replay vs conflict can still be distinguished?
 - what result metadata must be durably recoverable?
+- should conflicts be persisted now or only detected?
 
 ### Permissions
-- what runtime DB role should be allowed to do?
+
+- what runtime DB role should eventually be allowed to do?
 - should runtime role be insert/select only for accepted history?
 - who, if anyone, can update or delete historical rows?
+- should permission hardening be implemented now or after the durable loop is proven?
 
 ### Transactions
+
 - how are event append and idempotency write committed together?
 - what happens under conflict or stale-write rejection?
 - what happens if DB write partially fails?
+- where does the transaction boundary live in Python?
 
 ---
 
@@ -431,18 +485,29 @@ Before implementation, the following questions should be answered explicitly.
 The implementation order should remain conservative.
 
 ### Step 1: Schema translation draft
+
 Write down the event table and idempotency table shape before writing repository code.
 
 ### Step 2: Permission / append-only policy definition
+
 Clarify what the runtime role can and cannot do.
 
-### Step 3: Transaction design
+At this stage, permission policy may be documented before it is fully enforced in PostgreSQL roles.
+
+### Step 3: SQL migration draft
+
+Create the first executable schema anchor for `order_events` and `idempotency_records`.
+
+### Step 4: Transaction design
+
 Define exactly how durable event append and idempotency write happen together.
 
-### Step 4: Repository / store implementation
+### Step 5: Repository / store implementation
+
 Only after the schema and transaction semantics are clear should code be written.
 
-### Step 5: Replay verification
+### Step 6: Replay verification
+
 Confirm that persistence-backed history still replays correctly and deterministically.
 
 This protects the project from drifting into “database code first, semantics later.”
@@ -453,24 +518,28 @@ This protects the project from drifting into “database code first, semantics l
 
 A useful working rule is:
 
-> Python still owns meaning.
+> Python still owns meaning.  
 > PostgreSQL must durably defend the shape of accepted truth.
 
 This means:
 
 ### Python owns
+
 - event meaning
 - proof meaning
 - semantic validation
 - candidate-event construction
 - admission orchestration
+- idempotency classification
 
 ### PostgreSQL must defend
+
 - append-only accepted history shape
 - no accidental rewrite of admitted facts
 - exact money storage
 - durable stream identity
 - transaction coupling of event append + idempotency write
+- foreign-key linkage between idempotency records and accepted events
 
 This is the correct split of responsibility.
 
@@ -498,13 +567,15 @@ If they are restated correctly, Stage 3.5B becomes the natural continuation of t
 
 The next concrete artifacts should likely be:
 
-1. write-side schema note for `order_events`
-2. write-side schema note for durable idempotency records
+1. architecture note for `order_events` and `idempotency_records`
+2. boundary note for Python-to-database semantic translation
 3. transaction sequence note for append + idempotency write
 4. SQL migration draft
 5. runtime role / privilege policy draft
 
-These documents should come before full repository implementation.
+The first Stage 3.5B PR may include the first, second, and fourth items.
+
+The transaction sequence and privilege enforcement can be refined in follow-up work.
 
 ---
 
@@ -520,6 +591,7 @@ If the write-side currently depends on:
 - append-only accepted history
 - exact money values
 - deterministic replayable streams
+- request-level idempotency semantics
 
 then those guarantees must now be translated into:
 
