@@ -24,7 +24,7 @@ class EventStore:
     def __init__(self):
         self.events_by_order_id = {}
 
-    def append(self, new_event: OrderEvent, expected_current_version: int) -> None:
+    def append(self, candidate_event: OrderEvent, expected_current_version: int) -> None:
         """
         Append candidate event only if store continuity still matches caller expectation.
 
@@ -35,7 +35,7 @@ class EventStore:
         - this is the persistence-side optimistic admission guard
         - stale writers must be rejected here
         """
-        order_id = new_event.order_id
+        order_id = candidate_event.order_id
 
         if order_id in self.events_by_order_id:
             event_stream = self.events_by_order_id[order_id]
@@ -54,13 +54,13 @@ class EventStore:
 
         # Continuity Gate:
         expected_new_sequence = expected_current_version + 1
-        if new_event.sequence != expected_new_sequence:
+        if candidate_event.sequence != expected_new_sequence:
             raise ValueError(
                 f"Append-time continuity broken: expected event sequence {expected_new_sequence}, "
-                f"but event contains sequence {new_event.sequence}"
+                f"but event contains sequence {candidate_event.sequence}"
             )
 
-        event_stream.append(new_event)
+        event_stream.append(candidate_event)
 
     def load(self, order_id: str) -> List[OrderEvent]:
         """
