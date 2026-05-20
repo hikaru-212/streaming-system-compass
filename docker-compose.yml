@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: streaming_compass_postgres
+    environment:
+      POSTGRES_DB: compass_dev
+      POSTGRES_USER: compass_user
+      POSTGRES_PASSWORD: compass_password
+    ports:
+      # Bind only to localhost so the database is not exposed to the local network.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - compass_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U compass_user -d compass_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  compass_postgres_data:
