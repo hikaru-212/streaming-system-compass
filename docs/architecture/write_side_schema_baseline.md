@@ -231,9 +231,15 @@ Stores the minimal proof / predecessor claims needed by the current write-side m
 
 These fields make important proof values queryable without requiring every validation or debugging path to parse JSON.
 
-`proof_prev_event_id` may remain `TEXT` in the first baseline because it is part of the proof claim structure, not the accepted event row identity itself.
+`proof_prev_event_id` uses `UUID` because it represents the prior accepted event identity claimed by the current event proof.
 
-A future hardening step may convert it to `UUID` or introduce stronger linkage if proof references need to become physically enforced.
+It remains nullable for the first event in a stream.
+
+The first Stage 3.5B baseline does not add a foreign key from `proof_prev_event_id` back to `order_events.accepted_event_id`.
+
+That is intentional.
+
+The database can enforce UUID shape, but previous-event truth still belongs to Compass / replay logic because the real semantic check must consider order stream, sequence, prior status, and prior version, not only whether an ID exists.
 
 ### `payload_json`
 
@@ -247,7 +253,9 @@ Stores supplemental proof / provenance details in a form that can evolve without
 
 ### `metadata_json`
 
-Stores non-domain and non-proof metadata such as:
+Stores non-domain and non-proof runtime metadata.
+
+Examples include:
 
 - source
 - actor
@@ -255,6 +263,15 @@ Stores non-domain and non-proof metadata such as:
 - trace id
 - writer component
 - request context
+- validator identity
+- validation mode
+- future Compass validation timing
+- future registry-stage timing
+- other observability metadata
+
+These fields are not part of domain truth or proof truth.
+
+They support debugging, audit, traceability, and future performance analysis.
 
 This prevents domain payload and validation proof from being polluted by general runtime metadata.
 
@@ -319,7 +336,7 @@ CREATE TABLE IF NOT EXISTS order_events (
     amount NUMERIC(18, 2) NOT NULL,
     occurred_at_ms BIGINT NOT NULL,
 
-    proof_prev_event_id TEXT,
+    proof_prev_event_id UUID NULL,
     proof_prev_version INTEGER NOT NULL,
     proof_prev_status TEXT NOT NULL,
 
@@ -332,7 +349,7 @@ CREATE TABLE IF NOT EXISTS order_events (
     CONSTRAINT uq_order_events_order_sequence UNIQUE (order_id, sequence),
     CONSTRAINT ck_order_events_schema_version_positive CHECK (event_schema_version > 0),
     CONSTRAINT ck_order_events_sequence_positive CHECK (sequence > 0),
-    CONSTRAINT ck_order_events_event_type CHECK (event_type IN ('CREATED', 'PAID')),
+    CONSTRAINT ck_order_events_event_type CHECK (event_type IN ('created', 'paid')),
     CONSTRAINT ck_order_events_amount_non_negative CHECK (amount >= 0)
 );
 ```
@@ -511,7 +528,7 @@ CREATE TABLE IF NOT EXISTS idempotency_records (
         CHECK (status IN ('SUCCEEDED')),
 
     CONSTRAINT ck_idempotency_command_type
-        CHECK (command_type IN ('CREATE_ORDER', 'PAY_ORDER')),
+        CHECK (command_type IN ('create', 'pay')),
 
     CONSTRAINT ck_idempotency_amount_non_negative
         CHECK (amount >= 0)
@@ -629,7 +646,7 @@ Example semantic basis:
 
 ```json
 {
-  "command_type": "CREATE_ORDER",
+  "command_type": "create",
   "order_id": "<order_id>",
   "total_amount": "<amount>"
 }
@@ -657,7 +674,7 @@ Example semantic basis:
 
 ```json
 {
-  "command_type": "PAY_ORDER",
+  "command_type": "pay",
   "order_id": "<order_id>",
   "payment_amount": "<amount>"
 }
@@ -673,7 +690,7 @@ For example, if `currency` later becomes part of `PayOrder` meaning, then a futu
 
 ```json
 {
-  "command_type": "PAY_ORDER",
+  "command_type": "pay",
   "order_id": "<order_id>",
   "payment_amount": "<amount>",
   "currency": "<currency>"

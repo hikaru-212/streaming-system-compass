@@ -407,7 +407,19 @@ Stage 3.5B should preserve three different JSON extension surfaces:
 
 This separation prevents general runtime metadata from being mixed into domain payload or validation proof.
 
-It also makes future protocol-layer evolution cleaner.
+`metadata_json` is also the future container for write-side observability metadata.
+
+Future uses may include:
+
+- Compass validation timing
+- registry-stage timing
+- validator identity
+- validation mode
+- runtime trace/debug metadata
+
+These fields are not part of domain truth or proof truth.
+
+They support debugging, audit, and future performance analysis.
 
 ---
 
