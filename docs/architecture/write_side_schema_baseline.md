@@ -14,7 +14,6 @@ This note focuses on two durable write-side boundaries:
 - request-level idempotency persistence
 
 It does **not** define the entire runtime implementation.
-
 It defines the schema-level reasoning that supports that implementation.
 
 ---
@@ -30,7 +29,7 @@ Once write-side state must survive:
 - retry after timeout
 - partial persistence failure
 
-the system must make some previously implicit runtime assumptions explicit.
+the system must make previously implicit runtime assumptions explicit.
 
 That is why the durable write-side schema must answer not only:
 
@@ -61,6 +60,8 @@ It does **not yet** cover:
 - DLQ or out-of-order runtime structures
 - structured semantic outcome persistence
 - Layer 2 validation tables
+- production-grade partitioning
+- append-only trigger enforcement
 
 Those belong to later stages.
 
@@ -101,6 +102,7 @@ The baseline write-side schema should support:
 - aggregate-local replay
 - idempotency survival across restart
 - future evolution of semantic fingerprint rules
+- future evolution of event payload / proof format
 - exact money persistence
 - future-safe transition into transactional write-side persistence
 
@@ -123,6 +125,7 @@ A future generalized event store may rename this concept to `aggregate_id`, but 
 ## Proposed Core Columns
 
 - `accepted_event_id`
+- `event_schema_version`
 - `order_id`
 - `sequence`
 - `event_type`
@@ -134,7 +137,8 @@ A future generalized event store may rename this concept to `aggregate_id`, but 
 - `proof_prev_status`
 - `payload_json`
 - `proof_json`
-- `created_at`
+- `metadata_json`
+- `appended_at`
 
 ---
 
@@ -146,7 +150,7 @@ Stable event identity after the event has entered accepted history.
 
 This name is intentional.
 
-Before append, the same UUID-like value should be interpreted as `candidate_event_id`.
+Before append, the same UUID-compatible value should be interpreted as `candidate_event_id`.
 
 After successful append into `order_events`, it may be referenced as `accepted_event_id`.
 
@@ -154,6 +158,38 @@ The key boundary rule is:
 
 > `event_id` alone does not imply accepted history.  
 > Only event-log membership grants accepted-event status.
+
+The PostgreSQL column should use the `UUID` type instead of `TEXT`.
+
+This makes accepted event identity a durable schema contract rather than an untyped string convention.
+
+The database stores UUID values.
+
+The application remains responsible for event identity generation.
+
+UUIDv7-compatible generation is the preferred future policy because time-ordered UUIDs are useful for event-log locality and debugging, but Stage 3.5B PR 1 only requires the database contract to store UUID-compatible accepted event IDs.
+
+### `event_schema_version`
+
+Identifies the durable event format version.
+
+This field exists because event sourcing systems must support event shape evolution over time.
+
+For Stage 3.5B, the baseline version is:
+
+```text
+1
+```
+
+A future event format may add fields such as `currency`, richer proof structure, or protocol-level metadata.
+
+With `event_schema_version`, future replay logic can distinguish:
+
+- v1 event interpretation
+- v2 event interpretation
+- future migration or compatibility paths
+
+This avoids forcing reducers or validators to infer event format from payload shape alone.
 
 ### `order_id`
 
@@ -187,11 +223,17 @@ This should not use floating-point storage.
 
 Preserves the event occurrence timestamp carried by the domain event.
 
+This is the domain event time.
+
 ### `proof_prev_event_id`, `proof_prev_version`, `proof_prev_status`
 
 Stores the minimal proof / predecessor claims needed by the current write-side model.
 
 These fields make important proof values queryable without requiring every validation or debugging path to parse JSON.
+
+`proof_prev_event_id` may remain `TEXT` in the first baseline because it is part of the proof claim structure, not the accepted event row identity itself.
+
+A future hardening step may convert it to `UUID` or introduce stronger linkage if proof references need to become physically enforced.
 
 ### `payload_json`
 
@@ -203,11 +245,35 @@ This should not hide fields needed for stream identity, replay ordering, or writ
 
 Stores supplemental proof / provenance details in a form that can evolve without excessive schema churn.
 
-### `created_at`
+### `metadata_json`
 
-Provides durable insertion traceability and time-based debugging support.
+Stores non-domain and non-proof metadata such as:
 
-This is a persistence timestamp, not a replacement for `occurred_at_ms`.
+- source
+- actor
+- correlation id
+- trace id
+- writer component
+- request context
+
+This prevents domain payload and validation proof from being polluted by general runtime metadata.
+
+The baseline may default this to an empty JSON object.
+
+### `appended_at`
+
+Provides durable append-time traceability and time-based debugging support.
+
+This is the database accepted-history append time.
+
+It is intentionally distinct from `occurred_at_ms`.
+
+The distinction is:
+
+| Column | Meaning |
+|---|---|
+| `occurred_at_ms` | Domain event occurrence time |
+| `appended_at` | PostgreSQL accepted-history insertion time |
 
 ---
 
@@ -216,6 +282,8 @@ This is a persistence timestamp, not a replacement for `occurred_at_ms`.
 The initial durable write-side baseline should require:
 
 - primary key on `accepted_event_id`
+- UUID type for accepted event identity
+- event schema version presence
 - uniqueness of `(order_id, sequence)`
 - positive sequence values
 - exact non-negative money storage
@@ -237,11 +305,13 @@ It prevents two accepted rows from occupying the same logical event slot.
 
 ## Suggested Draft Shape
 
-A first migration may look conceptually like:
+A first migration should look conceptually like:
 
 ```sql
-CREATE TABLE order_events (
-    accepted_event_id TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS order_events (
+    accepted_event_id UUID PRIMARY KEY,
+    event_schema_version INTEGER NOT NULL DEFAULT 1,
+
     order_id TEXT NOT NULL,
     sequence INTEGER NOT NULL,
     event_type TEXT NOT NULL,
@@ -255,19 +325,21 @@ CREATE TABLE order_events (
 
     payload_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     proof_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
 
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    appended_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     CONSTRAINT uq_order_events_order_sequence UNIQUE (order_id, sequence),
+    CONSTRAINT ck_order_events_schema_version_positive CHECK (event_schema_version > 0),
     CONSTRAINT ck_order_events_sequence_positive CHECK (sequence > 0),
     CONSTRAINT ck_order_events_event_type CHECK (event_type IN ('CREATED', 'PAID')),
     CONSTRAINT ck_order_events_amount_non_negative CHECK (amount >= 0)
 );
 ```
 
-This is a baseline draft, not the final implementation contract.
+This is the Stage 3.5B baseline migration shape.
 
-The final migration should be reviewed together with the Python storage implementation.
+The final Python storage implementation must follow this contract rather than creating a different implicit schema.
 
 ---
 
@@ -278,6 +350,8 @@ The `order_events` table is:
 - append-oriented
 - replayable
 - aggregate-local ordered
+- schema-versioned
+- metadata-aware
 - the durable accepted-history boundary
 
 It is **not**:
@@ -287,6 +361,7 @@ It is **not**:
 - the checkpoint boundary
 - the conflict audit boundary
 - a mutable current-state table
+- a rejected-candidate audit table
 
 ---
 
@@ -367,7 +442,9 @@ It is the stable representation of the fields that define the semantic effect of
 
 Links the durable idempotency result to the accepted event that satisfied the request.
 
-This should reference `order_events.accepted_event_id`.
+This should use PostgreSQL `UUID` and reference `order_events.accepted_event_id`.
+
+This is important because idempotency records must point to accepted history, not rejected candidates.
 
 ### `result_sequence`
 
@@ -389,7 +466,9 @@ Conflict logging can be added later as a separate audit concern.
 
 ### `created_at`
 
-Supports auditability and durable traceability.
+Supports auditability and durable traceability for the idempotency record itself.
+
+This column does not need to be renamed to `appended_at` because the idempotency table is not the event log.
 
 The baseline table should avoid `updated_at` unless the implementation introduces a real state transition such as `PENDING -> SUCCEEDED`.
 
@@ -399,11 +478,12 @@ For the first baseline, idempotency records should be append-oriented successful
 
 ## Suggested Draft Shape
 
-A first migration may look conceptually like:
+A first migration should look conceptually like:
 
 ```sql
-CREATE TABLE idempotency_records (
+CREATE TABLE IF NOT EXISTS idempotency_records (
     request_id TEXT PRIMARY KEY,
+
     order_id TEXT NOT NULL,
     command_type TEXT NOT NULL,
     amount NUMERIC(18, 2) NOT NULL,
@@ -411,7 +491,7 @@ CREATE TABLE idempotency_records (
     fingerprint_version INTEGER NOT NULL,
     semantic_fingerprint TEXT NOT NULL,
 
-    accepted_event_id TEXT NOT NULL,
+    accepted_event_id UUID NOT NULL,
     result_sequence INTEGER NOT NULL,
 
     status TEXT NOT NULL DEFAULT 'SUCCEEDED',
@@ -424,12 +504,21 @@ CREATE TABLE idempotency_records (
     CONSTRAINT ck_idempotency_fingerprint_version_positive
         CHECK (fingerprint_version > 0),
 
+    CONSTRAINT ck_idempotency_result_sequence_positive
+        CHECK (result_sequence > 0),
+
     CONSTRAINT ck_idempotency_status
-        CHECK (status IN ('SUCCEEDED'))
+        CHECK (status IN ('SUCCEEDED')),
+
+    CONSTRAINT ck_idempotency_command_type
+        CHECK (command_type IN ('CREATE_ORDER', 'PAY_ORDER')),
+
+    CONSTRAINT ck_idempotency_amount_non_negative
+        CHECK (amount >= 0)
 );
 ```
 
-This is a baseline draft.
+This is the Stage 3.5B baseline migration shape.
 
 A later hardening stage may introduce conflict audit records, pending states, retry attempt metadata, or richer operational traces.
 
@@ -639,6 +728,60 @@ This means Stage 3.5B should document that the runtime application should not up
 
 ---
 
+# Durable Event Identity Policy
+
+The first durable schema stores `accepted_event_id` as PostgreSQL `UUID`.
+
+This establishes the database contract.
+
+The application remains responsible for generating event identity before append.
+
+Preferred future policy:
+
+```text
+application-generated UUIDv7-compatible event IDs
+```
+
+Rationale:
+
+- avoids database-owned identity generation
+- keeps candidate / accepted identity lifecycle visible in Python
+- supports event identity before admission
+- improves future event-log locality and debugging if UUIDv7 is adopted
+
+Stage 3.5B PR 1 does not need to implement the Python UUID generator.
+
+It only defines the durable database shape that PR 2 must follow.
+
+---
+
+# Future Production Hardening
+
+The following concerns are intentionally deferred from the Stage 3.5B minimal baseline:
+
+- append-only trigger to block `UPDATE` / `DELETE` on `order_events`
+- production DB roles with stricter runtime privileges
+- table partitioning
+- `tx_id` / WAL investigation support
+- idempotency conflict audit table
+- distributed ordering / HLC research
+
+These are valid production concerns.
+
+They are not required for the first durable write-side loop.
+
+Deferring them keeps Stage 3.5B focused on the minimal durable baseline:
+
+```text
+schema
+→ local PostgreSQL setup
+→ migration
+→ durable stores
+→ transactional write-side boundary
+```
+
+---
+
 # Current Design Decisions
 
 At the current stage, the following are directionally accepted:
@@ -646,8 +789,13 @@ At the current stage, the following are directionally accepted:
 - PostgreSQL is the primary durable storage target
 - accepted history remains the durable source of truth
 - `order_events` stores accepted history
+- `order_events.accepted_event_id` uses PostgreSQL `UUID`
+- event identity remains application-generated
+- `event_schema_version` is required for durable event format evolution
+- `metadata_json` is used for non-domain / non-proof runtime metadata
+- `appended_at` is used for database append time
 - `idempotency_records` stores durable replay / conflict classification support
-- `accepted_event_id` should be used for persisted accepted history
+- `idempotency_records.accepted_event_id` references accepted history
 - `order_id` remains the current aggregate-local stream identity
 - exact money storage is required
 - `semantic_fingerprint` must be durable and explicit
@@ -661,13 +809,13 @@ At the current stage, the following are directionally accepted:
 
 The following still require final implementation decisions:
 
-- exact SQL types for each identifier column
 - whether conflict should remain non-persistent in the first durable iteration
 - exact Python-side storage interface shape
 - exact migration file layout
 - exact transaction handling code
 - whether permission hardening should be implemented in the same stage or a later hardening PR
-- whether `payload_json` and `proof_json` should eventually store the full canonical event/proof body or only supplementary details
+- whether `payload_json`, `proof_json`, and `metadata_json` should eventually store the full canonical body or only supplementary details
+- whether the first Python UUID generation policy should use UUIDv4 first or adopt UUIDv7 immediately
 
 ---
 
@@ -681,11 +829,21 @@ It should preserve:
 - replayability
 - request-level idempotency semantics
 - exact money semantics
+- durable event format evolution
 - future-safe semantic fingerprint evolution
 
-That is why the initial durable write-side schema must include not only `semantic_fingerprint`, but also `fingerprint_version`.
+That is why the initial durable write-side schema must include:
 
-Without that, the system would have no durable way to distinguish:
+- `accepted_event_id` as UUID
+- `event_schema_version`
+- `metadata_json`
+- `appended_at`
+- `semantic_fingerprint`
+- `fingerprint_version`
 
-- same semantic rule set applied twice
-- versus fingerprints generated under different semantic worlds
+Without these, the system would have no durable way to distinguish:
+
+- accepted event identity vs generic string identity
+- event occurrence time vs database append time
+- domain payload vs proof vs runtime metadata
+- same semantic rule set applied twice vs fingerprints generated under different semantic worlds
