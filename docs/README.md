@@ -4,7 +4,7 @@
 
 This directory contains the design documentation for **Streaming System + Compass**.
 
-The goal of this documentation set is not only to describe what the system does, but also to preserve the reasoning behind major architectural decisions, implementation sequencing, domain boundaries, module responsibilities, design philosophy, and lessons learned during development.
+The goal of this documentation set is not only to describe what the system does, but also to preserve the reasoning behind major architectural decisions, implementation sequencing, domain boundaries, module responsibilities, design philosophy, local development setup, and lessons learned during development.
 
 At the current stage, the documentation no longer represents only intended architecture.
 It now also serves as the reference frame for an executable baseline covering:
@@ -14,6 +14,8 @@ It now also serves as the reference frame for an executable baseline covering:
 - write-side replay and admission boundaries
 - Stage 3 baseline projection runtime in deterministic in-memory form
 - Stage 3.5A exact-money hardening before durable persistence
+- Stage 3.5B durable write-side schema reasoning
+- local PostgreSQL development setup for durable write-side work
 - executable failure-path tests for selected invariants and adversarial cases
 
 ---
@@ -23,7 +25,7 @@ It now also serves as the reference frame for an executable baseline covering:
 The repository currently has an implemented baseline for:
 
 - transactional semantic core
-- accepted-history persistence and replay
+- accepted-history persistence and replay in the current in-memory baseline
 - request-level idempotency and replay/conflict distinction
 - optimistic admission for stale-write rejection
 - Compass Layer 1 validation before persistence
@@ -33,11 +35,23 @@ The repository currently has an implemented baseline for:
 - formal projection reducer path as the only replay-reduction truth path
 - executable tests across unit, integration, semantic-case, adversarial-baseline, and Stage 3 projection-baseline layers
 
+The repository is now entering **Stage 3.5B — durable write-side baseline**.
+
+The current Stage 3.5B focus is:
+
+- durable write-side schema baseline
+- Python-to-database guarantee translation
+- local PostgreSQL development setup
+- initial write-side SQL migration skeleton
+- later `PostgresEventStore`
+- later `PostgresIdempotencyStore`
+- later transactional grouping for accepted event append + idempotency record write
+
 The next major implementation steps are:
 
 - Stage 3.5B durable write-side baseline
 - Stage 3.5C durable read-side baseline
-- later Stage 4 runtime semantic validation and outcome structuring
+- later Stage 4 runtime semantic validation, semantic outcome structuring, runtime decision policy, and action safety
 
 ---
 
@@ -58,9 +72,10 @@ Recommended reading order:
 11. [Implementation Roadmap](roadmap/implementation_roadmap.md)
 12. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
 13. [Boundary Notes](boundary_notes/README.md)
-14. [Postmortems](postmortems/README.md)
+14. [Development Setup](development/README.md)
+15. [Postmortems](postmortems/README.md)
 
-This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, and finally module-boundary notes and postmortems.
+This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, module-boundary notes, local development setup, and finally postmortems.
 
 For the mental models and working methodology behind the architecture, see [Design Philosophy](philosophy/README.md), especially the notes on learning/design methodology, IBO, and Core / Enabler separation.
 
@@ -77,9 +92,11 @@ top-level system structure
 → Compass layer evolution
 → projection runtime baseline
 → exact-money hardening before durable persistence
+→ durable write-side schema and local PostgreSQL setup
 → durable write-side baseline
 → durable read-side baseline
 → runtime semantic validation and outcome structuring
+→ runtime decision policy and action safety
 → boundary clarification
 → postmortem lessons
 ```
@@ -94,6 +111,7 @@ docs/
 ├── architecture/      # Subsystem-level architecture notes
 ├── adr/               # Architecture Decision Records
 ├── boundary_notes/    # Module ownership and responsibility boundaries
+├── development/       # Local development setup and environment notes
 ├── domain/            # Versioned domain specifications and domain decision notes
 ├── roadmap/           # Implementation sequencing and evolution plans
 └── postmortems/       # Design lessons, mistakes, and boundary reflections
@@ -130,6 +148,7 @@ Use these documents when you want to understand:
 - what it intentionally does not own
 - how it relates to the rest of the system
 - what future evolution is expected
+- how durable write-side schema decisions should be shaped before implementation grows larger
 
 ---
 
@@ -149,20 +168,6 @@ ADRs are decision records, not general tutorials.
 
 ---
 
-### [domain/](domain/README.md)
-
-Domain-level specifications and domain decision notes.
-
-Use these documents when you want to understand:
-
-- what a business state or event means
-- which domain rules the aggregate must enforce
-- which domain constraints are in scope for the current version
-- which semantic limitations are intentionally deferred
-- how the domain model is expected to evolve over time
-
----
-
 ### [boundary_notes/](boundary_notes/README.md)
 
 Module-level and cross-boundary responsibility notes.
@@ -174,6 +179,38 @@ Use these documents when you want to understand:
 - where a value is decided
 - which layer validates, persists, derives, or governs meaning
 - how to avoid semantic confusion during implementation
+- how Python-side guarantees should be translated into database-side boundaries
+
+---
+
+### [development/](development/README.md)
+
+Local development setup notes.
+
+Use these documents when you want to understand:
+
+- how to start local development infrastructure
+- how to run the local PostgreSQL environment
+- which ports, credentials, and connection URLs are used for local development
+- which setup choices are local-only and not production-grade
+- which development environment boundaries must remain explicit
+
+These documents are not architecture decisions.
+They are practical setup notes for running and testing the project locally.
+
+---
+
+### [domain/](domain/README.md)
+
+Domain-level specifications and domain decision notes.
+
+Use these documents when you want to understand:
+
+- what a business state or event means
+- which domain rules the aggregate must enforce
+- which domain constraints are in scope for the current version
+- which semantic limitations are intentionally deferred
+- how the domain model is expected to evolve over time
 
 ---
 
@@ -213,6 +250,7 @@ Use these documents when you want to understand:
 | What does this business state or event mean? | [Domain Specifications](domain/README.md) |
 | Why was this architecture direction chosen? | [ADRs](adr/README.md) |
 | Which module owns this responsibility? | [Boundary Notes](boundary_notes/README.md) |
+| How do I run local development infrastructure? | [Development Setup](development/README.md) |
 | What has already been built and what comes next? | [Roadmaps](roadmap/README.md) |
 | What mistake or confusion should not be repeated? | [Postmortems](postmortems/README.md) |
 
@@ -224,9 +262,9 @@ The documentation follows one main principle:
 
 > Explain the boundary before explaining the implementation.
 
-This project is built around semantic correctness, replayability, failure awareness, and runtime validation.
+This project is built around semantic correctness, replayability, failure awareness, durable truth, and runtime validation.
 
-The documentation should therefore make ownership, invariants, and trade-offs explicit before code becomes too large to reason about.
+The documentation should therefore make ownership, invariants, environment boundaries, and trade-offs explicit before code becomes too large to reason about.
 
 In short:
 
@@ -234,5 +272,6 @@ In short:
 first define meaning
 then define ownership
 then define runtime flow
+then define local execution boundary
 then write implementation
 ```
