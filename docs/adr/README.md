@@ -28,6 +28,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0006 | [Use Decimal for Money Values Before Durable Persistence](0006_use_decimal_for_money_values_before_durable_persistence.md) | Proposed | Defines why money-like values should move from `float` to `Decimal` before the durable write-side baseline grows larger. |
 | 0007 | [Separate Semantic Correctness from Operational Trust](0007_separate_semantic_correctness_from_operational_trust.md) | Proposed | Defines why future trust evaluation should separate semantic correctness, projection correctness, operational trust, and action safety. |
 | 0008 | [Pre-Allocated Event Identity and Candidate/Accepted Event Naming Boundary](0008_pre_allocated_event_identity_and_candidate_accepted_boundary.md) | Proposed | Defines the lifecycle naming boundary for pre-allocated event IDs before durable write-side persistence. |
+| 0009 | [Write-Side Persistence Driver and Identity Generation Boundary](0009_write_side_persistence_driver_and_identity_boundary.md) | Proposed | Defines why the Stage 3.5B write-side persistence baseline uses explicit PostgreSQL driver access and centralized event ID generation instead of ORM-driven persistence or immediate UUIDv7 migration. |
 
 ---
 
@@ -51,7 +52,8 @@ Recommended order:
 6. [Persistent Storage Baseline Strategy](0005_persistent_storage_baseline_strategy.md) — explains why the next stage should prioritize durable persistence before advanced runtime complexity.
 7. [Use Decimal for Money Values Before Durable Persistence](0006_use_decimal_for_money_values_before_durable_persistence.md) — explains why exact money representation should be corrected before durable persistence expands further.
 8. [Pre-Allocated Event Identity and Candidate/Accepted Event Naming Boundary](0008_pre_allocated_event_identity_and_candidate_accepted_boundary.md) — explains why pre-allocated event IDs remain acceptable, while candidate and accepted event identities must be named explicitly before durable write-side persistence.
-9. [Separate Semantic Correctness from Operational Trust](0007_separate_semantic_correctness_from_operational_trust.md) — explains why future trust evaluation should not collapse semantic correctness, projection correctness, operational trust, and action safety into one boolean.
+9. [Write-Side Persistence Driver and Identity Generation Boundary](0009_write_side_persistence_driver_and_identity_boundary.md) — explains why the Stage 3.5B write-side persistence baseline uses explicit PostgreSQL driver access and centralizes event identity generation before deeper durable write-side code is added.
+10. [Separate Semantic Correctness from Operational Trust](0007_separate_semantic_correctness_from_operational_trust.md) — explains why future trust evaluation should not collapse semantic correctness, projection correctness, operational trust, and action safety into one boolean.
 
 ADR 0001 and ADR 0003 are closely related because both concern the transactional write-side path.
 
@@ -65,7 +67,9 @@ ADR 0006 is related to money representation hardening before the write-side dura
 
 ADR 0008 is related to the transition into Stage 3.5B. It records the event identity lifecycle rule used before durable persistence: pre-allocated `event_id` values may exist before append, but only event-log membership grants accepted-history status. This ADR should be read before modifying admission, event-store, validation-result, or future outcome schemas.
 
-ADR 0007 is related to the future evolution from structured semantic outcomes into layered trust verdicts. It should be read after ADR 0004, ADR 0005, and ADR 0006 because it assumes the reader already understands the Compass layering, persistent-storage direction, and current Stage 3.5 implementation priority.
+ADR 0009 is related to the first Stage 3.5B write-side code path after the schema baseline. It records why the project uses explicit `psycopg`-based PostgreSQL access for the write-side event store, why ORM-driven persistence is deferred for this boundary, and why event ID generation is centralized while UUIDv7 adoption is deferred.
+
+ADR 0007 is related to the future evolution from structured semantic outcomes into layered trust verdicts. It should be read after ADR 0004, ADR 0005, ADR 0006, ADR 0008, and ADR 0009 because it assumes the reader already understands the Compass layering, persistent-storage direction, event identity boundary, and current Stage 3.5 implementation priority.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -110,6 +114,7 @@ Recommended pattern:
 0006_use_decimal_for_money_values_before_durable_persistence.md
 0007_separate_semantic_correctness_from_operational_trust.md
 0008_pre_allocated_event_identity_and_candidate_accepted_boundary.md
+0009_write_side_persistence_driver_and_identity_boundary.md
 ```
 
 Evolution or supporting notes may be kept as separate files:
