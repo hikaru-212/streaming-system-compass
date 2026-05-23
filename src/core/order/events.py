@@ -3,7 +3,7 @@ from decimal import Decimal
 import time
 import uuid
 
-
+from src.core.common.ids import generate_event_id
 from src.core.common.money import normalize_money
 
 from .enums import EventType
@@ -62,7 +62,7 @@ class OrderEvent:
         - sequence truth should not be decided by external callers
         """
         return OrderEvent(
-            event_id=uuid.uuid4().hex,
+            event_id=generate_event_id(),
             request_id=request_id,
             order_id=order_id,
             sequence=sequence,
