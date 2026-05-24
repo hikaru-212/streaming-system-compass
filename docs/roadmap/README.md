@@ -21,6 +21,7 @@ Use roadmap documents to understand:
 |---|---|
 | [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, durable persistence, runtime semantic outcomes, runtime decision policy, action safety, and the Stage 5 dual-dimension governance demo. |
 | [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward durable runtime validation, structured semantic outcomes, runtime decisions, action safety, and later dual-dimension governance. |
+| [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred from the current implementation scope, including durable vocabulary normalization, UUIDv7 evaluation, formal protocols, JSONB evidence hydration, metadata timing, transaction ownership, persistence errors, append-only hardening, and integration-test strategy. |
 
 ---
 
@@ -28,10 +29,13 @@ Use roadmap documents to understand:
 
 1. [Implementation Roadmap](implementation_roadmap.md)
 2. [Compass Runtime Roadmap](compass_runtime_roadmap.md)
+3. [Deferred Architecture Backlog](deferred_architecture_backlog.md)
 
 The implementation roadmap gives the global project sequence.
 
 The Compass runtime roadmap gives a more focused view of how Compass should evolve from the current write-side baseline toward durable persistence, runtime semantic validation, structured semantic outcomes, runtime decision policy, action safety, and dual-dimension governance.
+
+The deferred architecture backlog should be read after the main roadmaps. It does not expand the current implementation scope. It records known architecture concerns that have been intentionally postponed until the right stage.
 
 ---
 
@@ -44,18 +48,18 @@ The project has already completed:
 - Stage 3 — Projection Runtime Baseline
 - Stage 3.5A — Decimal / Money Hardening
 - Stage 3.5B PR1 — Schema + Docker PostgreSQL + Migration Skeleton
+- Stage 3.5B PR2 — PostgresEventStore baseline
 
 The current next work is:
 
 ```text
-Stage 3.5B PR2 — PostgresEventStore
+Stage 3.5B PR3 — PostgresIdempotencyStore
 ```
 
 The remaining Stage 3.5B path is:
 
 ```text
-PR2 PostgresEventStore
-→ PR3 PostgresIdempotencyStore
+PR3 PostgresIdempotencyStore
 → PR4 Transactional Write-side Boundary
 ```
 
@@ -100,6 +104,30 @@ Stage 3.5B is split into four small checkpoints:
 
 4. **PR4 — Transactional Write-side Boundary**  
    Coordinates event append and idempotency record write in one database transaction.
+
+---
+
+## Deferred Architecture Backlog Reminder
+
+Some architecture issues are known but intentionally deferred to avoid scope creep.
+
+Examples include:
+
+- durable `EventType` vocabulary normalization
+- UUIDv7 / time-ordered UUID evaluation
+- formal `EventStoreProtocol`
+- stored event record / JSONB evidence hydration
+- registry-stage timing in `metadata_json`
+- transaction lifecycle ownership
+- custom persistence exceptions
+- append-only database hardening
+- integration-test structure and CI strategy
+
+These are tracked in:
+
+- [Deferred Architecture Backlog](deferred_architecture_backlog.md)
+
+They should be converted into GitHub Issues only when their suggested timing becomes active.
 
 ---
 
