@@ -139,25 +139,30 @@ At the current stage, this also now exists as part of the Stage 3 baseline proje
 
 ## Current Implementation Scope
 
-At the current stage, this module now supports both:
+At the current stage, this module supports both write-side and read-side persistence boundaries.
 
-1. write-side persistence boundaries
-   - `event_store.py`
-   - `idempotency_store.py`
+Write-side storage currently includes:
 
-2. Stage 3 baseline read-side persistence boundaries
-   - `projection_store.py`
-   - `checkpoint_store.py`
+- `event_store.py` — in-memory accepted-history store
+- `postgres_connection.py` — low-level PostgreSQL connection helper
+- `postgres_event_store.py` — PostgreSQL-backed accepted-history store baseline
+- `idempotency_store.py` — in-memory request replay / conflict store
 
-This means the storage layer is no longer only write-side focused.
+Read-side storage currently includes:
 
-However, the current read-side storage baseline remains intentionally limited:
+- `projection_store.py` — in-memory projection state store
+- `checkpoint_store.py` — in-memory checkpoint / offset store
 
-- projection state persistence is still in-memory
-- checkpoint persistence is still in-memory
-- durable database-backed semantics are not yet implemented
+The current durable write-side progress is:
 
-Those are the next major storage-evolution target.
+```text
+Stage 3.5B PR1 — PostgreSQL schema / local setup / migration ✅
+Stage 3.5B PR2 — PostgresEventStore baseline ✅
+Stage 3.5B PR3 — PostgresIdempotencyStore planned
+Stage 3.5B PR4 — transactional write-side boundary planned
+```
+
+The current durable read-side progress is still planned for Stage 3.5C.
 
 ---
 

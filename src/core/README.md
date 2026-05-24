@@ -34,7 +34,7 @@ src/core/
 
 ## Directory Guide
 
-### [common/](common/)
+### [common/](common/README.md)
 
 Shared semantic building blocks.
 
@@ -46,7 +46,12 @@ This area is appropriate for items that are:
 
 At the current stage, this area remains intentionally small.
 
-The first concrete example is `money.py`, which provides exact decimal money parsing, normalization, and durable string conversion for the current v1 domain.
+Current concrete examples include:
+
+- `money.py` — exact decimal money parsing, normalization, and durable string conversion for the current v1 domain.
+- `ids.py` — centralized event identity generation for the current write-side event model.
+
+`ids.py` currently generates UUIDv4 canonical string identities through a single boundary. This does not introduce UUIDv7 yet. The purpose is to prevent event identity generation from being scattered across domain, storage, and tests, so future UUID policy changes can be evaluated in one place.
 
 This layer should remain small and disciplined.
 It should not become a dumping ground for generic helpers.

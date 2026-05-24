@@ -5,9 +5,10 @@ on:
     branches:
       - main
       - feat/stage3.5b-write-side-durable-baseline
+
   push:
     branches:
-      - main # Also monitor pushes to main.
+      - main
       - refactor/event-identity-boundary-cleanup
       - feat/stage3.5b-write-side-durable-baseline
 
@@ -15,32 +16,56 @@ jobs:
   test:
     name: Run Semantic Tests
     runs-on: ubuntu-latest
-    
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: compass_dev
+          POSTGRES_USER: compass_user
+          POSTGRES_PASSWORD: compass_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U compass_user -d compass_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      DATABASE_URL: postgresql://compass_user:compass_password@localhost:5433/compass_dev
+
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4 # Use the stable v4 checkout action.
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip" # Enable pip caching to speed up future runs.
+          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov # Install pytest and coverage support.
+          pip install pytest pytest-cov
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Lint with Flake8 (Optional but Recommended)
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Apply database migrations
+        run: |
+          psql "$DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
+
+      - name: Lint with Flake8
         run: |
           pip install flake8
-          # Fail only on syntax errors and undefined names.
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      - name: Run Pytest with PYTHONPATH
-        env:
-          PYTHONPATH: ${{ github.workspace }}
+      - name: Run Pytest
         run: |
-          # Run the test suite.
-          pytest -v
+          pytest -v --durations=10

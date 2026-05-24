@@ -50,6 +50,9 @@ Use this directory when you want to understand:
 - what an aggregate means
 - what a legal transition is
 - which invariants belong to domain semantics
+- which shared semantic primitives support the domain
+
+Current shared semantic primitives include exact money handling and centralized event identity generation under `core/common/`.
 
 ---
 
@@ -63,6 +66,9 @@ Use this directory when you want to understand:
 - how idempotency records are stored
 - how projection state is stored
 - how checkpoint progress is tracked
+- how PostgreSQL-backed durable storage is being introduced
+
+At the current Stage 3.5B PR2 checkpoint, storage includes the first PostgreSQL-backed accepted-history implementation through `PostgresEventStore`.
 
 ---
 
@@ -143,12 +149,34 @@ At the current stage, `src/` already contains an executable baseline across:
 - optimistic admission / stale-write rejection
 - Compass Layer 1 transition-truth validation
 - Stage 3 baseline projection runtime in deterministic in-memory form
+- Stage 3.5A exact-money hardening
+- Stage 3.5B PR1 PostgreSQL schema / local setup / migration baseline
+- Stage 3.5B PR2 PostgreSQL-backed accepted-history baseline through `PostgresEventStore`
 
 This means `src/` is no longer only a semantic skeleton.
 It already contains the first closed executable loop for both:
 
 - write-side admission
 - read-side projection baseline
+
+It is also now beginning to support durable write-side persistence.
+
+---
+
+## Current Durable Persistence Position
+
+The current durable write-side path is intentionally staged:
+
+```text
+Stage 3.5B PR1 — PostgreSQL schema / local setup / migration ✅
+Stage 3.5B PR2 — PostgresEventStore baseline ✅
+Stage 3.5B PR3 — PostgresIdempotencyStore planned
+Stage 3.5B PR4 — transactional write-side boundary planned
+```
+
+The current durable baseline means accepted event history can now be persisted through PostgreSQL-backed storage.
+
+However, the full durable write-side flow is not complete until idempotency persistence and transaction coordination are also implemented.
 
 ---
 
@@ -164,6 +192,7 @@ That means:
 - keep storage separate from domain rules
 - keep semantic validation separate from persistence admission
 - keep composition separate from business logic
+- keep durable persistence separate from domain meaning
 
 This separation is especially important because the project is concerned with correctness under failure, not just successful execution.
 
@@ -173,7 +202,9 @@ This separation is especially important because the project is concerned with co
 
 At the current stage, the source tree does **not yet** fully solve:
 
-- persistent storage-backed runtime behavior
+- fully transactionally coordinated durable write-side behavior
+- durable idempotency storage
+- durable read-side projection / checkpoint storage
 - state-level Compass Layer 2 validation
 - advanced runtime concerns such as DLQ, buffering, watermarking, or multi-worker coordination
 - full analytical pipeline implementation

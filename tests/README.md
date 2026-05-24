@@ -17,6 +17,7 @@ They also exist to defend the semantic boundaries of the system, including:
 - admission / concurrency protection
 - projection sequencing behavior
 - projection replay / rebuild consistency at the Stage 3 baseline
+- durable accepted-history behavior through PostgreSQL-backed storage
 
 In this project, tests are part of the architecture argument.
 
@@ -27,10 +28,11 @@ They help prove that the intended semantic boundaries are actually executable.
 
 ## Current Testing Focus
 
-At the current stage, the strongest test coverage spans both:
+At the current stage, the strongest test coverage spans:
 
 - the write-side transactional baseline
 - the Stage 3 baseline projection runtime
+- the Stage 3.5B PR2 PostgreSQL-backed accepted-history baseline
 
 This currently includes:
 
@@ -43,9 +45,11 @@ This currently includes:
 - projection reducer correctness
 - checkpoint-aware worker sequencing behavior
 - replay / rebuild behavior for the in-memory Stage 3 projection baseline
+- PostgreSQL-backed `PostgresEventStore` append / load / latest-event behavior
+- UUID, Decimal, proof-status, JSONB, and schema-version persistence checks for the durable event-store baseline
 
 The test suite is therefore no longer only write-side focused.
-It now also begins to defend the read-side runtime baseline in executable form.
+It now also defends the first durable storage-backed accepted-history boundary.
 
 ---
 
@@ -57,13 +61,17 @@ Current test categories may include:
 
 - `tests/unit/`
 - `tests/integration/`
+- `tests/integration/storage/`
 - `tests/semantic_cases/`
-- `tests/adversarial_histories/`
+- `tests/adversarial/`
 - `tests/shared/`
 
 The exact layout may continue to evolve as the repository grows, but the guiding idea remains stable:
 
 > each test layer should defend a different semantic boundary.
+
+The new `tests/integration/storage/` area is currently used for database-backed storage integration tests.
+Older integration tests may still live directly under `tests/integration/`; broader test directory reorganization is intentionally deferred until Stage 3.5B boundaries are clearer.
 
 ---
 
@@ -79,6 +87,7 @@ Typical goals:
 - verify validator behavior
 - verify reducer behavior
 - verify local invariants at one module boundary
+- verify helper boundaries such as exact money handling, identity generation, and PostgreSQL connection configuration
 
 These tests answer:
 
@@ -109,6 +118,30 @@ These tests answer:
 
 ---
 
+### `tests/integration/storage/`
+
+Storage integration tests verify persistence-backed behavior against a real database boundary.
+
+Current goals:
+
+- verify `PostgresEventStore.append()`
+- verify `PostgresEventStore.load()`
+- verify `PostgresEventStore.last_event()`
+- verify stale expected-version rejection
+- verify append-time sequence continuity rejection
+- verify UUID / Decimal / proof-status round-trip behavior
+- verify JSONB evidence fields and `event_schema_version` are persisted as expected
+
+These tests answer:
+
+- does the durable accepted-history boundary behave like the in-memory baseline where required?
+- can PostgreSQL preserve the event identity, money value, proof status, and sequence semantics needed for replay?
+- does the durable store reject stale or broken append attempts before accepted history is polluted?
+
+These tests require a PostgreSQL-backed test environment in CI or local development.
+
+---
+
 ### `tests/semantic_cases/`
 
 Semantic-case tests focus on meaningful correctness scenarios.
@@ -126,7 +159,7 @@ These tests answer:
 
 ---
 
-### `tests/adversarial_histories/`
+### `tests/adversarial/`
 
 Adversarial-history tests deliberately use malformed, inconsistent, or hostile histories and event patterns.
 
@@ -161,6 +194,30 @@ If abstraction makes the test less semantically readable, the abstraction should
 
 ---
 
+## Database-Backed Integration Tests
+
+Stage 3.5B introduces tests that require PostgreSQL.
+
+The local expected setup is:
+
+```text
+docker compose up -d
+export DATABASE_URL=postgresql://compass_user:compass_password@localhost:5433/compass_dev
+psql "$DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
+pytest tests/integration/storage/test_postgres_event_store.py -q
+```
+
+The CI workflow should provide the same physical requirements:
+
+- PostgreSQL service
+- `DATABASE_URL`
+- migration application before tests
+- full pytest execution after database setup
+
+These tests intentionally validate the physical persistence boundary rather than only mocking database behavior.
+
+---
+
 ## Testing Philosophy
 
 This repository does not treat tests as an afterthought.
@@ -171,6 +228,7 @@ The test suite is part of the project’s broader design philosophy:
 - define ownership second
 - make the behavior executable
 - preserve the distinction between semantic truth and runtime mechanics
+- verify durable persistence only after the physical boundary is actually exercised
 
 This is especially important because the project is concerned with correctness under failure, not just successful execution.
 
@@ -184,6 +242,7 @@ Tests in this repository therefore aim to defend questions such as:
 - did semantic validation remain separate from admission logic?
 - did the projection reducer remain pure?
 - did the projection worker preserve sequencing and checkpoint semantics at the baseline level?
+- did the durable event store preserve the accepted-history facts required for replay?
 
 ---
 
@@ -207,11 +266,14 @@ At the current stage, the test suite is strongest on:
 - replay safety
 - transition-truth validation
 - Stage 3 baseline projection sequencing and replay behavior
+- Stage 3.5B PR2 PostgreSQL-backed accepted-history behavior
 
 However, the current suite does **not yet** fully cover:
 
-- persistence-backed restart semantics
-- PostgreSQL-backed write-side / read-side storage behavior
+- durable idempotency storage
+- same-transaction event append + idempotency record write
+- persistence-backed restart semantics for the full write-side flow
+- durable read-side projection / checkpoint behavior
 - state-level Compass Layer 2 validation
 - advanced runtime concerns such as DLQ, buffering, watermark semantics, or multi-worker coordination
 
@@ -234,6 +296,9 @@ unit tests
 integration tests
 → boundary composition correctness
 
+storage integration tests
+→ physical persistence-boundary correctness
+
 semantic-case tests
 → executable semantic claims
 
@@ -241,7 +306,7 @@ adversarial-history tests
 → defensive behavior under hostile conditions
 ```
 
-As the project evolves beyond the Stage 3 baseline, the test suite should continue to grow in the same spirit:
+As the project evolves beyond the Stage 3.5B durable write-side baseline, the test suite should continue to grow in the same spirit:
 
 - not only testing whether the system runs
 - but testing whether the system remains semantically trustworthy

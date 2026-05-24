@@ -31,9 +31,9 @@ class OrderStatus(Enum):
     - status meaning belongs to the domain specification
     - status legality is enforced by the aggregate
     """
-    INIT = "init"
-    CREATED = "created"
-    PAID = "paid"
+    INIT = "INIT"
+    CREATED = "CREATED"
+    PAID = "PAID"
 
 
 class CommandType(Enum):
