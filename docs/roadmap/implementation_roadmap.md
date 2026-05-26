@@ -36,6 +36,8 @@ The project has completed an executable baseline across:
 - ADR 0008 event identity lifecycle decision before durable write-side persistence
 - event identity boundary naming cleanup before durable storage expansion
 - Stage 3.5B PR1 schema / local PostgreSQL / migration setup checkpoint
+- Stage 3.5B PR2 PostgresEventStore baseline
+- Stage 3.5B PR3 PostgresIdempotencyStore baseline
 
 This means:
 
@@ -48,12 +50,10 @@ This means:
 
 The next major focus is:
 
-- **Stage 3.5B PR2 — PostgresEventStore baseline**
+- **Stage 3.5B PR4 — transactional write-side boundary**
 
-Only after write-side durable semantics are clarified should the project proceed toward:
+Only after the transactional write-side boundary is clarified should the project proceed toward:
 
-- Stage 3.5B PR3 — PostgresIdempotencyStore
-- Stage 3.5B PR4 — transactional write-side boundary
 - Stage 3.5C durable read-side baseline
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
 - Stage 5 dual-dimension governance demo
@@ -306,6 +306,10 @@ These postmortems explain why Stage 3.5B is not merely a database setup step:
 
 ### PR2 — Python Store / Repository Layer: PostgresEventStore
 
+#### Status
+
+Completed.
+
 #### Goal
 
 Make accepted event history durable through `order_events`.
@@ -368,6 +372,10 @@ PR2 does not implement:
 ---
 
 ### PR3 — PostgresIdempotencyStore Baseline
+
+#### Status
+
+Completed.
 
 #### Goal
 
@@ -1112,8 +1120,8 @@ Decimal / Money Hardening ✅
 Stage 3.5B:
 Durable Write-side Baseline
   PR1 Schema + Docker + Migration ✅
-  PR2 PostgresEventStore
-  PR3 PostgresIdempotencyStore
+  PR2 PostgresEventStore ✅
+  PR3 PostgresIdempotencyStore ✅
   PR4 Transactional Write-side Boundary
 
 Stage 3.5C:
