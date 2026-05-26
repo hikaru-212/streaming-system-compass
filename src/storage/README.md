@@ -147,6 +147,7 @@ Write-side storage currently includes:
 - `postgres_connection.py` — low-level PostgreSQL connection helper
 - `postgres_event_store.py` — PostgreSQL-backed accepted-history store baseline
 - `idempotency_store.py` — in-memory request replay / conflict store
+- `postgres_idempotency_store.py` — PostgreSQL-backed request replay / conflict store baseline
 
 Read-side storage currently includes:
 
@@ -158,7 +159,7 @@ The current durable write-side progress is:
 ```text
 Stage 3.5B PR1 — PostgreSQL schema / local setup / migration ✅
 Stage 3.5B PR2 — PostgresEventStore baseline ✅
-Stage 3.5B PR3 — PostgresIdempotencyStore planned
+Stage 3.5B PR3 — PostgresIdempotencyStore baseline ✅
 Stage 3.5B PR4 — transactional write-side boundary planned
 ```
 
