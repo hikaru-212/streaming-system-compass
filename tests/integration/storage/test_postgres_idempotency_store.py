@@ -7,7 +7,6 @@ from src.core.order.enums import CommandType, EventType, OrderStatus
 from src.core.order.events import OrderEvent
 from src.core.order.proofs import Proof
 from src.storage.idempotency_store import IdempotencyVerdict, RequestSignature
-from src.storage.postgres_connection import connect_postgres
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_idempotency_store import (
     FINGERPRINT_VERSION,
@@ -16,22 +15,7 @@ from src.storage.postgres_idempotency_store import (
 )
 
 
-@pytest.fixture
-def db_connection():
-    connection = connect_postgres()
-    try:
-        yield connection
-    finally:
-        connection.close()
-
-
-@pytest.fixture(autouse=True)
-def clean_database(db_connection):
-    with db_connection.cursor() as cursor:
-        cursor.execute(
-            "TRUNCATE idempotency_records, order_events RESTART IDENTITY CASCADE"
-        )
-    db_connection.commit()
+pytestmark = pytest.mark.usefixtures("clean_database")
 
 
 def build_created_event(order_id: str = "order-idem-1") -> OrderEvent:
@@ -178,7 +162,10 @@ def test_same_request_id_with_different_command_type_returns_conflict(db_connect
     assert decision.record.accepted_event == event
 
 
-def test_idempotency_record_survives_new_connection(db_connection):
+def test_idempotency_record_survives_new_connection(
+    db_connection,
+    db_connection_factory,
+):
     event = build_created_event()
     persist_accepted_event(db_connection, event)
 
@@ -188,9 +175,7 @@ def test_idempotency_record_survives_new_connection(db_connection):
     store.record(signature, event)
     db_connection.commit()
 
-    db_connection.close()
-
-    new_connection = connect_postgres()
+    new_connection = db_connection_factory()
     try:
         new_store = PostgresIdempotencyStore(new_connection)
 
@@ -243,7 +228,6 @@ def test_semantic_fingerprint_uses_current_version_prefix():
     fingerprint = build_semantic_fingerprint(signature)
 
     assert fingerprint.startswith(f"v{FINGERPRINT_VERSION}|")
-
 
 
 def test_conflict_does_not_overwrite_existing_record(db_connection):

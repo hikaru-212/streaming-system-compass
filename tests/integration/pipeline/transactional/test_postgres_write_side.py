@@ -15,7 +15,6 @@ from src.pipeline.transactional.postgres_write_side import (
     PostgresWriteSideOutcome,
 )
 from src.storage.idempotency_store import IdempotencyVerdict
-from src.storage.postgres_connection import connect_postgres
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_idempotency_store import PostgresIdempotencyStore
 
@@ -66,22 +65,7 @@ class FakeValidationRuntimeBlock:
         )
 
 
-@pytest.fixture
-def db_connection():
-    connection = connect_postgres()
-    try:
-        yield connection
-    finally:
-        connection.close()
-
-
-@pytest.fixture(autouse=True)
-def clean_database(db_connection):
-    with db_connection.cursor() as cursor:
-        cursor.execute(
-            "TRUNCATE idempotency_records, order_events RESTART IDENTITY CASCADE"
-        )
-    db_connection.commit()
+pytestmark = pytest.mark.usefixtures("clean_database")
 
 
 @pytest.fixture

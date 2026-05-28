@@ -6,25 +6,10 @@ import pytest
 from src.core.order.enums import EventType, OrderStatus
 from src.core.order.events import OrderEvent
 from src.core.order.proofs import Proof
-from src.storage.postgres_connection import connect_postgres
 from src.storage.postgres_event_store import PostgresEventStore
 
 
-@pytest.fixture
-def db_connection():
-    connection = connect_postgres()
-    try:
-        yield connection
-    finally:
-        connection.close()
-
-
-@pytest.fixture(autouse=True)
-def clean_database(db_connection):
-    with db_connection.cursor() as cursor:
-        cursor.execute("TRUNCATE idempotency_records, order_events RESTART IDENTITY CASCADE")
-    db_connection.commit()
-
+pytestmark = pytest.mark.usefixtures("clean_database")
 
 def build_created_event(order_id: str = "order-postgres-1") -> OrderEvent:
     return OrderEvent.create(
