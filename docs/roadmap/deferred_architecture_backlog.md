@@ -8,10 +8,37 @@ This document records architecture issues intentionally deferred from the curren
 
 The purpose of this backlog is not to expand the current PR scope. Instead, it preserves design concerns that were identified during Stage 3.5B work but should be handled only when the system reaches the right implementation stage.
 
-Current focus remains:
+Current focus:
 
 ```text
-Stage 3.5B PR2 — PostgresEventStore baseline
+Stage 3.5B PR4 — Transactional Semantic Write-side Boundary documentation closure
+```
+
+Next planned focus:
+
+```text
+Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
+```
+
+---
+
+## Status Legend
+
+```text
+Completed
+→ already handled in the current Stage 3.5B baseline
+
+PR5 candidate
+→ appropriate for the next concurrency/admission PR
+
+Optional Stage 3.5B hardening
+→ can be done after PR5 if worth the schema/documentation churn
+
+Stage 4 / evidence design
+→ should wait for SemanticOutcome, runtime evidence, or governance work
+
+Later production hardening
+→ useful, but not part of the current correctness baseline
 ```
 
 ---
@@ -20,7 +47,7 @@ Stage 3.5B PR2 — PostgresEventStore baseline
 
 ### Current Decision
 
-Do not change `EventType` values during PR2.
+Do not change `EventType` values during PR4 / PR5.
 
 Current values remain:
 
@@ -44,12 +71,29 @@ Changing `EventType` to uppercase values such as `"CREATED"` and `"PAID"` would 
 - PostgresEventStore insert behavior
 - integration tests
 - documentation
+- durable event fixtures / expected values
 
-That would expand PR2 beyond its intended scope.
+That would expand PR4 / PR5 beyond their intended scope.
+
+### Current Classification
+
+```text
+Optional Stage 3.5B hardening after PR5
+```
+
+This is **not** Stage 4 Error Model work.
+
+It is durable vocabulary / schema hardening.
 
 ### Suggested Timing
 
-After Stage 3.5B durable write-side baseline is complete.
+After Stage 3.5B PR5, if there is a clear reason to normalize durable storage vocabulary.
+
+Possible future PR:
+
+```text
+schema: harden durable event vocabulary constraints
+```
 
 ### Possible Future Issue
 
@@ -63,7 +107,7 @@ Evaluate durable EventType vocabulary normalization
 
 ### Current Decision
 
-`OrderStatus` values may be normalized to uppercase before durable event-store implementation:
+`OrderStatus` values may already be normalized at the Python domain level:
 
 ```python
 OrderStatus.INIT = "INIT"
@@ -71,11 +115,7 @@ OrderStatus.CREATED = "CREATED"
 OrderStatus.PAID = "PAID"
 ```
 
-This is acceptable because `proof_prev_status` currently has no SQL CHECK constraint.
-
-### Why Not Fully Harden Now
-
-The database schema currently defines:
+However, the database schema currently defines:
 
 ```sql
 proof_prev_status TEXT NOT NULL
@@ -91,9 +131,17 @@ After durable persistence behavior is stable, consider adding a DB constraint su
 CHECK (proof_prev_status IN ('INIT', 'CREATED', 'PAID'))
 ```
 
+### Current Classification
+
+```text
+Optional Stage 3.5B hardening after PR5
+```
+
+This is durable schema hardening, not Stage 4 `SemanticOutcome` / Error Model work.
+
 ### Suggested Timing
 
-After Stage 3.5B baseline, during durable schema hardening.
+After PR5 or before Stage 3.5C, if the project wants to harden durable proof-status vocabulary.
 
 ---
 
@@ -101,7 +149,7 @@ After Stage 3.5B baseline, during durable schema hardening.
 
 ### Current Decision
 
-Do not introduce UUIDv7 in PR2.
+Do not introduce UUIDv7 during Stage 3.5B PR4 / PR5.
 
 Current approach:
 
@@ -111,8 +159,6 @@ Current approach:
 - defer UUIDv7 / time-ordered UUID evaluation
 
 ### Why Not Now
-
-PR2 should focus on making accepted history durable through `PostgresEventStore`.
 
 UUIDv7 adoption may require:
 
@@ -128,9 +174,15 @@ UUIDv7 adoption may require:
 #7 Evaluate UUIDv7 for durable event identity generation
 ```
 
+### Current Classification
+
+```text
+Later evaluation
+```
+
 ### Suggested Timing
 
-After `PostgresEventStore` and the transactional write-side boundary are stable.
+After Stage 3.5B or after durable read-side baseline, unless storage locality or operational inspection becomes a real bottleneck.
 
 ---
 
@@ -138,7 +190,7 @@ After `PostgresEventStore` and the transactional write-side boundary are stable.
 
 ### Current Decision
 
-Do not introduce a formal `Protocol` or abstract base class during PR2.
+Do not introduce a formal `Protocol` or abstract base class just because PostgreSQL persistence now exists.
 
 The project currently relies on constructor injection and method-shape compatibility:
 
@@ -150,9 +202,15 @@ last_event(order_id)
 
 ### Why Not Now
 
-Only one durable implementation is being introduced.
+A protocol should be introduced only when it clarifies coordination between multiple implementations or admission strategies.
 
-Defining a protocol too early may result in an abstraction shaped by incomplete information.
+Defining it too early may result in an abstraction shaped by incomplete information.
+
+### Current Classification
+
+```text
+Optional PR5 candidate
+```
 
 ### Future Work
 
@@ -167,7 +225,9 @@ class EventStoreProtocol(Protocol):
 
 ### Suggested Timing
 
-After PR4 transactional write-side boundary, or when multiple storage implementations need stricter type-level coordination.
+During PR5 only if optimistic / pessimistic admission work needs a stable type boundary.
+
+Otherwise defer until multiple storage implementations require stricter type-level coordination.
 
 ---
 
@@ -216,6 +276,12 @@ load(order_id) -> list[OrderEvent]
 load_records(order_id) -> list[StoredOrderEvent]
 ```
 
+### Current Classification
+
+```text
+Stage 4 / evidence design
+```
+
 ### Suggested Timing
 
 During audit, evidence, or SemanticOutcome persistence design.
@@ -226,7 +292,7 @@ During audit, evidence, or SemanticOutcome persistence design.
 
 ### Current Decision
 
-PR2 does not implement timing collection.
+PR4 did not implement timing collection.
 
 `metadata_json` remains a reserved container for future runtime metadata.
 
@@ -245,27 +311,43 @@ Possible future timing fields:
 
 ### Why Not Now
 
-PR2 only implements event-store durability.
+PR4 focused on durable transaction composition and Compass-guarded accepted-history mutation.
 
-Full registry-stage timing becomes meaningful when the full durable write-side flow exists.
+Timing collection is meaningful, but it should not distract from correctness boundaries.
+
+### Current Classification
+
+```text
+Observability / Stage 4 / PR6 latency experiment candidate
+```
 
 ### Suggested Timing
 
-After PR4 transactional write-side boundary, or during observability / runtime evidence work.
+After PR5, during validation placement latency comparison or runtime evidence work.
 
 ---
 
 ## 7. Transaction Lifecycle Ownership
 
-### Current Decision
+### Status
+
+```text
+Completed in Stage 3.5B PR4
+```
+
+### What Changed
 
 `PostgresEventStore.append()` should not automatically call `commit()`.
 
-The caller should own connection and transaction lifecycle.
+The caller owns connection and transaction lifecycle.
 
-### Why Not Now
+PR4 introduced:
 
-PR4 will need to coordinate:
+```text
+PostgresWriteSideUnitOfWork
+```
+
+to coordinate:
 
 ```text
 event append + idempotency record write
@@ -273,20 +355,15 @@ event append + idempotency record write
 
 inside the same database transaction.
 
-If `PostgresEventStore.append()` commits by itself, PR4 transaction coordination becomes harder.
+### Current Classification
+
+```text
+Completed
+```
 
 ### Future Work
 
-Define a clear transaction boundary, possibly through:
-
-- `PostgresUnitOfWork`
-- durable write-side handler
-- transactional registry wrapper
-- explicit transaction context manager
-
-### Suggested Timing
-
-PR4 — Transactional write-side boundary.
+Further transaction ownership work may occur in PR5 when admission gates are integrated into the transactional write-side flow.
 
 ---
 
@@ -294,32 +371,50 @@ PR4 — Transactional write-side boundary.
 
 ### Current Decision
 
-PR2 may continue using `ValueError` to align with the current in-memory `EventStore` behavior.
+The project should not jump directly from raw PostgreSQL exceptions to Stage 4 `SemanticOutcome`.
 
-Examples:
+There are two separate layers:
 
-- version conflict
-- append-time continuity violation
+```text
+PR5:
+storage/admission-level errors and stable admission results
 
-### Why Not Now
+Stage 4:
+SemanticOutcome / RuntimeDecision mapping
+```
 
-Introducing custom exception hierarchy during PR2 would expand scope into error modeling.
+### Why Not All in Stage 4
+
+PR5 needs application-level handling for concurrent writer admission.
+
+For example, stale writes should not remain raw database-specific exceptions.
+
+But that does not require the full Stage 4 Error Model.
 
 ### Future Work
 
-Consider dedicated exceptions:
+Consider dedicated storage/admission errors:
 
 ```python
-class VersionConflictError(Exception): ...
-class AppendContinuityError(Exception): ...
-class DurablePersistenceError(Exception): ...
+class StorageConflictError(Exception): ...
+class StaleWriteError(StorageConflictError): ...
+class AppendContinuityError(StorageConflictError): ...
 ```
 
 These may later map into structured SemanticOutcome / RuntimeDecision behavior.
 
+### Current Classification
+
+```text
+PR5 candidate for storage/admission errors
+Stage 4 for SemanticOutcome mapping
+```
+
 ### Suggested Timing
 
-Stage 4B — Structured Semantic Outcome / Error Model v1, or after PR4.
+PR5 for stable concurrency/admission error mapping.
+
+Stage 4B for structured SemanticOutcome / Error Model v1.
 
 ---
 
@@ -327,7 +422,7 @@ Stage 4B — Structured Semantic Outcome / Error Model v1, or after PR4.
 
 ### Current Decision
 
-PR2 may use minimal JSONB objects:
+Stage 3.5B uses minimal JSONB objects:
 
 ```python
 payload_json = {}
@@ -352,6 +447,12 @@ Clarify:
 - whether `metadata_json` should be restricted to runtime metadata
 - how these fields relate to SemanticOutcome persistence
 
+### Current Classification
+
+```text
+Stage 4 evidence / outcome persistence
+```
+
 ### Suggested Timing
 
 After durable write-side baseline, before or during SemanticOutcome persistence design.
@@ -362,7 +463,7 @@ After durable write-side baseline, before or during SemanticOutcome persistence 
 
 ### Current Decision
 
-PR2 does not implement production-grade append-only hardening.
+Stage 3.5B does not implement production-grade append-only hardening.
 
 Current defenses are:
 
@@ -370,6 +471,8 @@ Current defenses are:
 - `accepted_event_id` primary key
 - `UNIQUE(order_id, sequence)`
 - expected-version check in the store
+- PR4 transaction boundary
+- PR5 planned admission boundary
 
 ### Future Work
 
@@ -381,6 +484,12 @@ Evaluate:
 - partitioning strategy
 - operational backup / restore behavior
 
+### Current Classification
+
+```text
+Later production hardening
+```
+
 ### Suggested Timing
 
 After Stage 3.5B durable baseline is complete, during production-hardening work.
@@ -389,40 +498,127 @@ After Stage 3.5B durable baseline is complete, during production-hardening work.
 
 ## 11. Integration Test Boundary and CI Strategy
 
+### Status
+
+```text
+Mostly completed in Stage 3.5B PR4
+```
+
+### What Changed
+
+PR4 introduced or aligned:
+
+- `TEST_DATABASE_URL`
+- `compass_test`
+- test database guardrails
+- destructive DB test isolation
+- CI test database creation
+- migration against test database
+- integration test directory reorganization
+- transactional integration test README
+- in-memory integration test README
+
+### Current Classification
+
+```text
+Mostly completed
+```
+
+### Remaining Future Work
+
+Possible later follow-ups:
+
+- pytest markers for DB-backed tests
+- storage integration README
+- integration root README
+- performance / benchmark test separation
+- optional test container lifecycle helpers
+
+These are not required for PR4.
+
+---
+
+## 12. Validation Placement Strategy
+
 ### Current Decision
 
-`postgres_connection.py` unit tests should not require a real database.
+Do not implement validation placement strategy in PR4.
 
-`PostgresEventStore` tests are the correct place for database-backed integration coverage.
+PR4 establishes the high-defense baseline:
+
+```text
+IN_TRANSACTION Compass validation
+```
+
+ADR 0011 records the distinction:
+
+```text
+ValidationMode
+≠
+ValidationPlacement
+```
+
+### Why Not Now
+
+Safe `PRE_TRANSACTION` validation requires append-time concurrency admission.
+
+That depends on PR5.
 
 ### Future Work
 
-Clarify integration test setup:
+After PR5, introduce validation placement strategy:
 
-- whether Docker PostgreSQL must be running
-- how migrations are applied before tests
-- whether tests should clean tables before each case
-- whether integration tests should use pytest markers
-- whether CI should run database-backed tests by default
+```text
+IN_TRANSACTION
+PRE_TRANSACTION
+ASYNC_AUDIT
+```
+
+Potential future flow:
+
+```text
+load history
+→ rehydrate aggregate
+→ build candidate event
+→ run Compass validation
+
+BEGIN
+→ append with expected_version / admission gate
+→ record idempotency
+→ COMMIT
+```
+
+### Current Classification
+
+```text
+PR6 / Stage 4 prelude
+```
 
 ### Suggested Timing
 
-During PR2 integration test implementation and later CI hardening.
+After PR5, when concurrency admission exists and latency / safety comparison becomes meaningful.
 
 ---
 
 ## Summary
 
-The current PR2 scope should remain focused on:
+The deferred backlog should now be read with the following stage alignment:
 
-```text
-PostgresEventStore baseline
-append / load / last_event
-UUID / Decimal / proof status round-trip
-stale expected version rejection
-duplicate sequence rejection
-```
+| Item | Current Alignment |
+|---|---|
+| EventType vocabulary normalization | Optional after PR5 / durable schema hardening |
+| OrderStatus durable constraint | Optional after PR5 / durable schema hardening |
+| UUIDv7 | Later evaluation |
+| EventStoreProtocol | Optional PR5 candidate |
+| StoredEventRecord / JSONB hydration | Stage 4 / evidence design |
+| Registry-stage timing | Observability / Stage 4 / PR6 latency experiment |
+| Transaction lifecycle ownership | Completed in PR4 |
+| Custom persistence exceptions | PR5 for storage/admission errors; Stage 4 for SemanticOutcome |
+| Payload/proof/metadata JSON shape | Stage 4 evidence / outcome persistence |
+| Append-only DB hardening | Later production hardening |
+| Integration test boundary / CI strategy | Mostly completed in PR4 |
+| Validation placement strategy | PR6 / Stage 4 prelude |
 
-The items in this backlog are valid architecture concerns, but they are intentionally deferred to avoid scope creep.
+The backlog remains a scope-control document.
 
-They should be converted into GitHub Issues only when their suggested timing becomes active.
+It should not be used to pull every valid architecture concern into the current PR.

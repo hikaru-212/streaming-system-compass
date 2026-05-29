@@ -27,10 +27,9 @@ Postmortems help preserve:
 - transitions where a previously "natural" guarantee turns out to require explicit design
 - reasoning bridges between current implementation and later roadmap stages
 - distinctions between runtime behavior, durable evidence, and future governance signals
+- cases where infrastructure hardening risks bypassing semantic governance
 
 ---
-
-## Current Postmortems
 
 ## Current Postmortems
 
@@ -44,6 +43,22 @@ Postmortems help preserve:
 | [from_local_postgres_to_defense_in_depth](from_local_postgres_to_defense_in_depth.md) | Explains why local PostgreSQL setup, `.env`, least privilege, SQL migrations, Compass validation, and transactions protect different system boundaries instead of one mechanism protecting everything. |
 | [from_runtime_behavior_to_durable_evidence](from_runtime_behavior_to_durable_evidence.md) | Explains why Python runtime behavior is not durable evidence unless selected facts are persisted into PostgreSQL, metadata fields, logs, metrics, traces, or audit records. |
 | [from_exception_strings_to_governable_outcomes](from_exception_strings_to_governable_outcomes.md) | Explains why raw exception strings are not enough for semantic governance, and why structured semantic outcomes must later feed runtime decision policy, action safety, and layered trust. |
+| [from_durable_persistence_to_semantic_gate_preservation](from_durable_persistence_to_semantic_gate_preservation.md) | Records the PR4 lesson that durable persistence hardening can preserve physical transaction correctness while accidentally bypassing Compass semantic gates. |
+
+---
+
+## Relationship to ADRs
+
+Some postmortems directly motivate later ADRs.
+
+The PR4 postmortem [From Durable Persistence to Semantic Gate Preservation](from_durable_persistence_to_semantic_gate_preservation.md) is directly related to:
+
+- [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
+- [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
+
+The postmortem records the implementation lesson.
+
+The ADRs record the follow-up architecture decisions.
 
 ---
 

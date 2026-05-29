@@ -4,7 +4,7 @@
 
 This directory contains roadmap documents for **Streaming System + Compass**.
 
-Roadmaps describe implementation sequencing and system evolution. They are not meant to replace architecture notes or ADRs.
+Roadmaps describe implementation sequencing and system evolution. They are not meant to replace architecture notes, ADRs, or postmortems.
 
 Use roadmap documents to understand:
 
@@ -12,6 +12,7 @@ Use roadmap documents to understand:
 - what depends on what
 - which features are intentionally deferred
 - how the project moves from durable truth toward runtime governance
+- which Stage 3.5B concerns are now complete, planned, or intentionally deferred
 
 ---
 
@@ -21,7 +22,7 @@ Use roadmap documents to understand:
 |---|---|
 | [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, durable persistence, runtime semantic outcomes, runtime decision policy, action safety, and the Stage 5 dual-dimension governance demo. |
 | [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward durable runtime validation, structured semantic outcomes, runtime decisions, action safety, and later dual-dimension governance. |
-| [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred from the current implementation scope, including durable vocabulary normalization, UUIDv7 evaluation, formal protocols, JSONB evidence hydration, metadata timing, transaction ownership, persistence errors, append-only hardening, and integration-test strategy. |
+| [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred from the current implementation scope, including durable vocabulary hardening, UUIDv7 evaluation, protocol boundaries, JSONB evidence hydration, metadata timing, persistence/admission errors, append-only hardening, validation placement strategy, and test boundary follow-ups. |
 
 ---
 
@@ -49,18 +50,29 @@ The project has already completed:
 - Stage 3.5A — Decimal / Money Hardening
 - Stage 3.5B PR1 — Schema + Docker PostgreSQL + Migration Skeleton
 - Stage 3.5B PR2 — PostgresEventStore baseline
+- Stage 3.5B PR3 — PostgresIdempotencyStore baseline
+- Stage 3.5B PR4 — Transactional Semantic Write-side Boundary
 
 The current next work is:
 
 ```text
-Stage 3.5B PR3 — PostgresIdempotencyStore
+Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
 ```
 
-The remaining Stage 3.5B path is:
+PR5 completes the remaining durable write-side correctness boundary by separating:
 
 ```text
-PR3 PostgresIdempotencyStore
-→ PR4 Transactional Write-side Boundary
+transaction atomicity
+≠
+concurrency admission
+```
+
+After PR5, the project may optionally add a PR6 / Stage 4 prelude for validation placement strategy:
+
+```text
+IN_TRANSACTION Compass validation
+vs
+PRE_TRANSACTION Compass validation + OCC
 ```
 
 ---
@@ -91,7 +103,7 @@ The system should not attempt to solve chaos, broad governance, or distributed c
 
 ## Stage 3.5B Reminder
 
-Stage 3.5B is split into four small checkpoints:
+Stage 3.5B is now split into five durable write-side checkpoints:
 
 1. **PR1 — Schema + Docker + Migration**  
    Establishes `order_events`, `idempotency_records`, local PostgreSQL setup, and durable schema contract.
@@ -102,8 +114,21 @@ Stage 3.5B is split into four small checkpoints:
 3. **PR3 — PostgresIdempotencyStore**  
    Makes request-level idempotency durable.
 
-4. **PR4 — Transactional Write-side Boundary**  
-   Coordinates event append and idempotency record write in one database transaction.
+4. **PR4 — Transactional Semantic Write-side Boundary**  
+   Coordinates event append and idempotency record write in one database transaction, while preserving Compass Layer 1 validation before accepted-history mutation.
+
+5. **PR5 — PostgreSQL Concurrency Admission Boundary**  
+   Reintroduces durable optimistic / pessimistic admission so concurrent writers can be admitted or rejected through a stable application boundary rather than raw database errors.
+
+A later PR6 or Stage 4 prelude may introduce validation placement strategy:
+
+```text
+ValidationMode
+≠
+ValidationPlacement
+```
+
+This is not required to complete the durable write-side baseline, but it is important for future latency / safety trade-off experiments.
 
 ---
 
@@ -114,14 +139,15 @@ Some architecture issues are known but intentionally deferred to avoid scope cre
 Examples include:
 
 - durable `EventType` vocabulary normalization
+- durable `OrderStatus` constraint hardening
 - UUIDv7 / time-ordered UUID evaluation
 - formal `EventStoreProtocol`
 - stored event record / JSONB evidence hydration
 - registry-stage timing in `metadata_json`
-- transaction lifecycle ownership
-- custom persistence exceptions
+- storage/admission error mapping
 - append-only database hardening
-- integration-test structure and CI strategy
+- validation placement strategy
+- integration-test follow-ups after the PR4 isolation baseline
 
 These are tracked in:
 
@@ -149,6 +175,16 @@ This reflects the core principle:
 
 > Error semantics should not only be observed.  
 > They should help the runtime decide whether to continue, rebuild, block, quarantine, stop, or escalate.
+
+Stage 4 should not be used as a dumping ground for every remaining durable schema cleanup.
+
+For example:
+
+```text
+EventType / OrderStatus durable vocabulary hardening
+```
+
+belongs to durable schema hardening, not Stage 4 Error Model work.
 
 ---
 
