@@ -85,6 +85,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Idempotency Module Boundary](idempotency_module.md)
 - [Registry Module Boundary](registry_module.md)
 - [Concurrency Boundary](concurrency_boundary.md)
+- [PostgreSQL Concurrency Admission Boundary](postgres_concurrency_admission_boundary.md)
 - [Projection Module Boundary](projection_module.md)
 - [Projection Runtime Boundary](projection_boundary.md)
 - [Checkpoint Module Boundary](checkpoint_module.md)
@@ -93,6 +94,8 @@ This folder currently includes notes for the most important module and cross-cut
 - [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
+
+The PostgreSQL concurrency admission note is intentionally separate from the older concurrency boundary note. The older note explains the conceptual distinction between idempotency, retry safety, and concurrency control. The PostgreSQL concurrency admission note records the Stage 3.5B PR5 implementation boundary: translating append-time writer competition into stable admission results without leaking raw database exceptions upward.
 
 Two projection-related notes are intentionally preserved:
 
@@ -117,12 +120,13 @@ A practical reading order is:
 5. [Idempotency Module Boundary](idempotency_module.md)
 6. [Registry Module Boundary](registry_module.md)
 7. [Concurrency Boundary](concurrency_boundary.md)
-8. [Projection Module Boundary](projection_module.md)
-9. [Projection Runtime Boundary](projection_boundary.md)
-10. [Checkpoint Module Boundary](checkpoint_module.md)
-11. [Compass Layer Boundary](compass_layer_boundary.md)
-12. [Persistence Boundary](persistence_boundary.md)
-13. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+8. [PostgreSQL Concurrency Admission Boundary](postgres_concurrency_admission_boundary.md)
+9. [Projection Module Boundary](projection_module.md)
+10. [Projection Runtime Boundary](projection_boundary.md)
+11. [Checkpoint Module Boundary](checkpoint_module.md)
+12. [Compass Layer Boundary](compass_layer_boundary.md)
+13. [Persistence Boundary](persistence_boundary.md)
+14. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -133,6 +137,7 @@ This roughly follows the intended semantic development order of the project:
 - define request safety boundaries
 - define orchestration boundaries
 - define concurrency / admission boundaries
+- define PostgreSQL append-time admission results
 - define projection as read-side derivation
 - define projection runtime internals
 - define runtime progress boundaries
@@ -158,6 +163,8 @@ These notes should be read together with:
 - [Implementation Roadmap](../roadmap/implementation_roadmap.md)
 - [Concurrency Control, Idempotency, and Retry Safety](../adr/0003_concurrency_idempotency_and_retry_safety.md)
 - [Persistent Storage Baseline Strategy](../adr/0005_persistent_storage_baseline_strategy.md)
+- [Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
+- [Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
 
 A good rule of thumb is:
 
