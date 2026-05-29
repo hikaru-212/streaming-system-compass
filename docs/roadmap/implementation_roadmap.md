@@ -38,6 +38,7 @@ The project has completed an executable baseline across:
 - Stage 3.5B PR1 schema / local PostgreSQL / migration setup checkpoint
 - Stage 3.5B PR2 PostgresEventStore baseline
 - Stage 3.5B PR3 PostgresIdempotencyStore baseline
+- Stage 3.5B PR4 transactional semantic write-side boundary
 
 This means:
 
@@ -47,13 +48,15 @@ This means:
 - Stage 3.5A is complete as the pre-persistence money / exact-value hardening step
 - pre-Stage 3.5B event identity semantics are documented and reflected in boundary naming
 - Stage 3.5B PR1 has established the durable write-side schema and local PostgreSQL setup baseline
+- Stage 3.5B PR4 has established the first PostgreSQL-backed transactional semantic write-side flow
 
 The next major focus is:
 
-- **Stage 3.5B PR4 — transactional write-side boundary**
+- **Stage 3.5B PR5 — PostgreSQL concurrency admission boundary**
 
-Only after the transactional write-side boundary is clarified should the project proceed toward:
+Only after transaction atomicity and PostgreSQL-backed concurrency admission are clarified should the project proceed toward:
 
+- PR6 / Stage 4 Prelude validation placement strategy
 - Stage 3.5C durable read-side baseline
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
 - Stage 5 dual-dimension governance demo
@@ -414,33 +417,41 @@ PR3 does not implement:
 
 ---
 
-### PR4 — Transactional Write-Side Boundary
+### PR4 — Transactional Semantic Write-Side Boundary
+
+#### Status
+
+Completed after PR4 merge.
 
 #### Goal
 
-Ensure event append and idempotency record write happen in the same database transaction.
+Coordinate durable event append, durable idempotency recording, and Compass Layer 1 validation inside a PostgreSQL-backed transactional write-side flow.
 
 #### Why
 
-The durable write-side baseline is incomplete unless these two writes are coordinated.
+The durable write-side baseline is incomplete unless physical transaction safety and semantic gate preservation are both explicit.
 
-The system must avoid:
+PR4 protects against two different failure modes:
 
-- event persisted without idempotency record
-- idempotency record persisted without event
-- conflict retry polluting idempotency memory
+- partial durable writes, such as an event being persisted without its idempotency record
+- semantic drift during persistence hardening, where the durable PostgreSQL path accidentally bypasses Compass Layer 1 validation
 
 #### Main Work
 
-- introduce a transactional write-side boundary or unit of work
-- check idempotency
-- rehydrate aggregate
-- build validation context
-- create candidate event
-- run Compass validation
-- append accepted event
-- record idempotency result
-- commit or roll back as one consistency group
+- introduce `PostgresWriteSideUnitOfWork`
+- coordinate `PostgresEventStore` and `PostgresIdempotencyStore` through one PostgreSQL transaction
+- introduce `PostgresTransactionalWriteSide`
+- check idempotency before command execution
+- rehydrate aggregate state from durable accepted history
+- build Compass Layer 1 `ValidationContext` from accepted history
+- create candidate events through the aggregate
+- run Compass Layer 1 validation before accepted history mutation
+- append accepted events only after validation allows the candidate
+- record idempotency results in the same transaction as accepted event append
+- rollback on validation block, domain legality failure, or idempotency-record failure
+- isolate destructive PostgreSQL integration tests through `TEST_DATABASE_URL`
+- reorganize integration tests by execution boundary
+- document transactional integration tests as executable architecture claims
 
 #### Minimal Flow
 
@@ -450,6 +461,7 @@ BEGIN
 check idempotency
 
 if REPLAY:
+    rollback / no write
     return previous accepted result
 
 if CONFLICT:
@@ -457,68 +469,199 @@ if CONFLICT:
     return conflict result
 
 if MISS:
+    load durable accepted history
     rehydrate aggregate
     build validation context
     create candidate event
-    Compass validation
+    run Compass Layer 1 validation
+
+    if BLOCK:
+        rollback / no write
+        return validation-blocked result
+
     append event into order_events
     record idempotency result into idempotency_records
 
 COMMIT
 ```
 
-#### Timing / Observability
+#### Boundary Clarified During PR4
 
-PR4 is the best place to introduce registry-stage timing because this is the first PR where the full write flow is available.
+PR4 clarified three important boundaries:
 
-Possible future metadata:
-
-```json
-{
-  "registry_timing": {
-    "idempotency_check_ms": 0.3,
-    "rehydrate_ms": 1.2,
-    "context_build_ms": 0.1,
-    "candidate_creation_ms": 0.2,
-    "compass_validation_ms": 2.4,
-    "admission_append_ms": 1.1,
-    "idempotency_record_ms": 0.4,
-    "transaction_total_ms": 5.7
-  }
-}
+```text
+transaction atomicity
+≠ concurrency admission
 ```
 
-If PR4 becomes too large, timing collection can be limited to metadata-path support and moved into a follow-up observability PR.
+```text
+validation mode
+≠ validation placement
+```
+
+```text
+durable persistence hardening
+must preserve Compass semantic gates
+```
+
+These boundaries are documented in:
+
+- [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
+- [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
+- [Postmortem — From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md)
 
 #### Tests
 
-PR4 should verify:
+PR4 verifies:
 
-- successful command writes both `order_events` and `idempotency_records`
-- retry same request returns replay result
-- conflict same `request_id` with different semantic fingerprint rejects
-- conflict does not create a new `order_event`
-- conflict does not mutate existing idempotency record
-- if event append fails, idempotency record is not committed
-- if idempotency record fails, event append is rolled back
-- transaction rollback leaves database clean
-
-If timing is implemented:
-
-- `metadata_json` contains `registry_timing`
-- timing metadata is not part of `payload_json` or `proof_json`
+- successful `create_order` writes both `order_events` and `idempotency_records`
+- successful `pay_order` writes the second accepted event and corresponding idempotency record
+- replay same request returns the previous accepted result
+- conflict same `request_id` with different semantic fingerprint creates no new rows
+- validation `BLOCK` creates no `order_events` row
+- validation `BLOCK` creates no `idempotency_records` row
+- domain legality failures leave no partial durable writes
+- if idempotency record persistence fails after event append, the event append is rolled back
+- transactional tests run against `TEST_DATABASE_URL`, not the development database
 
 #### Non-goals
 
 PR4 does not implement:
 
+- PostgreSQL-backed concurrency admission
+- optimistic admission gate
+- pessimistic admission gate
 - durable read-side projection store
 - durable checkpoint store
 - Layer 2 validator
-- structured semantic outcome family
+- structured `SemanticOutcome` / Error Model family
+- validation result persistence table
+- registry-stage timing implementation
 - OpenTelemetry / Datadog / Monte Carlo integration
 - production DB roles
 - append-only trigger enforcement
+
+---
+
+### PR5 — PostgreSQL Concurrency Admission Boundary
+
+#### Status
+
+Planned.
+
+#### Goal
+
+Introduce explicit PostgreSQL-backed admission control for concurrent writers.
+
+#### Why
+
+PR4 guarantees that related durable writes commit or roll back together.
+
+However, transaction atomicity does not answer whether a writer should be admitted to occupy the next stream sequence when multiple workers compete for the same aggregate stream.
+
+PR5 restores the admission-boundary idea from the earlier in-memory `ConcurrencyGate` / `OptimisticVersionGate` design into the durable PostgreSQL write-side.
+
+#### Main Work
+
+- introduce storage-level stale-write / concurrency errors
+- map raw PostgreSQL constraint or version conflicts into stable application-level admission results
+- implement `PostgresOptimisticAdmissionGate`
+- implement a minimal `PostgresPessimisticAdmissionGate`
+- replace direct append in `PostgresTransactionalWriteSide` with an admission boundary
+- test competing writers or simulated stale reads
+- keep admission rejection distinct from idempotency conflict and domain legality failure
+
+#### Expected Tests
+
+PR5 should verify:
+
+- one writer can append the next stream event
+- a stale writer is rejected without mutating accepted history
+- optimistic admission maps stale writes into stable results
+- pessimistic admission serializes same-stream writers
+- different stream writers are not unnecessarily blocked
+- admission rejection does not pollute idempotency memory
+
+#### Non-goals
+
+PR5 does not implement:
+
+- Stage 4 `SemanticOutcome`
+- runtime decision policy
+- validation placement strategy
+- full production locking framework
+- connection pooling
+- retry orchestration
+- operational alerting
+
+---
+
+### PR6 / Stage 4 Prelude — Validation Placement Strategy
+
+#### Status
+
+Deferred.
+
+#### Goal
+
+Introduce a configurable validation placement strategy after PostgreSQL concurrency admission exists.
+
+#### Why
+
+PR4 establishes an in-transaction Compass validation baseline.
+
+PR5 will establish append-time concurrency admission.
+
+Only after PR5 can the project safely support a second orchestration mode:
+
+```text
+pre-transaction Compass validation + OCC
+```
+
+This future strategy allows the system to compare latency and safety trade-offs between:
+
+- in-transaction Compass validation
+- pre-transaction Compass validation + OCC
+- validation-off baseline for measurement
+
+#### Main Work
+
+- define `ValidationPlacement`
+- keep `ValidationMode` separate from `ValidationPlacement`
+- support `IN_TRANSACTION` validation placement
+- support `PRE_TRANSACTION` validation + OCC
+- prepare a future write-side factory / config layer
+- enable future latency comparison without duplicating storage logic
+
+#### Candidate Future API
+
+```python
+PostgresWriteSideConfig(
+    validation_mode=ValidationMode.STRICT,
+    validation_placement=ValidationPlacement.IN_TRANSACTION,
+    admission_strategy=AdmissionStrategy.OPTIMISTIC,
+)
+```
+
+or:
+
+```python
+PostgresWriteSideConfig(
+    validation_mode=ValidationMode.STRICT,
+    validation_placement=ValidationPlacement.PRE_TRANSACTION,
+    admission_strategy=AdmissionStrategy.OPTIMISTIC,
+)
+```
+
+#### Non-goals
+
+PR6 / Stage 4 Prelude does not implement:
+
+- full DAG node model
+- risk scoring
+- async audit pipeline
+- Stage 4 `SemanticOutcome` tables
+- Stage 5 governance metrics
 
 ---
 
@@ -528,13 +671,16 @@ Stage 3.5B is complete when:
 
 - accepted events are persisted in PostgreSQL
 - accepted history can be replayed from durable storage
-- idempotency records survive restart
+- idempotency records survive restart / new connection
 - replay / conflict semantics work against durable storage
 - event append and idempotency record write are transactionally coordinated
+- Compass Layer 1 remains on the durable write-side path before accepted history mutation
+- validation `BLOCK` does not pollute accepted history or idempotency memory
+- PostgreSQL-backed concurrency admission rejects stale writers explicitly
 - exact money persistence is preserved
 - UUID event identity is preserved
 - candidate / accepted event identity semantics remain clear
-
+- destructive PostgreSQL tests run against `TEST_DATABASE_URL`, not the development database
 ---
 
 # Stage 3.5C: Durable Read-Side Baseline
@@ -1122,7 +1268,12 @@ Durable Write-side Baseline
   PR1 Schema + Docker + Migration ✅
   PR2 PostgresEventStore ✅
   PR3 PostgresIdempotencyStore ✅
-  PR4 Transactional Write-side Boundary
+  PR4 Transactional Semantic Write-side Boundary ✅
+  PR5 PostgreSQL Concurrency Admission Boundary
+
+PR6 / Stage 4 Prelude:
+Validation Placement Strategy
+  IN_TRANSACTION vs PRE_TRANSACTION + OCC
 
 Stage 3.5C:
 Durable Read-side Baseline

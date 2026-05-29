@@ -62,6 +62,9 @@ The current system already supports:
 - basic `ALLOW` / `BLOCK` enforcement
 - candidate vs accepted event identity boundary clarification
 - rejection before invalid events enter accepted history
+- PostgreSQL-backed accepted history through `PostgresEventStore`
+- PostgreSQL-backed idempotency memory through `PostgresIdempotencyStore`
+- Compass-guarded transactional write-side flow in Stage 3.5B PR4
 
 This means Compass is already more than a passive checker.
 
@@ -70,6 +73,14 @@ It already has runtime control authority at the write-side boundary:
 ```text
 invalid candidate event
 → blocked before accepted history
+```
+
+PR4 extends this authority into the durable PostgreSQL-backed write-side path:
+
+```text
+candidate event
+→ Compass Layer 1 validation
+→ append accepted event + record idempotency in one transaction
 ```
 
 ---
@@ -85,6 +96,10 @@ That means the following question is not yet fully answered:
 > Even if accepted history is valid, is the current read-side projection still faithful to that history?
 
 This is the gap that later stages must close.
+
+The durable write-side is also not yet fully concurrency-admission-aware.
+
+Stage 3.5B PR5 is planned to restore the concurrency/admission boundary for PostgreSQL-backed execution.
 
 ---
 
@@ -154,6 +169,8 @@ invalid semantic transition
 
 Implemented at baseline level.
 
+Stage 3.5B PR4 preserves Layer 1 inside the PostgreSQL-backed transactional write-side flow.
+
 ---
 
 # Phase 2 — Durable Write-Side Dependency
@@ -167,24 +184,35 @@ Stage 3.5B provides this dependency.
 The implementation roadmap owns the detailed PR sequence:
 
 ```text
-PR1 Physical Schema + Local PostgreSQL + Migration
-PR2 PostgresEventStore
-PR3 PostgresIdempotencyStore
-PR4 Transactional Write-Side Boundary
+PR1 Physical Schema + Local PostgreSQL + Migration ✅
+PR2 PostgresEventStore ✅
+PR3 PostgresIdempotencyStore ✅
+PR4 Transactional Semantic Write-side Boundary ✅
+PR5 PostgreSQL Concurrency Admission Boundary planned
+```
+
+A later PR6 / Stage 4 prelude may add validation placement strategy:
+
+```text
+IN_TRANSACTION validation
+PRE_TRANSACTION validation + OCC
+ASYNC_AUDIT future
 ```
 
 From the Compass perspective, Stage 3.5B matters because it turns accepted history into a durable validation source.
 
 ## Compass-Relevant Outcomes
 
-Stage 3.5B should give Compass:
+Stage 3.5B gives or should give Compass:
 
 - durable accepted history
 - durable event identity
 - durable replay source
 - durable idempotency result memory
 - transactionally coordinated event append and idempotency record write
+- Compass Layer 1 preserved before durable accepted-history mutation
 - clear candidate / accepted identity boundary
+- PostgreSQL-backed concurrency admission after PR5
 
 ## Related Postmortems
 
@@ -192,6 +220,7 @@ Stage 3.5B should give Compass:
 - [From Git Local–Remote Drift to Database Immutability Boundaries](../postmortems/from_git_sync_to_db_immutability.md)
 - [From Local PostgreSQL Setup to Defense-in-Depth Boundaries](../postmortems/from_local_postgres_to_defense_in_depth.md)
 - [From Runtime Behavior to Durable Evidence](../postmortems/from_runtime_behavior_to_durable_evidence.md)
+- [From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md)
 
 These explain why persistence is not just a backend swap.
 
@@ -202,11 +231,26 @@ Python-side semantic behavior is not durable evidence
 unless the selected facts are persisted into an explicit evidence channel.
 ```
 
+PR4 adds a second durable-persistence lesson:
+
+```text
+durable persistence hardening must preserve Compass semantic gates
+```
+
+## Related ADRs
+
+- [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
+- [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
+
+These clarify why PR4, PR5, and future validation placement strategy are separate concerns.
+
 ## Current Status
 
-Stage 3.5B PR1 is complete.
+Stage 3.5B PR1 / PR2 / PR3 are complete.
 
-Next implementation work is Stage 3.5B PR2: `PostgresEventStore`.
+Stage 3.5B PR4 establishes the transactional semantic write-side boundary.
+
+Stage 3.5B PR5 is planned for PostgreSQL-backed concurrency admission.
 
 ---
 
@@ -766,8 +810,14 @@ semantic truth
 Current:
 Layer 1 write-side event truth validation ✅
 
+Durable Write-side:
+Stage 3.5B PR1 schema ✅
+Stage 3.5B PR2 event store ✅
+Stage 3.5B PR3 idempotency store ✅
+Stage 3.5B PR4 transactional semantic write-side ✅
+Stage 3.5B PR5 concurrency admission planned
+
 Dependency:
-Stage 3.5B durable write-side baseline
 Stage 3.5C durable read-side baseline
 
 Next Compass Growth:
@@ -779,6 +829,7 @@ ActionSafetyGate
 Dual-Dimension Governance
 
 Later:
+validation placement strategies
 chaos hardening
 richer governance
 agent-facing runtime protocol
