@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
@@ -16,6 +17,14 @@ from src.compass.transition.types import (
 from src.core.order.aggregate import OrderAggregate
 from src.core.order.enums import CommandType
 from src.core.order.events import OrderEvent
+from src.pipeline.transactional.admission import (
+    AdmissionResult,
+    ConcurrencyGate,
+    StreamAdmissionResult,
+)
+from src.pipeline.transactional.postgres_admission import (
+    PostgresOptimisticAdmissionGate,
+)
 from src.pipeline.transactional.postgres_unit_of_work import (
     PostgresWriteSideUnitOfWork,
 )
@@ -26,11 +35,21 @@ from src.storage.idempotency_store import (
 )
 
 
+AdmissionGateFactory = Callable[[PostgresWriteSideUnitOfWork], ConcurrencyGate]
+CandidateEventBuilder = Callable[[OrderAggregate], OrderEvent]
+
+
+def _default_admission_gate_factory(
+    uow: PostgresWriteSideUnitOfWork,
+) -> ConcurrencyGate:
+    return PostgresOptimisticAdmissionGate(uow.event_store)
+
+
 class PostgresWriteSideOutcome(Enum):
     """
     Result type for the PostgreSQL-backed transactional write-side flow.
 
-    This is intentionally small for Stage 3.5B PR4.
+    This is intentionally small for Stage 3.5B.
     It is not the Stage 4 SemanticOutcome model.
     """
 
@@ -38,6 +57,7 @@ class PostgresWriteSideOutcome(Enum):
     REPLAY = "REPLAY"
     CONFLICT = "CONFLICT"
     VALIDATION_BLOCKED = "VALIDATION_BLOCKED"
+    ADMISSION_REJECTED = "ADMISSION_REJECTED"
 
 
 @dataclass(frozen=True)
@@ -47,50 +67,76 @@ class PostgresWriteSideResult:
 
     accepted_event:
     - present for ACCEPTED and REPLAY
-    - absent for CONFLICT and VALIDATION_BLOCKED
+    - absent for CONFLICT, VALIDATION_BLOCKED, and ADMISSION_REJECTED
 
     idempotency_decision:
     - records the durable idempotency classification used by this flow
 
+    stream_admission_result:
+    - present when stream preparation was executed
+    - absent for REPLAY / CONFLICT paths because replay/conflict are resolved
+      before stream preparation
+
     validation_decision:
     - present when Compass Layer 1 validation was executed
     - absent for REPLAY / CONFLICT paths because no candidate event is created
+    - absent for prepare-time ADMISSION_REJECTED because validation is not run
+
+    admission_result:
+    - present when append-time admission was executed
+    - absent for REPLAY / CONFLICT / VALIDATION_BLOCKED paths
+    - absent for prepare-time ADMISSION_REJECTED
     """
 
     outcome: PostgresWriteSideOutcome
     accepted_event: OrderEvent | None
     idempotency_decision: IdempotencyDecision
+    stream_admission_result: StreamAdmissionResult | None = None
     validation_decision: ValidationDecision | None = None
+    admission_result: AdmissionResult | None = None
 
 
 class PostgresTransactionalWriteSide:
     """
-    Minimal PostgreSQL-backed transactional write-side flow.
+    PostgreSQL-backed transactional write-side flow.
 
     This class coordinates:
 
     - durable idempotency check
+    - stream preparation / early concurrency admission
     - durable accepted-history loading
     - aggregate rehydration
     - candidate event creation through the aggregate
     - Compass Layer 1 transition-truth validation
-    - accepted event append
+    - append-time PostgreSQL admission
     - idempotency result recording
     - commit / rollback through PostgresWriteSideUnitOfWork
 
-    This is a durable Registry-like flow, but it does not yet introduce
-    PostgreSQL-backed concurrency admission strategies. That boundary is
-    intentionally deferred to PR5.
+    This is a durable Registry-like flow.
+
+    The write-side flow does not directly own the concrete admission strategy.
+    It receives an admission_gate_factory so the caller can choose:
+
+    - optimistic admission
+    - pessimistic admission
+    - test fake admission
+
+    The write side stores the factory, not a concrete gate instance. A new gate
+    is built inside each unit-of-work scope so stateful gates do not leak state
+    across commands or transactions.
     """
 
     def __init__(
         self,
         connection: Connection,
         validation_runtime: ValidationRuntime,
+        admission_gate_factory: AdmissionGateFactory | None = None,
     ):
         self._connection = connection
         self._validation_runtime = validation_runtime
-
+        self._admission_gate_factory = (
+            admission_gate_factory or _default_admission_gate_factory
+        )
 
     def _rehydrate_aggregate(
         self,
@@ -130,7 +176,114 @@ class PostgresTransactionalWriteSide:
             actual_prev_version=aggregate.current_version,
             actual_prev_status=aggregate.status,
         )
-    
+
+    def _execute_command(
+        self,
+        *,
+        request_id: str,
+        order_id: str,
+        amount: Decimal,
+        command_type: CommandType,
+        build_candidate_event: CandidateEventBuilder,
+    ) -> PostgresWriteSideResult:
+        signature = RequestSignature(
+            request_id=request_id,
+            command_type=command_type,
+            order_id=order_id,
+            amount=amount,
+        )
+
+        with PostgresWriteSideUnitOfWork(self._connection) as uow:
+            idempotency_decision = uow.idempotency_store.check(signature)
+
+            if idempotency_decision.verdict == IdempotencyVerdict.REPLAY:
+                uow.rollback()
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.REPLAY,
+                    accepted_event=idempotency_decision.record.accepted_event,
+                    idempotency_decision=idempotency_decision,
+                    stream_admission_result=None,
+                    validation_decision=None,
+                    admission_result=None,
+                )
+
+            if idempotency_decision.verdict == IdempotencyVerdict.CONFLICT:
+                uow.rollback()
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.CONFLICT,
+                    accepted_event=None,
+                    idempotency_decision=idempotency_decision,
+                    stream_admission_result=None,
+                    validation_decision=None,
+                    admission_result=None,
+                )
+
+            admission_gate = self._admission_gate_factory(uow)
+
+            stream_admission_result = admission_gate.prepare_stream(order_id)
+
+            if not stream_admission_result.admitted:
+                uow.rollback()
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.ADMISSION_REJECTED,
+                    accepted_event=None,
+                    idempotency_decision=idempotency_decision,
+                    stream_admission_result=stream_admission_result,
+                    validation_decision=None,
+                    admission_result=None,
+                )
+
+            aggregate, history = self._rehydrate_aggregate(uow, order_id)
+            actual_prev_event = history[-1] if history else None
+            validation_context = self._build_validation_context(
+                aggregate=aggregate,
+                actual_prev_event=actual_prev_event,
+            )
+
+            candidate_event = build_candidate_event(aggregate)
+
+            validation_decision = self._validation_runtime.decide(
+                candidate_event,
+                validation_context,
+            )
+            if validation_decision.action != EnforcementAction.ALLOW:
+                uow.rollback()
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.VALIDATION_BLOCKED,
+                    accepted_event=None,
+                    idempotency_decision=idempotency_decision,
+                    stream_admission_result=stream_admission_result,
+                    validation_decision=validation_decision,
+                    admission_result=None,
+                )
+
+            expected_current_version = aggregate.current_version
+            admission_result = admission_gate.admit(
+                candidate_event,
+                expected_current_version=expected_current_version,
+            )
+
+            if not admission_result.admitted:
+                uow.rollback()
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.ADMISSION_REJECTED,
+                    accepted_event=None,
+                    idempotency_decision=idempotency_decision,
+                    stream_admission_result=stream_admission_result,
+                    validation_decision=validation_decision,
+                    admission_result=admission_result,
+                )
+
+            uow.idempotency_store.record(signature, candidate_event)
+
+            return PostgresWriteSideResult(
+                outcome=PostgresWriteSideOutcome.ACCEPTED,
+                accepted_event=candidate_event,
+                idempotency_decision=idempotency_decision,
+                stream_admission_result=stream_admission_result,
+                validation_decision=validation_decision,
+                admission_result=admission_result,
+            )
 
     def create_order(
         self,
@@ -139,73 +292,16 @@ class PostgresTransactionalWriteSide:
         order_id: str,
         amount: Decimal,
     ) -> PostgresWriteSideResult:
-        signature = RequestSignature(
+        return self._execute_command(
             request_id=request_id,
-            command_type=CommandType.CREATE,
             order_id=order_id,
             amount=amount,
+            command_type=CommandType.CREATE,
+            build_candidate_event=lambda aggregate: aggregate.create(
+                request_id,
+                amount,
+            ),
         )
-
-        with PostgresWriteSideUnitOfWork(self._connection) as uow:
-            idempotency_decision = uow.idempotency_store.check(signature)
-
-            if idempotency_decision.verdict == IdempotencyVerdict.REPLAY:
-                uow.rollback()
-                return PostgresWriteSideResult(
-                    outcome=PostgresWriteSideOutcome.REPLAY,
-                    accepted_event=idempotency_decision.record.accepted_event,
-                    idempotency_decision=idempotency_decision,
-                    validation_decision=None,
-                )
-
-            if idempotency_decision.verdict == IdempotencyVerdict.CONFLICT:
-                uow.rollback()
-                return PostgresWriteSideResult(
-                    outcome=PostgresWriteSideOutcome.CONFLICT,
-                    accepted_event=None,
-                    idempotency_decision=idempotency_decision,
-                    validation_decision=None,
-                )
-
-            aggregate, history = self._rehydrate_aggregate(uow, order_id)
-            actual_prev_event = history[-1] if history else None
-            validation_context = self._build_validation_context(
-                aggregate=aggregate,
-                actual_prev_event=actual_prev_event,
-            )
-
-            candidate_event = aggregate.create(request_id, amount)
-
-            validation_decision = self._validation_runtime.decide(
-                candidate_event,
-                validation_context,
-            )
-            if validation_decision.action != EnforcementAction.ALLOW:
-                uow.rollback()
-                return PostgresWriteSideResult(
-                    outcome=PostgresWriteSideOutcome.VALIDATION_BLOCKED,
-                    accepted_event=None,
-                    idempotency_decision=idempotency_decision,
-                    validation_decision=validation_decision,
-                )
-
-            expected_current_version = aggregate.current_version
-
-            # PR5 will replace or wrap this direct append with a PostgreSQL-backed
-            # admission gate. For PR4, this keeps the durable transaction boundary
-            # focused on append + idempotency atomicity.
-            uow.event_store.append(
-                candidate_event,
-                expected_current_version=expected_current_version,
-            )
-            uow.idempotency_store.record(signature, candidate_event)
-
-            return PostgresWriteSideResult(
-                outcome=PostgresWriteSideOutcome.ACCEPTED,
-                accepted_event=candidate_event,
-                idempotency_decision=idempotency_decision,
-                validation_decision=validation_decision,
-            )
 
     def pay_order(
         self,
@@ -214,70 +310,13 @@ class PostgresTransactionalWriteSide:
         order_id: str,
         amount: Decimal,
     ) -> PostgresWriteSideResult:
-        signature = RequestSignature(
+        return self._execute_command(
             request_id=request_id,
-            command_type=CommandType.PAY,
             order_id=order_id,
             amount=amount,
+            command_type=CommandType.PAY,
+            build_candidate_event=lambda aggregate: aggregate.pay(
+                request_id,
+                amount,
+            ),
         )
-
-        with PostgresWriteSideUnitOfWork(self._connection) as uow:
-            idempotency_decision = uow.idempotency_store.check(signature)
-
-            if idempotency_decision.verdict == IdempotencyVerdict.REPLAY:
-                uow.rollback()
-                return PostgresWriteSideResult(
-                    outcome=PostgresWriteSideOutcome.REPLAY,
-                    accepted_event=idempotency_decision.record.accepted_event,
-                    idempotency_decision=idempotency_decision,
-                    validation_decision=None,
-                )
-
-            if idempotency_decision.verdict == IdempotencyVerdict.CONFLICT:
-                uow.rollback()
-                return PostgresWriteSideResult(
-                    outcome=PostgresWriteSideOutcome.CONFLICT,
-                    accepted_event=None,
-                    idempotency_decision=idempotency_decision,
-                    validation_decision=None,
-                )
-
-            aggregate, history = self._rehydrate_aggregate(uow, order_id)
-            actual_prev_event = history[-1] if history else None
-            validation_context = self._build_validation_context(
-                aggregate=aggregate,
-                actual_prev_event=actual_prev_event,
-            )
-
-            candidate_event = aggregate.pay(request_id, amount)
-
-            validation_decision = self._validation_runtime.decide(
-                candidate_event,
-                validation_context,
-            )
-            if validation_decision.action != EnforcementAction.ALLOW:
-                uow.rollback()
-                return PostgresWriteSideResult(
-                    outcome=PostgresWriteSideOutcome.VALIDATION_BLOCKED,
-                    accepted_event=None,
-                    idempotency_decision=idempotency_decision,
-                    validation_decision=validation_decision,
-                )
-
-            expected_current_version = aggregate.current_version
-
-            # PR5 will replace or wrap this direct append with a PostgreSQL-backed
-            # admission gate.
-            uow.event_store.append(
-                candidate_event,
-                expected_current_version=expected_current_version,
-            )
-            uow.idempotency_store.record(signature, candidate_event)
-
-            return PostgresWriteSideResult(
-                outcome=PostgresWriteSideOutcome.ACCEPTED,
-                accepted_event=candidate_event,
-                idempotency_decision=idempotency_decision,
-                validation_decision=validation_decision,
-            )
-
