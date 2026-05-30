@@ -68,7 +68,51 @@ def build_paid_event(
     )
 
 
-def test_postgres_pessimistic_gate_admits_fresh_created_event(db_connection):
+def test_postgres_pessimistic_gate_prepare_stream_acquires_stream_lock(
+    db_connection,
+):
+    event_store = PostgresEventStore(db_connection)
+    gate = PostgresPessimisticAdmissionGate(
+        connection=db_connection,
+        event_store=event_store,
+    )
+
+    result = gate.prepare_stream("order-pessimistic-admission-1")
+
+    assert result.verdict == AdmissionVerdict.ADMITTED
+    assert result.admitted is True
+    assert result.order_id == "order-pessimistic-admission-1"
+
+    assert count_rows(db_connection, "order_events") == 0
+
+
+def test_postgres_pessimistic_gate_admits_fresh_created_event_after_prepare(
+    db_connection,
+):
+    event_store = PostgresEventStore(db_connection)
+    gate = PostgresPessimisticAdmissionGate(
+        connection=db_connection,
+        event_store=event_store,
+    )
+
+    candidate_event = build_created_event()
+
+    prepare_result = gate.prepare_stream(candidate_event.order_id)
+    result = gate.admit(candidate_event, expected_current_version=0)
+    db_connection.commit()
+
+    assert prepare_result.verdict == AdmissionVerdict.ADMITTED
+    assert result.verdict == AdmissionVerdict.ADMITTED
+    assert result.admitted is True
+    assert result.candidate_event_id == candidate_event.event_id
+    assert result.accepted_event_id == candidate_event.event_id
+
+    assert count_rows(db_connection, "order_events") == 1
+
+
+def test_postgres_pessimistic_gate_rejects_admit_without_prepare(
+    db_connection,
+):
     event_store = PostgresEventStore(db_connection)
     gate = PostgresPessimisticAdmissionGate(
         connection=db_connection,
@@ -78,17 +122,16 @@ def test_postgres_pessimistic_gate_admits_fresh_created_event(db_connection):
     candidate_event = build_created_event()
 
     result = gate.admit(candidate_event, expected_current_version=0)
-    db_connection.commit()
 
-    assert result.verdict == AdmissionVerdict.ADMITTED
-    assert result.admitted is True
+    assert result.verdict == AdmissionVerdict.INFRASTRUCTURE_ERROR
+    assert result.admitted is False
     assert result.candidate_event_id == candidate_event.event_id
-    assert result.accepted_event_id == candidate_event.event_id
+    assert result.accepted_event_id is None
 
-    assert count_rows(db_connection, "order_events") == 1
+    assert count_rows(db_connection, "order_events") == 0
 
 
-def test_postgres_pessimistic_gate_rejects_stale_expected_version(
+def test_postgres_pessimistic_gate_rejects_stale_expected_version_after_prepare(
     db_connection,
 ):
     event_store = PostgresEventStore(db_connection)
@@ -106,8 +149,10 @@ def test_postgres_pessimistic_gate_rejects_stale_expected_version(
         prev_event_id=created_event.event_id,
     )
 
+    prepare_result = gate.prepare_stream(stale_candidate.order_id)
     result = gate.admit(stale_candidate, expected_current_version=0)
 
+    assert prepare_result.verdict == AdmissionVerdict.ADMITTED
     assert result.verdict == AdmissionVerdict.STALE_WRITE
     assert result.admitted is False
     assert result.candidate_event_id == stale_candidate.event_id
@@ -116,7 +161,7 @@ def test_postgres_pessimistic_gate_rejects_stale_expected_version(
     assert count_rows(db_connection, "order_events") == 1
 
 
-def test_postgres_pessimistic_gate_returns_lock_timeout_when_stream_lock_is_held(
+def test_postgres_pessimistic_gate_returns_lock_timeout_during_prepare_stream(
     db_connection,
 ):
     locked_order_id = "order-pessimistic-locked"
@@ -140,17 +185,11 @@ def test_postgres_pessimistic_gate_returns_lock_timeout_when_stream_lock_is_held
             event_store=event_store,
         )
 
-        candidate_event = build_created_event(
-            request_id="create-request-locked",
-            order_id=locked_order_id,
-        )
-
-        result = gate.admit(candidate_event, expected_current_version=0)
+        result = gate.prepare_stream(locked_order_id)
 
         assert result.verdict == AdmissionVerdict.LOCK_TIMEOUT
         assert result.admitted is False
-        assert result.candidate_event_id == candidate_event.event_id
-        assert result.accepted_event_id is None
+        assert result.order_id == locked_order_id
 
         assert count_rows(db_connection, "order_events") == 0
     finally:
@@ -158,7 +197,9 @@ def test_postgres_pessimistic_gate_returns_lock_timeout_when_stream_lock_is_held
         locker_connection.close()
 
 
-def test_postgres_pessimistic_gate_rejects_autocommit_connection(db_connection):
+def test_postgres_pessimistic_gate_rejects_autocommit_connection_during_prepare(
+    db_connection,
+):
     db_connection.autocommit = True
 
     try:
@@ -168,13 +209,11 @@ def test_postgres_pessimistic_gate_rejects_autocommit_connection(db_connection):
             event_store=event_store,
         )
 
-        candidate_event = build_created_event()
-
-        result = gate.admit(candidate_event, expected_current_version=0)
+        result = gate.prepare_stream("order-pessimistic-admission-1")
 
         assert result.verdict == AdmissionVerdict.INFRASTRUCTURE_ERROR
         assert result.admitted is False
-        assert result.accepted_event_id is None
+        assert result.order_id == "order-pessimistic-admission-1"
         assert count_rows(db_connection, "order_events") == 0
     finally:
         db_connection.autocommit = False

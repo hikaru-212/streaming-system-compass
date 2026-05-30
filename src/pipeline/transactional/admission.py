@@ -24,9 +24,31 @@ class AdmissionVerdict(Enum):
 
 
 @dataclass(frozen=True)
+class StreamAdmissionResult:
+    """
+    Result of the stream-preparation boundary.
+
+    StreamAdmissionResult answers whether a writer may enter the critical
+    section for one aggregate stream before accepted-history loading,
+    aggregate rehydration, candidate-event creation, and validation.
+
+    It does not refer to a candidate event because candidate_event does not
+    exist yet at this phase.
+    """
+
+    verdict: AdmissionVerdict
+    reason: str
+    order_id: str
+
+    @property
+    def admitted(self) -> bool:
+        return self.verdict == AdmissionVerdict.ADMITTED
+
+
+@dataclass(frozen=True)
 class AdmissionResult:
     """
-    Result of the persistence admission boundary.
+    Result of the append-time persistence admission boundary.
 
     AdmissionResult answers whether a candidate event was allowed to occupy the
     next accepted-history position.
@@ -50,18 +72,26 @@ class ConcurrencyGate(Protocol):
     Structural contract for the persistence admission boundary.
 
     The caller depends only on:
+    - stream preparation result
     - candidate event
     - expected current version
-    - admission result
+    - append-time admission result
 
     Concrete strategies may differ:
     - optimistic version gate
     - pessimistic lock-based gate
     - test fake gate
 
-    This protocol may later be renamed to AdmissionGate once the PostgreSQL
-    admission boundary is fully established.
+    Two-phase admission exists because optimistic and pessimistic strategies
+    need different lock timing:
+
+    - optimistic admission usually performs no stream preparation
+    - pessimistic admission may acquire a stream lock before rehydration /
+      validation work begins
     """
+
+    def prepare_stream(self, order_id: str) -> StreamAdmissionResult:
+        ...
 
     def admit(
         self,
@@ -77,6 +107,7 @@ class OptimisticVersionGate:
 
     Strategy:
     - do not lock first
+    - use prepare_stream as a no-op
     - rely on append-time continuity check in EventStore
     - reject stale writers when store version no longer matches expectation
 
@@ -86,6 +117,13 @@ class OptimisticVersionGate:
 
     def __init__(self, store: EventStore):
         self.store = store
+
+    def prepare_stream(self, order_id: str) -> StreamAdmissionResult:
+        return StreamAdmissionResult(
+            verdict=AdmissionVerdict.ADMITTED,
+            reason="Optimistic admission does not pre-lock stream",
+            order_id=order_id,
+        )
 
     def admit(
         self,

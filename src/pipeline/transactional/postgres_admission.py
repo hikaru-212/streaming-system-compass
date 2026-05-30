@@ -1,7 +1,8 @@
 """PostgreSQL-backed admission gates.
 
-Admission decides whether a candidate event may occupy the next
-accepted-history stream position.
+Admission decides whether a writer may enter an aggregate-stream critical
+section and whether a candidate event may occupy the next accepted-history
+stream position.
 
 This module does not own:
 - domain legality
@@ -17,7 +18,11 @@ from psycopg import Connection
 from psycopg.errors import LockNotAvailable, UniqueViolation
 
 from src.core.order.events import OrderEvent
-from src.pipeline.transactional.admission import AdmissionResult, AdmissionVerdict
+from src.pipeline.transactional.admission import (
+    AdmissionResult,
+    AdmissionVerdict,
+    StreamAdmissionResult,
+)
 from src.storage.errors import (
     AppendConflictError,
     StaleWriteError,
@@ -30,7 +35,8 @@ class PostgresOptimisticAdmissionGate:
     """PostgreSQL-backed optimistic admission strategy.
 
     Strategy:
-    - do not lock first
+    - do not pre-lock the stream
+    - use prepare_stream as a no-op
     - do not pre-read current version in the gate
     - attempt append through PostgresEventStore
     - translate append-time persistence conflicts into stable AdmissionResult values
@@ -38,6 +44,13 @@ class PostgresOptimisticAdmissionGate:
 
     def __init__(self, event_store: PostgresEventStore):
         self.event_store = event_store
+
+    def prepare_stream(self, order_id: str) -> StreamAdmissionResult:
+        return StreamAdmissionResult(
+            verdict=AdmissionVerdict.ADMITTED,
+            reason="PostgreSQL optimistic admission does not pre-lock stream",
+            order_id=order_id,
+        )
 
     def admit(
         self,
@@ -56,8 +69,8 @@ class PostgresPessimisticAdmissionGate:
     """PostgreSQL-backed pessimistic admission strategy.
 
     Strategy:
-    - acquire a transaction-scoped advisory lock for the aggregate stream
-    - only append after the stream lock is acquired
+    - acquire a transaction-scoped advisory lock during stream preparation
+    - only append after the stream lock has been acquired
     - return LOCK_TIMEOUT if the stream lock cannot be acquired immediately
     - translate append-time persistence conflicts into stable AdmissionResult values
 
@@ -76,32 +89,55 @@ class PostgresPessimisticAdmissionGate:
     ):
         self.connection = connection
         self.event_store = event_store
+        self._prepared_order_ids: set[str] = set()
 
-    def admit(
-        self,
-        candidate_event: OrderEvent,
-        expected_current_version: int,
-    ) -> AdmissionResult:
+    def prepare_stream(self, order_id: str) -> StreamAdmissionResult:
         if self.connection.autocommit:
-            return AdmissionResult(
+            return StreamAdmissionResult(
                 verdict=AdmissionVerdict.INFRASTRUCTURE_ERROR,
                 reason=(
                     "PostgreSQL pessimistic admission gate requires a "
                     "transaction-scoped connection, but connection.autocommit "
                     "is enabled"
                 ),
-                candidate_event_id=candidate_event.event_id,
-                accepted_event_id=None,
+                order_id=order_id,
             )
 
-        lock_acquired = self._try_lock_stream(candidate_event.order_id)
+        lock_acquired = self._try_lock_stream(order_id)
 
         if not lock_acquired:
-            return AdmissionResult(
+            return StreamAdmissionResult(
                 verdict=AdmissionVerdict.LOCK_TIMEOUT,
                 reason=(
                     "Stream lock was not available for PostgreSQL pessimistic "
-                    f"admission gate: order_id={candidate_event.order_id}"
+                    f"admission gate: order_id={order_id}"
+                ),
+                order_id=order_id,
+            )
+
+        self._prepared_order_ids.add(order_id)
+
+        return StreamAdmissionResult(
+            verdict=AdmissionVerdict.ADMITTED,
+            reason=(
+                "Stream lock acquired by PostgreSQL pessimistic admission gate: "
+                f"order_id={order_id}"
+            ),
+            order_id=order_id,
+        )
+
+    def admit(
+        self,
+        candidate_event: OrderEvent,
+        expected_current_version: int,
+    ) -> AdmissionResult:
+        if candidate_event.order_id not in self._prepared_order_ids:
+            return AdmissionResult(
+                verdict=AdmissionVerdict.INFRASTRUCTURE_ERROR,
+                reason=(
+                    "PostgreSQL pessimistic admission gate requires "
+                    "prepare_stream(order_id) before append-time admission: "
+                    f"order_id={candidate_event.order_id}"
                 ),
                 candidate_event_id=candidate_event.event_id,
                 accepted_event_id=None,

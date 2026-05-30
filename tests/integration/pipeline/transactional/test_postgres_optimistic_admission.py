@@ -66,6 +66,19 @@ def build_paid_event(
     )
 
 
+def test_postgres_optimistic_gate_prepare_stream_is_noop(db_connection):
+    event_store = PostgresEventStore(db_connection)
+    gate = PostgresOptimisticAdmissionGate(event_store)
+
+    result = gate.prepare_stream("order-admission-1")
+
+    assert result.verdict == AdmissionVerdict.ADMITTED
+    assert result.admitted is True
+    assert result.order_id == "order-admission-1"
+
+    assert count_rows(db_connection, "order_events") == 0
+
+
 def test_postgres_optimistic_gate_admits_fresh_created_event(db_connection):
     event_store = PostgresEventStore(db_connection)
     gate = PostgresOptimisticAdmissionGate(event_store)
