@@ -75,6 +75,11 @@ class FakeValidationRuntimeBlock:
                 },
             ),
         )
+    
+
+class RaisingValidationRuntime:
+    def decide(self, candidate_event, context):
+        raise AssertionError("validation runtime should not be called")
 
 
 class FakePrepareRejectedGate:
@@ -129,6 +134,22 @@ def fake_prepare_rejected_gate_factory(uow):
 
 def fake_append_rejected_gate_factory(uow):
     return FakeAppendRejectedGate()
+
+
+def build_pre_transaction_write_side(
+    db_connection,
+    *,
+    validation_runtime=None,
+    admission_gate_factory=None,
+):
+    return PostgresTransactionalWriteSide(
+        connection=db_connection,
+        validation_runtime=validation_runtime or FakeValidationRuntimeAllow(),
+        admission_gate_factory=admission_gate_factory,
+        config=PostgresWriteSideConfig(
+            validation_placement=ValidationPlacement.PRE_TRANSACTION,
+        ),
+    )
 
 
 pytestmark = pytest.mark.usefixtures("clean_database")
@@ -203,6 +224,156 @@ def test_explicit_in_transaction_config_preserves_write_side_behavior(
     assert count_rows(db_connection, "order_events") == 1
     assert count_rows(db_connection, "idempotency_records") == 1
 
+
+def test_pre_transaction_create_order_accepts_event_and_records_idempotency(
+    db_connection,
+):
+    write_side = build_pre_transaction_write_side(db_connection)
+
+    result = write_side.create_order(
+        request_id="create-request-001",
+        order_id="order-write-side-1",
+        amount=Decimal("100.00"),
+    )
+
+    assert result.outcome == PostgresWriteSideOutcome.ACCEPTED
+    assert result.accepted_event is not None
+    assert result.accepted_event.event_type == EventType.CREATED
+    assert result.idempotency_decision.verdict == IdempotencyVerdict.MISS
+    assert result.stream_admission_result is not None
+    assert result.stream_admission_result.verdict == AdmissionVerdict.ADMITTED
+    assert result.validation_decision is not None
+    assert result.validation_decision.action == EnforcementAction.ALLOW
+    assert result.admission_result is not None
+    assert result.admission_result.verdict == AdmissionVerdict.ADMITTED
+
+    assert count_rows(db_connection, "order_events") == 1
+    assert count_rows(db_connection, "idempotency_records") == 1
+
+
+def test_pre_transaction_pay_order_accepts_second_event_and_records_idempotency(
+    db_connection,
+):
+    write_side = build_pre_transaction_write_side(db_connection)
+
+    create_result = write_side.create_order(
+        request_id="create-request-001",
+        order_id="order-write-side-1",
+        amount=Decimal("100.00"),
+    )
+
+    pay_result = write_side.pay_order(
+        request_id="pay-request-001",
+        order_id="order-write-side-1",
+        amount=Decimal("100.00"),
+    )
+
+    assert pay_result.outcome == PostgresWriteSideOutcome.ACCEPTED
+    assert pay_result.accepted_event is not None
+    assert pay_result.accepted_event.event_type == EventType.PAID
+    assert pay_result.accepted_event.sequence == 2
+    assert pay_result.accepted_event.proof.prev_event_id == (
+        create_result.accepted_event.event_id
+    )
+    assert pay_result.stream_admission_result is not None
+    assert pay_result.stream_admission_result.verdict == AdmissionVerdict.ADMITTED
+    assert pay_result.validation_decision is not None
+    assert pay_result.validation_decision.action == EnforcementAction.ALLOW
+    assert pay_result.admission_result is not None
+    assert pay_result.admission_result.verdict == AdmissionVerdict.ADMITTED
+
+    assert count_rows(db_connection, "order_events") == 2
+    assert count_rows(db_connection, "idempotency_records") == 2
+
+
+def test_pre_transaction_validation_block_does_not_create_rows(db_connection):
+    write_side = build_pre_transaction_write_side(
+        db_connection,
+        validation_runtime=FakeValidationRuntimeBlock(),
+    )
+
+    result = write_side.create_order(
+        request_id="create-request-001",
+        order_id="order-write-side-1",
+        amount=Decimal("100.00"),
+    )
+
+    assert result.outcome == PostgresWriteSideOutcome.VALIDATION_BLOCKED
+    assert result.accepted_event is None
+    assert result.idempotency_decision.verdict == IdempotencyVerdict.MISS
+    assert result.stream_admission_result is None
+    assert result.validation_decision is not None
+    assert result.validation_decision.action == EnforcementAction.BLOCK
+    assert result.admission_result is None
+
+    assert count_rows(db_connection, "order_events") == 0
+    assert count_rows(db_connection, "idempotency_records") == 0
+
+
+def test_pre_transaction_replay_does_not_run_validation_or_build_gate(
+    db_connection,
+):
+    default_write_side = PostgresTransactionalWriteSide(
+        connection=db_connection,
+        validation_runtime=FakeValidationRuntimeAllow(),
+    )
+    replay_write_side = build_pre_transaction_write_side(
+        db_connection,
+        validation_runtime=RaisingValidationRuntime(),
+        admission_gate_factory=RaisingGateFactory(),
+    )
+
+    first_result = default_write_side.create_order(
+        request_id="create-request-001",
+        order_id="order-write-side-1",
+        amount=Decimal("100.00"),
+    )
+
+    replay_result = replay_write_side.create_order(
+        request_id="create-request-001",
+        order_id="order-write-side-1",
+        amount=Decimal("100.00"),
+    )
+
+    assert replay_result.outcome == PostgresWriteSideOutcome.REPLAY
+    assert replay_result.idempotency_decision.verdict == IdempotencyVerdict.REPLAY
+    assert replay_result.accepted_event == first_result.accepted_event
+    assert replay_result.stream_admission_result is None
+    assert replay_result.validation_decision is None
+    assert replay_result.admission_result is None
+
+    assert count_rows(db_connection, "order_events") == 1
+    assert count_rows(db_connection, "idempotency_records") == 1
+
+
+def test_pre_transaction_append_admission_rejection_does_not_record_idempotency(
+    db_connection,
+):
+    write_side = build_pre_transaction_write_side(
+        db_connection,
+        validation_runtime=FakeValidationRuntimeAllow(),
+        admission_gate_factory=fake_append_rejected_gate_factory,
+    )
+
+    result = write_side.create_order(
+        request_id="create-request-001",
+        order_id="order-write-side-1",
+        amount=Decimal("100.00"),
+    )
+
+    assert result.outcome == PostgresWriteSideOutcome.ADMISSION_REJECTED
+    assert result.accepted_event is None
+    assert result.idempotency_decision.verdict == IdempotencyVerdict.MISS
+    assert result.stream_admission_result is not None
+    assert result.stream_admission_result.verdict == AdmissionVerdict.ADMITTED
+    assert result.validation_decision is not None
+    assert result.validation_decision.action == EnforcementAction.ALLOW
+    assert result.admission_result is not None
+    assert result.admission_result.verdict == AdmissionVerdict.STALE_WRITE
+
+    assert count_rows(db_connection, "order_events") == 0
+    assert count_rows(db_connection, "idempotency_records") == 0
+    
 
 def test_create_order_replay_returns_previous_accepted_event_without_new_rows(
     db_connection,
