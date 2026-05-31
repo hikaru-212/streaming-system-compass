@@ -11,13 +11,13 @@ The purpose of this backlog is not to expand the current PR scope. Instead, it p
 Current focus:
 
 ```text
-Stage 3.5B PR4 — Transactional Semantic Write-side Boundary documentation closure
+Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary closure
 ```
 
 Next planned focus:
 
 ```text
-Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
+Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy
 ```
 
 ---
@@ -367,7 +367,48 @@ Further transaction ownership work may occur in PR5 when admission gates are int
 
 ---
 
+## 7A. Pessimistic Admission Autocommit Guard
+
+### Status
+
+```text
+Completed in Stage 3.5B PR5
+```
+
+### Current Decision
+
+A PostgreSQL transaction-scoped advisory lock is only meaningful when the connection preserves a transaction boundary across the protected work.
+
+Therefore, pessimistic admission should reject `autocommit=True` instead of pretending that the stream lock is active.
+
+### Why
+
+If `autocommit=True`, a transaction-scoped lock can be acquired and released immediately when the lock statement completes.
+
+That would collapse the physical protection promised by `prepare_stream(order_id)`.
+
+### Current Classification
+
+```text
+Completed PR5 guardrail
+```
+
+### Related Note
+
+See:
+
+- [Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)
+
+
+---
+
 ## 8. Custom Persistence Exceptions
+
+### Status
+
+```text
+Completed in Stage 3.5B PR5 at the storage/admission boundary
+```
 
 ### Current Decision
 
@@ -391,30 +432,20 @@ For example, stale writes should not remain raw database-specific exceptions.
 
 But that does not require the full Stage 4 Error Model.
 
-### Future Work
-
-Consider dedicated storage/admission errors:
-
-```python
-class StorageConflictError(Exception): ...
-class StaleWriteError(StorageConflictError): ...
-class AppendContinuityError(StorageConflictError): ...
-```
-
-These may later map into structured SemanticOutcome / RuntimeDecision behavior.
+PR5 introduces storage/admission-level error vocabulary so raw storage conflicts can be translated into stable admission semantics before any future Stage 4 governance mapping exists.
 
 ### Current Classification
 
 ```text
-PR5 candidate for storage/admission errors
-Stage 4 for SemanticOutcome mapping
+Completed for PR5 baseline
+Stage 4 remains responsible for SemanticOutcome mapping
 ```
 
-### Suggested Timing
+### Remaining Future Work
 
-PR5 for stable concurrency/admission error mapping.
+Future Stage 4 work may map storage/admission results into structured `SemanticOutcome` and `RuntimeDecision` records.
 
-Stage 4B for structured SemanticOutcome / Error Model v1.
+PR5 does not persist admission attempts or introduce governance outcomes.
 
 ---
 
@@ -613,7 +644,8 @@ The deferred backlog should now be read with the following stage alignment:
 | StoredEventRecord / JSONB hydration | Stage 4 / evidence design |
 | Registry-stage timing | Observability / Stage 4 / PR6 latency experiment |
 | Transaction lifecycle ownership | Completed in PR4 |
-| Custom persistence exceptions | PR5 for storage/admission errors; Stage 4 for SemanticOutcome |
+| Pessimistic admission autocommit guard | Completed in PR5 |
+| Custom persistence exceptions | Completed in PR5 for storage/admission errors; Stage 4 for SemanticOutcome |
 | Payload/proof/metadata JSON shape | Stage 4 evidence / outcome persistence |
 | Append-only DB hardening | Later production hardening |
 | Integration test boundary / CI strategy | Mostly completed in PR4 |

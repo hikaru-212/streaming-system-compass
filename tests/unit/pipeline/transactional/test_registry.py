@@ -55,7 +55,7 @@ class FakeValidationRuntimeBlock:
 class FakeGateReject:
     def admit(self, candidate_event, expected_current_version):
         return AdmissionResult(
-            verdict=AdmissionVerdict.REJECTED,
+            verdict=AdmissionVerdict.STALE_WRITE,
             reason="rejected by fake gate",
             candidate_event_id=candidate_event.event_id,
             accepted_event_id=None,
@@ -208,7 +208,7 @@ class TestHandleCreate:
 
         result = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
-        assert result.verdict == AdmissionVerdict.REJECTED
+        assert result.verdict == AdmissionVerdict.STALE_WRITE
         assert empty_store.load("order-123") == []
 
         decision = empty_idempotency_provider.check(

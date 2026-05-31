@@ -72,7 +72,7 @@ class TestConcurrencyAdmission:
 
         # B becomes stale and must be rejected by the admission boundary
         admission_b = registry.gate.admit(event_b, expected_current_version=1)
-        assert admission_b.verdict == AdmissionVerdict.REJECTED
+        assert admission_b.verdict == AdmissionVerdict.STALE_WRITE
         assert "Version conflict" in admission_b.reason
 
         # accepted history must contain only one successful pay

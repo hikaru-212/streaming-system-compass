@@ -44,6 +44,7 @@ Postmortems help preserve:
 | [from_runtime_behavior_to_durable_evidence](from_runtime_behavior_to_durable_evidence.md) | Explains why Python runtime behavior is not durable evidence unless selected facts are persisted into PostgreSQL, metadata fields, logs, metrics, traces, or audit records. |
 | [from_exception_strings_to_governable_outcomes](from_exception_strings_to_governable_outcomes.md) | Explains why raw exception strings are not enough for semantic governance, and why structured semantic outcomes must later feed runtime decision policy, action safety, and layered trust. |
 | [from_durable_persistence_to_semantic_gate_preservation](from_durable_persistence_to_semantic_gate_preservation.md) | Records the PR4 lesson that durable persistence hardening can preserve physical transaction correctness while accidentally bypassing Compass semantic gates. |
+| [autocommit_boundary_and_partial_write_risk](autocommit_boundary_and_partial_write_risk.md) | Explains why `autocommit`, transaction-scoped advisory locks, and partial-write risks must be treated as physical transaction-boundary concerns in the durable write-side pipeline. |
 
 ---
 
@@ -59,6 +60,15 @@ The PR4 postmortem [From Durable Persistence to Semantic Gate Preservation](from
 The postmortem records the implementation lesson.
 
 The ADRs record the follow-up architecture decisions.
+
+---
+
+The postmortem [Autocommit, Transaction Boundaries, and Partial-Write Risk](autocommit_boundary_and_partial_write_risk.md) is related to the Stage 3.5B / PR5 transition:
+
+- PR4 establishes transaction atomicity for accepted event append + idempotency record persistence.
+- PR5 introduces PostgreSQL-backed admission and transaction-scoped lock semantics.
+- The postmortem explains why `autocommit=False` is a physical requirement for transaction-scoped pessimistic admission.
+- This directly supports [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md), especially the physical transaction-boundary requirement behind `prepare_stream(order_id)`.
 
 ---
 
