@@ -85,22 +85,30 @@ This folder currently includes notes for the most important module and cross-cut
 - [Idempotency Module Boundary](idempotency_module.md)
 - [Registry Module Boundary](registry_module.md)
 - [Concurrency Boundary](concurrency_boundary.md)
+- [PostgreSQL Concurrency Admission Boundary](postgres_concurrency_admission_boundary.md)
+- [Validation Placement Strategy Boundary](validation_placement_strategy_boundary.md)
 - [Projection Module Boundary](projection_module.md)
 - [Projection Runtime Boundary](projection_boundary.md)
 - [Checkpoint Module Boundary](checkpoint_module.md)
 - [Compass Layer Boundary](compass_layer_boundary.md)
 - [Persistence Boundary](persistence_boundary.md)
+- [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
+
+The PostgreSQL concurrency admission note is intentionally separate from the older concurrency boundary note. The older note explains the conceptual distinction between idempotency, retry safety, and concurrency control. The PostgreSQL concurrency admission note records the Stage 3.5B PR5 implementation boundary: translating writer competition into stable admission results without leaking raw database exceptions upward.
+
+The validation placement strategy note builds on ADR 0011 and PR5 admission. It records the Stage 3.5B PR6 / Stage 4 Prelude boundary for comparing `IN_TRANSACTION` Compass validation against `PRE_TRANSACTION` validation plus append-time concurrency admission.
 
 Two projection-related notes are intentionally preserved:
 
 - **Projection Module Boundary** describes the external role of projection as a whole.
 - **Projection Runtime Boundary** describes the internal Stage 3 boundary between reducer, worker, projection store, and checkpoint store.
 
-The persistence-related note is also intentionally separate:
+The persistence-related notes are also intentionally separate:
 
 - **Persistence Boundary** explains how durable storage should be introduced without collapsing the boundaries between event store, idempotency store, projection state, and checkpoint progress.
+- **Stage 3.5B Write-Side Schema Translation Note** explains how Python-side guarantees such as `frozen=True`, append-only accepted history, and exact money semantics should be translated into database-side physical constraints before durable write-side implementation begins.
 
 ---
 
@@ -115,11 +123,14 @@ A practical reading order is:
 5. [Idempotency Module Boundary](idempotency_module.md)
 6. [Registry Module Boundary](registry_module.md)
 7. [Concurrency Boundary](concurrency_boundary.md)
-8. [Projection Module Boundary](projection_module.md)
-9. [Projection Runtime Boundary](projection_boundary.md)
-10. [Checkpoint Module Boundary](checkpoint_module.md)
-11. [Compass Layer Boundary](compass_layer_boundary.md)
-12. [Persistence Boundary](persistence_boundary.md)
+8. [PostgreSQL Concurrency Admission Boundary](postgres_concurrency_admission_boundary.md)
+9. [Validation Placement Strategy Boundary](validation_placement_strategy_boundary.md)
+10. [Projection Module Boundary](projection_module.md)
+11. [Projection Runtime Boundary](projection_boundary.md)
+12. [Checkpoint Module Boundary](checkpoint_module.md)
+13. [Compass Layer Boundary](compass_layer_boundary.md)
+14. [Persistence Boundary](persistence_boundary.md)
+15. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -130,11 +141,14 @@ This roughly follows the intended semantic development order of the project:
 - define request safety boundaries
 - define orchestration boundaries
 - define concurrency / admission boundaries
+- define PostgreSQL admission results
+- define validation placement strategy after admission exists
 - define projection as read-side derivation
 - define projection runtime internals
 - define runtime progress boundaries
 - define semantic validation layers
 - define durable-world persistence discipline
+- define how Python-side semantic guarantees are restated at the database boundary
 
 ---
 
@@ -150,9 +164,13 @@ These notes should be read together with:
 - [Compass Layers](../architecture/compass_layers.md)
 - [Projection Pipeline](../architecture/projection_pipeline.md)
 - [Persistent Storage Baseline](../architecture/persistent_storage_baseline.md)
+- [Write-Side Schema Baseline](../architecture/write_side_schema_baseline.md)
 - [Implementation Roadmap](../roadmap/implementation_roadmap.md)
 - [Concurrency Control, Idempotency, and Retry Safety](../adr/0003_concurrency_idempotency_and_retry_safety.md)
 - [Persistent Storage Baseline Strategy](../adr/0005_persistent_storage_baseline_strategy.md)
+- [Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
+- [Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
+- [Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md)
 
 A good rule of thumb is:
 

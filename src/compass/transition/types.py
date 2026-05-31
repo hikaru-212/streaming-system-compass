@@ -53,7 +53,7 @@ class ValidationResult:
     """
     verdict: ValidationVerdict
     reason: str
-    event_id: str
+    candidate_event_id: str
     validator_name: str
     validation_mode: ValidationMode
     logic_validation_time_ms: float
@@ -94,5 +94,5 @@ class TransitionValidator(Protocol):
     """
     Protocol for Compass Layer 1 transition validators.
     """
-    def validate(self, event: OrderEvent, context: ValidationContext) -> ValidationResult:
+    def validate(self, candidate_event: OrderEvent, context: ValidationContext) -> ValidationResult:
         ...

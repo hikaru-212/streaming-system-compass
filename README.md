@@ -3,7 +3,7 @@
 > ⚠️ This project is under active development. See [Current Status](#-current-status) for progress.
 
 A failure-aware streaming system with invariant-driven correctness,  
-validated through executable tests and later hardened through chaos engineering.
+validated through executable tests and later extended toward durable persistence, runtime semantic outcomes, and governance-oriented system reasoning.
 
 ---
 
@@ -17,18 +17,21 @@ It is a production-inspired streaming-system project focused on:
 - **semantic validation before persistence**
 - **orthogonal idempotency / concurrency boundaries**
 - **replay-safe projection runtime design**
+- **exact-money hardening before durable persistence**
 
 The project currently has:
 
 - a completed write-side transactional baseline
 - Compass Layer 1 transition-truth validation
 - a Stage 3 baseline projection runtime with reducer / worker separation
+- a completed Stage 3.5A decimal / money hardening step before durable persistence
+- a completed Stage 3.5B durable write-side baseline, including PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and validation placement strategy
 - executable tests defending both write-side and read-side baseline semantics
 
-The next major step is:
+The next major steps are:
 
-- **persistent storage baseline**
-- followed later by **state-level Compass validation**
+- **Stage 3.5C — durable read-side baseline**
+- followed later by **runtime semantic validation, structured semantic outcomes, runtime decision policy, and action safety**
 
 ---
 
@@ -70,6 +73,12 @@ If you want to understand how the repository thinks rather than only what it imp
 - **Replay-safe projection baseline**  
   The Stage 3 projection runtime uses reducer / worker separation and replay / rebuild through the same runtime path.
 
+- **Exact-money pre-persistence hardening**  
+  Stage 3.5A completed the migration from float-based money handling to Decimal-based semantics before durable persistence work expands.
+
+- **Durable write-side baseline**  
+  Stage 3.5B establishes PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and configurable validation placement.
+
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
 
@@ -82,8 +91,8 @@ This project is a production-inspired streaming system designed to solve three f
 1. **Transactional Correctness**  
    Ensure state transitions are logically valid.
 
-2. **Analytical Observability**  
-   Extract insights from streaming data.
+2. **Runtime Semantic Integrity**  
+   Ensure derived runtime state remains faithful to accepted history.
 
 3. **Failure Resilience under Adversarial Conditions**  
    Maintain correctness even under failures.
@@ -96,7 +105,7 @@ This project is a production-inspired streaming system designed to solve three f
 > The same data, interpreted under different system semantics
 
 - Transactional Pipeline → state transition
-- Analytical Pipeline → statistical signal
+- Read-Side / Runtime Pipeline → derived runtime truth
 
 ---
 
@@ -104,7 +113,6 @@ This project is a production-inspired streaming system designed to solve three f
 
 ```mermaid
 flowchart TD
-    %% Write-Side / Transactional Path
     A[Commands / Requests] --> B[Transactional Pipeline]
     B --> C[Compass Layer 1<br/>Transition Truth Validation]
     C --> D{Concurrency / Admission Gate}
@@ -112,22 +120,17 @@ flowchart TD
     D -- Accepted --> E[(Event Log / Immutable History)]
     D -- Rejected / Conflict --> R[Reject / Retry Flow]
 
-    %% Read-Side / Projection and Analytics
     E --> F[Projection Pipeline]
-    E --> G[Analytical Pipeline]
-
     F --> H[Derived Runtime State]
     H --> I[Compass Layer 2<br/>Runtime State Validation]
-
-    G --> J[Aggregation / Analytics]
 ```
 
 This architecture separates:
 
 - **write-side admission**, where candidate events must pass semantic validation and concurrency-safe persistence
 - **accepted immutable history**, where admitted events become the durable source of truth
-- **read-side derivation**, where projection and analytics interpret the accepted event stream under different goals
-- **runtime verification**, where Compass later validates projected state and governance outcomes
+- **read-side derivation**, where projection interprets accepted history into runtime state
+- **runtime verification**, where Compass later validates whether projected state remains semantically correct
 
 ---
 
@@ -148,12 +151,13 @@ This architecture separates:
 
 Compass is the semantic validation layer of the system.
 
-It begins with event-level transition truth validation and evolves toward runtime state verification and governance.
+It begins with event-level transition truth validation and evolves toward runtime state verification, structured semantic outcomes, and later governance-oriented decisions.
 
 At a high level:
 
 - **Compass Layer 1** validates whether a candidate event truthfully follows accepted history.
 - **Compass Layer 2** validates whether projected runtime state remains semantically correct.
+- **Structured semantic outcomes** are the later bridge from raw failure detection toward reusable governance meaning.
 - **Compass governance** later decides how the system should respond to violations.
 
 Compass does not replace concurrency control.
@@ -187,7 +191,7 @@ They test whether the correctness mechanisms inside `src/` survive adversarial r
 ## 🎯 Key Principle
 
 > A system is not correct because it works.  
-> A system is correct because it survives failure.
+> A system is correct because it preserves truth under failure.
 
 ---
 
@@ -200,7 +204,11 @@ They test whether the correctness mechanisms inside `src/` survive adversarial r
 - Executable write-side invariants through tests
 - Stage 3 baseline read-side projection runtime with reducer / worker separation
 - Replay-safe projection state derivation with checkpoint-aware sequencing
-- Clear separation between domain legality, transition truth, admission continuity, retry safety, and read-side derivation
+- Decimal-based money semantics before durable persistence
+- PostgreSQL-backed durable write-side persistence
+- Two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
+- Configurable validation placement through `IN_TRANSACTION` and `PRE_TRANSACTION`
+- Clear separation between domain legality, transition truth, admission continuity, retry safety, validation placement, and read-side derivation
 
 ---
 
@@ -222,6 +230,7 @@ A production-inspired streaming system focused on:
 - failure modeling
 - semantic validation
 - replayable state reconstruction
+- durable-boundary design before broader runtime complexity
 
 ---
 
@@ -327,8 +336,8 @@ Instead, it starts by defining and implementing:
 
 Everything else grows around this core:
 
-- `storage/` persists accepted history and protects version continuity
-- `pipeline/` executes transactional and projection flows
+- `storage/` persists accepted history, idempotency memory, and protects version continuity
+- `pipeline/` executes transactional and projection flows, including PostgreSQL-backed write-side orchestration
 - `compass/` validates semantic correctness
 - `bootstrap/` assembles concrete runtime wiring
 - `chaos_engine/` stress-tests whether mechanisms inside `src/` survive adversarial conditions
@@ -352,27 +361,40 @@ Everything else grows around this core:
 - transition truth checking before persistence
 - validation dispatch and basic `ALLOW` / `BLOCK` policy
 
-### Phase 3 — Projection Runtime
+### Phase 3 — Projection Runtime + Exact-Money Hardening
 
 - pure reducer
 - checkpoint-aware projection worker
 - projection state store
 - checkpoint / offset handling
 - replay and rebuild flow
+- Decimal hardening before durable persistence
 
-### Phase 4 — State-Level Compass Verification
+### Phase 3.5B / 3.5C — Durable Persistence Baseline
+
+- Stage 3.5B durable write-side baseline completed at branch level
+- PostgreSQL-backed accepted history and idempotency memory
+- transactional event append + idempotency record persistence
+- two-phase concurrency admission and validation placement strategy
+- Stage 3.5C durable read-side baseline next
+- persistence-backed replay / rebuild validation
+- exact money durability
+- append-only durable history and idempotency evolution
+
+### Phase 4 — Runtime Semantic Validation and Outcome Structuring
 
 - projected state invariants
-- checkpoint validation
 - replay vs incremental consistency checks
-- semantic runtime verification
+- Layer 2 minimal validator
+- structured semantic outcomes
+- future Layer 1 / Layer 2 outcome-family alignment
 
-### Phase 5 — Analytical Pipeline
+### Phase 5 — Demo, Packaging, and Reviewer-Facing Story
 
-- event-time processing
-- windowed aggregation
-- lateness-aware handling
-- statistical materialization
+- reviewer-friendly demo packaging
+- documentation alignment
+- clear implementation vs future-work boundary
+- portfolio / open-source-ready milestone
 
 ### Phase 6 — Governance and Chaos Hardening
 
@@ -404,21 +426,26 @@ Current baseline completed:
   - in-memory projection state store
   - in-memory checkpoint store
   - replay / rebuild baseline
+- Stage 3.5A exact-money hardening before durable persistence:
+  - Decimal-based money semantics
+  - aligned fixtures / unit / integration / semantic / adversarial / demo paths
+  - formal projection reducer path as the only replay-reduction truth path
 - executable tests across transactional legality, replay safety, transition-truth checks, semantic-case scenarios, adversarial histories, and Stage 3 baseline projection behavior
 
 Current boundary of completion:
 
 - write-side transactional baseline is established
 - read-side projection baseline now exists in a deterministic in-memory form
+- exact-money semantics are now stabilized before deeper durable persistence work
 - failure-path reasoning is meaningfully executable across both write-side and Stage 3 baseline read-side paths
 - persistent storage-backed runtime behavior is not yet implemented
 - state-level Compass Layer 2 validation is not yet implemented
 
 Next implementation milestone:
 
-- introduce a persistent storage baseline, starting from durable write-side and read-side store evolution
-- validate replay / rebuild behavior against persistence-backed state
-- prepare the path toward Stage 4 state-level Compass validation
+- Stage 3.5B durable write-side baseline
+- Stage 3.5C durable read-side baseline
+- later Stage 4 runtime semantic validation and outcome structuring
 - defer advanced runtime concerns such as DLQ, buffering, watermark semantics, and multi-worker coordination until after durable baseline semantics are clear
 
 ---
@@ -445,7 +472,8 @@ The repository remains intentionally conservative:
 - `src/` implements runtime logic
 - `tests/` make selected invariants and failure paths executable
 - the current Stage 3 baseline remains intentionally minimal and in-memory
-- later phases will extend this baseline toward durable persistence, state-level Compass checks, and adversarial hardening
+- Stage 3.5A has hardened exact-money semantics before persistence expands
+- later phases will extend this baseline toward durable persistence, runtime semantic outcomes, and adversarial hardening
 
 ---
 

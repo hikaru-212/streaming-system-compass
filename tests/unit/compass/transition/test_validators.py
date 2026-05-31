@@ -43,7 +43,7 @@ class TestFullProofValidatorSuccess:
 
         assert result.verdict == ValidationVerdict.PASSED
         assert result.validation_mode == ValidationMode.STRICT
-        assert result.event_id == created_event.event_id
+        assert result.candidate_event_id == created_event.event_id
         assert result.logic_validation_time_ms >= 0.0
         assert result.io_time_ms == 0.0
         assert result.total_time_ms >= result.logic_validation_time_ms
@@ -60,7 +60,7 @@ class TestFullProofValidatorSuccess:
 
         assert result.verdict == ValidationVerdict.PASSED
         assert result.validation_mode == ValidationMode.STRICT
-        assert result.event_id == paid_event.event_id
+        assert result.candidate_event_id == paid_event.event_id
 
 
 class TestFullProofValidatorFailures:

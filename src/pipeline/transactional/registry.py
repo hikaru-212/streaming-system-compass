@@ -99,6 +99,11 @@ class OrderRegistry:
         - same request_id + same semantic payload -> replay
         - same request_id + different semantic payload -> conflict
         - unseen request_id -> continue normal processing
+
+        Replay boundary:
+        - a REPLAY decision returns a previously accepted event
+        - no new candidate event is created on this path
+        - the returned event.event_id should be interpreted as accepted_event_id
         """
         decision = self.idem.check(signature)
 
@@ -136,24 +141,24 @@ class OrderRegistry:
         validation_context = self._build_validation_context(aggregate, actual_prev_event)
 
         # 3. Decision Logic (Core)
-        new_event = aggregate.create(request_id, amount)
+        candidate_event = aggregate.create(request_id, amount)
 
         # 4. Compass Semantic Validation (Enabler)
-        validation_decision = self.validation_runtime.decide(new_event, validation_context)
+        validation_decision = self.validation_runtime.decide(candidate_event, validation_context)
         if validation_decision.action != EnforcementAction.ALLOW:
             return validation_decision
 
         # 5. Concurrency Admission (Enabler)
         expected_current_version = aggregate.current_version
-        admission_result = self.gate.admit(new_event, expected_current_version)
+        admission_result = self.gate.append_if_admitted(candidate_event, expected_current_version)
         if admission_result.verdict != AdmissionVerdict.ADMITTED:
             return admission_result
 
-        # 6. Post-Commit Mutation & Recording
-        aggregate.apply(new_event)
-        self.idem.record(signature, new_event)
+        # 6. Post-Admission Local Mutation & Recording
+        aggregate.apply(candidate_event)
+        self.idem.record(signature, candidate_event)
 
-        return new_event
+        return candidate_event
 
     def handle_pay(self, request_id: str, order_id: str, amount: Decimal):
         """
@@ -174,18 +179,19 @@ class OrderRegistry:
         actual_prev_event = history[-1] if history else None
         validation_context = self._build_validation_context(aggregate, actual_prev_event)
 
-        new_event = aggregate.pay(request_id, amount)
+        candidate_event = aggregate.pay(request_id, amount)
 
-        validation_decision = self.validation_runtime.decide(new_event, validation_context)
+        validation_decision = self.validation_runtime.decide(candidate_event, validation_context)
         if validation_decision.action != EnforcementAction.ALLOW:
             return validation_decision
         
         expected_current_version = aggregate.current_version
-        admission_result = self.gate.admit(new_event, expected_current_version)
+        admission_result = self.gate.append_if_admitted(candidate_event, expected_current_version)
         if admission_result.verdict != AdmissionVerdict.ADMITTED:
             return admission_result
 
-        aggregate.apply(new_event)
-        self.idem.record(signature, new_event)
+        # After admission succeeds, candidate_event is now accepted history.
+        aggregate.apply(candidate_event)
+        self.idem.record(signature, candidate_event)
 
-        return new_event
+        return candidate_event

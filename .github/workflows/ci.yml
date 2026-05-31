@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - feat/stage3.5b-write-side-durable-baseline
+
+  push:
+    branches:
+      - main
+      - refactor/event-identity-boundary-cleanup
+      - feat/stage3.5b-write-side-durable-baseline
+
+jobs:
+  test:
+    name: Run Semantic Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: compass_dev
+          POSTGRES_USER: compass_user
+          POSTGRES_PASSWORD: compass_password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U compass_user -d compass_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      DATABASE_URL: postgresql://compass_user:compass_password@localhost:5433/compass_dev
+      TEST_DATABASE_URL: postgresql://compass_user:compass_password@localhost:5433/compass_test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create test database
+        run: |
+          psql "$DATABASE_URL" -tAc "SELECT 1 FROM pg_database WHERE datname = 'compass_test'" | grep -q 1 || \
+          psql "$DATABASE_URL" -c "CREATE DATABASE compass_test;"
+
+      - name: Apply test database migrations
+        run: |
+          psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
+
+      - name: Lint with Flake8
+        run: |
+          pip install flake8
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Pytest
+        run: |
+          pytest -v --durations=10 --cov=src --cov-report=term-missing

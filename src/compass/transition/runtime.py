@@ -25,7 +25,7 @@ class ValidationDispatcher:
         self.strict_validator = strict_validator
         self.off_validator = off_validator
 
-    def select(self, event: OrderEvent, mode: ValidationMode) -> TransitionValidator:
+    def select(self, candidate_event: OrderEvent, mode: ValidationMode) -> TransitionValidator:
         if mode == ValidationMode.OFF:
             return self.off_validator
         return self.strict_validator
@@ -68,11 +68,11 @@ class ValidationRuntime:
 
     def decide(
         self,
-        event: OrderEvent,
+        candidate_event: OrderEvent,
         context: ValidationContext,
     ) -> ValidationDecision:
-        validator = self.dispatcher.select(event, self.mode)
-        validation_result = validator.validate(event, context)
+        validator = self.dispatcher.select(candidate_event, self.mode)
+        validation_result = validator.validate(candidate_event, context)
         action = self.policy.decide(validation_result)
 
         return ValidationDecision(

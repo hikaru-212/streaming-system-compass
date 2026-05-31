@@ -17,13 +17,13 @@ from src.storage.idempotency_store import IdempotencyVerdict
 
 
 class FakeValidationRuntimeAllow:
-    def decide(self, event, context):
+    def decide(self, candidate_event, context):
         return ValidationDecision(
             action=EnforcementAction.ALLOW,
             validation_result=ValidationResult(
                 verdict=ValidationVerdict.PASSED,
                 reason="ok",
-                event_id=event.event_id,
+                candidate_event_id=candidate_event.event_id,
                 validator_name="FakeValidationRuntimeAllow",
                 validation_mode=ValidationMode.STRICT,
                 logic_validation_time_ms=0.0,
@@ -35,13 +35,13 @@ class FakeValidationRuntimeAllow:
 
 
 class FakeValidationRuntimeBlock:
-    def decide(self, event, context):
+    def decide(self, candidate_event, context):
         return ValidationDecision(
             action=EnforcementAction.BLOCK,
             validation_result=ValidationResult(
                 verdict=ValidationVerdict.FAILED,
                 reason="blocked by fake validation runtime",
-                event_id=event.event_id,
+                candidate_event_id=candidate_event.event_id,
                 validator_name="FakeValidationRuntimeBlock",
                 validation_mode=ValidationMode.STRICT,
                 logic_validation_time_ms=0.0,
@@ -53,11 +53,12 @@ class FakeValidationRuntimeBlock:
 
 
 class FakeGateReject:
-    def admit(self, event, expected_current_version):
+    def append_if_admitted(self, candidate_event, expected_current_version):
         return AdmissionResult(
-            verdict=AdmissionVerdict.REJECTED,
+            verdict=AdmissionVerdict.STALE_WRITE,
             reason="rejected by fake gate",
-            event_id=event.event_id,
+            candidate_event_id=candidate_event.event_id,
+            accepted_event_id=None,
         )
 
 
@@ -207,7 +208,7 @@ class TestHandleCreate:
 
         result = registry.handle_create("create-001", "order-123", Decimal("100.00"))
 
-        assert result.verdict == AdmissionVerdict.REJECTED
+        assert result.verdict == AdmissionVerdict.STALE_WRITE
         assert empty_store.load("order-123") == []
 
         decision = empty_idempotency_provider.check(

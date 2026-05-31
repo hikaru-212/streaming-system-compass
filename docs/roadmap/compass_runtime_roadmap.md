@@ -2,269 +2,885 @@
 
 [← Back to Roadmaps Index](README.md)
 
-## 0. Current Position
+## Purpose
 
-The project now has an implemented write-side baseline and a minimal Stage 3 read-side projection baseline.
+This roadmap describes the **Compass runtime evolution path**.
 
-### Transactional Baseline Already Integrated
+It intentionally does not repeat the full implementation roadmap.
 
-The current executable write-side path includes:
+For the project-wide implementation sequence, including detailed Stage 3.5B PostgreSQL tables, migrations, store implementation order, and PR breakdowns, see:
 
-- aggregate-based command handling
-- event generation
-- event store append through an admission boundary
-- aggregate replay / rehydration
-- idempotency handling
-- proof embedded in each candidate event
-- transition validation through Compass Layer 1
-- basic validation dispatch and `ALLOW` / `BLOCK` policy
-- optimistic stale-write rejection at the admission boundary
+- [Implementation Roadmap](implementation_roadmap.md)
 
-This means the original "merge the two lines" step is no longer a future target.
-It now exists as the current write-side baseline.
+This document focuses on a narrower question:
 
-### Projection Baseline Now Exists
+> How does Compass evolve from write-side semantic validation into runtime semantic validation, structured outcomes, runtime decisions, action safety, and dual-dimension governance?
 
-The current read-side baseline now includes:
-
-- a pure projection reducer
-- a checkpoint-aware projection worker
-- in-memory projection state storage
-- in-memory checkpoint storage
-- replay / rebuild through the same worker + reducer path
-
-This means projection is no longer only a replay helper.
-A minimal Stage 3 baseline projection runtime now exists.
-
-### Current Boundary
-
-What is already true:
-
-- Compass can validate event claims before persistence
-- admission still owns version consistency and conditional persistence
-- aggregate state still mutates only through `apply(event)`
-- idempotency remains distinct from semantic validation
-- Stage 3 projection baseline now exists in deterministic in-memory form
-- selected failure paths are executable through tests on both write-side and Stage 3 baseline read-side paths
-
-What is not yet true:
-
-- persistent storage-backed runtime behavior is not yet implemented
-- state-level Compass validation is not yet implemented
-- governance behavior is not yet richer than basic `ALLOW` / `BLOCK`
-- advanced runtime concerns such as DLQ, buffering, watermarking, or multi-worker coordination are not yet in scope
+In other words, this roadmap is about the semantic control layer, not the full project build plan.
 
 ---
 
-## 1. Stage 1: Transactional Semantic Core
+## Scope Boundary
 
-### Goal
+The implementation roadmap answers:
 
-Establish the write-side semantic baseline of the system.
+> What should be built, and in what order?
 
-### Achieved Outcome
+This Compass runtime roadmap answers:
 
-The current baseline now supports:
+> How does Compass become more capable as a runtime semantic control layer?
 
-- aggregate-based command handling
-- candidate-event generation
-- accepted-history replay / rehydration
-- event-store append through an admission boundary
-- optimistic stale-write rejection at the persistence boundary
-- idempotency handling
-- aggregate mutation only through `apply(event)`
+The two roadmaps overlap around Stage 3.5B and Stage 3.5C because Compass depends on durable write-side and read-side boundaries.
 
-### Deliverable
+However, this document avoids repeating detailed schema columns, migration details, and store test matrices.
 
-A write-side transactional path that is deterministic, replayable, and protected by conditional admission.
+Those belong in the implementation roadmap.
 
-### Status
-
-Completed at the baseline level.
+This document instead tracks how those implementation stages support the next Compass capabilities.
 
 ---
 
-## 2. Stage 2: Event Truth Validation
+## Terminology Note: Compass Phases vs Project Stages
 
-### Goal
+This document uses **Phase** to describe the focused evolution of Compass as a runtime semantic control layer.
 
-Integrate Compass Layer 1 into the transactional path.
+The broader implementation roadmap uses **Stage** to describe project-wide build sequencing.
 
-### Achieved Outcome
+These two terms are intentionally related but not identical:
 
-The current baseline now supports:
+```text
+Compass Phase = semantic-control capability progression
+Project Stage = repository-wide implementation milestone
+```
 
-- aggregates produce events with proof
-- Compass validates event claims before persistence
-- validation dispatch routes the candidate event through the active validation path
-- a basic validation policy converts validation results into `ALLOW` / `BLOCK`
-- the admission gate / event store still enforces version consistency
-- aggregate state is updated only through `apply(event)`
-- idempotency remains preserved
+For example:
 
-### Deliverable
+- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, and Stage 3.5B / 3.5C.
+- Compass Phase 4 roughly maps to the beginning of Stage 4 Layer 2 validation work.
+- Compass Phases 5–7 roughly map to Stage 4 structured semantic outcomes, runtime decision policy, and action safety.
+- Compass Phase 8 maps to the Stage 5 dual-dimension governance demo.
 
-A single write-side path that is operational, semantically validated, and protected by conditional admission.
-
-### Status
-
-Completed at the baseline level.
+The phase labels in this document should therefore be read as a Compass-specific capability path, not as a replacement for the project-wide Stage numbering in the implementation roadmap.
 
 ---
 
-## 3. Stage 3: Projection Runtime Baseline
+## Current Compass Position
 
-### Goal
+Compass currently has a working Layer 1 baseline.
 
-Replace the earlier replay-helper / demo-style projection logic with a real baseline projection runtime.
+Layer 1 protects the write-side accepted-history boundary:
 
-### Why
+```text
+candidate event
+→ transition-truth validation
+→ ALLOW / BLOCK
+→ only allowed event can reach accepted history
+```
 
-The earlier replay reduction logic was useful for replay-consistency testing, but it was not yet a runtime projection subsystem.
+The current system already supports:
 
-### Achieved Outcome
+- write-side candidate-event generation
+- proof-carrying event structure
+- Layer 1 transition validation
+- validation dispatch
+- basic `ALLOW` / `BLOCK` enforcement
+- candidate vs accepted event identity boundary clarification
+- rejection before invalid events enter accepted history
+- PostgreSQL-backed accepted history through `PostgresEventStore`
+- PostgreSQL-backed idempotency memory through `PostgresIdempotencyStore`
+- Compass-guarded transactional write-side flow in Stage 3.5B PR4
 
-The current Stage 3 baseline now includes:
+This means Compass is already more than a passive checker.
 
-- reducer / worker separation
-- event consumption flow in minimal baseline form
-- incremental projection updates
-- projection state store
-- offset / checkpoint tracking
-- replay / rebuild through the same runtime path
+It already has runtime control authority at the write-side boundary:
 
-### Deliverable
+```text
+invalid candidate event
+→ blocked before accepted history
+```
 
-A read-side pipeline that behaves like a real projection worker in a deterministic in-memory baseline form.
+PR4 extends this authority into the durable PostgreSQL-backed write-side path:
 
-### Status
+```text
+candidate event
+→ Compass Layer 1 validation
+→ append accepted event + record idempotency in one transaction
+```
 
-Completed at the baseline level.
+---
 
-### Current Limitation
+## Current Limitation
 
-The current Stage 3 baseline does **not yet** include:
+Compass does not yet fully protect derived runtime state.
 
-- persistent storage-backed runtime behavior
-- advanced recovery logic
+The current Stage 3 projection baseline can derive state through a deterministic reducer / worker path, but Compass has not yet become a state-level validator.
+
+That means the following question is not yet fully answered:
+
+> Even if accepted history is valid, is the current read-side projection still faithful to that history?
+
+This is the gap that later stages must close.
+
+The durable write-side is also not yet fully concurrency-admission-aware.
+
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, and Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude.
+
+---
+
+## Compass Evolution Principle
+
+Compass should evolve from:
+
+```text
+write-side event truth
+→ durable accepted history
+→ durable derived state
+→ Layer 2 state validation
+→ structured semantic outcomes
+→ runtime decisions
+→ action safety
+→ dual-dimension governance
+```
+
+The key principle is:
+
+> A semantic failure should not only be detected.  
+> It should become explicit enough that the runtime can decide whether to continue, rebuild, block, quarantine, stop, or escalate.
+
+---
+
+# Phase 1 — Layer 1 Write-Side Validation
+
+## Goal
+
+Protect accepted history before invalid facts enter the event log.
+
+## Already Established
+
+Compass Layer 1 checks whether a candidate event truthfully follows accepted history.
+
+Examples:
+
+```text
+INIT → CREATED  allowed
+CREATED → PAID  allowed
+INIT → PAID     blocked
+```
+
+Layer 1 currently protects:
+
+- transition truth
+- claimed previous state
+- claimed previous version
+- candidate event consistency
+- accepted-history entry
+
+## Runtime Meaning
+
+Layer 1 is already a runtime control boundary.
+
+It does not merely record that an event is invalid.
+
+It prevents invalid history from being written.
+
+```text
+invalid semantic transition
+→ BLOCK
+→ no accepted event
+```
+
+## Current Status
+
+Implemented at baseline level.
+
+Stage 3.5B PR4 preserves Layer 1 inside the PostgreSQL-backed transactional write-side flow.
+
+---
+
+# Phase 2 — Durable Write-Side Dependency
+
+## Why Compass Needs This
+
+Layer 1 protects accepted history, but accepted history must become durable before later runtime validation can be trusted across restart, retry, and partial failure.
+
+Stage 3.5B provides this dependency.
+
+The implementation roadmap owns the detailed PR sequence:
+
+```text
+PR1 Physical Schema + Local PostgreSQL + Migration ✅
+PR2 PostgresEventStore ✅
+PR3 PostgresIdempotencyStore ✅
+PR4 Transactional Semantic Write-side Boundary ✅
+PR5 PostgreSQL Concurrency Admission Boundary ✅
+```
+
+PR6 / Stage 4 prelude adds validation placement strategy:
+
+```text
+IN_TRANSACTION validation
+PRE_TRANSACTION validation + append-time admission
+ASYNC_AUDIT future
+```
+
+From the Compass perspective, Stage 3.5B matters because it turns accepted history into a durable validation source.
+
+## Compass-Relevant Outcomes
+
+Stage 3.5B gives Compass:
+
+- durable accepted history
+- durable event identity
+- durable replay source
+- durable idempotency result memory
+- transactionally coordinated event append and idempotency record write
+- Compass Layer 1 preserved before durable accepted-history mutation
+- clear candidate / accepted identity boundary
+- PostgreSQL-backed two-phase concurrency admission through PR5
+- validation placement strategy through PR6
+- minimal `PRE_TRANSACTION` validation path guarded by append-time admission
+
+## Related Postmortems
+
+- [From In-Memory Correctness to Durable Consistency](../postmortems/from_in_memory_correctness_to_durable_consistency.md)
+- [From Git Local–Remote Drift to Database Immutability Boundaries](../postmortems/from_git_sync_to_db_immutability.md)
+- [From Local PostgreSQL Setup to Defense-in-Depth Boundaries](../postmortems/from_local_postgres_to_defense_in_depth.md)
+- [From Runtime Behavior to Durable Evidence](../postmortems/from_runtime_behavior_to_durable_evidence.md)
+- [From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md)
+- [Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)
+- [Pre-Transaction Read Cleanup Boundary](../postmortems/pre_transaction_read_cleanup_boundary.md)
+
+These explain why persistence is not just a backend swap.
+
+For Compass, the important lesson is:
+
+```text
+Python-side semantic behavior is not durable evidence
+unless the selected facts are persisted into an explicit evidence channel.
+```
+
+PR4 adds a second durable-persistence lesson:
+
+```text
+durable persistence hardening must preserve Compass semantic gates
+```
+
+## Related ADRs
+
+- [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
+- [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
+- [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md)
+
+These clarify why PR4 transaction atomicity, PR5 concurrency admission, two-phase admission, and future validation placement strategy are separate concerns.
+
+## Current Status
+
+Stage 3.5B PR1 / PR2 / PR3 are complete.
+
+Stage 3.5B PR4 establishes the transactional semantic write-side boundary.
+
+Stage 3.5B PR5 is complete for PostgreSQL-backed two-phase concurrency admission.
+
+Stage 3.5B PR6 is complete at the baseline level for validation placement strategy. It preserves `IN_TRANSACTION` as the default and adds a minimal `PRE_TRANSACTION` path guarded by append-time admission.
+
+---
+
+# Phase 3 — Durable Read-Side Dependency
+
+## Why Compass Needs This
+
+Layer 2 validation requires a durable read-side target.
+
+To detect projection drift, Compass needs to compare:
+
+```text
+expected state from accepted-history replay
+vs
+persisted projection state
+```
+
+If the projection state exists only in memory, the validation is useful but not yet durable enough for stronger runtime governance.
+
+Stage 3.5C provides this dependency.
+
+## Compass-Relevant Outcomes
+
+Stage 3.5C should provide:
+
+- durable projection state
+- durable checkpoint state
+- persistence-backed replay / rebuild
+- state that survives restart
+- a durable target for Layer 2 validation
+
+## Runtime Meaning
+
+Read-side state is not source of truth.
+
+It is derived state.
+
+Compass Layer 2 should eventually verify whether derived state remains faithful to accepted history.
+
+```text
+accepted history = truth source
+projection state = derived runtime view
+Layer 2 = truthfulness check for derived state
+```
+
+## Current Status
+
+Next major focus after the Stage 3.5B durable write-side baseline.
+
+---
+
+# Phase 4 — Layer 2 State-Level Validation
+
+## Goal
+
+Add the first read-side / state-level Compass validator.
+
+Layer 1 protects:
+
+```text
+candidate event → accepted history
+```
+
+Layer 2 protects:
+
+```text
+accepted history → derived runtime state
+```
+
+## What Layer 2 Detects
+
+Layer 2 should detect:
+
+- projection drift
+- replay vs persisted-state mismatch
+- reducer mismatch
+- checkpoint / state mismatch
+
+## Minimal Flow
+
+```text
+accepted event history
+        ↓
+replay using canonical reducer
+        ↓
+expected_state
+        ↓ compare
+persisted_projection_state
+        ↓
+Layer 2 validation result
+```
+
+## Example
+
+```text
+accepted history replay result: PAID
+persisted projection state: CREATED
+```
+
+This is not a write-side transition violation.
+
+It is read-side semantic drift.
+
+Layer 2 should detect it.
+
+## Completion Criteria
+
+Layer 2 is minimally useful when:
+
+- at least 1–2 projection drift cases can be produced deterministically
+- replayed expected state can be compared with persisted projection state
+- validation output clearly explains the mismatch
+- tests prove the mismatch is detected
+
+## Boundary
+
+Layer 2 detects whether derived state is correct.
+
+It does not yet decide what the runtime should do.
+
+That decision belongs to the runtime decision policy phase.
+
+---
+
+# Phase 5 — Structured Semantic Outcomes
+
+## Goal
+
+Replace raw exception strings, booleans, and ad hoc validation messages with structured semantic outcomes.
+
+## Why
+
+A raw exception can interrupt execution.
+
+But it cannot reliably support governance.
+
+Compass needs a reusable semantic artifact that can be consumed by:
+
+- validators
+- runtime decision policies
+- action safety gates
+- future trust evaluators
+- later agent-facing governance paths
+
+## Preferred Concept
+
+Use:
+
+```text
+SemanticOutcome
+```
+
+rather than only:
+
+```text
+ErrorModel
+```
+
+because not every outcome is a conventional exception.
+
+Some outcomes represent:
+
+- semantic drift
+- trust mismatch
+- irreversible boundary risk
+- operational staleness
+- action safety risk
+
+## Minimal Outcome Shape
+
+A future `SemanticOutcome` should express:
+
+- whether the outcome is OK
+- which layer produced it
+- what semantic failure occurred
+- what evidence supports it
+- how severe it is
+- whether it is reversible
+- what context produced it
+
+Example shape:
+
+```python
+@dataclass(frozen=True)
+class SemanticOutcome:
+    outcome_id: str
+    ok: bool
+    layer: str
+    error_code: str | None
+    error_type: str | None
+    severity: str
+    reversibility: str
+    risk_level: str
+    context: dict
+    evidence: dict
+    message: str
+```
+
+## Related Postmortem
+
+See:
+
+- [From Exception Strings to Governable Outcomes](../postmortems/from_exception_strings_to_governable_outcomes.md)
+
+That postmortem explains why the system must evolve from:
+
+```text
+raise ValueError(...)
+→ structured semantic outcome
+→ runtime decision policy
+→ runtime decision
+→ action safety gate
+→ layered trust / governance
+```
+
+## Boundary
+
+A semantic outcome describes what happened.
+
+It should not directly own the final control action.
+
+That responsibility belongs to `RuntimeDecisionPolicy`.
+
+---
+
+# Phase 6 — Runtime Decision Policy
+
+## Goal
+
+Convert semantic outcomes into runtime decisions.
+
+This is the transition from:
+
+```text
+detect and classify
+```
+
+to:
+
+```text
+decide and control
+```
+
+## Core Boundary
+
+Separate these responsibilities:
+
+```text
+SemanticOutcome
+→ describes what happened
+
+RuntimeDecisionPolicy
+→ decides what to do
+
+RuntimeDecision
+→ carries the executable decision
+
+ActionSafetyGate
+→ enforces the decision before unsafe execution
+```
+
+## Minimal Runtime Actions
+
+A minimal runtime action set may include:
+
+- `ALLOW`
+- `BLOCK`
+- `REBUILD`
+- `QUARANTINE`
+- `ESCALATE`
+
+## Example Policy Mapping
+
+```text
+ok=True
+→ ALLOW
+
+DOMAIN_TRANSITION_VIOLATION
+→ BLOCK
+
+SEMANTIC_PROJECTION_DRIFT
+→ REBUILD or QUARANTINE
+
+REPLAY_REDUCER_MISMATCH
+→ BLOCK or ESCALATE
+
+IRREVERSIBLE_BOUNDARY_RISK
+→ BLOCK
+```
+
+## Runtime Meaning
+
+This is where Compass becomes more than validation.
+
+It begins to answer:
+
+```text
+Given this semantic failure, what should the runtime do now?
+```
+
+## Completion Criteria
+
+This phase is minimally useful when:
+
+- Layer 2 drift can map to `REBUILD`, `QUARANTINE`, or `ESCALATE`
+- Layer 1 invalid transition can map to `BLOCK`
+- tests assert decision fields, not only error strings
+- irreversible actions do not proceed when the decision is `BLOCK`
+
+---
+
+# Phase 7 — Action Safety Gate
+
+## Goal
+
+Add a domain-level gate before dependent actions execute.
+
+Do not start with a general-purpose agent protocol.
+
+Start with domain actions that are meaningful inside this project.
+
+## Candidate Domain Actions
+
+Possible simulated actions:
+
+- `EMIT_DOWNSTREAM_SIGNAL`
+- `GENERATE_SETTLEMENT_REPORT`
+- `MARK_PROJECTION_TRUSTED`
+- `ADVANCE_EXTERNAL_EXPORT`
+
+## Minimal Flow
+
+```text
+requested action
+        ↓
+semantic state check
+        ↓
+SemanticOutcome
+        ↓
+RuntimeDecisionPolicy
+        ↓
+RuntimeDecision
+        ↓
+ActionSafetyGate
+        ↓
+execute or block
+```
+
+## Runtime Meaning
+
+This is the generalization of Layer 1.
+
+Layer 1 says:
+
+```text
+invalid event must not enter accepted history
+```
+
+Action safety says:
+
+```text
+unsafe state must not trigger dependent action
+```
+
+Both follow the same principle:
+
+```text
+Before something becomes irreversible,
+check whether it is semantically allowed.
+```
+
+## Completion Criteria
+
+The action safety gate is minimally useful when:
+
+- unsafe semantic outcome blocks dependent action
+- projection drift can block or quarantine downstream action
+- clean semantic state allows action
+- tests prove blocked action is not executed
+
+---
+
+# Phase 8 — Dual-Dimension Governance
+
+## Goal
+
+Evaluate runtime trust using two dimensions:
+
+```text
+semantic correctness × operational freshness
+```
+
+The final question becomes:
+
+```text
+Is this state true enough, fresh enough, and safe enough to act on?
+```
+
+## Why This Matters
+
+A system can be semantically correct but operationally stale.
+
+A system can be operationally fresh but semantically wrong.
+
+Therefore, action safety cannot depend on a single trusted / untrusted boolean.
+
+## Core Matrix
+
+|  | Operational Fresh | Operational Stale |
+|---|---|---|
+| Semantic Correct | Safe to act | Semantically correct but stale |
+| Semantic Incorrect | Operationally healthy but semantically unsafe | Unsafe / stop / escalate |
+
+## Required Cases
+
+### Case 1 — Semantic Correct + Operational Fresh
+
+Meaning:
+
+```text
+truth and view are both reliable
+```
+
+Possible verdict:
+
+```text
+SAFE_TO_ACT
+```
+
+### Case 2 — Semantic Correct + Operational Stale
+
+Meaning:
+
+```text
+the fact is semantically valid,
+but the current view is stale
+```
+
+Possible verdict:
+
+```text
+REFRESH_BEFORE_ACTION
+```
+
+### Case 3 — Semantic Incorrect + Operational Fresh
+
+Meaning:
+
+```text
+the pipeline looks fresh,
+but the fact is semantically unsafe
+```
+
+Possible verdict:
+
+```text
+BLOCK_ACTION
+```
+
+This is one of the strongest project insights:
+
+```text
+freshness does not imply correctness
+```
+
+### Case 4 — Semantic Incorrect + Operational Stale
+
+Meaning:
+
+```text
+both semantic correctness and operational freshness are broken
+```
+
+Possible verdict:
+
+```text
+STOP / QUARANTINE / ESCALATE
+```
+
+## Minimal Structures
+
+```python
+@dataclass(frozen=True)
+class SemanticSignal:
+    correct: bool
+    outcome: SemanticOutcome | None
+```
+
+```python
+@dataclass(frozen=True)
+class OperationalSignal:
+    fresh: bool
+    checkpoint_age_ms: int
+    worker_lag: int
+    reason: str
+```
+
+```python
+@dataclass(frozen=True)
+class ActionSafetyVerdict:
+    semantic_correct: bool
+    operational_fresh: bool
+    action: str
+    safe_to_act: bool
+    reason: str
+```
+
+## Completion Criteria
+
+This phase is minimally useful when:
+
+- all four matrix cases can be produced
+- semantic incorrect + operational fresh is clearly shown
+- semantic correct + operational stale is clearly shown
+- final action-safety verdict is explicit
+- demo can explain why pipeline health alone is not correctness
+
+---
+
+# Phase 9 — Later Governance and Chaos Hardening
+
+## Goal
+
+After the minimal governance demo is coherent, Compass can grow toward richer failure-aware runtime governance.
+
+## Possible Later Work
+
+- DLQ
 - out-of-order buffering
-- DLQ handling
 - watermark semantics
-- distributed multi-worker coordination
-
-Those are intentionally deferred.
-
----
-
-## 3.5 Next Step: Persistent Storage Baseline
-
-### Goal
-
-Strengthen the current write-side and read-side runtime baselines through durable persistence-backed semantics.
-
-### Why
-
-The next meaningful step after the in-memory projection baseline is not advanced runtime complexity first.
-
-It is persistent storage evolution, because restart semantics, durable replay, and persistence-backed correctness should be clarified before DLQ, buffering, watermarking, or multi-worker coordination are introduced.
-
-### Target Outcome
-
-A persistence-backed runtime baseline with:
-
-- durable event-store evolution
-- durable idempotency-store evolution
-- durable projection-state store
-- durable checkpoint store
-- replay / rebuild validation against persistence-backed state
-
-### Deliverable
-
-A storage-backed baseline that preserves the current semantic boundaries while strengthening runtime durability.
-
----
-
-## 4. Stage 4: Add Projection / State-Level Compass Verification
-
-### Goal
-
-Move Compass beyond event admission and into runtime state verification.
-
-### Why
-
-Even if every event is individually valid, the projection process can still drift or fail.
-
-That risk becomes even more important once the runtime moves beyond purely in-memory baseline behavior and into persistence-backed semantics.
-
-### Target Outcome
-
-A second Compass layer that validates:
-
-- projected version correctness
-- projected state invariants
-- consistency between replayed state and incrementally projected state
-- semantic correctness at checkpoint boundaries
-
-### Candidate Invariants
-
-- projected version must match last consumed event sequence
-- paid amount must not exceed total amount
-- projected status progression must remain legal
-- replayed state must equal incrementally projected state
-
-### Deliverable
-
-A true runtime verification layer for state evolution.
-
----
-
-## 5. Stage 5: Move from Validation to Governance
-
-### Goal
-
-Turn Compass from a validator into a governance layer.
-
-### Target Outcome
-
-Support for advanced governance behavior:
-
-- warn / quarantine policies
-- evidence logging
+- multi-worker coordination
+- stronger transaction boundaries
+- real observability integration
+- richer policy engine
+- chaos testing
 - semantic alerts
-- drift classification
-- auditability and recovery workflows
+- agent tool interface
+- generalized semantic governance protocol
 
-Basic `ALLOW` / `BLOCK` enforcement belongs to the earlier validation dispatch path.  
-Stage 5 focuses on richer governance actions after validation becomes observable and policy-driven.
+These are intentionally deferred.
 
-### Deliverable
+The project should first prove:
 
-A semantic governance layer sitting above both write-side and read-side execution.
+```text
+semantic truth
+→ durable evidence
+→ structured outcome
+→ runtime decision
+→ action safety
+```
 
 ---
 
-## 6. Summary of Intended Evolution
+## Summary View
 
-### Stage 1
+```text
+Current:
+Layer 1 write-side event truth validation ✅
 
-Transactional semantic core establishes the deterministic write-side baseline.
+Durable Write-side:
+Stage 3.5B PR1 schema ✅
+Stage 3.5B PR2 event store ✅
+Stage 3.5B PR3 idempotency store ✅
+Stage 3.5B PR4 transactional semantic write-side ✅
+Stage 3.5B PR5 concurrency admission planned
 
-### Stage 2
+Dependency:
+Stage 3.5C durable read-side baseline
 
-Event truth validation integrates Compass Layer 1 into transactional execution and conditional admission.
+Next Compass Growth:
+Layer 2 state-level validation
+SemanticOutcome
+RuntimeDecisionPolicy
+RuntimeDecision
+ActionSafetyGate
+Dual-Dimension Governance
 
-### Stage 3
+Later:
+validation placement strategies
+chaos hardening
+richer governance
+agent-facing runtime protocol
+```
 
-Projection runtime baseline now exists as a real deterministic in-memory runtime path rather than only a replay helper.
+---
 
-### Stage 3.5
+## Final Summary
 
-Persistent storage baseline strengthens write-side and read-side runtime durability.
+Compass should evolve from a validator into a runtime semantic control layer.
 
-### Stage 4
+The intended progression is:
 
-Compass validates whether projected state remains semantically correct.
+```text
+validate event truth
+→ verify derived state
+→ express semantic failure
+→ decide runtime action
+→ block unsafe execution
+→ combine semantic and operational trust
+```
 
-### Stage 5
-
-Compass becomes a runtime governance framework rather than just a validator.
+This is the core path from Compass Layer 1 toward dual-dimension governance.

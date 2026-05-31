@@ -20,7 +20,7 @@ from src.core.order.enums import OrderStatus
 class DummyValidator:
     result: ValidationResult
 
-    def validate(self, event, context):
+    def validate(self, candidate_event, context):
         return self.result
 
 
@@ -30,7 +30,7 @@ class TestValidationDispatcher:
         off_validator = object()
         dispatcher = ValidationDispatcher(strict_validator, off_validator)
 
-        selected = dispatcher.select(event=None, mode=ValidationMode.OFF)
+        selected = dispatcher.select(candidate_event=None, mode=ValidationMode.OFF)
 
         assert selected is off_validator
 
@@ -39,7 +39,7 @@ class TestValidationDispatcher:
         off_validator = object()
         dispatcher = ValidationDispatcher(strict_validator, off_validator)
 
-        selected = dispatcher.select(event=None, mode=ValidationMode.STRICT)
+        selected = dispatcher.select(candidate_event=None, mode=ValidationMode.STRICT)
 
         assert selected is strict_validator
 
@@ -50,7 +50,7 @@ class TestValidationPolicy:
         result = ValidationResult(
             verdict=ValidationVerdict.FAILED,
             reason="bad",
-            event_id="e1",
+            candidate_event_id="e1",
             validator_name="Dummy",
             validation_mode=ValidationMode.STRICT,
             logic_validation_time_ms=1.0,
@@ -68,7 +68,7 @@ class TestValidationPolicy:
         result = ValidationResult(
             verdict=ValidationVerdict.PASSED,
             reason="ok",
-            event_id="e1",
+            candidate_event_id="e1",
             validator_name="Dummy",
             validation_mode=ValidationMode.STRICT,
             logic_validation_time_ms=1.0,
@@ -86,7 +86,7 @@ class TestValidationPolicy:
         result = ValidationResult(
             verdict=ValidationVerdict.SKIPPED,
             reason="skip",
-            event_id="e1",
+            candidate_event_id="e1",
             validator_name="Dummy",
             validation_mode=ValidationMode.OFF,
             logic_validation_time_ms=0.0,
@@ -105,7 +105,7 @@ class TestValidationRuntime:
         validation_result = ValidationResult(
             verdict=ValidationVerdict.PASSED,
             reason="ok",
-            event_id=created_event.event_id,
+            candidate_event_id=created_event.event_id,
             validator_name="DummyValidator",
             validation_mode=ValidationMode.STRICT,
             logic_validation_time_ms=1.0,
@@ -140,7 +140,7 @@ class TestValidationRuntime:
         validation_result = ValidationResult(
             verdict=ValidationVerdict.FAILED,
             reason="bad",
-            event_id=created_event.event_id,
+            candidate_event_id=created_event.event_id,
             validator_name="DummyValidator",
             validation_mode=ValidationMode.STRICT,
             logic_validation_time_ms=1.0,

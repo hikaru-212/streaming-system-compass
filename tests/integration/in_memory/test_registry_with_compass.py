@@ -95,7 +95,7 @@ class TestRegistryWithCompass:
         decision = registry.validation_runtime.decide(broken_event, context)
 
         assert decision.action == EnforcementAction.BLOCK
-        assert decision.validation_result.event_id == broken_event.event_id
+        assert decision.validation_result.candidate_event_id == broken_event.event_id
         assert "prev_event_id" in decision.validation_result.reason or "Predecessor mismatch" in decision.validation_result.reason
 
         history_after = registry.store.load("order-123")
@@ -127,7 +127,7 @@ class TestRegistryWithCompass:
         decision = registry.validation_runtime.decide(broken_event, context)
 
         assert decision.action == EnforcementAction.BLOCK
-        assert decision.validation_result.event_id == broken_event.event_id
+        assert decision.validation_result.candidate_event_id == broken_event.event_id
         assert "prev_version" in decision.validation_result.reason or "Proof mismatch" in decision.validation_result.reason
 
         history_after = registry.store.load("order-123")
@@ -159,7 +159,7 @@ class TestRegistryWithCompass:
         decision = registry.validation_runtime.decide(broken_event, context)
 
         assert decision.action == EnforcementAction.BLOCK
-        assert decision.validation_result.event_id == broken_event.event_id
+        assert decision.validation_result.candidate_event_id == broken_event.event_id
         assert "prev_status" in decision.validation_result.reason or "actual history" in decision.validation_result.reason
 
         history_after = registry.store.load("order-123")
