@@ -150,7 +150,7 @@ class OrderRegistry:
 
         # 5. Concurrency Admission (Enabler)
         expected_current_version = aggregate.current_version
-        admission_result = self.gate.admit(candidate_event, expected_current_version)
+        admission_result = self.gate.append_if_admitted(candidate_event, expected_current_version)
         if admission_result.verdict != AdmissionVerdict.ADMITTED:
             return admission_result
 
@@ -186,7 +186,7 @@ class OrderRegistry:
             return validation_decision
         
         expected_current_version = aggregate.current_version
-        admission_result = self.gate.admit(candidate_event, expected_current_version)
+        admission_result = self.gate.append_if_admitted(candidate_event, expected_current_version)
         if admission_result.verdict != AdmissionVerdict.ADMITTED:
             return admission_result
 

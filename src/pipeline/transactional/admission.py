@@ -93,7 +93,7 @@ class ConcurrencyGate(Protocol):
     def prepare_stream(self, order_id: str) -> StreamAdmissionResult:
         ...
 
-    def admit(
+    def append_if_admitted(
         self,
         candidate_event: OrderEvent,
         expected_current_version: int,
@@ -125,7 +125,7 @@ class OptimisticVersionGate:
             order_id=order_id,
         )
 
-    def admit(
+    def append_if_admitted(
         self,
         candidate_event: OrderEvent,
         expected_current_version: int,

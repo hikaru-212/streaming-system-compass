@@ -53,7 +53,7 @@ class FakeValidationRuntimeBlock:
 
 
 class FakeGateReject:
-    def admit(self, candidate_event, expected_current_version):
+    def append_if_admitted(self, candidate_event, expected_current_version):
         return AdmissionResult(
             verdict=AdmissionVerdict.STALE_WRITE,
             reason="rejected by fake gate",

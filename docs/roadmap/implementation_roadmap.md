@@ -569,7 +569,7 @@ This leads to a two-phase admission model:
 
 ```text
 prepare_stream(order_id)
-→ admit(candidate_event, expected_current_version)
+→ append_if_admitted(candidate_event, expected_current_version)
 ```
 
 #### Main Work

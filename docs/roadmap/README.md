@@ -71,7 +71,7 @@ It also evolves PostgreSQL admission from single-phase append-time admission int
 
 ```text
 prepare_stream(order_id)
-→ admit(candidate_event, expected_current_version)
+→ append_if_admitted(candidate_event, expected_current_version)
 ```
 
 This preserves one write-side orchestration path while allowing optimistic and pessimistic admission strategies to differ behind the admission interface.

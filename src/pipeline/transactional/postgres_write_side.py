@@ -273,7 +273,7 @@ class PostgresTransactionalWriteSide:
 
             # append-time admission has a physical side effect:
             # if admitted, the candidate event is appended to order_events here.
-            admission_result = admission_gate.admit(
+            admission_result = admission_gate.append_if_admitted(
                 candidate_event,
                 expected_current_version=expected_current_version,
             )
@@ -418,7 +418,7 @@ class PostgresTransactionalWriteSide:
 
             # append-time admission has a physical side effect:
             # if admitted, the candidate event is appended to order_events here.
-            admission_result = admission_gate.admit(
+            admission_result = admission_gate.append_if_admitted(
                 candidate_event,
                 expected_current_version=expected_current_version,
             )

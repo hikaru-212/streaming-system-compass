@@ -85,7 +85,7 @@ ADR 0010 records that transaction atomicity is not the same as concurrency admis
 
 ADR 0011 records that validation mode is not the same as validation placement. It explains why future write-side flows may support both in-transaction validation and pre-transaction validation with OCC after PR5 admission exists.
 
-ADR 0012 records why PR5 evolves from single-phase append-time admission into two-phase concurrency admission. It explains why `prepare_stream(order_id)` is needed for early pessimistic stream protection, why `admit(candidate_event, expected_current_version)` remains necessary as the append-time accepted-history continuity check, and why separate optimistic / pessimistic write-side command flows were rejected.
+ADR 0012 records why PR5 evolves from single-phase append-time admission into two-phase concurrency admission. It explains why `prepare_stream(order_id)` is needed for early pessimistic stream protection, why `append_if_admitted(candidate_event, expected_current_version)` remains necessary as the append-time accepted-history continuity check, and why separate optimistic / pessimistic write-side command flows were rejected.
 
 Both ADR 0010 and ADR 0011 are related to the postmortem [From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md), which records the PR4 implementation lesson that durable persistence hardening must preserve Compass semantic gates.
 

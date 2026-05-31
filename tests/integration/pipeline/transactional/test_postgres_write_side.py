@@ -90,8 +90,8 @@ class FakePrepareRejectedGate:
             order_id=order_id,
         )
 
-    def admit(self, candidate_event, expected_current_version):
-        raise AssertionError("admit should not be called after prepare rejection")
+    def append_if_admitted(self, candidate_event, expected_current_version):
+        raise AssertionError("append_if_admitted should not be called after prepare rejection")
 
 
 class FakeAppendRejectedGate:
@@ -102,7 +102,7 @@ class FakeAppendRejectedGate:
             order_id=order_id,
         )
 
-    def admit(self, candidate_event, expected_current_version):
+    def append_if_admitted(self, candidate_event, expected_current_version):
         return AdmissionResult(
             verdict=AdmissionVerdict.STALE_WRITE,
             reason="append-time admission rejected by fake gate",

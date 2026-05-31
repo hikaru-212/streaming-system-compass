@@ -33,7 +33,7 @@ PR5 established PostgreSQL-backed two-phase concurrency admission:
 
 ```text
 prepare_stream(order_id)
-→ admit(candidate_event, expected_current_version)
+→ append_if_admitted(candidate_event, expected_current_version)
 ```
 
 After PR5, the project can safely evaluate a second validation placement:
@@ -122,7 +122,7 @@ candidate event validated before transaction
 → BEGIN / UoW
 → idempotency check
 → prepare_stream(order_id)
-→ admit(candidate_event, expected_current_version)
+→ append_if_admitted(candidate_event, expected_current_version)
 → only admitted candidate can become accepted history
 → record idempotency result
 → COMMIT
@@ -152,7 +152,7 @@ BEGIN / UoW
 → rehydrate aggregate
 → create candidate event
 → Compass validation
-→ admit(candidate_event, expected_current_version)
+→ append_if_admitted(candidate_event, expected_current_version)
 → record idempotency result
 → COMMIT
 ```
@@ -184,7 +184,7 @@ load accepted history
 BEGIN / UoW
 → idempotency check
 → prepare_stream(order_id)
-→ admit(candidate_event, expected_current_version)
+→ append_if_admitted(candidate_event, expected_current_version)
 → record idempotency result
 → COMMIT
 ```
@@ -294,7 +294,7 @@ Therefore append-time admission remains mandatory:
 
 ```text
 validated candidate event
-→ admit(candidate_event, expected_current_version)
+→ append_if_admitted(candidate_event, expected_current_version)
 → accepted history mutation only if admitted
 ```
 

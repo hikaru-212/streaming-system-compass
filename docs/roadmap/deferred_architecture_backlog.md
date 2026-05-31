@@ -597,7 +597,7 @@ PR5 completed the required admission dependency by introducing two-phase Postgre
 
 ```text
 prepare_stream(order_id)
-→ admit(candidate_event, expected_current_version)
+→ append_if_admitted(candidate_event, expected_current_version)
 ```
 
 After PR5, validation placement is no longer only a deferred concern. The required append-time admission boundary now exists, so `PRE_TRANSACTION` validation can be evaluated safely as a PR6 / Stage 4 Prelude.
