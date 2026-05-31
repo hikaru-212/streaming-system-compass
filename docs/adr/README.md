@@ -58,7 +58,8 @@ Recommended order:
 9. [Write-Side Persistence Driver and Identity Generation Boundary](0009_write_side_persistence_driver_and_identity_boundary.md) — explains why the Stage 3.5B write-side persistence baseline uses explicit PostgreSQL driver access and centralizes event identity generation before deeper durable write-side code is added.
 10. [Separate Transaction Atomicity from Concurrency Admission](0010_transaction_atomicity_vs_concurrency_admission.md) — explains why PR4 transaction atomicity does not eliminate the need for PR5 PostgreSQL concurrency admission.
 11. [Separate Validation Mode from Validation Placement Strategy](0011_validation_mode_vs_validation_placement.md) — explains why validation strength and validation placement should be modeled as separate design axes before future validation placement strategies are introduced.
-12. [Separate Semantic Correctness from Operational Trust](0007_separate_semantic_correctness_from_operational_trust.md) — explains why future trust evaluation should not collapse semantic correctness, projection correctness, operational trust, and action safety into one boolean.
+12. [Two-Phase Concurrency Admission for PostgreSQL Write-Side](0012_two_phase_concurrency_admission.md) — explains why PR5 evolves from append-time-only admission into two-phase stream preparation plus append-time admission.
+13. [Separate Semantic Correctness from Operational Trust](0007_separate_semantic_correctness_from_operational_trust.md) — explains why future trust evaluation should not collapse semantic correctness, projection correctness, operational trust, and action safety into one boolean.
 
 ---
 
@@ -88,7 +89,7 @@ ADR 0012 records why PR5 evolves from single-phase append-time admission into tw
 
 Both ADR 0010 and ADR 0011 are related to the postmortem [From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md), which records the PR4 implementation lesson that durable persistence hardening must preserve Compass semantic gates.
 
-ADR 0007 is related to the future evolution from structured semantic outcomes into layered trust verdicts. It should be read after ADR 0004, ADR 0005, ADR 0006, ADR 0008, ADR 0009, ADR 0010, and ADR 0011 because it assumes the reader already understands the Compass layering, persistent-storage direction, event identity boundary, concurrency boundary, validation placement boundary, and current Stage 3.5 implementation priority, and two-phase admission evolution.
+ADR 0007 is related to the future evolution from structured semantic outcomes into layered trust verdicts. It should be read after ADR 0004, ADR 0005, ADR 0006, ADR 0008, ADR 0009, ADR 0010, ADR 0011, and ADR 0012 because it assumes the reader already understands the Compass layering, persistent-storage direction, event identity boundary, concurrency boundary, validation placement boundary, and two-phase admission evolution.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 

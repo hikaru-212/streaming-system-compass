@@ -53,7 +53,7 @@ The project has already completed:
 - Stage 3.5B PR3 — PostgresIdempotencyStore baseline
 - Stage 3.5B PR4 — Transactional Semantic Write-side Boundary
 
-The current next work is:
+The current Stage 3.5B focus is:
 
 ```text
 Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
@@ -66,6 +66,16 @@ transaction atomicity
 ≠
 concurrency admission
 ```
+
+It also evolves PostgreSQL admission from single-phase append-time admission into two-phase admission:
+
+```text
+prepare_stream(order_id)
+→ admit(candidate_event, expected_current_version)
+```
+
+This preserves one write-side orchestration path while allowing optimistic and pessimistic admission strategies to differ behind the admission interface.
+
 
 After PR5, the project may optionally add a PR6 / Stage 4 prelude for validation placement strategy:
 
@@ -118,7 +128,7 @@ Stage 3.5B is now split into five durable write-side checkpoints:
    Coordinates event append and idempotency record write in one database transaction, while preserving Compass Layer 1 validation before accepted-history mutation.
 
 5. **PR5 — PostgreSQL Concurrency Admission Boundary**  
-   Reintroduces durable optimistic / pessimistic admission so concurrent writers can be admitted or rejected through a stable application boundary rather than raw database errors.
+   Reintroduces durable optimistic / pessimistic admission so concurrent writers can be admitted or rejected through a stable application boundary rather than raw database errors. PR5 also records the two-phase admission decision in ADR 0012 and treats `autocommit=True` as incompatible with transaction-scoped pessimistic admission.
 
 A later PR6 or Stage 4 prelude may introduce validation placement strategy:
 

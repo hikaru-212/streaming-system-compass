@@ -40,6 +40,30 @@ This document instead tracks how those implementation stages support the next Co
 
 ---
 
+## Terminology Note: Compass Phases vs Project Stages
+
+This document uses **Phase** to describe the focused evolution of Compass as a runtime semantic control layer.
+
+The broader implementation roadmap uses **Stage** to describe project-wide build sequencing.
+
+These two terms are intentionally related but not identical:
+
+```text
+Compass Phase = semantic-control capability progression
+Project Stage = repository-wide implementation milestone
+```
+
+For example:
+
+- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, and Stage 3.5B / 3.5C.
+- Compass Phase 4 roughly maps to the beginning of Stage 4 Layer 2 validation work.
+- Compass Phases 5–7 roughly map to Stage 4 structured semantic outcomes, runtime decision policy, and action safety.
+- Compass Phase 8 maps to the Stage 5 dual-dimension governance demo.
+
+The phase labels in this document should therefore be read as a Compass-specific capability path, not as a replacement for the project-wide Stage numbering in the implementation roadmap.
+
+---
+
 ## Current Compass Position
 
 Compass currently has a working Layer 1 baseline.
@@ -188,7 +212,7 @@ PR1 Physical Schema + Local PostgreSQL + Migration ✅
 PR2 PostgresEventStore ✅
 PR3 PostgresIdempotencyStore ✅
 PR4 Transactional Semantic Write-side Boundary ✅
-PR5 PostgreSQL Concurrency Admission Boundary planned
+PR5 PostgreSQL Concurrency Admission Boundary in progress
 ```
 
 A later PR6 / Stage 4 prelude may add validation placement strategy:
@@ -212,7 +236,7 @@ Stage 3.5B gives or should give Compass:
 - transactionally coordinated event append and idempotency record write
 - Compass Layer 1 preserved before durable accepted-history mutation
 - clear candidate / accepted identity boundary
-- PostgreSQL-backed concurrency admission after PR5
+- PostgreSQL-backed two-phase concurrency admission through PR5
 
 ## Related Postmortems
 
@@ -221,6 +245,7 @@ Stage 3.5B gives or should give Compass:
 - [From Local PostgreSQL Setup to Defense-in-Depth Boundaries](../postmortems/from_local_postgres_to_defense_in_depth.md)
 - [From Runtime Behavior to Durable Evidence](../postmortems/from_runtime_behavior_to_durable_evidence.md)
 - [From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md)
+- [Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)
 
 These explain why persistence is not just a backend swap.
 
@@ -241,8 +266,9 @@ durable persistence hardening must preserve Compass semantic gates
 
 - [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
 - [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
+- [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md)
 
-These clarify why PR4, PR5, and future validation placement strategy are separate concerns.
+These clarify why PR4 transaction atomicity, PR5 concurrency admission, two-phase admission, and future validation placement strategy are separate concerns.
 
 ## Current Status
 
@@ -250,7 +276,7 @@ Stage 3.5B PR1 / PR2 / PR3 are complete.
 
 Stage 3.5B PR4 establishes the transactional semantic write-side boundary.
 
-Stage 3.5B PR5 is planned for PostgreSQL-backed concurrency admission.
+Stage 3.5B PR5 is in progress for PostgreSQL-backed two-phase concurrency admission.
 
 ---
 

@@ -211,6 +211,17 @@ This avoids wasting stream locks on requests that are already known replay or co
 
 Idempotency replay and conflict classification are not concurrency admission problems. They should be resolved before acquiring a pessimistic stream lock.
 
+## Physical Transaction Boundary Note
+
+Pessimistic `prepare_stream(order_id)` relies on a transaction-scoped PostgreSQL advisory lock.
+
+That means the connection must preserve an active transaction boundary while the protected work runs.
+
+If `autocommit=True`, a transaction-scoped lock may be acquired and then released immediately when the lock statement completes. This would make the pessimistic gate look valid at the API level while failing to protect the stream critical section physically.
+
+Therefore, the PostgreSQL pessimistic admission gate should fail closed when `autocommit=True`, returning an infrastructure-level admission failure instead of pretending the stream lock is active.
+
+
 ## Rejected Alternative: Separate Pessimistic Write-Side Flow
 
 A separate pessimistic write-side implementation was considered and rejected.
@@ -294,3 +305,4 @@ Commit 7:
 - [ADR 0010: Transaction Atomicity vs Concurrency Admission](0010_transaction_atomicity_vs_concurrency_admission.md)
 - [ADR 0011: Validation Mode vs Validation Placement](0011_validation_mode_vs_validation_placement.md)
 - [PostgreSQL Concurrency Admission Boundary Note](../boundary_notes/postgres_concurrency_admission_boundary.md)
+- [Postmortem: Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)

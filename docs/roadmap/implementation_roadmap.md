@@ -547,11 +547,11 @@ PR4 does not implement:
 
 #### Status
 
-Planned.
+In progress / closing implementation.
 
 #### Goal
 
-Introduce explicit PostgreSQL-backed admission control for concurrent writers.
+Introduce explicit PostgreSQL-backed admission control for concurrent writers and integrate it into the durable transactional write-side flow.
 
 #### Why
 
@@ -561,15 +561,34 @@ However, transaction atomicity does not answer whether a writer should be admitt
 
 PR5 restores the admission-boundary idea from the earlier in-memory `ConcurrencyGate` / `OptimisticVersionGate` design into the durable PostgreSQL write-side.
 
+During implementation, PR5 also clarifies that optimistic and pessimistic admission do not acquire protection at the same physical moment.
+
+This leads to a two-phase admission model:
+
+```text
+prepare_stream(order_id)
+→ admit(candidate_event, expected_current_version)
+```
+
 #### Main Work
 
 - introduce storage-level stale-write / concurrency errors
 - map raw PostgreSQL constraint or version conflicts into stable application-level admission results
+- extend admission vocabulary with:
+  - `ADMITTED`
+  - `STALE_WRITE`
+  - `LOCK_TIMEOUT`
+  - `INFRASTRUCTURE_ERROR`
+- add `StreamAdmissionResult` for stream-preparation decisions
+- keep `AdmissionResult` for append-time candidate-event admission
 - implement `PostgresOptimisticAdmissionGate`
-- implement a minimal `PostgresPessimisticAdmissionGate`
-- replace direct append in `PostgresTransactionalWriteSide` with an admission boundary
-- test competing writers or simulated stale reads
-- keep admission rejection distinct from idempotency conflict and domain legality failure
+- implement `PostgresPessimisticAdmissionGate`
+- move pessimistic advisory-lock acquisition into `prepare_stream(order_id)`
+- reject `autocommit=True` for transaction-scoped pessimistic admission
+- integrate two-phase admission into `PostgresTransactionalWriteSide`
+- preserve idempotency-before-prepare ordering
+- keep admission rejection distinct from idempotency conflict, validation block, and domain legality failure
+- keep append-time expected-version admission as the final accepted-history continuity check
 
 #### Expected Tests
 
@@ -578,9 +597,22 @@ PR5 should verify:
 - one writer can append the next stream event
 - a stale writer is rejected without mutating accepted history
 - optimistic admission maps stale writes into stable results
-- pessimistic admission serializes same-stream writers
-- different stream writers are not unnecessarily blocked
-- admission rejection does not pollute idempotency memory
+- pessimistic admission can acquire a transaction-scoped stream lock during `prepare_stream(order_id)`
+- pessimistic admission returns `LOCK_TIMEOUT` when the stream lock is unavailable
+- pessimistic admission rejects `autocommit=True`
+- replay / conflict paths do not acquire stream locks
+- prepare-time rejection does not run validation or create durable rows
+- append-time admission rejection does not record idempotency
+- admission rejection does not pollute accepted history or idempotency memory
+- the write side stores an admission gate factory, not a reusable gate singleton
+- PR4 event append + idempotency atomicity tests still pass
+
+#### Related Decisions and Notes
+
+- [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
+- [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
+- [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md)
+- [Postmortem — Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)
 
 #### Non-goals
 
@@ -592,6 +624,10 @@ PR5 does not implement:
 - full production locking framework
 - connection pooling
 - retry orchestration
+- hot-stream routing policy
+- durable admission audit table
+- durable lock table
+- cross-aggregate locking model
 - operational alerting
 
 ---
@@ -610,7 +646,7 @@ Introduce a configurable validation placement strategy after PostgreSQL concurre
 
 PR4 establishes an in-transaction Compass validation baseline.
 
-PR5 will establish append-time concurrency admission.
+PR5 establishes two-phase PostgreSQL concurrency admission.
 
 Only after PR5 can the project safely support a second orchestration mode:
 
