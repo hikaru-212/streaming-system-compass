@@ -39,6 +39,7 @@ The project has completed an executable baseline across:
 - Stage 3.5B PR2 PostgresEventStore baseline
 - Stage 3.5B PR3 PostgresIdempotencyStore baseline
 - Stage 3.5B PR4 transactional semantic write-side boundary
+- Stage 3.5B PR5 PostgreSQL concurrency admission boundary
 
 This means:
 
@@ -49,12 +50,13 @@ This means:
 - pre-Stage 3.5B event identity semantics are documented and reflected in boundary naming
 - Stage 3.5B PR1 has established the durable write-side schema and local PostgreSQL setup baseline
 - Stage 3.5B PR4 has established the first PostgreSQL-backed transactional semantic write-side flow
+- Stage 3.5B PR5 has established PostgreSQL-backed two-phase concurrency admission
 
 The next major focus is:
 
-- **Stage 3.5B PR5 — PostgreSQL concurrency admission boundary**
+- **Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy**
 
-Only after transaction atomicity and PostgreSQL-backed concurrency admission are clarified should the project proceed toward:
+After transaction atomicity and PostgreSQL-backed concurrency admission are clarified, the project can proceed toward:
 
 - PR6 / Stage 4 Prelude validation placement strategy
 - Stage 3.5C durable read-side baseline
@@ -547,7 +549,7 @@ PR4 does not implement:
 
 #### Status
 
-In progress / closing implementation.
+Completed after PR5 merge into the Stage 3.5B baseline.
 
 #### Goal
 
@@ -636,7 +638,7 @@ PR5 does not implement:
 
 #### Status
 
-Deferred.
+Next active candidate after PR5 merge.
 
 #### Goal
 
@@ -654,20 +656,23 @@ Only after PR5 can the project safely support a second orchestration mode:
 pre-transaction Compass validation + OCC
 ```
 
-This future strategy allows the system to compare latency and safety trade-offs between:
+This strategy allows the system to compare latency and safety trade-offs between:
 
 - in-transaction Compass validation
 - pre-transaction Compass validation + OCC
 - validation-off baseline for measurement
 
+Without validation placement strategy, Stage 4 timing or evidence tables would only measure one fixed orchestration path. They would not be able to compare in-transaction validation against pre-transaction validation plus append-time concurrency admission.
+
 #### Main Work
 
 - define `ValidationPlacement`
 - keep `ValidationMode` separate from `ValidationPlacement`
-- support `IN_TRANSACTION` validation placement
-- support `PRE_TRANSACTION` validation + OCC
-- prepare a future write-side factory / config layer
-- enable future latency comparison without duplicating storage logic
+- preserve `IN_TRANSACTION` as the default validation placement
+- support a minimal `PRE_TRANSACTION` validation + append-time admission path
+- introduce a write-side factory / config boundary if needed
+- ensure stale pre-validated candidates cannot enter accepted history
+- enable latency and safety comparison without duplicating storage logic
 
 #### Candidate Future API
 
@@ -697,6 +702,8 @@ PR6 / Stage 4 Prelude does not implement:
 - risk scoring
 - async audit pipeline
 - Stage 4 `SemanticOutcome` tables
+- validation attempt persistence tables
+- registry-stage timing persistence tables
 - Stage 5 governance metrics
 
 ---
@@ -1134,6 +1141,12 @@ Create a reviewer-facing demo that evaluates system trust using two dimensions:
 semantic correctness × operational freshness
 ```
 
+The purpose of this stage is not only to observe whether the system is correct after the fact.
+
+The purpose is to decide whether a dependent action is safe before it executes.
+
+This is especially important for irreversible or high-risk actions, where post-hoc monitoring is too late.
+
 The final question is:
 
 > Is this state true enough, fresh enough, and safe enough to act on?
@@ -1305,7 +1318,7 @@ Durable Write-side Baseline
   PR2 PostgresEventStore ✅
   PR3 PostgresIdempotencyStore ✅
   PR4 Transactional Semantic Write-side Boundary ✅
-  PR5 PostgreSQL Concurrency Admission Boundary
+  PR5 PostgreSQL Concurrency Admission Boundary ✅
 
 PR6 / Stage 4 Prelude:
 Validation Placement Strategy

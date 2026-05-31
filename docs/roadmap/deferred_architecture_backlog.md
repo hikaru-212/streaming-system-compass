@@ -11,7 +11,7 @@ The purpose of this backlog is not to expand the current PR scope. Instead, it p
 Current focus:
 
 ```text
-Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary closure
+Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy
 ```
 
 Next planned focus:
@@ -28,8 +28,8 @@ Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy
 Completed
 → already handled in the current Stage 3.5B baseline
 
-PR5 candidate
-→ appropriate for the next concurrency/admission PR
+PR6 active candidate
+→ appropriate for the validation-placement strategy PR after PR5 admission exists
 
 Optional Stage 3.5B hardening
 → can be done after PR5 if worth the schema/documentation churn
@@ -209,7 +209,7 @@ Defining it too early may result in an abstraction shaped by incomplete informat
 ### Current Classification
 
 ```text
-Optional PR5 candidate
+Deferred until multiple storage implementations need stricter type-level coordination
 ```
 
 ### Future Work
@@ -225,9 +225,9 @@ class EventStoreProtocol(Protocol):
 
 ### Suggested Timing
 
-During PR5 only if optimistic / pessimistic admission work needs a stable type boundary.
+Do not introduce only because PR5 admission exists.
 
-Otherwise defer until multiple storage implementations require stricter type-level coordination.
+Defer until multiple storage implementations or admission strategies require stricter type-level coordination.
 
 ---
 
@@ -318,12 +318,12 @@ Timing collection is meaningful, but it should not distract from correctness bou
 ### Current Classification
 
 ```text
-Observability / Stage 4 / PR6 latency experiment candidate
+PR6 latency experiment candidate / Stage 4 evidence design
 ```
 
 ### Suggested Timing
 
-After PR5, during validation placement latency comparison or runtime evidence work.
+During PR6 if lightweight in-memory timing metadata helps compare validation placements; otherwise defer to Stage 4 evidence / outcome persistence.
 
 ---
 
@@ -363,7 +363,7 @@ Completed
 
 ### Future Work
 
-Further transaction ownership work may occur in PR5 when admission gates are integrated into the transactional write-side flow.
+Further transaction ownership work may occur in PR6 when validation placement introduces pre-transaction and in-transaction orchestration modes.
 
 ---
 
@@ -503,7 +503,7 @@ Current defenses are:
 - `UNIQUE(order_id, sequence)`
 - expected-version check in the store
 - PR4 transaction boundary
-- PR5 planned admission boundary
+- PR5 admission boundary
 
 ### Future Work
 
@@ -571,17 +571,21 @@ These are not required for PR4.
 
 ## 12. Validation Placement Strategy
 
+### Status
+
+```text
+Active PR6 candidate after PR5
+```
+
 ### Current Decision
 
-Do not implement validation placement strategy in PR4.
-
-PR4 establishes the high-defense baseline:
+PR4 established the high-defense baseline:
 
 ```text
 IN_TRANSACTION Compass validation
 ```
 
-ADR 0011 records the distinction:
+ADR 0011 records the conceptual distinction:
 
 ```text
 ValidationMode
@@ -589,45 +593,44 @@ ValidationMode
 ValidationPlacement
 ```
 
-### Why Not Now
+PR5 completed the required admission dependency by introducing two-phase PostgreSQL concurrency admission:
+
+```text
+prepare_stream(order_id)
+→ admit(candidate_event, expected_current_version)
+```
+
+After PR5, validation placement is no longer only a deferred concern. The required append-time admission boundary now exists, so `PRE_TRANSACTION` validation can be evaluated safely as a PR6 / Stage 4 Prelude.
+
+### Why It Becomes Active After PR5
 
 Safe `PRE_TRANSACTION` validation requires append-time concurrency admission.
 
-That depends on PR5.
+Without PR5, a candidate event could be validated against accepted history and then become stale before append.
 
-### Future Work
+With PR5, append-time admission can reject the stale candidate before it enters accepted history.
 
-After PR5, introduce validation placement strategy:
+### PR6 Work
+
+PR6 should introduce:
 
 ```text
 IN_TRANSACTION
 PRE_TRANSACTION
-ASYNC_AUDIT
+future ASYNC_AUDIT
 ```
 
-Potential future flow:
-
-```text
-load history
-→ rehydrate aggregate
-→ build candidate event
-→ run Compass validation
-
-BEGIN
-→ append with expected_version / admission gate
-→ record idempotency
-→ COMMIT
-```
+It should preserve `IN_TRANSACTION` as the default and add a minimal `PRE_TRANSACTION` orchestration path for latency / safety comparison.
 
 ### Current Classification
 
 ```text
-PR6 / Stage 4 prelude
+Active PR6 / Stage 4 prelude
 ```
 
 ### Suggested Timing
 
-After PR5, when concurrency admission exists and latency / safety comparison becomes meaningful.
+Immediately after PR5 merge, before Stage 4 timing / evidence persistence work.
 
 ---
 
@@ -640,16 +643,16 @@ The deferred backlog should now be read with the following stage alignment:
 | EventType vocabulary normalization | Optional after PR5 / durable schema hardening |
 | OrderStatus durable constraint | Optional after PR5 / durable schema hardening |
 | UUIDv7 | Later evaluation |
-| EventStoreProtocol | Optional PR5 candidate |
+| EventStoreProtocol | Deferred until stricter type-level coordination is needed |
 | StoredEventRecord / JSONB hydration | Stage 4 / evidence design |
-| Registry-stage timing | Observability / Stage 4 / PR6 latency experiment |
+| Registry-stage timing | PR6 latency experiment candidate / Stage 4 evidence design |
 | Transaction lifecycle ownership | Completed in PR4 |
 | Pessimistic admission autocommit guard | Completed in PR5 |
 | Custom persistence exceptions | Completed in PR5 for storage/admission errors; Stage 4 for SemanticOutcome |
 | Payload/proof/metadata JSON shape | Stage 4 evidence / outcome persistence |
 | Append-only DB hardening | Later production hardening |
 | Integration test boundary / CI strategy | Mostly completed in PR4 |
-| Validation placement strategy | PR6 / Stage 4 prelude |
+| Validation placement strategy | Active PR6 / Stage 4 prelude |
 
 The backlog remains a scope-control document.
 

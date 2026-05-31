@@ -663,6 +663,12 @@ That postmortem records how PostgreSQL persistence hardening initially risked pr
 
 This ADR formalizes the follow-up design distinction between validation strength and validation placement.
 
+For the PR6 implementation boundary that follows from this ADR, see:
+
+- [Validation Placement Strategy Boundary](../boundary_notes/validation_placement_strategy_boundary.md)
+
+That boundary note explains how Stage 3.5B PR6 turns this ADR into an implementation plan after PR5 two-phase PostgreSQL concurrency admission exists.
+
 ---
 
 ## Related ADRs
