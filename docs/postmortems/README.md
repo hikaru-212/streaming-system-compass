@@ -28,23 +28,25 @@ Postmortems help preserve:
 - reasoning bridges between current implementation and later roadmap stages
 - distinctions between runtime behavior, durable evidence, and future governance signals
 - cases where infrastructure hardening risks bypassing semantic governance
+- cases where logical orchestration boundaries require explicit physical connection-state cleanup
 
 ---
 
 ## Current Postmortems
 
-| Document | Purpose |
-|---|---|
-| [function_boundary_scale_mismatch](function_boundary_scale_mismatch.md) | Explains a recurring confusion caused by reading function parameters before identifying module roles, ownership boundaries, and architectural scale. |
-| [from_projection_concerns_to_event_truth](from_projection_concerns_to_event_truth.md) | Records the design shift from focusing mainly on projection/runtime problems to treating event-source correctness and accepted-history entry as a more foundational concern. |
-| [docs_vs_enterprise_design_docs](docs_vs_enterprise_design_docs.md) | Clarifies why the current repository documents emphasize semantic completeness and boundary clarity first, rather than pretending to already be a full enterprise operational design doc. |
-| [from_in_memory_correctness_to_durable_consistency](from_in_memory_correctness_to_durable_consistency.md) | Explains why durable persistence is not just a backend replacement: once state must survive across time and restart, guarantees that felt natural in the in-memory world are no longer free. |
-| [from_git_sync_to_db_immutability](from_git_sync_to_db_immutability.md) | Records how a Git local/remote synchronization confusion exposed a deeper distributed-systems lesson: Python-side guarantees such as `frozen=True` and append-only history must be explicitly re-declared at the database boundary. |
-| [from_local_postgres_to_defense_in_depth](from_local_postgres_to_defense_in_depth.md) | Explains why local PostgreSQL setup, `.env`, least privilege, SQL migrations, Compass validation, and transactions protect different system boundaries instead of one mechanism protecting everything. |
-| [from_runtime_behavior_to_durable_evidence](from_runtime_behavior_to_durable_evidence.md) | Explains why Python runtime behavior is not durable evidence unless selected facts are persisted into PostgreSQL, metadata fields, logs, metrics, traces, or audit records. |
-| [from_exception_strings_to_governable_outcomes](from_exception_strings_to_governable_outcomes.md) | Explains why raw exception strings are not enough for semantic governance, and why structured semantic outcomes must later feed runtime decision policy, action safety, and layered trust. |
-| [from_durable_persistence_to_semantic_gate_preservation](from_durable_persistence_to_semantic_gate_preservation.md) | Records the PR4 lesson that durable persistence hardening can preserve physical transaction correctness while accidentally bypassing Compass semantic gates. |
-| [autocommit_boundary_and_partial_write_risk](autocommit_boundary_and_partial_write_risk.md) | Explains why `autocommit`, transaction-scoped advisory locks, and partial-write risks must be treated as physical transaction-boundary concerns in the durable write-side pipeline. |
+| Document | Impact Area | Purpose |
+|---|---|---|
+| [function_boundary_scale_mismatch](function_boundary_scale_mismatch.md) | Code Reading / Boundary Understanding | Explains a recurring confusion caused by reading function parameters before identifying module roles, ownership boundaries, and architectural scale. |
+| [from_projection_concerns_to_event_truth](from_projection_concerns_to_event_truth.md) | Event Truth / Source of Truth | Records the design shift from focusing mainly on projection/runtime problems to treating event-source correctness and accepted-history entry as a more foundational concern. |
+| [docs_vs_enterprise_design_docs](docs_vs_enterprise_design_docs.md) | Documentation Scope / Project Positioning | Clarifies why the current repository documents emphasize semantic completeness and boundary clarity first, rather than pretending to already be a full enterprise operational design doc. |
+| [from_in_memory_correctness_to_durable_consistency](from_in_memory_correctness_to_durable_consistency.md) | Durable Persistence / Consistency | Explains why durable persistence is not just a backend replacement: once state must survive across time and restart, guarantees that felt natural in the in-memory world are no longer free. |
+| [from_git_sync_to_db_immutability](from_git_sync_to_db_immutability.md) | Database Boundary / Immutability | Records how a Git local/remote synchronization confusion exposed a deeper distributed-systems lesson: Python-side guarantees such as `frozen=True` and append-only history must be explicitly re-declared at the database boundary. |
+| [from_local_postgres_to_defense_in_depth](from_local_postgres_to_defense_in_depth.md) | Security / Defense in Depth | Explains why local PostgreSQL setup, `.env`, least privilege, SQL migrations, Compass validation, and transactions protect different system boundaries instead of one mechanism protecting everything. |
+| [from_runtime_behavior_to_durable_evidence](from_runtime_behavior_to_durable_evidence.md) | Runtime Evidence / Observability | Explains why Python runtime behavior is not durable evidence unless selected facts are persisted into PostgreSQL, metadata fields, logs, metrics, traces, or audit records. |
+| [from_exception_strings_to_governable_outcomes](from_exception_strings_to_governable_outcomes.md) | Error Model / Governance | Explains why raw exception strings are not enough for semantic governance, and why structured semantic outcomes must later feed runtime decision policy, action safety, and layered trust. |
+| [from_durable_persistence_to_semantic_gate_preservation](from_durable_persistence_to_semantic_gate_preservation.md) | Semantic Gate / Validation Preservation | Records the PR4 lesson that durable persistence hardening can preserve physical transaction correctness while accidentally bypassing Compass semantic gates. |
+| [autocommit_boundary_and_partial_write_risk](autocommit_boundary_and_partial_write_risk.md) | Transaction Boundary / Concurrency | Explains why `autocommit`, transaction-scoped advisory locks, and partial-write risks must be treated as physical transaction-boundary concerns in the durable write-side pipeline. |
+| [pre_transaction_read_cleanup_boundary](pre_transaction_read_cleanup_boundary.md) | Connection Reliability / Infrastructure | Explains why `PRE_TRANSACTION` validation must explicitly clean up implicit read transactions before CPU-side validation, and why cleanup failure handling is deferred to Stage 4 / production hardening. |
 
 ---
 
@@ -69,6 +71,16 @@ The postmortem [Autocommit, Transaction Boundaries, and Partial-Write Risk](auto
 - PR5 introduces PostgreSQL-backed admission and transaction-scoped lock semantics.
 - The postmortem explains why `autocommit=False` is a physical requirement for transaction-scoped pessimistic admission.
 - This directly supports [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md), especially the physical transaction-boundary requirement behind `prepare_stream(order_id)`.
+
+---
+
+The postmortem [Pre-Transaction Read Cleanup Boundary](pre_transaction_read_cleanup_boundary.md) is related to the Stage 3.5B / PR6 validation placement transition:
+
+- PR6 introduces configurable validation placement between `IN_TRANSACTION` and `PRE_TRANSACTION`.
+- `PRE_TRANSACTION` validation requires more than moving Compass validation outside the write-side UoW.
+- Preliminary PostgreSQL reads may still open implicit transactions.
+- The postmortem explains why a `try/finally` cleanup boundary is required to rollback the implicit read transaction before CPU-side Compass validation begins.
+- This directly supports the [Validation Placement Strategy Boundary](../boundary_notes/validation_placement_strategy_boundary.md), especially the physical connection-state requirement behind `PRE_TRANSACTION` validation.
 
 ---
 

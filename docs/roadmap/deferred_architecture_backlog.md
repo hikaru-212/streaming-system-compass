@@ -17,8 +17,10 @@ Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy
 Next planned focus:
 
 ```text
-Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy
+Stage 3.5C — Durable Read-Side Baseline
 ```
+
+PR6 remains the current focus until the validation placement baseline is merged and marked complete.
 
 ---
 
@@ -39,6 +41,9 @@ Stage 4 / evidence design
 
 Later production hardening
 → useful, but not part of the current correctness baseline
+
+Stage 4 / connection-pool hardening
+→ should wait until structured error modeling, connection lifecycle policy, or pooled database connections exist
 ```
 
 ---
@@ -634,6 +639,177 @@ Immediately after PR5 merge, before Stage 4 timing / evidence persistence work.
 
 ---
 
+## 13. Pre-Transaction Cleanup Failure Handling
+
+### Status
+
+```text
+Deferred until Stage 4 error model or connection-pool hardening
+```
+
+### Context
+
+Stage 3.5B PR6 introduces `PRE_TRANSACTION` validation placement.
+
+The current PR6 baseline uses a cleanup boundary during the preliminary read phase:
+
+```python
+try:
+    preliminary_idempotency_decision = read_idempotency_store.check(signature)
+
+    if preliminary_idempotency_decision.verdict == IdempotencyVerdict.REPLAY:
+        return PostgresWriteSideResult(...)
+
+    if preliminary_idempotency_decision.verdict == IdempotencyVerdict.CONFLICT:
+        return PostgresWriteSideResult(...)
+
+    history = read_event_store.load(order_id)
+finally:
+    connection.rollback()
+```
+
+This is required because read-only `SELECT` operations can still open an implicit transaction when the PostgreSQL connection is not in autocommit mode.
+
+The current PR6 goal is to ensure that CPU-side Compass validation does not accidentally run while the connection still carries an implicit read transaction.
+
+### Current Decision
+
+Use the simple cleanup guarantee for PR6:
+
+```text
+preliminary read phase
+→ always attempt rollback cleanup
+→ run CPU-side validation only after the read transaction is closed
+```
+
+This is sufficient for the current local PostgreSQL and non-pooled connection baseline.
+
+It preserves the physical meaning of:
+
+```text
+ValidationPlacement.PRE_TRANSACTION
+```
+
+by ensuring that validation is not merely outside the write-side Unit of Work logically, but also separated from the preliminary read transaction physically.
+
+### Deferred Concern
+
+The current PR6 baseline does not yet implement structured handling for rollback failure itself.
+
+Future production-like handling may need to distinguish:
+
+```text
+primary read / load failure
+vs
+cleanup rollback failure
+```
+
+This matters because rollback can itself fail if the connection is already closed, aborted, or physically broken.
+
+There are two different failure cases:
+
+```text
+Case 1:
+primary read failure happens
++
+cleanup rollback failure also happens
+
+Risk:
+cleanup failure may mask the original read failure
+```
+
+```text
+Case 2:
+primary read succeeds
++
+cleanup rollback fails
+
+Risk:
+the system may continue as if the connection were clean even though cleanup failed
+```
+
+The project should not silently swallow cleanup failures with a broad:
+
+```python
+except Exception:
+    pass
+```
+
+That would avoid masking the primary error, but it could also hide connection-state corruption.
+
+### Future Direction
+
+When Stage 4 error modeling or connection pooling is introduced, consider a hardened cleanup model that can:
+
+- preserve the primary error when cleanup also fails
+- attach cleanup failure as diagnostic context
+- map cleanup failure into a structured infrastructure error
+- mark the connection as unsafe for reuse
+- discard or invalidate broken pooled connections
+- log cleanup failures with trace context
+- expose cleanup failure as operational evidence
+
+A possible future pattern is:
+
+```text
+if primary error exists:
+    preserve primary error
+    attach cleanup failure as diagnostic context
+
+if no primary error exists:
+    surface cleanup failure as infrastructure failure
+```
+
+This future work should be integrated with the Stage 4 error model instead of being implemented as ad hoc exception handling inside PR6.
+
+### Why Not Now
+
+PR6 is focused on validation placement:
+
+```text
+IN_TRANSACTION
+vs
+PRE_TRANSACTION
+```
+
+It should not introduce a full production-grade connection lifecycle policy.
+
+The current project does not yet own:
+
+- connection pool abstraction
+- connection invalidation policy
+- structured infrastructure error model
+- durable infrastructure-error evidence
+- production observability pipeline
+- cleanup failure metrics or traces
+
+Adding all of that in PR6 would expand the PR beyond validation placement strategy.
+
+### Current Classification
+
+```text
+Stage 4 / connection-pool hardening
+```
+
+### Suggested Timing
+
+Revisit when at least one of the following becomes true:
+
+- Stage 4 error model work begins
+- connection pooling is introduced
+- infrastructure errors are mapped into structured runtime outcomes
+- production-like observability is added
+- cleanup failures need to become operational evidence
+
+### Related Note
+
+See:
+
+- [Pre-Transaction Read Cleanup Boundary](../postmortems/pre_transaction_read_cleanup_boundary.md)
+
+
+---
+
 ## Summary
 
 The deferred backlog should now be read with the following stage alignment:
@@ -653,6 +829,7 @@ The deferred backlog should now be read with the following stage alignment:
 | Append-only DB hardening | Later production hardening |
 | Integration test boundary / CI strategy | Mostly completed in PR4 |
 | Validation placement strategy | Active PR6 / Stage 4 prelude |
+| Pre-transaction cleanup failure handling | Stage 4 / connection-pool hardening |
 
 The backlog remains a scope-control document.
 
