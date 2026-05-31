@@ -52,15 +52,14 @@ This means:
 - Stage 3.5B PR1 has established the durable write-side schema and local PostgreSQL setup baseline
 - Stage 3.5B PR4 has established the first PostgreSQL-backed transactional semantic write-side flow
 - Stage 3.5B PR5 has established PostgreSQL-backed two-phase concurrency admission
-- Stage 3.5B PR6 is establishing validation placement strategy as a Stage 4 prelude
+- Stage 3.5B PR6 has established validation placement strategy as a Stage 4 prelude
 
 The current major focus is:
 
-- **Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy**
+- **Stage 3.5C — Durable Read-Side Baseline**
 
-After transaction atomicity and PostgreSQL-backed concurrency admission are clarified, the project can proceed toward:
+After transaction atomicity, PostgreSQL-backed concurrency admission, and validation placement strategy are clarified, the project can proceed toward:
 
-- finalize PR6 / Stage 4 Prelude validation placement strategy
 - Stage 3.5C durable read-side baseline
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
 - Stage 5 dual-dimension governance demo
@@ -640,7 +639,7 @@ PR5 does not implement:
 
 #### Status
 
-In progress / close-ready in Stage 3.5B PR6.
+Completed after PR6 merge into the Stage 3.5B baseline.
 
 #### Goal
 
@@ -722,7 +721,7 @@ PR6 / Stage 4 Prelude does not implement:
 
 ## Stage 3.5B Completion Criteria
 
-Stage 3.5B is complete when:
+Stage 3.5B is complete at the durable write-side baseline level when:
 
 - accepted events are persisted in PostgreSQL
 - accepted history can be replayed from durable storage
@@ -739,6 +738,12 @@ Stage 3.5B is complete when:
 - UUID event identity is preserved
 - candidate / accepted event identity semantics remain clear
 - destructive PostgreSQL tests run against `TEST_DATABASE_URL`, not the development database
+
+### Current Status
+
+Completed at the durable write-side baseline level after PR6 merge into the Stage 3.5B baseline branch.
+
+Stage 3.5B may still receive optional future hardening items, but the next main implementation focus is Stage 3.5C durable read-side persistence.
 ---
 
 # Stage 3.5C: Durable Read-Side Baseline

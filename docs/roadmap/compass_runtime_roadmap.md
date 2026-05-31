@@ -123,7 +123,7 @@ This is the gap that later stages must close.
 
 The durable write-side is also not yet fully concurrency-admission-aware.
 
-Stage 3.5B PR5 restores the concurrency/admission boundary for PostgreSQL-backed execution, and Stage 3.5B PR6 introduces validation placement strategy as a Stage 4 prelude.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, and Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude.
 
 ---
 
@@ -227,7 +227,7 @@ From the Compass perspective, Stage 3.5B matters because it turns accepted histo
 
 ## Compass-Relevant Outcomes
 
-Stage 3.5B gives or should give Compass:
+Stage 3.5B gives Compass:
 
 - durable accepted history
 - durable event identity
@@ -281,7 +281,7 @@ Stage 3.5B PR4 establishes the transactional semantic write-side boundary.
 
 Stage 3.5B PR5 is complete for PostgreSQL-backed two-phase concurrency admission.
 
-Stage 3.5B PR6 is in progress / close-ready for validation placement strategy. It preserves `IN_TRANSACTION` as the default and adds a minimal `PRE_TRANSACTION` path guarded by append-time admission.
+Stage 3.5B PR6 is complete at the baseline level for validation placement strategy. It preserves `IN_TRANSACTION` as the default and adds a minimal `PRE_TRANSACTION` path guarded by append-time admission.
 
 ---
 
@@ -329,7 +329,7 @@ Layer 2 = truthfulness check for derived state
 
 ## Current Status
 
-Planned after Stage 3.5B.
+Next major focus after the Stage 3.5B durable write-side baseline.
 
 ---
 

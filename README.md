@@ -25,13 +25,13 @@ The project currently has:
 - Compass Layer 1 transition-truth validation
 - a Stage 3 baseline projection runtime with reducer / worker separation
 - a completed Stage 3.5A decimal / money hardening step before durable persistence
+- a completed Stage 3.5B durable write-side baseline, including PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and validation placement strategy
 - executable tests defending both write-side and read-side baseline semantics
 
 The next major steps are:
 
-- **Stage 3.5B — durable write-side baseline**
 - **Stage 3.5C — durable read-side baseline**
-- followed later by **runtime semantic validation and outcome structuring**
+- followed later by **runtime semantic validation, structured semantic outcomes, runtime decision policy, and action safety**
 
 ---
 
@@ -75,6 +75,9 @@ If you want to understand how the repository thinks rather than only what it imp
 
 - **Exact-money pre-persistence hardening**  
   Stage 3.5A completed the migration from float-based money handling to Decimal-based semantics before durable persistence work expands.
+
+- **Durable write-side baseline**  
+  Stage 3.5B establishes PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and configurable validation placement.
 
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
@@ -202,7 +205,10 @@ They test whether the correctness mechanisms inside `src/` survive adversarial r
 - Stage 3 baseline read-side projection runtime with reducer / worker separation
 - Replay-safe projection state derivation with checkpoint-aware sequencing
 - Decimal-based money semantics before durable persistence
-- Clear separation between domain legality, transition truth, admission continuity, retry safety, and read-side derivation
+- PostgreSQL-backed durable write-side persistence
+- Two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
+- Configurable validation placement through `IN_TRANSACTION` and `PRE_TRANSACTION`
+- Clear separation between domain legality, transition truth, admission continuity, retry safety, validation placement, and read-side derivation
 
 ---
 
@@ -330,8 +336,8 @@ Instead, it starts by defining and implementing:
 
 Everything else grows around this core:
 
-- `storage/` persists accepted history and protects version continuity
-- `pipeline/` executes transactional and projection flows
+- `storage/` persists accepted history, idempotency memory, and protects version continuity
+- `pipeline/` executes transactional and projection flows, including PostgreSQL-backed write-side orchestration
 - `compass/` validates semantic correctness
 - `bootstrap/` assembles concrete runtime wiring
 - `chaos_engine/` stress-tests whether mechanisms inside `src/` survive adversarial conditions
@@ -366,8 +372,11 @@ Everything else grows around this core:
 
 ### Phase 3.5B / 3.5C — Durable Persistence Baseline
 
-- durable write-side baseline
-- durable read-side baseline
+- Stage 3.5B durable write-side baseline completed at branch level
+- PostgreSQL-backed accepted history and idempotency memory
+- transactional event append + idempotency record persistence
+- two-phase concurrency admission and validation placement strategy
+- Stage 3.5C durable read-side baseline next
 - persistence-backed replay / rebuild validation
 - exact money durability
 - append-only durable history and idempotency evolution

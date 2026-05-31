@@ -12,7 +12,8 @@ Use roadmap documents to understand:
 - what depends on what
 - which features are intentionally deferred
 - how the project moves from durable truth toward runtime governance
-- which Stage 3.5B concerns are complete, active, planned, or intentionally deferred
+- which Stage 3.5B concerns are complete and which later concerns are intentionally deferred
+- why Stage 3.5C is the next implementation focus after the durable write-side baseline
 
 ---
 
@@ -22,7 +23,7 @@ Use roadmap documents to understand:
 |---|---|
 | [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, durable persistence, runtime semantic outcomes, runtime decision policy, action safety, and the Stage 5 dual-dimension governance demo. |
 | [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward durable runtime validation, structured semantic outcomes, runtime decisions, action safety, and later dual-dimension governance. |
-| [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred from the current implementation scope, including durable vocabulary hardening, UUIDv7 evaluation, protocol boundaries, JSONB evidence hydration, metadata timing, persistence/admission errors, append-only hardening, validation placement strategy, and test boundary follow-ups. |
+| [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred beyond the current implementation scope, including proof-status constraint hardening, UUIDv7 evaluation, protocol boundaries, JSONB evidence hydration, metadata timing, append-only hardening, cleanup failure handling, and later production-hardening concerns. |
 
 ---
 
@@ -55,38 +56,17 @@ The project has already completed:
 - Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
 - Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude
 
-The current Stage 3.5B focus is:
+Stage 3.5B now forms a durable write-side baseline:
 
 ```text
-Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy
+durable accepted history
++ durable idempotency memory
++ transactional write-side execution
++ two-phase concurrency admission
++ validation placement strategy
 ```
 
-PR5 completed the durable concurrency-admission boundary by separating:
-
-```text
-transaction atomicity
-≠
-concurrency admission
-```
-
-It also evolved PostgreSQL admission from single-phase append-time admission into two-phase admission:
-
-```text
-prepare_stream(order_id)
-→ append_if_admitted(candidate_event, expected_current_version)
-```
-
-PR6 builds on that admission boundary and introduces configurable validation placement:
-
-```text
-IN_TRANSACTION Compass validation
-vs
-PRE_TRANSACTION Compass validation + append-time admission
-```
-
-This lets the project compare latency and safety trade-offs without duplicating write-side storage, idempotency, validation, or admission logic.
-
-After PR6 is merged and marked complete, the next major focus becomes:
+The current major focus is:
 
 ```text
 Stage 3.5C — Durable Read-Side Baseline
@@ -120,25 +100,41 @@ The system should not attempt to solve chaos, broad governance, or distributed c
 
 ## Stage 3.5B Reminder
 
-Stage 3.5B is now split into six durable write-side checkpoints:
+Stage 3.5B completed six durable write-side checkpoints:
 
 1. **PR1 — Schema + Docker + Migration**  
-   Establishes `order_events`, `idempotency_records`, local PostgreSQL setup, and durable schema contract.
+   Established `order_events`, `idempotency_records`, local PostgreSQL setup, and the durable schema contract.
 
 2. **PR2 — PostgresEventStore**  
-   Makes accepted event history durable.
+   Made accepted event history durable.
 
 3. **PR3 — PostgresIdempotencyStore**  
-   Makes request-level idempotency durable.
+   Made request-level idempotency durable.
 
 4. **PR4 — Transactional Semantic Write-side Boundary**  
-   Coordinates event append and idempotency record write in one database transaction, while preserving Compass Layer 1 validation before accepted-history mutation.
+   Coordinated event append and idempotency record write in one database transaction, while preserving Compass Layer 1 validation before accepted-history mutation.
 
 5. **PR5 — PostgreSQL Concurrency Admission Boundary**  
-   Reintroduces durable optimistic / pessimistic admission so concurrent writers can be admitted or rejected through a stable application boundary rather than raw database errors. PR5 also records the two-phase admission decision in ADR 0012 and treats `autocommit=True` as incompatible with transaction-scoped pessimistic admission.
+   Reintroduced durable optimistic / pessimistic admission so concurrent writers can be admitted or rejected through a stable application boundary rather than raw database errors. PR5 also recorded the two-phase admission decision in ADR 0012 and treats `autocommit=True` as incompatible with transaction-scoped pessimistic admission.
 
 6. **PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude**  
-   Separates `ValidationMode` from `ValidationPlacement`, preserves `IN_TRANSACTION` as the default write-side behavior, and adds a minimal `PRE_TRANSACTION` orchestration path guarded by append-time admission. PR6 also records the pre-transaction read cleanup boundary required to keep the physical connection state aligned with the placement label.
+   Separated `ValidationMode` from `ValidationPlacement`, preserved `IN_TRANSACTION` as the default write-side behavior, and added a minimal `PRE_TRANSACTION` orchestration path guarded by append-time admission. PR6 also recorded the pre-transaction read cleanup boundary required to keep the physical connection state aligned with the placement label.
+
+---
+
+## Stage 3.5C Reminder
+
+Stage 3.5C should move the read-side baseline from in-memory stores toward durable persistence-backed semantics.
+
+The main goal is to add durable projection state and checkpoint state without redefining the source of truth.
+
+```text
+event log / order_events = accepted history truth
+projection state = derived runtime state
+checkpoint = operational progress metadata
+```
+
+Stage 3.5C should prepare the system for later Compass Layer 2 validation by making derived state durable enough to compare against replayed accepted history.
 
 ---
 
@@ -148,16 +144,15 @@ Some architecture issues are known but intentionally deferred to avoid scope cre
 
 Examples include:
 
-- durable `EventType` vocabulary normalization
-- durable `OrderStatus` constraint hardening
+- proof previous status constraint hardening
 - UUIDv7 / time-ordered UUID evaluation
 - formal `EventStoreProtocol`
 - stored event record / JSONB evidence hydration
 - registry-stage timing in `metadata_json`
-- storage/admission error mapping
+- payload / proof / metadata JSON shape
 - append-only database hardening
-- validation placement cleanup failure handling after Stage 4 error model or connection-pool hardening exists
-- integration-test follow-ups after the PR4 isolation baseline
+- pre-transaction cleanup failure handling after Stage 4 error model or connection-pool hardening exists
+- integration-test follow-ups as the durable read-side test matrix expands
 
 These are tracked in:
 
@@ -191,10 +186,10 @@ Stage 4 should not be used as a dumping ground for every remaining durable schem
 For example:
 
 ```text
-EventType / OrderStatus durable vocabulary hardening
+proof_prev_status durable constraint hardening
 ```
 
-belongs to durable schema hardening, not Stage 4 Error Model work.
+belongs to optional durable schema hardening, not Stage 4 Error Model work.
 
 ---
 
