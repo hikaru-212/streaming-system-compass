@@ -28,6 +28,10 @@ from src.pipeline.transactional.postgres_admission import (
 from src.pipeline.transactional.postgres_unit_of_work import (
     PostgresWriteSideUnitOfWork,
 )
+from src.pipeline.transactional.postgres_write_side_config import (
+    PostgresWriteSideConfig,
+    ValidationPlacement,
+)
 from src.storage.idempotency_store import (
     IdempotencyDecision,
     IdempotencyVerdict,
@@ -124,6 +128,15 @@ class PostgresTransactionalWriteSide:
     The write side stores the factory, not a concrete gate instance. A new gate
     is built inside each unit-of-work scope so stateful gates do not leak state
     across commands or transactions.
+
+    PR6 makes validation placement explicit.
+
+    The default config preserves the current behavior:
+
+    - ValidationMode.STRICT
+    - ValidationPlacement.IN_TRANSACTION
+
+    PRE_TRANSACTION is intentionally not implemented in this commit.
     """
 
     def __init__(
@@ -131,12 +144,14 @@ class PostgresTransactionalWriteSide:
         connection: Connection,
         validation_runtime: ValidationRuntime,
         admission_gate_factory: AdmissionGateFactory | None = None,
+        config: PostgresWriteSideConfig | None = None,
     ):
         self._connection = connection
         self._validation_runtime = validation_runtime
         self._admission_gate_factory = (
             admission_gate_factory or _default_admission_gate_factory
         )
+        self._config = config or PostgresWriteSideConfig()
 
     def _rehydrate_aggregate(
         self,
@@ -186,6 +201,47 @@ class PostgresTransactionalWriteSide:
         command_type: CommandType,
         build_candidate_event: CandidateEventBuilder,
     ) -> PostgresWriteSideResult:
+        """
+        Dispatch command execution by validation placement.
+
+        Commit 3 only makes the existing IN_TRANSACTION path explicit.
+        PRE_TRANSACTION will be added in a later commit.
+        """
+        if self._config.validation_placement == ValidationPlacement.IN_TRANSACTION:
+            return self._execute_in_transaction_command(
+                request_id=request_id,
+                order_id=order_id,
+                amount=amount,
+                command_type=command_type,
+                build_candidate_event=build_candidate_event,
+            )
+
+        raise NotImplementedError(
+            "Unsupported validation placement for this commit: "
+            f"{self._config.validation_placement}"
+        )
+
+    def _execute_in_transaction_command(
+        self,
+        *,
+        request_id: str,
+        order_id: str,
+        amount: Decimal,
+        command_type: CommandType,
+        build_candidate_event: CandidateEventBuilder,
+    ) -> PostgresWriteSideResult:
+        """
+        Execute the current durable write-side flow with Compass validation
+        inside the PostgreSQL unit-of-work boundary.
+
+        This is the existing Stage 3.5B PR5 behavior, now named explicitly
+        as the IN_TRANSACTION validation placement path.
+
+        Important:
+        PostgresWriteSideUnitOfWork commits on a clean context-manager exit.
+        Therefore, every non-accepted early return inside this method must call
+        uow.rollback() before returning.
+        """
         signature = RequestSignature(
             request_id=request_id,
             command_type=command_type,
@@ -240,6 +296,7 @@ class PostgresTransactionalWriteSide:
                 actual_prev_event=actual_prev_event,
             )
 
+            # The candidate event is not accepted history until validation and admission pass.
             candidate_event = build_candidate_event(aggregate)
 
             validation_decision = self._validation_runtime.decide(
@@ -258,6 +315,9 @@ class PostgresTransactionalWriteSide:
                 )
 
             expected_current_version = aggregate.current_version
+
+            # append-time admission has a physical side effect:
+            # if admitted, the candidate event is appended to order_events here.
             admission_result = admission_gate.admit(
                 candidate_event,
                 expected_current_version=expected_current_version,

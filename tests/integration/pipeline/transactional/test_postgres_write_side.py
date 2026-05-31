@@ -22,6 +22,10 @@ from src.pipeline.transactional.postgres_write_side import (
     PostgresTransactionalWriteSide,
     PostgresWriteSideOutcome,
 )
+from src.pipeline.transactional.postgres_write_side_config import (
+    PostgresWriteSideConfig,
+    ValidationPlacement,
+)
 from src.storage.idempotency_store import IdempotencyVerdict
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_idempotency_store import PostgresIdempotencyStore
@@ -110,12 +114,12 @@ class RaisingGateFactory:
 class CountingOptimisticGateFactory:
     def __init__(self):
         self.call_count = 0
-        self.gate_ids: list[int] = []
+        self.gates: list[PostgresOptimisticAdmissionGate] = []
 
     def __call__(self, uow):
         self.call_count += 1
         gate = PostgresOptimisticAdmissionGate(uow.event_store)
-        self.gate_ids.append(id(gate))
+        self.gates.append(gate)
         return gate
 
 
@@ -147,6 +151,38 @@ def count_rows(db_connection, table_name: str) -> int:
 
 
 def test_create_order_accepts_event_and_records_idempotency(db_connection, write_side):
+    result = write_side.create_order(
+        request_id="create-request-001",
+        order_id="order-write-side-1",
+        amount=Decimal("100.00"),
+    )
+
+    assert result.outcome == PostgresWriteSideOutcome.ACCEPTED
+    assert result.accepted_event is not None
+    assert result.accepted_event.event_type == EventType.CREATED
+    assert result.idempotency_decision.verdict == IdempotencyVerdict.MISS
+    assert result.stream_admission_result is not None
+    assert result.stream_admission_result.verdict == AdmissionVerdict.ADMITTED
+    assert result.validation_decision is not None
+    assert result.validation_decision.action == EnforcementAction.ALLOW
+    assert result.admission_result is not None
+    assert result.admission_result.verdict == AdmissionVerdict.ADMITTED
+
+    assert count_rows(db_connection, "order_events") == 1
+    assert count_rows(db_connection, "idempotency_records") == 1
+
+
+def test_explicit_in_transaction_config_preserves_write_side_behavior(
+    db_connection,
+):
+    write_side = PostgresTransactionalWriteSide(
+        connection=db_connection,
+        validation_runtime=FakeValidationRuntimeAllow(),
+        config=PostgresWriteSideConfig(
+            validation_placement=ValidationPlacement.IN_TRANSACTION,
+        ),
+    )
+
     result = write_side.create_order(
         request_id="create-request-001",
         order_id="order-write-side-1",
@@ -701,8 +737,8 @@ def test_admission_gate_factory_builds_new_gate_per_command(db_connection):
     )
 
     assert factory.call_count == 2
-    assert len(factory.gate_ids) == 2
-    assert len(set(factory.gate_ids)) == 2
+    assert len(factory.gates) == 2
+    assert factory.gates[0] is not factory.gates[1]
 
 
 def test_accepted_history_can_be_loaded_after_transactional_flow(
