@@ -40,6 +40,7 @@ The project has completed an executable baseline across:
 - Stage 3.5B PR3 PostgresIdempotencyStore baseline
 - Stage 3.5B PR4 transactional semantic write-side boundary
 - Stage 3.5B PR5 PostgreSQL concurrency admission boundary
+- Stage 3.5B PR6 validation placement strategy baseline
 
 This means:
 
@@ -51,14 +52,15 @@ This means:
 - Stage 3.5B PR1 has established the durable write-side schema and local PostgreSQL setup baseline
 - Stage 3.5B PR4 has established the first PostgreSQL-backed transactional semantic write-side flow
 - Stage 3.5B PR5 has established PostgreSQL-backed two-phase concurrency admission
+- Stage 3.5B PR6 is establishing validation placement strategy as a Stage 4 prelude
 
-The next major focus is:
+The current major focus is:
 
 - **Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy**
 
 After transaction atomicity and PostgreSQL-backed concurrency admission are clarified, the project can proceed toward:
 
-- PR6 / Stage 4 Prelude validation placement strategy
+- finalize PR6 / Stage 4 Prelude validation placement strategy
 - Stage 3.5C durable read-side baseline
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
 - Stage 5 dual-dimension governance demo
@@ -638,7 +640,7 @@ PR5 does not implement:
 
 #### Status
 
-Next active candidate after PR5 merge.
+In progress / close-ready in Stage 3.5B PR6.
 
 #### Goal
 
@@ -653,13 +655,13 @@ PR5 establishes two-phase PostgreSQL concurrency admission.
 Only after PR5 can the project safely support a second orchestration mode:
 
 ```text
-pre-transaction Compass validation + OCC
+pre-transaction Compass validation + append-time admission
 ```
 
 This strategy allows the system to compare latency and safety trade-offs between:
 
 - in-transaction Compass validation
-- pre-transaction Compass validation + OCC
+- pre-transaction Compass validation + append-time admission
 - validation-off baseline for measurement
 
 Without validation placement strategy, Stage 4 timing or evidence tables would only measure one fixed orchestration path. They would not be able to compare in-transaction validation against pre-transaction validation plus append-time concurrency admission.
@@ -670,8 +672,11 @@ Without validation placement strategy, Stage 4 timing or evidence tables would o
 - keep `ValidationMode` separate from `ValidationPlacement`
 - preserve `IN_TRANSACTION` as the default validation placement
 - support a minimal `PRE_TRANSACTION` validation + append-time admission path
-- introduce a write-side factory / config boundary if needed
+- introduce `PostgresWriteSideConfig` / `ValidationPlacement` as the configuration boundary
 - ensure stale pre-validated candidates cannot enter accepted history
+- preserve `IN_TRANSACTION` as the default behavior
+- keep `append_if_admitted(...)` as the final accepted-history mutation boundary
+- clean up implicit read transactions before CPU-side `PRE_TRANSACTION` validation
 - enable latency and safety comparison without duplicating storage logic
 
 #### Candidate Future API
@@ -693,6 +698,13 @@ PostgresWriteSideConfig(
     admission_strategy=AdmissionStrategy.OPTIMISTIC,
 )
 ```
+
+#### Related Notes
+
+- [Validation Placement Strategy Boundary](../boundary_notes/validation_placement_strategy_boundary.md)
+- [Pre-Transaction Read Cleanup Boundary](../postmortems/pre_transaction_read_cleanup_boundary.md)
+
+The cleanup boundary records why `PRE_TRANSACTION` validation must not accidentally carry an implicit PostgreSQL read transaction into CPU-side validation.
 
 #### Non-goals
 
@@ -720,6 +732,9 @@ Stage 3.5B is complete when:
 - Compass Layer 1 remains on the durable write-side path before accepted history mutation
 - validation `BLOCK` does not pollute accepted history or idempotency memory
 - PostgreSQL-backed concurrency admission rejects stale writers explicitly
+- validation placement can be configured between `IN_TRANSACTION` and minimal `PRE_TRANSACTION` baseline
+- `PRE_TRANSACTION` validation remains guarded by append-time admission before accepted-history mutation
+- preliminary read transactions are cleaned up before CPU-side pre-transaction validation
 - exact money persistence is preserved
 - UUID event identity is preserved
 - candidate / accepted event identity semantics remain clear

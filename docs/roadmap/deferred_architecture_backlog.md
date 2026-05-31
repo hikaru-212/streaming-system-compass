@@ -8,6 +8,18 @@ This document records architecture issues intentionally deferred from the curren
 
 The purpose of this backlog is not to expand the current PR scope. Instead, it preserves design concerns that were identified during Stage 3.5B work but should be handled only when the system reaches the right implementation stage.
 
+This backlog should not collect every possible cleanup idea.
+
+An item should remain here only if it has at least one of the following:
+
+- a plausible future trigger
+- an architectural consequence
+- a stage dependency
+- a production-hardening reason
+- a clear relationship to runtime evidence, governance, or durability
+
+Pure naming preference or style cleanup should not remain in this backlog unless it has a concrete future compatibility cost.
+
 Current focus:
 
 ```text
@@ -33,8 +45,8 @@ Completed
 PR6 active candidate
 → appropriate for the validation-placement strategy PR after PR5 admission exists
 
-Optional Stage 3.5B hardening
-→ can be done after PR5 if worth the schema/documentation churn
+Optional durable schema hardening
+→ can be done later if the schema boundary becomes meaningful enough to justify migration churn
 
 Stage 4 / evidence design
 → should wait for SemanticOutcome, runtime evidence, or governance work
@@ -48,71 +60,17 @@ Stage 4 / connection-pool hardening
 
 ---
 
-## 1. Durable `EventType` Vocabulary Normalization
+## 1. Proof Previous Status Constraint Hardening
 
 ### Current Decision
 
-Do not change `EventType` values during PR4 / PR5.
-
-Current values remain:
-
-```python
-EventType.CREATED = "created"
-EventType.PAID = "paid"
-```
-
-This is intentionally aligned with the current SQL migration constraint:
+The database currently stores previous-status proof claims as plain text:
 
 ```sql
-CHECK (event_type IN ('created', 'paid'))
+proof_prev_status TEXT NOT NULL
 ```
 
-### Why Not Now
-
-Changing `EventType` to uppercase values such as `"CREATED"` and `"PAID"` would require coordinated changes to:
-
-- SQL migration constraints
-- existing local database state
-- PostgresEventStore insert behavior
-- integration tests
-- documentation
-- durable event fixtures / expected values
-
-That would expand PR4 / PR5 beyond their intended scope.
-
-### Current Classification
-
-```text
-Optional Stage 3.5B hardening after PR5
-```
-
-This is **not** Stage 4 Error Model work.
-
-It is durable vocabulary / schema hardening.
-
-### Suggested Timing
-
-After Stage 3.5B PR5, if there is a clear reason to normalize durable storage vocabulary.
-
-Possible future PR:
-
-```text
-schema: harden durable event vocabulary constraints
-```
-
-### Possible Future Issue
-
-```text
-Evaluate durable EventType vocabulary normalization
-```
-
----
-
-## 2. `OrderStatus` Durable Constraint Hardening
-
-### Current Decision
-
-`OrderStatus` values may already be normalized at the Python domain level:
+Python domain status values are already normalized:
 
 ```python
 OrderStatus.INIT = "INIT"
@@ -120,17 +78,33 @@ OrderStatus.CREATED = "CREATED"
 OrderStatus.PAID = "PAID"
 ```
 
-However, the database schema currently defines:
+The current application write path constructs proof status from domain objects, so normal command execution is already protected by Python-side domain logic and Compass validation.
 
-```sql
-proof_prev_status TEXT NOT NULL
+### Why Not Now
+
+Adding a database constraint is useful defense-in-depth, but it is not required for the current PR6 validation placement baseline.
+
+PR6 focuses on:
+
+```text
+ValidationPlacement.IN_TRANSACTION
+ValidationPlacement.PRE_TRANSACTION
 ```
 
-It does not yet enforce allowed status values.
+and on making sure pre-transaction validation remains protected by append-time admission and connection-state cleanup.
 
-### Future Work
+A proof-status database constraint would be a durable schema hardening task, not a validation-placement requirement.
 
-After durable persistence behavior is stable, consider adding a DB constraint such as:
+### Future Trigger
+
+Consider adding a database constraint when one of the following becomes true:
+
+- proof fields are treated as durable evidence in Stage 4
+- additional write paths or migration tools may touch `order_events`
+- manual SQL / operational repair scripts become part of the workflow
+- the project wants stronger database-side proof vocabulary enforcement before production hardening
+
+Possible future constraint:
 
 ```sql
 CHECK (proof_prev_status IN ('INIT', 'CREATED', 'PAID'))
@@ -139,18 +113,18 @@ CHECK (proof_prev_status IN ('INIT', 'CREATED', 'PAID'))
 ### Current Classification
 
 ```text
-Optional Stage 3.5B hardening after PR5
+Optional durable schema hardening
 ```
 
 This is durable schema hardening, not Stage 4 `SemanticOutcome` / Error Model work.
 
 ### Suggested Timing
 
-After PR5 or before Stage 3.5C, if the project wants to harden durable proof-status vocabulary.
+Before Stage 4 durable evidence work, or during a dedicated schema-hardening pass.
 
 ---
 
-## 3. UUIDv7 / Time-Ordered UUID Evaluation
+## 2. UUIDv7 / Time-Ordered UUID Evaluation
 
 ### Current Decision
 
@@ -191,7 +165,7 @@ After Stage 3.5B or after durable read-side baseline, unless storage locality or
 
 ---
 
-## 4. Formal `EventStoreProtocol`
+## 3. Formal `EventStoreProtocol`
 
 ### Current Decision
 
@@ -236,7 +210,7 @@ Defer until multiple storage implementations or admission strategies require str
 
 ---
 
-## 5. Stored Event Record / JSONB Evidence Hydration
+## 4. Stored Event Record / JSONB Evidence Hydration
 
 ### Current Decision
 
@@ -293,7 +267,7 @@ During audit, evidence, or SemanticOutcome persistence design.
 
 ---
 
-## 6. Registry-Stage Timing in `metadata_json`
+## 5. Registry-Stage Timing in `metadata_json`
 
 ### Current Decision
 
@@ -332,7 +306,7 @@ During PR6 if lightweight in-memory timing metadata helps compare validation pla
 
 ---
 
-## 7. Transaction Lifecycle Ownership
+## 6. Transaction Lifecycle Ownership
 
 ### Status
 
@@ -372,7 +346,7 @@ Further transaction ownership work may occur in PR6 when validation placement in
 
 ---
 
-## 7A. Pessimistic Admission Autocommit Guard
+## 6A. Pessimistic Admission Autocommit Guard
 
 ### Status
 
@@ -407,7 +381,7 @@ See:
 
 ---
 
-## 8. Custom Persistence Exceptions
+## 7. Custom Persistence Exceptions
 
 ### Status
 
@@ -454,7 +428,7 @@ PR5 does not persist admission attempts or introduce governance outcomes.
 
 ---
 
-## 9. Event Payload / Proof / Metadata JSON Shape
+## 8. Event Payload / Proof / Metadata JSON Shape
 
 ### Current Decision
 
@@ -495,7 +469,7 @@ After durable write-side baseline, before or during SemanticOutcome persistence 
 
 ---
 
-## 10. Append-Only Database Hardening
+## 9. Append-Only Database Hardening
 
 ### Current Decision
 
@@ -532,7 +506,7 @@ After Stage 3.5B durable baseline is complete, during production-hardening work.
 
 ---
 
-## 11. Integration Test Boundary and CI Strategy
+## 10. Integration Test Boundary and CI Strategy
 
 ### Status
 
@@ -574,7 +548,7 @@ These are not required for PR4.
 
 ---
 
-## 12. Validation Placement Strategy
+## 11. Validation Placement Strategy
 
 ### Status
 
@@ -639,7 +613,7 @@ Immediately after PR5 merge, before Stage 4 timing / evidence persistence work.
 
 ---
 
-## 13. Pre-Transaction Cleanup Failure Handling
+## 12. Pre-Transaction Cleanup Failure Handling
 
 ### Status
 
@@ -816,8 +790,7 @@ The deferred backlog should now be read with the following stage alignment:
 
 | Item | Current Alignment |
 |---|---|
-| EventType vocabulary normalization | Optional after PR5 / durable schema hardening |
-| OrderStatus durable constraint | Optional after PR5 / durable schema hardening |
+| Proof previous status constraint hardening | Optional durable schema hardening |
 | UUIDv7 | Later evaluation |
 | EventStoreProtocol | Deferred until stricter type-level coordination is needed |
 | StoredEventRecord / JSONB hydration | Stage 4 / evidence design |

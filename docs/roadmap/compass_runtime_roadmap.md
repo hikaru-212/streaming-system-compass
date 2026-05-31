@@ -123,7 +123,7 @@ This is the gap that later stages must close.
 
 The durable write-side is also not yet fully concurrency-admission-aware.
 
-Stage 3.5B PR5 is planned to restore the concurrency/admission boundary for PostgreSQL-backed execution.
+Stage 3.5B PR5 restores the concurrency/admission boundary for PostgreSQL-backed execution, and Stage 3.5B PR6 introduces validation placement strategy as a Stage 4 prelude.
 
 ---
 
@@ -212,14 +212,14 @@ PR1 Physical Schema + Local PostgreSQL + Migration ✅
 PR2 PostgresEventStore ✅
 PR3 PostgresIdempotencyStore ✅
 PR4 Transactional Semantic Write-side Boundary ✅
-PR5 PostgreSQL Concurrency Admission Boundary in progress
+PR5 PostgreSQL Concurrency Admission Boundary ✅
 ```
 
-A later PR6 / Stage 4 prelude may add validation placement strategy:
+PR6 / Stage 4 prelude adds validation placement strategy:
 
 ```text
 IN_TRANSACTION validation
-PRE_TRANSACTION validation + OCC
+PRE_TRANSACTION validation + append-time admission
 ASYNC_AUDIT future
 ```
 
@@ -237,6 +237,8 @@ Stage 3.5B gives or should give Compass:
 - Compass Layer 1 preserved before durable accepted-history mutation
 - clear candidate / accepted identity boundary
 - PostgreSQL-backed two-phase concurrency admission through PR5
+- validation placement strategy through PR6
+- minimal `PRE_TRANSACTION` validation path guarded by append-time admission
 
 ## Related Postmortems
 
@@ -246,6 +248,7 @@ Stage 3.5B gives or should give Compass:
 - [From Runtime Behavior to Durable Evidence](../postmortems/from_runtime_behavior_to_durable_evidence.md)
 - [From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md)
 - [Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)
+- [Pre-Transaction Read Cleanup Boundary](../postmortems/pre_transaction_read_cleanup_boundary.md)
 
 These explain why persistence is not just a backend swap.
 
@@ -276,7 +279,9 @@ Stage 3.5B PR1 / PR2 / PR3 are complete.
 
 Stage 3.5B PR4 establishes the transactional semantic write-side boundary.
 
-Stage 3.5B PR5 is in progress for PostgreSQL-backed two-phase concurrency admission.
+Stage 3.5B PR5 is complete for PostgreSQL-backed two-phase concurrency admission.
+
+Stage 3.5B PR6 is in progress / close-ready for validation placement strategy. It preserves `IN_TRANSACTION` as the default and adds a minimal `PRE_TRANSACTION` path guarded by append-time admission.
 
 ---
 
