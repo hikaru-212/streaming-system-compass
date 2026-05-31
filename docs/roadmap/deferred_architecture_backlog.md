@@ -8,17 +8,31 @@ This document records architecture issues intentionally deferred from the curren
 
 The purpose of this backlog is not to expand the current PR scope. Instead, it preserves design concerns that were identified during Stage 3.5B work but should be handled only when the system reaches the right implementation stage.
 
+This backlog should not collect every possible cleanup idea.
+
+An item should remain here only if it has at least one of the following:
+
+- a plausible future trigger
+- an architectural consequence
+- a stage dependency
+- a production-hardening reason
+- a clear relationship to runtime evidence, governance, or durability
+
+Pure naming preference or style cleanup should not remain in this backlog unless it has a concrete future compatibility cost.
+
 Current focus:
 
 ```text
-Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary closure
+Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy
 ```
 
 Next planned focus:
 
 ```text
-Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy
+Stage 3.5C — Durable Read-Side Baseline
 ```
+
+PR6 remains the current focus until the validation placement baseline is merged and marked complete.
 
 ---
 
@@ -28,86 +42,35 @@ Stage 3.5B PR6 / Stage 4 Prelude — Validation Placement Strategy
 Completed
 → already handled in the current Stage 3.5B baseline
 
-PR5 candidate
-→ appropriate for the next concurrency/admission PR
+PR6 active candidate
+→ appropriate for the validation-placement strategy PR after PR5 admission exists
 
-Optional Stage 3.5B hardening
-→ can be done after PR5 if worth the schema/documentation churn
+Optional durable schema hardening
+→ can be done later if the schema boundary becomes meaningful enough to justify migration churn
 
 Stage 4 / evidence design
 → should wait for SemanticOutcome, runtime evidence, or governance work
 
 Later production hardening
 → useful, but not part of the current correctness baseline
+
+Stage 4 / connection-pool hardening
+→ should wait until structured error modeling, connection lifecycle policy, or pooled database connections exist
 ```
 
 ---
 
-## 1. Durable `EventType` Vocabulary Normalization
+## 1. Proof Previous Status Constraint Hardening
 
 ### Current Decision
 
-Do not change `EventType` values during PR4 / PR5.
-
-Current values remain:
-
-```python
-EventType.CREATED = "created"
-EventType.PAID = "paid"
-```
-
-This is intentionally aligned with the current SQL migration constraint:
+The database currently stores previous-status proof claims as plain text:
 
 ```sql
-CHECK (event_type IN ('created', 'paid'))
+proof_prev_status TEXT NOT NULL
 ```
 
-### Why Not Now
-
-Changing `EventType` to uppercase values such as `"CREATED"` and `"PAID"` would require coordinated changes to:
-
-- SQL migration constraints
-- existing local database state
-- PostgresEventStore insert behavior
-- integration tests
-- documentation
-- durable event fixtures / expected values
-
-That would expand PR4 / PR5 beyond their intended scope.
-
-### Current Classification
-
-```text
-Optional Stage 3.5B hardening after PR5
-```
-
-This is **not** Stage 4 Error Model work.
-
-It is durable vocabulary / schema hardening.
-
-### Suggested Timing
-
-After Stage 3.5B PR5, if there is a clear reason to normalize durable storage vocabulary.
-
-Possible future PR:
-
-```text
-schema: harden durable event vocabulary constraints
-```
-
-### Possible Future Issue
-
-```text
-Evaluate durable EventType vocabulary normalization
-```
-
----
-
-## 2. `OrderStatus` Durable Constraint Hardening
-
-### Current Decision
-
-`OrderStatus` values may already be normalized at the Python domain level:
+Python domain status values are already normalized:
 
 ```python
 OrderStatus.INIT = "INIT"
@@ -115,17 +78,33 @@ OrderStatus.CREATED = "CREATED"
 OrderStatus.PAID = "PAID"
 ```
 
-However, the database schema currently defines:
+The current application write path constructs proof status from domain objects, so normal command execution is already protected by Python-side domain logic and Compass validation.
 
-```sql
-proof_prev_status TEXT NOT NULL
+### Why Not Now
+
+Adding a database constraint is useful defense-in-depth, but it is not required for the current PR6 validation placement baseline.
+
+PR6 focuses on:
+
+```text
+ValidationPlacement.IN_TRANSACTION
+ValidationPlacement.PRE_TRANSACTION
 ```
 
-It does not yet enforce allowed status values.
+and on making sure pre-transaction validation remains protected by append-time admission and connection-state cleanup.
 
-### Future Work
+A proof-status database constraint would be a durable schema hardening task, not a validation-placement requirement.
 
-After durable persistence behavior is stable, consider adding a DB constraint such as:
+### Future Trigger
+
+Consider adding a database constraint when one of the following becomes true:
+
+- proof fields are treated as durable evidence in Stage 4
+- additional write paths or migration tools may touch `order_events`
+- manual SQL / operational repair scripts become part of the workflow
+- the project wants stronger database-side proof vocabulary enforcement before production hardening
+
+Possible future constraint:
 
 ```sql
 CHECK (proof_prev_status IN ('INIT', 'CREATED', 'PAID'))
@@ -134,18 +113,18 @@ CHECK (proof_prev_status IN ('INIT', 'CREATED', 'PAID'))
 ### Current Classification
 
 ```text
-Optional Stage 3.5B hardening after PR5
+Optional durable schema hardening
 ```
 
 This is durable schema hardening, not Stage 4 `SemanticOutcome` / Error Model work.
 
 ### Suggested Timing
 
-After PR5 or before Stage 3.5C, if the project wants to harden durable proof-status vocabulary.
+Before Stage 4 durable evidence work, or during a dedicated schema-hardening pass.
 
 ---
 
-## 3. UUIDv7 / Time-Ordered UUID Evaluation
+## 2. UUIDv7 / Time-Ordered UUID Evaluation
 
 ### Current Decision
 
@@ -186,7 +165,7 @@ After Stage 3.5B or after durable read-side baseline, unless storage locality or
 
 ---
 
-## 4. Formal `EventStoreProtocol`
+## 3. Formal `EventStoreProtocol`
 
 ### Current Decision
 
@@ -209,7 +188,7 @@ Defining it too early may result in an abstraction shaped by incomplete informat
 ### Current Classification
 
 ```text
-Optional PR5 candidate
+Deferred until multiple storage implementations need stricter type-level coordination
 ```
 
 ### Future Work
@@ -225,13 +204,13 @@ class EventStoreProtocol(Protocol):
 
 ### Suggested Timing
 
-During PR5 only if optimistic / pessimistic admission work needs a stable type boundary.
+Do not introduce only because PR5 admission exists.
 
-Otherwise defer until multiple storage implementations require stricter type-level coordination.
+Defer until multiple storage implementations or admission strategies require stricter type-level coordination.
 
 ---
 
-## 5. Stored Event Record / JSONB Evidence Hydration
+## 4. Stored Event Record / JSONB Evidence Hydration
 
 ### Current Decision
 
@@ -288,7 +267,7 @@ During audit, evidence, or SemanticOutcome persistence design.
 
 ---
 
-## 6. Registry-Stage Timing in `metadata_json`
+## 5. Registry-Stage Timing in `metadata_json`
 
 ### Current Decision
 
@@ -318,16 +297,16 @@ Timing collection is meaningful, but it should not distract from correctness bou
 ### Current Classification
 
 ```text
-Observability / Stage 4 / PR6 latency experiment candidate
+PR6 latency experiment candidate / Stage 4 evidence design
 ```
 
 ### Suggested Timing
 
-After PR5, during validation placement latency comparison or runtime evidence work.
+During PR6 if lightweight in-memory timing metadata helps compare validation placements; otherwise defer to Stage 4 evidence / outcome persistence.
 
 ---
 
-## 7. Transaction Lifecycle Ownership
+## 6. Transaction Lifecycle Ownership
 
 ### Status
 
@@ -363,11 +342,11 @@ Completed
 
 ### Future Work
 
-Further transaction ownership work may occur in PR5 when admission gates are integrated into the transactional write-side flow.
+Further transaction ownership work may occur in PR6 when validation placement introduces pre-transaction and in-transaction orchestration modes.
 
 ---
 
-## 7A. Pessimistic Admission Autocommit Guard
+## 6A. Pessimistic Admission Autocommit Guard
 
 ### Status
 
@@ -402,7 +381,7 @@ See:
 
 ---
 
-## 8. Custom Persistence Exceptions
+## 7. Custom Persistence Exceptions
 
 ### Status
 
@@ -449,7 +428,7 @@ PR5 does not persist admission attempts or introduce governance outcomes.
 
 ---
 
-## 9. Event Payload / Proof / Metadata JSON Shape
+## 8. Event Payload / Proof / Metadata JSON Shape
 
 ### Current Decision
 
@@ -490,7 +469,7 @@ After durable write-side baseline, before or during SemanticOutcome persistence 
 
 ---
 
-## 10. Append-Only Database Hardening
+## 9. Append-Only Database Hardening
 
 ### Current Decision
 
@@ -503,7 +482,7 @@ Current defenses are:
 - `UNIQUE(order_id, sequence)`
 - expected-version check in the store
 - PR4 transaction boundary
-- PR5 planned admission boundary
+- PR5 admission boundary
 
 ### Future Work
 
@@ -527,7 +506,7 @@ After Stage 3.5B durable baseline is complete, during production-hardening work.
 
 ---
 
-## 11. Integration Test Boundary and CI Strategy
+## 10. Integration Test Boundary and CI Strategy
 
 ### Status
 
@@ -569,19 +548,23 @@ These are not required for PR4.
 
 ---
 
-## 12. Validation Placement Strategy
+## 11. Validation Placement Strategy
+
+### Status
+
+```text
+Active PR6 candidate after PR5
+```
 
 ### Current Decision
 
-Do not implement validation placement strategy in PR4.
-
-PR4 establishes the high-defense baseline:
+PR4 established the high-defense baseline:
 
 ```text
 IN_TRANSACTION Compass validation
 ```
 
-ADR 0011 records the distinction:
+ADR 0011 records the conceptual distinction:
 
 ```text
 ValidationMode
@@ -589,45 +572,215 @@ ValidationMode
 ValidationPlacement
 ```
 
-### Why Not Now
+PR5 completed the required admission dependency by introducing two-phase PostgreSQL concurrency admission:
+
+```text
+prepare_stream(order_id)
+→ append_if_admitted(candidate_event, expected_current_version)
+```
+
+After PR5, validation placement is no longer only a deferred concern. The required append-time admission boundary now exists, so `PRE_TRANSACTION` validation can be evaluated safely as a PR6 / Stage 4 Prelude.
+
+### Why It Becomes Active After PR5
 
 Safe `PRE_TRANSACTION` validation requires append-time concurrency admission.
 
-That depends on PR5.
+Without PR5, a candidate event could be validated against accepted history and then become stale before append.
 
-### Future Work
+With PR5, append-time admission can reject the stale candidate before it enters accepted history.
 
-After PR5, introduce validation placement strategy:
+### PR6 Work
+
+PR6 should introduce:
 
 ```text
 IN_TRANSACTION
 PRE_TRANSACTION
-ASYNC_AUDIT
+future ASYNC_AUDIT
 ```
 
-Potential future flow:
-
-```text
-load history
-→ rehydrate aggregate
-→ build candidate event
-→ run Compass validation
-
-BEGIN
-→ append with expected_version / admission gate
-→ record idempotency
-→ COMMIT
-```
+It should preserve `IN_TRANSACTION` as the default and add a minimal `PRE_TRANSACTION` orchestration path for latency / safety comparison.
 
 ### Current Classification
 
 ```text
-PR6 / Stage 4 prelude
+Active PR6 / Stage 4 prelude
 ```
 
 ### Suggested Timing
 
-After PR5, when concurrency admission exists and latency / safety comparison becomes meaningful.
+Immediately after PR5 merge, before Stage 4 timing / evidence persistence work.
+
+---
+
+## 12. Pre-Transaction Cleanup Failure Handling
+
+### Status
+
+```text
+Deferred until Stage 4 error model or connection-pool hardening
+```
+
+### Context
+
+Stage 3.5B PR6 introduces `PRE_TRANSACTION` validation placement.
+
+The current PR6 baseline uses a cleanup boundary during the preliminary read phase:
+
+```python
+try:
+    preliminary_idempotency_decision = read_idempotency_store.check(signature)
+
+    if preliminary_idempotency_decision.verdict == IdempotencyVerdict.REPLAY:
+        return PostgresWriteSideResult(...)
+
+    if preliminary_idempotency_decision.verdict == IdempotencyVerdict.CONFLICT:
+        return PostgresWriteSideResult(...)
+
+    history = read_event_store.load(order_id)
+finally:
+    connection.rollback()
+```
+
+This is required because read-only `SELECT` operations can still open an implicit transaction when the PostgreSQL connection is not in autocommit mode.
+
+The current PR6 goal is to ensure that CPU-side Compass validation does not accidentally run while the connection still carries an implicit read transaction.
+
+### Current Decision
+
+Use the simple cleanup guarantee for PR6:
+
+```text
+preliminary read phase
+→ always attempt rollback cleanup
+→ run CPU-side validation only after the read transaction is closed
+```
+
+This is sufficient for the current local PostgreSQL and non-pooled connection baseline.
+
+It preserves the physical meaning of:
+
+```text
+ValidationPlacement.PRE_TRANSACTION
+```
+
+by ensuring that validation is not merely outside the write-side Unit of Work logically, but also separated from the preliminary read transaction physically.
+
+### Deferred Concern
+
+The current PR6 baseline does not yet implement structured handling for rollback failure itself.
+
+Future production-like handling may need to distinguish:
+
+```text
+primary read / load failure
+vs
+cleanup rollback failure
+```
+
+This matters because rollback can itself fail if the connection is already closed, aborted, or physically broken.
+
+There are two different failure cases:
+
+```text
+Case 1:
+primary read failure happens
++
+cleanup rollback failure also happens
+
+Risk:
+cleanup failure may mask the original read failure
+```
+
+```text
+Case 2:
+primary read succeeds
++
+cleanup rollback fails
+
+Risk:
+the system may continue as if the connection were clean even though cleanup failed
+```
+
+The project should not silently swallow cleanup failures with a broad:
+
+```python
+except Exception:
+    pass
+```
+
+That would avoid masking the primary error, but it could also hide connection-state corruption.
+
+### Future Direction
+
+When Stage 4 error modeling or connection pooling is introduced, consider a hardened cleanup model that can:
+
+- preserve the primary error when cleanup also fails
+- attach cleanup failure as diagnostic context
+- map cleanup failure into a structured infrastructure error
+- mark the connection as unsafe for reuse
+- discard or invalidate broken pooled connections
+- log cleanup failures with trace context
+- expose cleanup failure as operational evidence
+
+A possible future pattern is:
+
+```text
+if primary error exists:
+    preserve primary error
+    attach cleanup failure as diagnostic context
+
+if no primary error exists:
+    surface cleanup failure as infrastructure failure
+```
+
+This future work should be integrated with the Stage 4 error model instead of being implemented as ad hoc exception handling inside PR6.
+
+### Why Not Now
+
+PR6 is focused on validation placement:
+
+```text
+IN_TRANSACTION
+vs
+PRE_TRANSACTION
+```
+
+It should not introduce a full production-grade connection lifecycle policy.
+
+The current project does not yet own:
+
+- connection pool abstraction
+- connection invalidation policy
+- structured infrastructure error model
+- durable infrastructure-error evidence
+- production observability pipeline
+- cleanup failure metrics or traces
+
+Adding all of that in PR6 would expand the PR beyond validation placement strategy.
+
+### Current Classification
+
+```text
+Stage 4 / connection-pool hardening
+```
+
+### Suggested Timing
+
+Revisit when at least one of the following becomes true:
+
+- Stage 4 error model work begins
+- connection pooling is introduced
+- infrastructure errors are mapped into structured runtime outcomes
+- production-like observability is added
+- cleanup failures need to become operational evidence
+
+### Related Note
+
+See:
+
+- [Pre-Transaction Read Cleanup Boundary](../postmortems/pre_transaction_read_cleanup_boundary.md)
+
 
 ---
 
@@ -637,19 +790,19 @@ The deferred backlog should now be read with the following stage alignment:
 
 | Item | Current Alignment |
 |---|---|
-| EventType vocabulary normalization | Optional after PR5 / durable schema hardening |
-| OrderStatus durable constraint | Optional after PR5 / durable schema hardening |
+| Proof previous status constraint hardening | Optional durable schema hardening |
 | UUIDv7 | Later evaluation |
-| EventStoreProtocol | Optional PR5 candidate |
+| EventStoreProtocol | Deferred until stricter type-level coordination is needed |
 | StoredEventRecord / JSONB hydration | Stage 4 / evidence design |
-| Registry-stage timing | Observability / Stage 4 / PR6 latency experiment |
+| Registry-stage timing | PR6 latency experiment candidate / Stage 4 evidence design |
 | Transaction lifecycle ownership | Completed in PR4 |
 | Pessimistic admission autocommit guard | Completed in PR5 |
 | Custom persistence exceptions | Completed in PR5 for storage/admission errors; Stage 4 for SemanticOutcome |
 | Payload/proof/metadata JSON shape | Stage 4 evidence / outcome persistence |
 | Append-only DB hardening | Later production hardening |
 | Integration test boundary / CI strategy | Mostly completed in PR4 |
-| Validation placement strategy | PR6 / Stage 4 prelude |
+| Validation placement strategy | Active PR6 / Stage 4 prelude |
+| Pre-transaction cleanup failure handling | Stage 4 / connection-pool hardening |
 
 The backlog remains a scope-control document.
 

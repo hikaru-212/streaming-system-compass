@@ -66,7 +66,7 @@ def test_postgres_optimistic_admit_appends_candidate_event():
     gate = PostgresOptimisticAdmissionGate(event_store)
     candidate_event = FakeEvent()
 
-    result = gate.admit(candidate_event, expected_current_version=1)
+    result = gate.append_if_admitted(candidate_event, expected_current_version=1)
 
     assert result.verdict == AdmissionVerdict.ADMITTED
     assert result.admitted is True
@@ -86,7 +86,7 @@ def test_postgres_optimistic_admit_translates_value_error_to_stale_write():
     )
     candidate_event = FakeEvent()
 
-    result = gate.admit(candidate_event, expected_current_version=1)
+    result = gate.append_if_admitted(candidate_event, expected_current_version=1)
 
     assert result.verdict == AdmissionVerdict.STALE_WRITE
     assert result.admitted is False
@@ -101,7 +101,7 @@ def test_postgres_optimistic_admit_translates_stale_write_error_to_stale_write()
     )
     candidate_event = FakeEvent()
 
-    result = gate.admit(candidate_event, expected_current_version=1)
+    result = gate.append_if_admitted(candidate_event, expected_current_version=1)
 
     assert result.verdict == AdmissionVerdict.STALE_WRITE
     assert result.admitted is False
@@ -116,7 +116,7 @@ def test_postgres_optimistic_admit_translates_append_conflict_to_stale_write():
     )
     candidate_event = FakeEvent()
 
-    result = gate.admit(candidate_event, expected_current_version=1)
+    result = gate.append_if_admitted(candidate_event, expected_current_version=1)
 
     assert result.verdict == AdmissionVerdict.STALE_WRITE
     assert result.admitted is False
@@ -131,7 +131,7 @@ def test_postgres_optimistic_admit_translates_storage_infrastructure_error():
     )
     candidate_event = FakeEvent()
 
-    result = gate.admit(candidate_event, expected_current_version=1)
+    result = gate.append_if_admitted(candidate_event, expected_current_version=1)
 
     assert result.verdict == AdmissionVerdict.INFRASTRUCTURE_ERROR
     assert result.admitted is False
@@ -147,7 +147,7 @@ def test_postgres_pessimistic_admit_requires_prepare_stream_first():
     )
     candidate_event = FakeEvent(order_id="order-1")
 
-    result = gate.admit(candidate_event, expected_current_version=1)
+    result = gate.append_if_admitted(candidate_event, expected_current_version=1)
 
     assert result.verdict == AdmissionVerdict.INFRASTRUCTURE_ERROR
     assert result.admitted is False

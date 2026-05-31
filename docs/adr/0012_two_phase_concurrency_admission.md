@@ -13,7 +13,7 @@ Stage 3.5B PR5 introduces PostgreSQL-backed concurrency admission for the durabl
 Earlier in PR5, the project established a single-phase admission interface:
 
 ```text
-admit(candidate_event, expected_current_version)
+append_if_admitted(candidate_event, expected_current_version)
 ```
 
 This interface models **append-time admission**. It answers whether a candidate event may occupy the next accepted-history stream position.
@@ -25,7 +25,7 @@ load accepted history
 → rehydrate aggregate
 → create candidate event
 → run Compass validation
-→ admit(candidate_event, expected_version)
+→ append_if_admitted(candidate_event, expected_version)
 → append event if admitted
 ```
 
@@ -37,7 +37,7 @@ Try to append.
 Reject stale writers at append time.
 ```
 
-However, when pessimistic admission was introduced, the same single-phase interface forced the lock to be acquired inside `admit()`. Because `admit()` requires a `candidate_event`, the lock could only be acquired after:
+However, when pessimistic admission was introduced, the same single-phase interface forced the lock to be acquired inside `append_if_admitted()`. Because `append_if_admitted()` requires a `candidate_event`, the lock could only be acquired after:
 
 ```text
 accepted-history loading
@@ -79,12 +79,12 @@ acquire stream lock
 The original interface only allowed this:
 
 ```text
-admit(candidate_event, expected_version)
+append_if_admitted(candidate_event, expected_version)
 ```
 
 But before reading and validation, no candidate event exists yet.
 
-Therefore, a single `admit()` method cannot represent both moments:
+Therefore, a single `append_if_admitted()` method cannot represent both moments:
 
 ```text
 1. entering the stream critical section
@@ -127,7 +127,7 @@ The gate interface should support two distinct moments:
 
 ```text
 prepare_stream(order_id)
-admit(candidate_event, expected_current_version)
+append_if_admitted(candidate_event, expected_current_version)
 ```
 
 ## Phase 1: Stream Preparation
@@ -161,7 +161,7 @@ This allows pessimistic admission to protect the expensive read / rehydrate / va
 
 ## Phase 2: Append-Time Admission
 
-`admit(candidate_event, expected_current_version)` runs after candidate event creation and Compass validation.
+`append_if_admitted(candidate_event, expected_current_version)` runs after candidate event creation and Compass validation.
 
 It answers:
 
@@ -172,7 +172,7 @@ May this candidate event occupy the next accepted-history stream position?
 For optimistic admission:
 
 ```text
-admit(candidate_event, expected_version)
+append_if_admitted(candidate_event, expected_version)
 → attempt append
 → ADMITTED or STALE_WRITE
 ```
@@ -180,7 +180,7 @@ admit(candidate_event, expected_version)
 For pessimistic admission:
 
 ```text
-admit(candidate_event, expected_version)
+append_if_admitted(candidate_event, expected_version)
 → append while the stream lock is already held
 → ADMITTED or STALE_WRITE
 ```
@@ -202,7 +202,7 @@ BEGIN / UoW
 → rehydrate aggregate
 → create candidate event
 → Compass validation
-→ admit(candidate_event, expected_version)
+→ append_if_admitted(candidate_event, expected_version)
 → record idempotency result
 → COMMIT
 ```
@@ -290,10 +290,10 @@ Commit 6:
 - Add ConcurrencyGate.prepare_stream(order_id)
 - Implement optimistic prepare_stream as no-op
 - Move pessimistic advisory lock acquisition into prepare_stream
-- Keep admit(candidate_event, expected_version) as append-time admission
+- Keep append_if_admitted(candidate_event, expected_version) as append-time admission
 
 Commit 7:
-- Integrate prepare_stream + admit into PostgresTransactionalWriteSide
+- Integrate prepare_stream + append_if_admitted into PostgresTransactionalWriteSide
 - Preserve idempotency-before-prepare ordering
 - Add tests for prepare-time LOCK_TIMEOUT
 - Add tests proving replay / conflict does not acquire stream lock

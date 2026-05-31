@@ -28,11 +28,17 @@ from src.pipeline.transactional.postgres_admission import (
 from src.pipeline.transactional.postgres_unit_of_work import (
     PostgresWriteSideUnitOfWork,
 )
+from src.pipeline.transactional.postgres_write_side_config import (
+    PostgresWriteSideConfig,
+    ValidationPlacement,
+)
 from src.storage.idempotency_store import (
     IdempotencyDecision,
     IdempotencyVerdict,
     RequestSignature,
 )
+from src.storage.postgres_event_store import PostgresEventStore
+from src.storage.postgres_idempotency_store import PostgresIdempotencyStore
 
 
 AdmissionGateFactory = Callable[[PostgresWriteSideUnitOfWork], ConcurrencyGate]
@@ -64,28 +70,6 @@ class PostgresWriteSideOutcome(Enum):
 class PostgresWriteSideResult:
     """
     Result returned by the PostgreSQL-backed transactional write-side flow.
-
-    accepted_event:
-    - present for ACCEPTED and REPLAY
-    - absent for CONFLICT, VALIDATION_BLOCKED, and ADMISSION_REJECTED
-
-    idempotency_decision:
-    - records the durable idempotency classification used by this flow
-
-    stream_admission_result:
-    - present when stream preparation was executed
-    - absent for REPLAY / CONFLICT paths because replay/conflict are resolved
-      before stream preparation
-
-    validation_decision:
-    - present when Compass Layer 1 validation was executed
-    - absent for REPLAY / CONFLICT paths because no candidate event is created
-    - absent for prepare-time ADMISSION_REJECTED because validation is not run
-
-    admission_result:
-    - present when append-time admission was executed
-    - absent for REPLAY / CONFLICT / VALIDATION_BLOCKED paths
-    - absent for prepare-time ADMISSION_REJECTED
     """
 
     outcome: PostgresWriteSideOutcome
@@ -100,30 +84,14 @@ class PostgresTransactionalWriteSide:
     """
     PostgreSQL-backed transactional write-side flow.
 
-    This class coordinates:
+    PR6 makes validation placement explicit.
 
-    - durable idempotency check
-    - stream preparation / early concurrency admission
-    - durable accepted-history loading
-    - aggregate rehydration
-    - candidate event creation through the aggregate
-    - Compass Layer 1 transition-truth validation
-    - append-time PostgreSQL admission
-    - idempotency result recording
-    - commit / rollback through PostgresWriteSideUnitOfWork
+    Default behavior remains:
 
-    This is a durable Registry-like flow.
+    - ValidationMode.STRICT
+    - ValidationPlacement.IN_TRANSACTION
 
-    The write-side flow does not directly own the concrete admission strategy.
-    It receives an admission_gate_factory so the caller can choose:
-
-    - optimistic admission
-    - pessimistic admission
-    - test fake admission
-
-    The write side stores the factory, not a concrete gate instance. A new gate
-    is built inside each unit-of-work scope so stateful gates do not leak state
-    across commands or transactions.
+    PRE_TRANSACTION is now supported as a separate orchestration path.
     """
 
     def __init__(
@@ -131,12 +99,26 @@ class PostgresTransactionalWriteSide:
         connection: Connection,
         validation_runtime: ValidationRuntime,
         admission_gate_factory: AdmissionGateFactory | None = None,
+        config: PostgresWriteSideConfig | None = None,
     ):
         self._connection = connection
         self._validation_runtime = validation_runtime
         self._admission_gate_factory = (
             admission_gate_factory or _default_admission_gate_factory
         )
+        self._config = config or PostgresWriteSideConfig()
+
+    def _rehydrate_aggregate_from_history(
+        self,
+        order_id: str,
+        history: list[OrderEvent],
+    ) -> OrderAggregate:
+        aggregate = OrderAggregate(order_id)
+
+        for historical_event in history:
+            aggregate.apply(historical_event)
+
+        return aggregate
 
     def _rehydrate_aggregate(
         self,
@@ -150,10 +132,7 @@ class PostgresTransactionalWriteSide:
         replay accepted history through Aggregate.apply(event).
         """
         history = uow.event_store.load(order_id)
-        aggregate = OrderAggregate(order_id)
-
-        for historical_event in history:
-            aggregate.apply(historical_event)
+        aggregate = self._rehydrate_aggregate_from_history(order_id, history)
 
         return aggregate, history
 
@@ -165,11 +144,6 @@ class PostgresTransactionalWriteSide:
     ) -> ValidationContext:
         """
         Build Compass Layer 1 validation context from accepted history.
-
-        Source of truth:
-        - actual_prev_event comes from accepted history
-        - actual_prev_version comes from the rehydrated aggregate
-        - actual_prev_status comes from the rehydrated aggregate
         """
         return ValidationContext(
             actual_prev_event=actual_prev_event,
@@ -186,6 +160,53 @@ class PostgresTransactionalWriteSide:
         command_type: CommandType,
         build_candidate_event: CandidateEventBuilder,
     ) -> PostgresWriteSideResult:
+        """
+        Dispatch command execution by validation placement.
+        """
+        if self._config.validation_placement == ValidationPlacement.IN_TRANSACTION:
+            return self._execute_in_transaction_command(
+                request_id=request_id,
+                order_id=order_id,
+                amount=amount,
+                command_type=command_type,
+                build_candidate_event=build_candidate_event,
+            )
+
+        if self._config.validation_placement == ValidationPlacement.PRE_TRANSACTION:
+            return self._execute_pre_transaction_command(
+                request_id=request_id,
+                order_id=order_id,
+                amount=amount,
+                command_type=command_type,
+                build_candidate_event=build_candidate_event,
+            )
+
+        raise NotImplementedError(
+            "Unsupported validation placement: "
+            f"{self._config.validation_placement}"
+        )
+
+    def _execute_in_transaction_command(
+        self,
+        *,
+        request_id: str,
+        order_id: str,
+        amount: Decimal,
+        command_type: CommandType,
+        build_candidate_event: CandidateEventBuilder,
+    ) -> PostgresWriteSideResult:
+        """
+        Execute the durable write-side flow with Compass validation inside the
+        PostgreSQL unit-of-work boundary.
+
+        This is the existing Stage 3.5B PR5 behavior, now named explicitly
+        as the IN_TRANSACTION validation placement path.
+
+        Important:
+        PostgresWriteSideUnitOfWork commits on a clean context-manager exit.
+        Therefore, every non-accepted early return inside this method must call
+        uow.rollback() before returning.
+        """
         signature = RequestSignature(
             request_id=request_id,
             command_type=command_type,
@@ -202,9 +223,6 @@ class PostgresTransactionalWriteSide:
                     outcome=PostgresWriteSideOutcome.REPLAY,
                     accepted_event=idempotency_decision.record.accepted_event,
                     idempotency_decision=idempotency_decision,
-                    stream_admission_result=None,
-                    validation_decision=None,
-                    admission_result=None,
                 )
 
             if idempotency_decision.verdict == IdempotencyVerdict.CONFLICT:
@@ -213,13 +231,9 @@ class PostgresTransactionalWriteSide:
                     outcome=PostgresWriteSideOutcome.CONFLICT,
                     accepted_event=None,
                     idempotency_decision=idempotency_decision,
-                    stream_admission_result=None,
-                    validation_decision=None,
-                    admission_result=None,
                 )
 
             admission_gate = self._admission_gate_factory(uow)
-
             stream_admission_result = admission_gate.prepare_stream(order_id)
 
             if not stream_admission_result.admitted:
@@ -229,8 +243,6 @@ class PostgresTransactionalWriteSide:
                     accepted_event=None,
                     idempotency_decision=idempotency_decision,
                     stream_admission_result=stream_admission_result,
-                    validation_decision=None,
-                    admission_result=None,
                 )
 
             aggregate, history = self._rehydrate_aggregate(uow, order_id)
@@ -240,6 +252,7 @@ class PostgresTransactionalWriteSide:
                 actual_prev_event=actual_prev_event,
             )
 
+            # The candidate event is not accepted history until validation and admission pass.
             candidate_event = build_candidate_event(aggregate)
 
             validation_decision = self._validation_runtime.decide(
@@ -254,11 +267,13 @@ class PostgresTransactionalWriteSide:
                     idempotency_decision=idempotency_decision,
                     stream_admission_result=stream_admission_result,
                     validation_decision=validation_decision,
-                    admission_result=None,
                 )
 
             expected_current_version = aggregate.current_version
-            admission_result = admission_gate.admit(
+
+            # append-time admission has a physical side effect:
+            # if admitted, the candidate event is appended to order_events here.
+            admission_result = admission_gate.append_if_admitted(
                 candidate_event,
                 expected_current_version=expected_current_version,
             )
@@ -280,6 +295,151 @@ class PostgresTransactionalWriteSide:
                 outcome=PostgresWriteSideOutcome.ACCEPTED,
                 accepted_event=candidate_event,
                 idempotency_decision=idempotency_decision,
+                stream_admission_result=stream_admission_result,
+                validation_decision=validation_decision,
+                admission_result=admission_result,
+            )
+
+    def _execute_pre_transaction_command(
+        self,
+        *,
+        request_id: str,
+        order_id: str,
+        amount: Decimal,
+        command_type: CommandType,
+        build_candidate_event: CandidateEventBuilder,
+    ) -> PostgresWriteSideResult:
+        """
+        Execute Compass validation before entering the PostgreSQL write-side
+        unit-of-work boundary.
+
+        This path intentionally performs:
+
+        1. preliminary idempotency check outside the write transaction
+        2. accepted-history loading outside the write transaction
+        3. candidate event creation and Compass validation outside the write transaction
+        4. authoritative idempotency re-check inside the write transaction
+        5. append-time admission inside the write transaction
+
+        The second idempotency check and append-time admission are required
+        because pre-transaction validation can become stale before append.
+        """
+        signature = RequestSignature(
+            request_id=request_id,
+            command_type=command_type,
+            order_id=order_id,
+            amount=amount,
+        )
+
+        read_idempotency_store = PostgresIdempotencyStore(self._connection)
+        read_event_store = PostgresEventStore(self._connection)
+
+        try:
+            preliminary_idempotency_decision = read_idempotency_store.check(signature)
+
+            if preliminary_idempotency_decision.verdict == IdempotencyVerdict.REPLAY:
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.REPLAY,
+                    accepted_event=preliminary_idempotency_decision.record.accepted_event,
+                    idempotency_decision=preliminary_idempotency_decision,
+                )
+            
+            if preliminary_idempotency_decision.verdict == IdempotencyVerdict.CONFLICT:
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.CONFLICT,
+                    accepted_event=None,
+                    idempotency_decision=preliminary_idempotency_decision,
+                )
+            
+            history = read_event_store.load(order_id)
+        finally:
+            # Close the implicit read transaction before CPU-side validation or return.
+            # This keeps PRE_TRANSACTION validation from holding an open PostgreSQL
+            # transaction while Compass validation runs.
+            self._connection.rollback()
+            
+        aggregate = self._rehydrate_aggregate_from_history(order_id, history)
+        actual_prev_event = history[-1] if history else None
+        validation_context = self._build_validation_context(
+            aggregate=aggregate,
+            actual_prev_event=actual_prev_event,
+        )
+
+        # The candidate event is validated before the write transaction begins.
+        candidate_event = build_candidate_event(aggregate)
+
+        validation_decision = self._validation_runtime.decide(
+            candidate_event,
+            validation_context,
+        )
+        if validation_decision.action != EnforcementAction.ALLOW:
+            return PostgresWriteSideResult(
+                outcome=PostgresWriteSideOutcome.VALIDATION_BLOCKED,
+                accepted_event=None,
+                idempotency_decision=preliminary_idempotency_decision,
+                validation_decision=validation_decision,
+            )
+
+        expected_current_version = aggregate.current_version
+
+        with PostgresWriteSideUnitOfWork(self._connection) as uow:
+            authoritative_idempotency_decision = uow.idempotency_store.check(signature)
+
+            if authoritative_idempotency_decision.verdict == IdempotencyVerdict.REPLAY:
+                uow.rollback()
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.REPLAY,
+                    accepted_event=authoritative_idempotency_decision.record.accepted_event,
+                    idempotency_decision=authoritative_idempotency_decision,
+                    validation_decision=validation_decision,
+                )
+
+            if authoritative_idempotency_decision.verdict == IdempotencyVerdict.CONFLICT:
+                uow.rollback()
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.CONFLICT,
+                    accepted_event=None,
+                    idempotency_decision=authoritative_idempotency_decision,
+                    validation_decision=validation_decision,
+                )
+
+            admission_gate = self._admission_gate_factory(uow)
+            stream_admission_result = admission_gate.prepare_stream(order_id)
+
+            if not stream_admission_result.admitted:
+                uow.rollback()
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.ADMISSION_REJECTED,
+                    accepted_event=None,
+                    idempotency_decision=authoritative_idempotency_decision,
+                    stream_admission_result=stream_admission_result,
+                    validation_decision=validation_decision,
+                )
+
+            # append-time admission has a physical side effect:
+            # if admitted, the candidate event is appended to order_events here.
+            admission_result = admission_gate.append_if_admitted(
+                candidate_event,
+                expected_current_version=expected_current_version,
+            )
+
+            if not admission_result.admitted:
+                uow.rollback()
+                return PostgresWriteSideResult(
+                    outcome=PostgresWriteSideOutcome.ADMISSION_REJECTED,
+                    accepted_event=None,
+                    idempotency_decision=authoritative_idempotency_decision,
+                    stream_admission_result=stream_admission_result,
+                    validation_decision=validation_decision,
+                    admission_result=admission_result,
+                )
+
+            uow.idempotency_store.record(signature, candidate_event)
+
+            return PostgresWriteSideResult(
+                outcome=PostgresWriteSideOutcome.ACCEPTED,
+                accepted_event=candidate_event,
+                idempotency_decision=authoritative_idempotency_decision,
                 stream_admission_result=stream_admission_result,
                 validation_decision=validation_decision,
                 admission_result=admission_result,

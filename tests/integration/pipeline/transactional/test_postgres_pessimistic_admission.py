@@ -98,7 +98,7 @@ def test_postgres_pessimistic_gate_admits_fresh_created_event_after_prepare(
     candidate_event = build_created_event()
 
     prepare_result = gate.prepare_stream(candidate_event.order_id)
-    result = gate.admit(candidate_event, expected_current_version=0)
+    result = gate.append_if_admitted(candidate_event, expected_current_version=0)
     db_connection.commit()
 
     assert prepare_result.verdict == AdmissionVerdict.ADMITTED
@@ -121,7 +121,7 @@ def test_postgres_pessimistic_gate_rejects_admit_without_prepare(
 
     candidate_event = build_created_event()
 
-    result = gate.admit(candidate_event, expected_current_version=0)
+    result = gate.append_if_admitted(candidate_event, expected_current_version=0)
 
     assert result.verdict == AdmissionVerdict.INFRASTRUCTURE_ERROR
     assert result.admitted is False
@@ -150,7 +150,7 @@ def test_postgres_pessimistic_gate_rejects_stale_expected_version_after_prepare(
     )
 
     prepare_result = gate.prepare_stream(stale_candidate.order_id)
-    result = gate.admit(stale_candidate, expected_current_version=0)
+    result = gate.append_if_admitted(stale_candidate, expected_current_version=0)
 
     assert prepare_result.verdict == AdmissionVerdict.ADMITTED
     assert result.verdict == AdmissionVerdict.STALE_WRITE

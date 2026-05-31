@@ -67,11 +67,11 @@ class TestConcurrencyAdmission:
         assert decision_b.action == EnforcementAction.ALLOW
 
         # A wins the append race
-        admission_a = registry.gate.admit(event_a, expected_current_version=1)
+        admission_a = registry.gate.append_if_admitted(event_a, expected_current_version=1)
         assert admission_a.verdict == AdmissionVerdict.ADMITTED
 
         # B becomes stale and must be rejected by the admission boundary
-        admission_b = registry.gate.admit(event_b, expected_current_version=1)
+        admission_b = registry.gate.append_if_admitted(event_b, expected_current_version=1)
         assert admission_b.verdict == AdmissionVerdict.STALE_WRITE
         assert "Version conflict" in admission_b.reason
 

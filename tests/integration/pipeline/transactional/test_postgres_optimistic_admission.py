@@ -85,7 +85,7 @@ def test_postgres_optimistic_gate_admits_fresh_created_event(db_connection):
 
     candidate_event = build_created_event()
 
-    result = gate.admit(candidate_event, expected_current_version=0)
+    result = gate.append_if_admitted(candidate_event, expected_current_version=0)
     db_connection.commit()
 
     assert result.verdict == AdmissionVerdict.ADMITTED
@@ -111,7 +111,7 @@ def test_postgres_optimistic_gate_rejects_stale_expected_version(
         prev_event_id=created_event.event_id,
     )
 
-    result = gate.admit(stale_candidate, expected_current_version=0)
+    result = gate.append_if_admitted(stale_candidate, expected_current_version=0)
 
     assert result.verdict == AdmissionVerdict.STALE_WRITE
     assert result.admitted is False
@@ -140,10 +140,10 @@ def test_postgres_optimistic_gate_rejects_stale_writer_after_competing_append(
         prev_event_id=created_event.event_id,
     )
 
-    winning_result = gate.admit(winning_event, expected_current_version=1)
+    winning_result = gate.append_if_admitted(winning_event, expected_current_version=1)
     db_connection.commit()
 
-    stale_result = gate.admit(stale_event, expected_current_version=1)
+    stale_result = gate.append_if_admitted(stale_event, expected_current_version=1)
 
     assert winning_result.verdict == AdmissionVerdict.ADMITTED
     assert stale_result.verdict == AdmissionVerdict.STALE_WRITE

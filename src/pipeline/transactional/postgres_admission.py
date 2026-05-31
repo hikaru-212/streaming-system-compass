@@ -52,7 +52,7 @@ class PostgresOptimisticAdmissionGate:
             order_id=order_id,
         )
 
-    def admit(
+    def append_if_admitted(
         self,
         candidate_event: OrderEvent,
         expected_current_version: int,
@@ -126,7 +126,7 @@ class PostgresPessimisticAdmissionGate:
             order_id=order_id,
         )
 
-    def admit(
+    def append_if_admitted(
         self,
         candidate_event: OrderEvent,
         expected_current_version: int,
