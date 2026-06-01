@@ -1,7 +1,13 @@
 # Python
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Env
 .env
@@ -11,5 +17,3 @@ __pycache__/
 # macOS
 .DS_Store
 
-# VSCode
-.coverage
