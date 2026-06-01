@@ -258,10 +258,9 @@ def _is_stream_position_conflict(exc: UniqueViolation) -> bool:
 
     known_stream_position_constraints = {
         # Explicit constraint name from db/migrations/001_create_write_side_tables.sql
-        "uq_order_events_order_sequence",
+        "uq_order_events_order_id_sequence",
         # Common PostgreSQL auto-generated or future explicit alternatives.
         "order_events_order_id_sequence_key",
-        "uq_order_events_order_id_sequence",
     }
 
     return constraint_name in known_stream_position_constraints

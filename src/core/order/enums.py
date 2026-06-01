@@ -16,8 +16,8 @@ class EventType(Enum):
     - whether the event is legal
     - whether the event truthfully follows accepted history
     """
-    CREATED = "created"
-    PAID = "paid"
+    CREATED = "CREATED"
+    PAID = "PAID"
 
 
 class OrderStatus(Enum):
