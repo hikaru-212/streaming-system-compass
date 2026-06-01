@@ -17,6 +17,8 @@ This version updates the roadmap to reflect the current Stage 3.5B direction:
 - event format evolution is represented through `event_schema_version`
 - runtime metadata is separated into `metadata_json`
 - database append time is represented as `appended_at`
+- Stage 3.5C PR0 hardens durable order-event vocabulary before read-side persistence begins
+- Stage 3.5D is introduced as a persistence optimization / replay-efficiency stage after the durable read-side baseline
 - Stage 4 is not only an error taxonomy stage; it becomes a structured semantic outcome and runtime decision boundary
 - Stage 5 becomes the dual-dimension governance demo: semantic correctness × operational freshness → action safety
 
@@ -41,6 +43,7 @@ The project has completed an executable baseline across:
 - Stage 3.5B PR4 transactional semantic write-side boundary
 - Stage 3.5B PR5 PostgreSQL concurrency admission boundary
 - Stage 3.5B PR6 validation placement strategy baseline
+- Stage 3.5C PR0 durable order-event vocabulary hardening
 
 This means:
 
@@ -53,6 +56,7 @@ This means:
 - Stage 3.5B PR4 has established the first PostgreSQL-backed transactional semantic write-side flow
 - Stage 3.5B PR5 has established PostgreSQL-backed two-phase concurrency admission
 - Stage 3.5B PR6 has established validation placement strategy as a Stage 4 prelude
+- Stage 3.5C PR0 has normalized durable `event_type` vocabulary, added `proof_prev_status` database constraint enforcement, and renamed the order stream-position unique constraint before durable read-side work begins
 
 The current major focus is:
 
@@ -61,6 +65,7 @@ The current major focus is:
 After transaction atomicity, PostgreSQL-backed concurrency admission, and validation placement strategy are clarified, the project can proceed toward:
 
 - Stage 3.5C durable read-side baseline
+- Stage 3.5D persistence optimization / replay efficiency
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
 - Stage 5 dual-dimension governance demo
 
@@ -79,11 +84,12 @@ The project should evolve from:
 7. candidate / accepted event identity boundary cleanup
 8. durable write-side persistence semantics
 9. durable read-side persistence semantics
-10. runtime semantic outcomes
-11. runtime decision policy
-12. action safety gate
-13. dual-dimension governance demo
-14. later governance and adversarial hardening
+10. persistence optimization / replay efficiency
+11. runtime semantic outcomes
+12. runtime decision policy
+13. action safety gate
+14. dual-dimension governance demo
+15. later governance and adversarial hardening
 
 This order is intentional.
 
@@ -238,8 +244,9 @@ Core columns:
 
 Core constraints:
 
-- `UNIQUE (order_id, sequence)`
-- `event_type IN ('created', 'paid')`
+- `UNIQUE (order_id, sequence)` using `uq_order_events_order_id_sequence`
+- `event_type IN ('CREATED', 'PAID')`
+- `proof_prev_status IN ('INIT', 'CREATED', 'PAID')`
 - `amount >= 0`
 - `sequence > 0`
 - `event_schema_version > 0`
@@ -275,6 +282,9 @@ Core constraints:
 - `proof_prev_event_id` is also UUID because it represents a previous accepted event identity claim.
 - `proof_prev_event_id` is not yet a foreign key because previous-event truth belongs to Compass / replay logic, not a partial relational constraint.
 - `event_schema_version` protects durable event format evolution.
+- Durable `event_type` values use uppercase enum-style accepted-event vocabulary: `CREATED`, `PAID`.
+- `proof_prev_status` uses uppercase domain-state vocabulary: `INIT`, `CREATED`, `PAID`.
+- `command_type` remains lowercase because it represents request/action identity for idempotency records, not accepted event identity.
 - `metadata_json` is reserved for non-domain runtime metadata, including future validation timing, registry-stage timing, validator identity, validation mode, and runtime trace metadata.
 - `appended_at` is database append time and remains distinct from `occurred_at_ms`.
 
@@ -743,7 +753,54 @@ Stage 3.5B is complete at the durable write-side baseline level when:
 
 Completed at the durable write-side baseline level after PR6 merge into the Stage 3.5B baseline branch.
 
-Stage 3.5B may still receive optional future hardening items, but the next main implementation focus is Stage 3.5C durable read-side persistence.
+Stage 3.5B may still receive optional future hardening items, but Stage 3.5C PR0 has completed the immediate durable order-event vocabulary hardening pass before durable read-side persistence begins.
+---
+
+# Stage 3.5C PR0: Durable Order Event Vocabulary Hardening
+
+## Goal
+
+Finalize the durable `order_events` vocabulary and selected schema constraints before Stage 3.5C durable read-side persistence starts depending on stored event records.
+
+## Why
+
+Stage 3.5B established the durable write-side baseline. Before read-side projection and checkpoint persistence consume durable accepted events, the stored event vocabulary should be explicit and stable.
+
+This PR0 is a schema-hardening pass, not the durable read-side baseline itself.
+
+## Completed Scope
+
+- normalize durable `event_type` values from lowercase to uppercase:
+  - `created` → `CREATED`
+  - `paid` → `PAID`
+- align Python `OrderEventType` enum values with the database vocabulary
+- update the `order_events.event_type` CHECK constraint
+- add `proof_prev_status` CHECK constraint for `INIT`, `CREATED`, and `PAID`
+- rename the order stream-position unique constraint to `uq_order_events_order_id_sequence`
+- add PostgreSQL schema-constraint tests for rejected lowercase event types and invalid proof statuses
+
+## Boundary Decision
+
+Durable accepted-event vocabulary now uses uppercase enum-style values:
+
+```text
+CREATED
+PAID
+```
+
+`CommandType` remains lowercase because it represents request/action identity for idempotency records, not accepted event identity.
+
+## Non-goals
+
+This PR0 does not implement:
+
+- durable projection state
+- durable checkpoint state
+- `PostgresProjectionStore`
+- `PostgresCheckpointStore`
+- snapshot or replay optimization
+- Compass Layer 2 validation
+
 ---
 
 # Stage 3.5C: Durable Read-Side Baseline
@@ -806,6 +863,97 @@ Exact shape should follow the current projection worker and checkpoint model.
 - projection can rebuild from accepted history
 - read-side persistence does not redefine source of truth
 - replay from durable `order_events` can rebuild the projection deterministically
+
+
+---
+
+# Stage 3.5D: Persistence Optimization & Replay Efficiency
+
+## Goal
+
+Establish snapshot and replay-efficiency mechanisms after the durable write-side and read-side baselines are complete.
+
+Stage 3.5D treats snapshots as derived state-compression artifacts, not as replacements for accepted event history.
+
+## Why
+
+Stage 3.5B establishes the durable write-side baseline.
+
+Stage 3.5C establishes the durable read-side baseline.
+
+Together, they answer:
+
+```text
+Can the system form a durable closed loop?
+```
+
+Stage 3.5D answers a different question:
+
+```text
+As accepted history grows, how can replay, rehydrate, and rebuild costs be reduced without weakening source-of-truth semantics?
+```
+
+Snapshots are therefore not part of the correctness baseline.
+
+They are persistence, recovery, and replay-efficiency hardening.
+
+The accepted event log remains the source of truth.
+
+```text
+accepted history = source of truth
+snapshot = derived state compression
+projection state = derived runtime view
+checkpoint = operational progress metadata
+```
+
+## Main Work
+
+Stage 3.5D may include:
+
+- aggregate snapshot schema
+- aggregate snapshot store
+- aggregate rehydration from latest valid snapshot plus tail events
+- projection rebuild optimization
+- snapshot metadata and lineage
+- snapshot validity rules
+- replay cost measurement
+- tests proving that snapshot-assisted replay produces the same state as full accepted-history replay
+
+## Completion Criteria
+
+Stage 3.5D is complete at the baseline level when:
+
+- aggregate rehydration can use a valid snapshot plus tail events
+- full replay and snapshot-assisted replay produce equivalent aggregate state
+- invalid snapshots are rejected or ignored safely
+- snapshot lineage points back to accepted history
+- replay-cost metrics can show how many events were skipped or replayed
+- Stage 4 Layer 2 work can rely on a clearer persistence and replay-efficiency substrate
+
+## Non-goals
+
+Stage 3.5D does not implement:
+
+- Compass Layer 2 full validation
+- structured `SemanticOutcome`
+- runtime decision policy
+- action safety gate
+- dual-dimension governance
+- complex policy engine
+- agent blocking semantics
+
+Those belong to Stage 4 and Stage 5.
+
+## Boundary Statement
+
+Stage 3.5D improves replay and persistence efficiency.
+
+It does not change the source of truth.
+
+```text
+Snapshots compress accepted history.
+Snapshots do not replace accepted history.
+```
 
 ---
 
@@ -1339,13 +1487,16 @@ Durable Write-side Baseline
   PR3 PostgresIdempotencyStore ✅
   PR4 Transactional Semantic Write-side Boundary ✅
   PR5 PostgreSQL Concurrency Admission Boundary ✅
+  PR6 Validation Placement Strategy ✅
 
-PR6 / Stage 4 Prelude:
-Validation Placement Strategy
-  IN_TRANSACTION vs PRE_TRANSACTION + OCC
+Stage 3.5C PR0:
+Durable Order Event Vocabulary Hardening ✅
 
 Stage 3.5C:
 Durable Read-side Baseline
+
+Stage 3.5D:
+Persistence Optimization & Replay Efficiency
 
 Stage 4:
 Runtime Semantic Validation and Runtime Decision Boundary

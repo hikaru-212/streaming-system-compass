@@ -12,6 +12,12 @@
 -- - order_id + sequence defines aggregate-local replay order.
 -- - money values use NUMERIC, not FLOAT.
 -- - idempotency records reference accepted events, not rejected candidates.
+-- - event_type uses uppercase durable accepted-event vocabulary:
+--   CREATED, PAID.
+-- - proof_prev_status uses uppercase domain-state vocabulary:
+--   INIT, CREATED, PAID.
+-- - command_type remains lowercase because it represents request/action
+--   identity for idempotency, not accepted event identity.
 -- - metadata_json is reserved for non-domain runtime metadata, including
 --   future validation timing, registry-stage timing, trace/debug metadata,
 --   validator identity, and validation mode.
@@ -40,7 +46,7 @@ CREATE TABLE IF NOT EXISTS order_events (
 
     appended_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    CONSTRAINT uq_order_events_order_sequence
+    CONSTRAINT uq_order_events_order_id_sequence
         UNIQUE (order_id, sequence),
 
     CONSTRAINT ck_order_events_schema_version_positive
@@ -50,7 +56,10 @@ CREATE TABLE IF NOT EXISTS order_events (
         CHECK (sequence > 0),
 
     CONSTRAINT ck_order_events_event_type
-        CHECK (event_type IN ('created', 'paid')),
+        CHECK (event_type IN ('CREATED', 'PAID')),
+
+    CONSTRAINT ck_order_events_proof_prev_status
+        CHECK (proof_prev_status IN ('INIT', 'CREATED', 'PAID')),
 
     CONSTRAINT ck_order_events_amount_non_negative
         CHECK (amount >= 0),

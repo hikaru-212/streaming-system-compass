@@ -26,11 +26,13 @@ The project currently has:
 - a Stage 3 baseline projection runtime with reducer / worker separation
 - a completed Stage 3.5A decimal / money hardening step before durable persistence
 - a completed Stage 3.5B durable write-side baseline, including PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and validation placement strategy
+- Stage 3.5C PR0 durable order-event vocabulary hardening, including uppercase `event_type` vocabulary, `proof_prev_status` database constraint, and stream-position unique-constraint rename
 - executable tests defending both write-side and read-side baseline semantics
 
 The next major steps are:
 
 - **Stage 3.5C — durable read-side baseline**
+- **Stage 3.5D — persistence optimization and replay efficiency**
 - followed later by **runtime semantic validation, structured semantic outcomes, runtime decision policy, and action safety**
 
 ---
@@ -78,6 +80,9 @@ If you want to understand how the repository thinks rather than only what it imp
 
 - **Durable write-side baseline**  
   Stage 3.5B establishes PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and configurable validation placement.
+
+- **Durable vocabulary hardening before read-side persistence**  
+  Stage 3.5C PR0 normalizes durable accepted-event vocabulary and adds database-side proof-status constraints before read-side consumers depend on stored events.
 
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
@@ -208,6 +213,7 @@ They test whether the correctness mechanisms inside `src/` survive adversarial r
 - PostgreSQL-backed durable write-side persistence
 - Two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
 - Configurable validation placement through `IN_TRANSACTION` and `PRE_TRANSACTION`
+- Durable order-event vocabulary hardening through uppercase `event_type` values, `proof_prev_status` CHECK constraints, and explicit stream-position constraint naming
 - Clear separation between domain legality, transition truth, admission continuity, retry safety, validation placement, and read-side derivation
 
 ---
@@ -370,14 +376,17 @@ Everything else grows around this core:
 - replay and rebuild flow
 - Decimal hardening before durable persistence
 
-### Phase 3.5B / 3.5C — Durable Persistence Baseline
+### Phase 3.5B / 3.5C / 3.5D — Durable Persistence and Replay Hardening
 
-- Stage 3.5B durable write-side baseline completed at branch level
+- Stage 3.5B durable write-side baseline completed
+- Stage 3.5C PR0 durable order-event vocabulary hardening completed
 - PostgreSQL-backed accepted history and idempotency memory
 - transactional event append + idempotency record persistence
 - two-phase concurrency admission and validation placement strategy
 - Stage 3.5C durable read-side baseline next
+- durable projection state and checkpoint state
 - persistence-backed replay / rebuild validation
+- Stage 3.5D snapshot, replay-efficiency, and persistence optimization
 - exact money durability
 - append-only durable history and idempotency evolution
 
@@ -430,23 +439,34 @@ Current baseline completed:
   - Decimal-based money semantics
   - aligned fixtures / unit / integration / semantic / adversarial / demo paths
   - formal projection reducer path as the only replay-reduction truth path
-- executable tests across transactional legality, replay safety, transition-truth checks, semantic-case scenarios, adversarial histories, and Stage 3 baseline projection behavior
+- Stage 3.5B durable write-side baseline:
+  - PostgreSQL-backed accepted history through `PostgresEventStore`
+  - PostgreSQL-backed idempotency memory through `PostgresIdempotencyStore`
+  - transactional event append and idempotency record persistence
+  - two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
+  - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION`
+- Stage 3.5C PR0 durable order-event vocabulary hardening:
+  - uppercase durable `event_type` vocabulary: `CREATED`, `PAID`
+  - `proof_prev_status` database CHECK constraint
+  - explicit stream-position unique constraint name: `uq_order_events_order_id_sequence`
+  - PostgreSQL schema constraint tests
 
 Current boundary of completion:
 
 - write-side transactional baseline is established
-- read-side projection baseline now exists in a deterministic in-memory form
-- exact-money semantics are now stabilized before deeper durable persistence work
-- failure-path reasoning is meaningfully executable across both write-side and Stage 3 baseline read-side paths
-- persistent storage-backed runtime behavior is not yet implemented
+- durable write-side persistence is established
+- read-side projection baseline exists in deterministic in-memory form
+- exact-money semantics are stabilized before deeper durable persistence work
+- durable accepted-history vocabulary has been hardened before read-side persistence depends on stored events
+- durable read-side projection and checkpoint storage are not yet implemented
 - state-level Compass Layer 2 validation is not yet implemented
 
-Next implementation milestone:
+Next implementation milestones:
 
-- Stage 3.5B durable write-side baseline
 - Stage 3.5C durable read-side baseline
-- later Stage 4 runtime semantic validation and outcome structuring
-- defer advanced runtime concerns such as DLQ, buffering, watermark semantics, and multi-worker coordination until after durable baseline semantics are clear
+- Stage 3.5D persistence optimization and replay efficiency
+- later Stage 4 runtime semantic validation, semantic outcome structuring, runtime decision policy, and action safety
+- Stage 5 dual-dimension governance demo
 
 ---
 

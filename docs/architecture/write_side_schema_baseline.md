@@ -346,10 +346,10 @@ CREATE TABLE IF NOT EXISTS order_events (
 
     appended_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    CONSTRAINT uq_order_events_order_sequence UNIQUE (order_id, sequence),
+    CONSTRAINT uq_order_events_order_id_sequence UNIQUE (order_id, sequence),
     CONSTRAINT ck_order_events_schema_version_positive CHECK (event_schema_version > 0),
     CONSTRAINT ck_order_events_sequence_positive CHECK (sequence > 0),
-    CONSTRAINT ck_order_events_event_type CHECK (event_type IN ('created', 'paid')),
+    CONSTRAINT ck_order_events_event_type CHECK (event_type IN ('CREATED', 'PAID')),
     CONSTRAINT ck_order_events_amount_non_negative CHECK (amount >= 0)
 );
 ```

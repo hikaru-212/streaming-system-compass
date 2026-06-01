@@ -20,7 +20,7 @@ An item should remain here only if it has at least one of the following:
 
 Pure naming preference, style cleanup, or already-completed implementation work should not remain in this backlog.
 
-Completed Stage 3.5B work should be recorded in roadmaps, ADRs, postmortems, or implementation notes instead of staying here as deferred work.
+Completed Stage 3.5B work and completed Stage 3.5C PR0 schema-hardening work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
 
 Current focus:
 
@@ -45,21 +45,31 @@ PR5 PostgreSQL Concurrency Admission Boundary
 PR6 Validation Placement Strategy Boundary / Stage 4 Prelude
 ```
 
-This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline.
+Stage 3.5C PR0 has also completed durable order-event vocabulary hardening:
+
+```text
+event_type durable vocabulary normalization
+proof_prev_status database CHECK constraint
+order_events unique constraint rename
+```
+
+These completed items are no longer tracked as deferred backlog work.
+
+This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline and Stage 3.5C PR0 schema-hardening pass.
 
 ---
 
 ## Status Legend
 
 ```text
-Optional durable schema hardening
-→ can be done later if the schema boundary becomes meaningful enough to justify migration churn
-
 Stage 4 / evidence design
 → should wait for SemanticOutcome, runtime evidence, or governance work
 
 Stage 4 / connection-pool hardening
 → should wait until structured error modeling, connection lifecycle policy, or pooled database connections exist
+
+Stage 3.5D / persistence optimization
+→ should wait until durable write-side and durable read-side baselines exist, and replay / rebuild cost becomes meaningful
 
 Later evaluation
 → should be revisited only when a concrete runtime, storage, or operational need appears
@@ -70,79 +80,11 @@ Later production hardening
 
 ---
 
-## 1. Proof Previous Status Constraint Hardening
+## 1. UUIDv7 / Time-Ordered UUID Evaluation
 
 ### Current Decision
 
-The database currently stores previous-status proof claims as plain text:
-
-```sql
-proof_prev_status TEXT NOT NULL
-```
-
-Python domain status values are already normalized:
-
-```python
-OrderStatus.INIT = "INIT"
-OrderStatus.CREATED = "CREATED"
-OrderStatus.PAID = "PAID"
-```
-
-The current application write path constructs proof status from domain objects, so normal command execution is already protected by Python-side domain logic and Compass validation.
-
-### Why Not Now
-
-Adding a database constraint is useful defense-in-depth, but it is not required for the current Stage 3.5B durable write-side baseline.
-
-The completed Stage 3.5B baseline focused on:
-
-```text
-durable accepted history
-durable idempotency memory
-transactional write-side execution
-two-phase concurrency admission
-validation placement strategy
-```
-
-A proof-status database constraint would be a durable schema-hardening task, not a requirement for write-side baseline correctness.
-
-### Future Trigger
-
-Consider adding a database constraint when one of the following becomes true:
-
-- proof fields are treated as durable evidence in Stage 4
-- durable read-side or validation logic starts relying on proof fields as trusted database evidence
-- additional write paths or migration tools may touch `order_events`
-- manual SQL / operational repair scripts become part of the workflow
-- the project wants stronger database-side proof vocabulary enforcement before production hardening
-
-Possible future constraint:
-
-```sql
-CHECK (proof_prev_status IN ('INIT', 'CREATED', 'PAID'))
-```
-
-### Current Classification
-
-```text
-Optional durable schema hardening
-```
-
-This is durable schema hardening, not Stage 4 `SemanticOutcome` / Error Model work.
-
-### Suggested Timing
-
-During Stage 3.5C if durable read-side work starts depending on proof fields as trusted evidence.
-
-Otherwise, revisit before Stage 4 durable evidence work or during a dedicated schema-hardening pass.
-
----
-
-## 2. UUIDv7 / Time-Ordered UUID Evaluation
-
-### Current Decision
-
-Do not introduce UUIDv7 during Stage 3.5B.
+Do not introduce UUIDv7 during Stage 3.5B or Stage 3.5C.
 
 Current approach:
 
@@ -175,11 +117,11 @@ Later evaluation
 
 ### Suggested Timing
 
-After Stage 3.5C or during later storage/operational hardening, unless storage locality or operational inspection becomes a real bottleneck.
+After Stage 3.5C or during later storage / operational hardening, unless storage locality or operational inspection becomes a real bottleneck.
 
 ---
 
-## 3. Formal `EventStoreProtocol`
+## 2. Formal `EventStoreProtocol`
 
 ### Current Decision
 
@@ -222,7 +164,7 @@ Defer until multiple storage implementations or admission strategies require str
 
 ---
 
-## 4. Stored Event Record / JSONB Evidence Hydration
+## 3. Stored Event Record / JSONB Evidence Hydration
 
 ### Current Decision
 
@@ -279,7 +221,7 @@ During audit, evidence, or SemanticOutcome persistence design.
 
 ---
 
-## 5. Registry-Stage Timing in `metadata_json`
+## 4. Registry-Stage Timing in `metadata_json`
 
 ### Current Decision
 
@@ -326,7 +268,7 @@ During Stage 4 evidence / outcome persistence, or during a dedicated observabili
 
 ---
 
-## 6. Event Payload / Proof / Metadata JSON Shape
+## 5. Event Payload / Proof / Metadata JSON Shape
 
 ### Current Decision
 
@@ -341,6 +283,8 @@ proof_json = {
 }
 metadata_json = {}
 ```
+
+Stage 3.5C PR0 hardened selected durable vocabulary at the schema boundary, but it did not define a full JSONB event evidence model.
 
 ### Why Not Now
 
@@ -367,7 +311,7 @@ After durable read-side baseline, before or during SemanticOutcome persistence d
 
 ---
 
-## 7. Append-Only Database Hardening
+## 6. Append-Only Database Hardening
 
 ### Current Decision
 
@@ -381,6 +325,7 @@ Current defenses are:
 - expected-version check in the store
 - PR4 transaction boundary
 - PR5 admission boundary
+- Stage 3.5C PR0 durable vocabulary and proof-status schema hardening
 
 ### Future Work
 
@@ -404,7 +349,7 @@ After durable read-side baseline, or during production-hardening work.
 
 ---
 
-## 8. Integration Test Boundary and CI Strategy
+## 7. Integration Test Boundary and CI Strategy
 
 ### Current Decision
 
@@ -420,7 +365,9 @@ Stage 3.5B introduced or aligned:
 - transactional integration test README
 - in-memory integration test README
 
-These are sufficient for the current durable write-side baseline.
+Stage 3.5C PR0 also added PostgreSQL schema-constraint coverage for durable order-event vocabulary hardening.
+
+These are sufficient for the current durable write-side baseline and PR0 schema-hardening pass.
 
 ### Remaining Future Work
 
@@ -441,6 +388,70 @@ Later production hardening
 ### Suggested Timing
 
 Revisit when the test matrix expands for Stage 3.5C durable read-side persistence or when CI runtime becomes difficult to manage.
+
+---
+
+## 8. Snapshot and Replay Efficiency
+
+### Current Decision
+
+Do not implement aggregate snapshots or projection rebuild optimization during Stage 3.5C.
+
+Stage 3.5C should first complete the durable read-side baseline:
+
+```text
+durable projection state
+durable checkpoint state
+PostgresProjectionStore
+PostgresCheckpointStore
+persistence-backed projection worker tests
+```
+
+Snapshot and replay-efficiency mechanisms should be handled as a later persistence-optimization stage.
+
+### Why Not Now
+
+Stage 3.5C answers:
+
+```text
+Can the read-side become durable while preserving accepted history as the source of truth?
+```
+
+Snapshot work answers a different question:
+
+```text
+As accepted history grows, how can replay, rehydrate, and rebuild costs be reduced?
+```
+
+That optimization should not distract from the durable read-side correctness baseline.
+
+### Future Work
+
+Consider:
+
+- aggregate snapshot schema
+- aggregate snapshot store
+- rehydration from latest valid snapshot plus tail events
+- projection rebuild optimization
+- snapshot metadata and lineage
+- snapshot validity rules
+- replay cost measurement
+
+### Current Classification
+
+```text
+Stage 3.5D / persistence optimization
+```
+
+### Suggested Timing
+
+During:
+
+```text
+Stage 3.5D — Persistence Optimization & Replay Efficiency
+```
+
+after Stage 3.5C durable read-side baseline is complete.
 
 ---
 
@@ -569,7 +580,6 @@ The deferred backlog should now be read with the following stage alignment:
 
 | Item | Current Alignment |
 |---|---|
-| Proof previous status constraint hardening | Optional durable schema hardening |
 | UUIDv7 | Later evaluation |
 | EventStoreProtocol | Later evaluation |
 | StoredEventRecord / JSONB hydration | Stage 4 / evidence design |
@@ -577,6 +587,7 @@ The deferred backlog should now be read with the following stage alignment:
 | Payload/proof/metadata JSON shape | Stage 4 evidence / outcome persistence |
 | Append-only DB hardening | Later production hardening |
 | Integration test boundary / CI strategy | Later production hardening |
+| Snapshot and replay efficiency | Stage 3.5D / persistence optimization |
 | Pre-transaction cleanup failure handling | Stage 4 / connection-pool hardening |
 
 The backlog remains a scope-control document.

@@ -157,13 +157,13 @@ def test_postgres_pessimistic_admit_requires_prepare_stream_first():
 
 
 def test_is_stream_position_conflict_returns_true_for_current_migration_constraint():
-    exc = FakeUniqueViolation("uq_order_events_order_sequence")
+    exc = FakeUniqueViolation("uq_order_events_order_id_sequence")
 
     assert _is_stream_position_conflict(exc) is True
 
 
-def test_is_stream_position_conflict_returns_true_for_future_explicit_constraint():
-    exc = FakeUniqueViolation("uq_order_events_order_id_sequence")
+def test_is_stream_position_conflict_returns_true_for_postgres_auto_generated_constraint():
+    exc = FakeUniqueViolation("order_events_order_id_sequence_key")
 
     assert _is_stream_position_conflict(exc) is True
 
