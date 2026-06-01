@@ -30,7 +30,7 @@ This Compass runtime roadmap answers:
 
 > How does Compass become more capable as a runtime semantic control layer?
 
-The two roadmaps overlap around Stage 3.5B and Stage 3.5C because Compass depends on durable write-side and read-side boundaries.
+The two roadmaps overlap around Stage 3.5B, Stage 3.5C, and Stage 3.5D because Compass depends on durable write-side, durable read-side, and replay-efficiency boundaries before stronger runtime validation grows.
 
 However, this document avoids repeating detailed schema columns, migration details, and store test matrices.
 
@@ -55,7 +55,7 @@ Project Stage = repository-wide implementation milestone
 
 For example:
 
-- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, and Stage 3.5B / 3.5C.
+- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, and the Stage 3.5D replay-efficiency substrate.
 - Compass Phase 4 roughly maps to the beginning of Stage 4 Layer 2 validation work.
 - Compass Phases 5–7 roughly map to Stage 4 structured semantic outcomes, runtime decision policy, and action safety.
 - Compass Phase 8 maps to the Stage 5 dual-dimension governance demo.
@@ -89,6 +89,9 @@ The current system already supports:
 - PostgreSQL-backed accepted history through `PostgresEventStore`
 - PostgreSQL-backed idempotency memory through `PostgresIdempotencyStore`
 - Compass-guarded transactional write-side flow in Stage 3.5B PR4
+- PostgreSQL-backed two-phase concurrency admission through Stage 3.5B PR5
+- validation placement strategy through Stage 3.5B PR6
+- durable order-event vocabulary hardening through Stage 3.5C PR0
 
 This means Compass is already more than a passive checker.
 
@@ -121,9 +124,9 @@ That means the following question is not yet fully answered:
 
 This is the gap that later stages must close.
 
-The durable write-side is also not yet fully concurrency-admission-aware.
+The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, and Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, and Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins.
 
 ---
 
@@ -329,7 +332,45 @@ Layer 2 = truthfulness check for derived state
 
 ## Current Status
 
-Next major focus after the Stage 3.5B durable write-side baseline.
+Current major implementation focus after the Stage 3.5B durable write-side baseline.
+
+Stage 3.5C PR0 has already hardened durable order-event vocabulary before the read-side baseline begins.
+
+---
+
+# Stage 3.5D Dependency — Persistence Optimization and Replay Efficiency
+
+Before Compass Layer 2 grows into stronger runtime state validation, the persistence substrate may need one additional hardening stage:
+
+```text
+Stage 3.5D — Persistence Optimization & Replay Efficiency
+```
+
+This stage does not implement Layer 2 validation itself.
+
+Instead, it improves the replay and recovery substrate that Layer 2 may later depend on.
+
+Stage 3.5D treats snapshots as derived state-compression artifacts:
+
+```text
+accepted history = source of truth
+snapshot = derived state compression
+projection state = derived runtime view
+```
+
+The purpose is to reduce replay, rehydrate, and rebuild cost without allowing snapshots to replace accepted history.
+
+Compass-relevant outcomes include:
+
+- aggregate snapshot lineage back to accepted history
+- snapshot-assisted replay that remains equivalent to full replay
+- snapshot validity rules
+- replay cost measurement
+- safer persistence substrate before Layer 2 drift validation
+
+This stage should remain persistence / replay hardening.
+
+It should not absorb structured semantic outcomes, runtime decision policy, action safety, or dual-dimension governance.
 
 ---
 
@@ -846,10 +887,11 @@ Stage 3.5B PR1 schema ✅
 Stage 3.5B PR2 event store ✅
 Stage 3.5B PR3 idempotency store ✅
 Stage 3.5B PR4 transactional semantic write-side ✅
-Stage 3.5B PR5 concurrency admission planned
+Stage 3.5B PR5 concurrency admission ✅
 
 Dependency:
 Stage 3.5C durable read-side baseline
+Stage 3.5D replay-efficiency substrate
 
 Next Compass Growth:
 Layer 2 state-level validation
@@ -860,7 +902,6 @@ ActionSafetyGate
 Dual-Dimension Governance
 
 Later:
-validation placement strategies
 chaos hardening
 richer governance
 agent-facing runtime protocol

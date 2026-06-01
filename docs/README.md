@@ -44,19 +44,19 @@ The repository currently has an implemented baseline for:
 - PostgreSQL-backed two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - executable tests across unit, integration, semantic-case, adversarial-baseline, Stage 3 projection-baseline, and PostgreSQL-backed write-side layers
+- Stage 3.5C PR0 durable order-event vocabulary hardening, including uppercase `event_type` vocabulary, `proof_prev_status` database constraint, and `order_events` unique-constraint rename
 
-The repository is closing **Stage 3.5B — durable write-side baseline**.
+The repository has completed **Stage 3.5B — Durable Write-Side Baseline** and is now applying **Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening** before starting the main durable read-side baseline.
 
-The current Stage 3.5B focus is:
+The current focus is:
 
-- final validation of the durable write-side baseline
-- documentation alignment for validation placement strategy
-- preserving the boundary between validation mode, validation placement, transaction atomicity, and concurrency admission
-- preparing the transition toward Stage 3.5C durable read-side work
+- completing Stage 3.5C PR0 durable order-event vocabulary hardening
+- preparing the transition into Stage 3.5C durable read-side baseline
 
 The next major implementation steps are:
 
 - Stage 3.5C durable read-side baseline
+- Stage 3.5D persistence optimization and replay efficiency
 - later Stage 4 runtime semantic validation, semantic outcome structuring, runtime decision policy, and action safety
 
 ---

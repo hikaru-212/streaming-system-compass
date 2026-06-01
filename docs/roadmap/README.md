@@ -12,8 +12,9 @@ Use roadmap documents to understand:
 - what depends on what
 - which features are intentionally deferred
 - how the project moves from durable truth toward runtime governance
-- which Stage 3.5B concerns are complete and which later concerns are intentionally deferred
+- which Stage 3.5B and Stage 3.5C PR0 concerns are complete and which later concerns are intentionally deferred
 - why Stage 3.5C is the next implementation focus after the durable write-side baseline
+- why Stage 3.5D is kept as a later persistence optimization / replay-efficiency stage
 
 ---
 
@@ -23,7 +24,7 @@ Use roadmap documents to understand:
 |---|---|
 | [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, durable persistence, runtime semantic outcomes, runtime decision policy, action safety, and the Stage 5 dual-dimension governance demo. |
 | [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward durable runtime validation, structured semantic outcomes, runtime decisions, action safety, and later dual-dimension governance. |
-| [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred beyond the current implementation scope, including proof-status constraint hardening, UUIDv7 evaluation, protocol boundaries, JSONB evidence hydration, metadata timing, append-only hardening, cleanup failure handling, and later production-hardening concerns. |
+| [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred beyond the current implementation scope, including UUIDv7 evaluation, protocol boundaries, JSONB evidence hydration, metadata timing, snapshot / replay-efficiency work, append-only hardening, cleanup failure handling, and later production-hardening concerns. |
 
 ---
 
@@ -55,6 +56,7 @@ The project has already completed:
 - Stage 3.5B PR4 — Transactional Semantic Write-side Boundary
 - Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
 - Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude
+- Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening
 
 Stage 3.5B now forms a durable write-side baseline:
 
@@ -72,6 +74,8 @@ The current major focus is:
 Stage 3.5C — Durable Read-Side Baseline
 ```
 
+Stage 3.5D is intentionally reserved for persistence optimization, snapshots, and replay efficiency after the durable read-side baseline exists.
+
 ---
 
 ## Roadmap Principle
@@ -87,6 +91,7 @@ semantic truth
 → exact money hardening before durable persistence
 → durable write-side baseline
 → durable read-side baseline
+→ persistence optimization / replay efficiency
 → runtime semantic validation
 → structured semantic outcome
 → runtime decision policy
@@ -120,6 +125,22 @@ Stage 3.5B completed six durable write-side checkpoints:
 6. **PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude**  
    Separated `ValidationMode` from `ValidationPlacement`, preserved `IN_TRANSACTION` as the default write-side behavior, and added a minimal `PRE_TRANSACTION` orchestration path guarded by append-time admission. PR6 also recorded the pre-transaction read cleanup boundary required to keep the physical connection state aligned with the placement label.
 
+
+---
+
+## Stage 3.5C PR0 Reminder
+
+Stage 3.5C PR0 completed durable order-event vocabulary hardening before durable read-side persistence begins.
+
+It finalized selected write-side schema vocabulary so later projection and replay code can depend on stable stored event records:
+
+```text
+event_type: CREATED / PAID
+proof_prev_status: INIT / CREATED / PAID
+unique constraint: uq_order_events_order_id_sequence
+```
+
+`CommandType` remains lowercase because it represents request/action identity for idempotency records, not accepted event identity.
 ---
 
 ## Stage 3.5C Reminder
@@ -136,6 +157,30 @@ checkpoint = operational progress metadata
 
 Stage 3.5C should prepare the system for later Compass Layer 2 validation by making derived state durable enough to compare against replayed accepted history.
 
+
+---
+
+## Stage 3.5D Reminder
+
+Stage 3.5D should not be mixed into the Stage 3.5C durable read-side baseline.
+
+It is reserved for persistence optimization and replay efficiency after durable write-side and durable read-side baselines are both coherent.
+
+Possible Stage 3.5D work includes:
+
+- aggregate snapshots
+- snapshot metadata and lineage
+- snapshot validity rules
+- projection rebuild optimization
+- replay cost measurement
+
+The source-of-truth rule remains unchanged:
+
+```text
+accepted history = source of truth
+snapshot = derived state compression
+projection state = derived runtime view
+```
 ---
 
 ## Deferred Architecture Backlog Reminder
@@ -144,13 +189,13 @@ Some architecture issues are known but intentionally deferred to avoid scope cre
 
 Examples include:
 
-- proof previous status constraint hardening
 - UUIDv7 / time-ordered UUID evaluation
 - formal `EventStoreProtocol`
 - stored event record / JSONB evidence hydration
 - registry-stage timing in `metadata_json`
 - payload / proof / metadata JSON shape
 - append-only database hardening
+- snapshot and replay-efficiency optimization
 - pre-transaction cleanup failure handling after Stage 4 error model or connection-pool hardening exists
 - integration-test follow-ups as the durable read-side test matrix expands
 
@@ -181,15 +226,11 @@ This reflects the core principle:
 > Error semantics should not only be observed.  
 > They should help the runtime decide whether to continue, rebuild, block, quarantine, stop, or escalate.
 
-Stage 4 should not be used as a dumping ground for every remaining durable schema cleanup.
+Stage 4 should not be used as a dumping ground for durable persistence cleanup or replay optimization.
 
-For example:
+Completed schema-hardening work, such as Stage 3.5C PR0 durable event vocabulary normalization and `proof_prev_status` constraint enforcement, should remain recorded in implementation notes, PR history, and roadmaps rather than in the active deferred backlog.
 
-```text
-proof_prev_status durable constraint hardening
-```
-
-belongs to optional durable schema hardening, not Stage 4 Error Model work.
+Replay-efficiency work belongs to Stage 3.5D, not Stage 4 Error Model work.
 
 ---
 
