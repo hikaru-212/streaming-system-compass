@@ -4,17 +4,15 @@ on:
   pull_request:
     branches:
       - main
-      - feat/stage3.5b-write-side-durable-baseline
-
+      - feat/stage3.5c-durable-read-side-baseline
   push:
     branches:
       - main
-      - refactor/event-identity-boundary-cleanup
-      - feat/stage3.5b-write-side-durable-baseline
+      - feat/stage3.5c-durable-read-side-baseline
 
 jobs:
   test:
-    name: Run Semantic Tests
+    name: Run Tests
     runs-on: ubuntu-latest
 
     services:
@@ -72,6 +70,6 @@ jobs:
           pip install flake8
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      - name: Run Pytest
+      - name: Run Pytest with Coverage
         run: |
           pytest -v --durations=10 --cov=src --cov-report=term-missing
