@@ -43,21 +43,23 @@ The repository currently has an implemented baseline for:
 - PostgreSQL-backed transactional semantic write-side execution
 - PostgreSQL-backed two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
-- executable tests across unit, integration, semantic-case, adversarial-baseline, Stage 3 projection-baseline, and PostgreSQL-backed write-side layers
+- executable tests across unit, integration, semantic-case, adversarial-baseline, Stage 3 projection-baseline, storage integration, transactional PostgreSQL-backed write-side, and admission-boundary layers
 - Stage 3.5C PR0 durable order-event vocabulary hardening, including uppercase `event_type` vocabulary, `proof_prev_status` database constraint, and `order_events` unique-constraint rename
 
-The repository has completed **Stage 3.5B — Durable Write-Side Baseline** and is now applying **Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening** before starting the main durable read-side baseline.
+The repository has completed **Stage 3.5B — Durable Write-Side Baseline** and **Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening**.
 
-The current focus is:
+The current focus is now:
 
-- completing Stage 3.5C PR0 durable order-event vocabulary hardening
-- preparing the transition into Stage 3.5C durable read-side baseline
+- starting **Stage 3.5C — Durable Read-Side Baseline**
+- defining durable projection-state and checkpoint-state boundaries
+- preparing PostgreSQL-backed read-side persistence work
 
 The next major implementation steps are:
 
 - Stage 3.5C durable read-side baseline
-- Stage 3.5D persistence optimization and replay efficiency
-- later Stage 4 runtime semantic validation, semantic outcome structuring, runtime decision policy, and action safety
+- Stage 3.5D Snapshot Trust Contract / persistence optimization / replay efficiency
+- Stage 3.5E durable history and permission hardening
+- Stage 4 runtime semantic validation, semantic outcome structuring, retry reason classification, runtime decision policy, and action safety
 
 ---
 

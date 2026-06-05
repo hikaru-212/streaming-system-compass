@@ -30,7 +30,7 @@ This Compass runtime roadmap answers:
 
 > How does Compass become more capable as a runtime semantic control layer?
 
-The two roadmaps overlap around Stage 3.5B, Stage 3.5C, and Stage 3.5D because Compass depends on durable write-side, durable read-side, and replay-efficiency boundaries before stronger runtime validation grows.
+The two roadmaps overlap around Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E because Compass depends on durable write-side, durable read-side, replay-efficiency, and accepted-history hardening boundaries before stronger runtime validation grows.
 
 However, this document avoids repeating detailed schema columns, migration details, and store test matrices.
 
@@ -55,7 +55,7 @@ Project Stage = repository-wide implementation milestone
 
 For example:
 
-- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, and the Stage 3.5D replay-efficiency substrate.
+- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, the Stage 3.5D replay-efficiency substrate, and the Stage 3.5E durable history hardening boundary.
 - Compass Phase 4 roughly maps to the beginning of Stage 4 Layer 2 validation work.
 - Compass Phases 5–7 roughly map to Stage 4 structured semantic outcomes, runtime decision policy, and action safety.
 - Compass Phase 8 maps to the Stage 5 dual-dimension governance demo.
@@ -138,6 +138,7 @@ Compass should evolve from:
 write-side event truth
 → durable accepted history
 → durable derived state
+→ snapshot trust / replay-efficiency substrate
 → Layer 2 state validation
 → structured semantic outcomes
 → runtime decisions
@@ -365,12 +366,54 @@ Compass-relevant outcomes include:
 - aggregate snapshot lineage back to accepted history
 - snapshot-assisted replay that remains equivalent to full replay
 - snapshot validity rules
+- lineage, tail-continuity, schema-version, reducer-version, and payload-integrity checks
+- fast-path vs authority-path distinction
 - replay cost measurement
 - safer persistence substrate before Layer 2 drift validation
 
 This stage should remain persistence / replay hardening.
 
+It qualifies snapshots for fast-path use, but it does not make snapshots the source of truth.
+
 It should not absorb structured semantic outcomes, runtime decision policy, action safety, or dual-dimension governance.
+
+---
+
+
+# Stage 3.5E Dependency — Durable History and Permission Hardening
+
+Before Compass grows into stronger runtime governance, the accepted-history substrate should be hardened against accidental or improper database mutation.
+
+```text
+Stage 3.5E — Durable History and Permission Hardening
+```
+
+This stage does not implement Layer 2 validation, structured semantic outcomes, or runtime decision policy.
+
+Instead, it clarifies database authority around accepted history and derived state.
+
+Compass depends on this distinction because later runtime governance will treat accepted history as durable evidence:
+
+```text
+accepted history = source of truth / durable evidence
+projection state = derived runtime view
+checkpoint = operational progress metadata
+```
+
+Stage 3.5E should therefore harden `order_events` without accidentally making mutable read-side tables immutable.
+
+Compass-relevant outcomes include:
+
+- clearer database role boundaries
+- write-side runtime authority limited to accepted-history append behavior
+- projection worker authority separated from write-side admission authority
+- accepted-history tables protected from casual `UPDATE` / `DELETE`
+- read-side tables left mutable for upsert, resume, reset, and rebuild
+- stronger confidence that later Layer 2 comparisons are grounded in a hardened accepted-history source
+
+This stage should remain durable storage / authority hardening.
+
+It should not absorb Layer 2 validation, `SemanticOutcome`, runtime decision policy, action safety, or dual-dimension governance.
 
 ---
 
@@ -400,6 +443,12 @@ Layer 2 should detect:
 - replay vs persisted-state mismatch
 - reducer mismatch
 - checkpoint / state mismatch
+- snapshot metadata invalidity
+- snapshot hash mismatch
+- unsupported snapshot schema
+- untrusted snapshot reducer version
+- snapshot tail discontinuity
+- snapshot replay mismatch
 
 ## Minimal Flow
 
@@ -538,6 +587,49 @@ raise ValueError(...)
 → layered trust / governance
 ```
 
+## Retry Reason Classification and Intent Consistency
+
+Stage 4 structured outcomes should explicitly classify retry-like situations.
+
+Retry is not a single category.
+
+Possible retry-related outcomes include:
+
+- idempotent replay of the same request identity
+- idempotency conflict where the same request identity carries different command meaning
+- stale-write retry caused by concurrency admission
+- transient infrastructure retry
+- rebuild-oriented retry caused by projection or snapshot drift
+- future agent intent drift where the agent claims to retry the same task but changes the intended meaning
+
+This classification belongs in `SemanticOutcome` / request-attempt evidence design.
+
+It should not be stored directly in `idempotency_records`, because `idempotency_records` remain successful request-result memory.
+
+Suggested concepts:
+
+```text
+retry_class
+retry_safety
+intent_consistency
+```
+
+Examples:
+
+```text
+same request_id + same semantic_fingerprint
+→ IDEMPOTENT_REPLAY / SAFE_TO_REPLAY / SAME_INTENT
+
+same request_id + different semantic_fingerprint
+→ SEMANTIC_CONFLICT / NOT_RETRYABLE / SAME_IDENTITY_DIFFERENT_MEANING
+
+stale expected_version
+→ CONCURRENCY_RETRY / SAFE_TO_RETRY_AFTER_RELOAD / NOT_AN_IDEMPOTENCY_REPLAY
+
+future same intent_id + different intent_fingerprint
+→ SEMANTIC_DRIFT / BLOCK_AND_ESCALATE / AGENT_INTENT_DRIFT
+```
+
 ## Boundary
 
 A semantic outcome describes what happened.
@@ -611,6 +703,24 @@ REPLAY_REDUCER_MISMATCH
 
 IRREVERSIBLE_BOUNDARY_RISK
 → BLOCK
+
+IDEMPOTENT_REPLAY
+→ ALLOW_REPLAY
+
+SEMANTIC_CONFLICT / IDEMPOTENCY_CONFLICT
+→ BLOCK
+
+CONCURRENCY_RETRY
+→ RETRY_AFTER_RELOAD or BLOCK
+
+INFRASTRUCTURE_RETRY
+→ RETRY_WITH_BACKOFF or ESCALATE
+
+REBUILD_REQUIRED
+→ REBUILD or QUARANTINE
+
+AGENT_INTENT_DRIFT
+→ BLOCK_AND_ESCALATE
 ```
 
 ## Runtime Meaning
@@ -726,6 +836,8 @@ Is this state true enough, fresh enough, and safe enough to act on?
 A system can be semantically correct but operationally stale.
 
 A system can be operationally fresh but semantically wrong.
+
+Snapshot and projection trust should contribute to the semantic correctness signal. A state can be fresh but unsafe if snapshot trust checks fail, reducer version is untrusted, checkpoint and state disagree, or projection differs from accepted-history replay.
 
 Therefore, action safety cannot depend on a single trusted / untrusted boolean.
 
@@ -860,6 +972,9 @@ After the minimal governance demo is coherent, Compass can grow toward richer fa
 - chaos testing
 - semantic alerts
 - agent tool interface
+- isolated derived-state runtime / oblivious agent runtime
+- separate read-side projection DB for untrusted agent observation
+- controlled agent read API
 - generalized semantic governance protocol
 
 These are intentionally deferred.
@@ -869,6 +984,7 @@ The project should first prove:
 ```text
 semantic truth
 → durable evidence
+→ hardened accepted history
 → structured outcome
 → runtime decision
 → action safety
@@ -892,6 +1008,7 @@ Stage 3.5B PR5 concurrency admission ✅
 Dependency:
 Stage 3.5C durable read-side baseline
 Stage 3.5D replay-efficiency substrate
+Stage 3.5E durable history hardening
 
 Next Compass Growth:
 Layer 2 state-level validation
@@ -905,6 +1022,7 @@ Later:
 chaos hardening
 richer governance
 agent-facing runtime protocol
+isolated derived-state runtime
 ```
 
 ---

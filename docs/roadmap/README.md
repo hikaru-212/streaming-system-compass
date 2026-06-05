@@ -4,7 +4,7 @@
 
 This directory contains roadmap documents for **Streaming System + Compass**.
 
-Roadmaps describe implementation sequencing and system evolution. They are not meant to replace architecture notes, ADRs, or postmortems.
+Roadmaps describe implementation sequencing and system evolution. They are not meant to replace architecture notes, ADRs, boundary notes, or postmortems.
 
 Use roadmap documents to understand:
 
@@ -13,8 +13,10 @@ Use roadmap documents to understand:
 - which features are intentionally deferred
 - how the project moves from durable truth toward runtime governance
 - which Stage 3.5B and Stage 3.5C PR0 concerns are complete and which later concerns are intentionally deferred
-- why Stage 3.5C is the next implementation focus after the durable write-side baseline
-- why Stage 3.5D is kept as a later persistence optimization / replay-efficiency stage
+- why Stage 3.5C is the current implementation focus after the durable write-side baseline
+- why Stage 3.5D is kept as a later Snapshot Trust Contract / replay-efficiency stage
+- why Stage 4 should classify retry reasons and intent consistency through `SemanticOutcome` / runtime evidence design
+- why Stage 5+ may later evaluate isolated derived-state runtime / oblivious agent runtime as an agent-governance hardening direction
 
 ---
 
@@ -22,9 +24,9 @@ Use roadmap documents to understand:
 
 | Document | Purpose |
 |---|---|
-| [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, durable persistence, runtime semantic outcomes, runtime decision policy, action safety, and the Stage 5 dual-dimension governance demo. |
-| [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward durable runtime validation, structured semantic outcomes, runtime decisions, action safety, and later dual-dimension governance. |
-| [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred beyond the current implementation scope, including UUIDv7 evaluation, protocol boundaries, JSONB evidence hydration, metadata timing, snapshot / replay-efficiency work, append-only hardening, cleanup failure handling, and later production-hardening concerns. |
+| [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, durable persistence, snapshot trust / replay efficiency, durable-history hardening, runtime semantic outcomes, runtime decision policy, action safety, Stage 5 dual-dimension governance, and later isolated derived-state runtime evaluation. |
+| [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward durable runtime validation, snapshot-aware state validation, structured semantic outcomes, retry reason classification, runtime decisions, action safety, dual-dimension governance, and later agent-facing governance hardening. |
+| [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred beyond the current implementation scope, including UUIDv7 evaluation, protocol boundaries, JSONB evidence hydration, metadata timing, Snapshot Trust Contract work, append-only hardening, retry classification, cleanup failure handling, isolated derived-state runtime, and later production / governance-hardening concerns. |
 
 ---
 
@@ -74,7 +76,9 @@ The current major focus is:
 Stage 3.5C — Durable Read-Side Baseline
 ```
 
-Stage 3.5D is intentionally reserved for persistence optimization, snapshots, and replay efficiency after the durable read-side baseline exists.
+Stage 3.5C should stay focused on durable projection state, durable checkpoint state, and persistence-backed projection worker behavior.
+
+Snapshot trust, retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.
 
 ---
 
@@ -91,15 +95,18 @@ semantic truth
 → exact money hardening before durable persistence
 → durable write-side baseline
 → durable read-side baseline
-→ persistence optimization / replay efficiency
+→ snapshot trust qualification / replay efficiency
+→ durable history and permission hardening
 → runtime semantic validation
 → structured semantic outcome
+→ retry reason classification and intent consistency
 → runtime decision policy
 → action safety gate
 → dual-dimension governance demo
+→ later isolated derived-state runtime and adversarial hardening
 ```
 
-The system should not attempt to solve chaos, broad governance, or distributed complexity before the transactional semantic core, write-side safety boundaries, runtime semantics, and durable persistence boundaries are coherent.
+The system should not attempt to solve chaos, broad governance, agent isolation, or distributed complexity before the transactional semantic core, write-side safety boundaries, runtime semantics, and durable persistence boundaries are coherent.
 
 ---
 
@@ -125,7 +132,6 @@ Stage 3.5B completed six durable write-side checkpoints:
 6. **PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude**  
    Separated `ValidationMode` from `ValidationPlacement`, preserved `IN_TRANSACTION` as the default write-side behavior, and added a minimal `PRE_TRANSACTION` orchestration path guarded by append-time admission. PR6 also recorded the pre-transaction read cleanup boundary required to keep the physical connection state aligned with the placement label.
 
-
 ---
 
 ## Stage 3.5C PR0 Reminder
@@ -141,6 +147,7 @@ unique constraint: uq_order_events_order_id_sequence
 ```
 
 `CommandType` remains lowercase because it represents request/action identity for idempotency records, not accepted event identity.
+
 ---
 
 ## Stage 3.5C Reminder
@@ -158,21 +165,59 @@ checkpoint = operational progress metadata
 Stage 3.5C should prepare the system for later Compass Layer 2 validation by making derived state durable enough to compare against replayed accepted history.
 
 
+Stage 3.5C should be implemented as a staged durable read-side PR sequence:
+
+```text
+PR1 — Durable Read-Side Schema Baseline
+PR2 — PostgresProjectionStore
+PR3 — PostgresCheckpointStore
+PR4 — PostgreSQL-Backed Projection Worker
+PR5 — Durable Replay / Rebuild Validation
+PR6 — Stage 3.5C Documentation and Completion Alignment
+```
+
+The sequencing rule is:
+
+```text
+schema first
+→ store implementations
+→ worker orchestration
+→ replay / rebuild proof
+→ documentation alignment
+```
+
+This keeps the read-side baseline focused on durable derived state and checkpoint progress before later stages introduce Snapshot Trust Contract work, Layer 2 validation, SemanticOutcome, or database role hardening.
+
+Stage 3.5C should not implement:
+
+- aggregate snapshots
+- Snapshot Trust Contract
+- Layer 2 validation
+- retry reason classification
+- `SemanticOutcome` persistence
+- isolated read-side DB / agent runtime isolation
+
 ---
 
 ## Stage 3.5D Reminder
 
 Stage 3.5D should not be mixed into the Stage 3.5C durable read-side baseline.
 
-It is reserved for persistence optimization and replay efficiency after durable write-side and durable read-side baselines are both coherent.
+It is reserved for **Snapshot Trust Contract and replay efficiency** after durable write-side and durable read-side baselines are both coherent.
 
 Possible Stage 3.5D work includes:
 
 - aggregate snapshots
 - snapshot metadata and lineage
 - snapshot validity rules
+- lineage checks using aggregate / order identity, snapshot version, source event identity, and source event sequence
+- tail continuity checks after the snapshot version
+- snapshot schema version and reducer version tracking
+- payload hash / checksum as a baseline integrity check
+- invalid snapshot fallback to full accepted-history replay
 - projection rebuild optimization
 - replay cost measurement
+- evidence hooks for future Stage 4 `SemanticOutcome`
 
 The source-of-truth rule remains unchanged:
 
@@ -181,6 +226,48 @@ accepted history = source of truth
 snapshot = derived state compression
 projection state = derived runtime view
 ```
+
+The important Stage 3.5D distinction is:
+
+```text
+fast path:
+snapshot + tail replay + trust checks
+
+authority path:
+full accepted-history replay for audit, rebuild, suspicious cases, reducer upgrades, or high-risk verification
+```
+
+---
+
+## Stage 3.5E Reminder
+
+Stage 3.5E is reserved for durable history and permission hardening after durable write-side, durable read-side, and replay-efficiency boundaries are clear.
+
+The first hardening target is accepted history:
+
+```text
+order_events = accepted history / source of truth
+```
+
+Stage 3.5E should evaluate:
+
+- database role boundary documentation
+- migration owner vs runtime role separation
+- write-side runtime permission baseline
+- projection worker permission baseline
+- read-only observer permission baseline
+- revoking runtime `UPDATE` / `DELETE` authority from `order_events`
+- optional trigger-based rejection of `UPDATE` / `DELETE` on `order_events`
+
+If Stage 3.5D introduces snapshot tables, Stage 3.5E may also evaluate snapshot table permissions or append-only derived-artifact discipline.
+
+However, projection state and checkpoint tables must remain mutable enough to support:
+
+- upsert
+- resume
+- reset
+- rebuild
+
 ---
 
 ## Deferred Architecture Backlog Reminder
@@ -195,8 +282,10 @@ Examples include:
 - registry-stage timing in `metadata_json`
 - payload / proof / metadata JSON shape
 - append-only database hardening
-- snapshot and replay-efficiency optimization
+- Snapshot Trust Contract and replay-efficiency optimization
+- retry reason classification and intent consistency
 - pre-transaction cleanup failure handling after Stage 4 error model or connection-pool hardening exists
+- isolated derived-state runtime / oblivious agent runtime
 - integration-test follow-ups as the durable read-side test matrix expands
 
 These are tracked in:
@@ -224,13 +313,48 @@ Layer 2 validation
 This reflects the core principle:
 
 > Error semantics should not only be observed.  
-> They should help the runtime decide whether to continue, rebuild, block, quarantine, stop, or escalate.
+> They should help the runtime decide whether to continue, replay, retry, reload, rebuild, block, quarantine, stop, or escalate.
 
 Stage 4 should not be used as a dumping ground for durable persistence cleanup or replay optimization.
 
 Completed schema-hardening work, such as Stage 3.5C PR0 durable event vocabulary normalization and `proof_prev_status` constraint enforcement, should remain recorded in implementation notes, PR history, and roadmaps rather than in the active deferred backlog.
 
 Replay-efficiency work belongs to Stage 3.5D, not Stage 4 Error Model work.
+
+### Retry Reason Classification
+
+Stage 4 should explicitly classify retry-like situations through `SemanticOutcome` / request-attempt evidence design.
+
+Retry is not a single category.
+
+Examples:
+
+```text
+same request_id + same semantic_fingerprint
+→ idempotent replay / safe physical retry
+
+same request_id + different semantic_fingerprint
+→ semantic conflict / same identity carrying different meaning
+
+stale expected_version
+→ concurrency retry / retry after reload
+
+transient database or connection failure
+→ infrastructure retry / retry with backoff or escalate
+
+projection or snapshot drift
+→ rebuild-oriented retry / quarantine derived state
+
+future same intent_id + different intent_fingerprint
+→ agent intent drift / block and escalate
+```
+
+This classification should not be stored directly in `idempotency_records`.
+
+```text
+idempotency_records = successful request-result memory
+SemanticOutcome / request_attempts = retry reason and governance evidence
+```
 
 ---
 
@@ -254,3 +378,43 @@ This final demo should show that:
 - operational freshness is not semantic correctness
 - semantic correctness is not operational freshness
 - action safety requires both dimensions
+
+Snapshot / projection trust can contribute to the semantic correctness signal.
+
+For example, a state may be operationally fresh but semantically unsafe if:
+
+- projection differs from accepted-history replay
+- snapshot trust checks fail
+- reducer version is untrusted
+- checkpoint and projection state disagree
+
+---
+
+## Stage 5+ Reminder
+
+Stage 5+ may later evaluate isolated derived-state runtime / oblivious agent runtime.
+
+This is a future governance-hardening direction, not a current implementation requirement.
+
+The long-term model is:
+
+```text
+Sovereign Event Store
+→ Projection Pipeline
+→ Isolated Derived-State DB / controlled read boundary
+→ Agent observes derived state
+→ Agent submits candidate action
+→ Compass validates against accepted history
+→ accepted event is appended only by the trusted system boundary
+```
+
+The key principle is:
+
+```text
+Agent observes derived state.
+Agent does not own truth mutation.
+Compass owns admission.
+Event log owns truth.
+```
+
+This should be revisited only after Stage 5 dual-dimension governance, `ActionSafetyGate`, and a concrete agent-facing tool boundary exist.

@@ -32,7 +32,8 @@ The project currently has:
 The next major steps are:
 
 - **Stage 3.5C — durable read-side baseline**
-- **Stage 3.5D — persistence optimization and replay efficiency**
+- **Stage 3.5D — snapshot trust, persistence optimization, and replay efficiency**
+- **Stage 3.5E — durable history and permission hardening**
 - followed later by **runtime semantic validation, structured semantic outcomes, runtime decision policy, and action safety**
 
 ---
@@ -83,6 +84,9 @@ If you want to understand how the repository thinks rather than only what it imp
 
 - **Durable vocabulary hardening before read-side persistence**  
   Stage 3.5C PR0 normalizes durable accepted-event vocabulary and adds database-side proof-status constraints before read-side consumers depend on stored events.
+
+- **Planned durable-history hardening**  
+  Stage 3.5E is reserved for database authority and permission hardening after durable write-side, durable read-side, and replay-efficiency boundaries become clear.
 
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
@@ -273,6 +277,13 @@ Run a specific test directory:
 pytest tests/integration -v
 ```
 
+Some PostgreSQL-backed integration tests require local PostgreSQL, `TEST_DATABASE_URL`, and migrations.
+
+For the full local PostgreSQL setup and destructive integration-test guardrails, see:
+
+- [Development Setup](docs/development/README.md)
+- [Local PostgreSQL Setup](docs/development/postgres_local_setup.md)
+
 ---
 
 ## 📚 Documentation
@@ -376,7 +387,7 @@ Everything else grows around this core:
 - replay and rebuild flow
 - Decimal hardening before durable persistence
 
-### Phase 3.5B / 3.5C / 3.5D — Durable Persistence and Replay Hardening
+### Phase 3.5B / 3.5C / 3.5D / 3.5E — Durable Persistence and Replay Hardening
 
 - Stage 3.5B durable write-side baseline completed
 - Stage 3.5C PR0 durable order-event vocabulary hardening completed
@@ -386,7 +397,8 @@ Everything else grows around this core:
 - Stage 3.5C durable read-side baseline next
 - durable projection state and checkpoint state
 - persistence-backed replay / rebuild validation
-- Stage 3.5D snapshot, replay-efficiency, and persistence optimization
+- Stage 3.5D snapshot trust, replay-efficiency, and persistence optimization
+- Stage 3.5E durable history and permission hardening
 - exact money durability
 - append-only durable history and idempotency evolution
 
@@ -464,7 +476,8 @@ Current boundary of completion:
 Next implementation milestones:
 
 - Stage 3.5C durable read-side baseline
-- Stage 3.5D persistence optimization and replay efficiency
+- Stage 3.5D snapshot trust, persistence optimization, and replay efficiency
+- Stage 3.5E durable history and permission hardening
 - later Stage 4 runtime semantic validation, semantic outcome structuring, runtime decision policy, and action safety
 - Stage 5 dual-dimension governance demo
 
