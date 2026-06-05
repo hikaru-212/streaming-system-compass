@@ -19,7 +19,10 @@ They also exist to defend the semantic boundaries of the system, including:
 - projection replay / rebuild consistency at the Stage 3 baseline
 - durable accepted-history behavior through PostgreSQL-backed storage
 - durable idempotency behavior through PostgreSQL-backed storage
-- transactionally safe write-side composition
+- transactionally safe PostgreSQL-backed write-side composition
+- PostgreSQL-backed concurrency admission
+- validation placement strategy
+- destructive PostgreSQL test database isolation
 
 In this project, tests are part of the architecture argument.
 
@@ -30,18 +33,19 @@ They help prove that the intended semantic boundaries are actually executable.
 
 ## Current Testing Focus
 
-At the current stage, the strongest test coverage spans:
+At the current baseline, the strongest test coverage spans:
 
 - the in-memory write-side semantic baseline
-- the Stage 3 baseline projection runtime
+- the Stage 3 in-memory projection runtime baseline
 - the Stage 3.5B PostgreSQL-backed storage baseline
-- the Stage 3.5B PR4 transactional semantic write-side boundary
+- the completed Stage 3.5B transactional write-side baseline through PR6
+- the Stage 3.5C PR0 durable order-event vocabulary hardening pass
 
 This currently includes:
 
 - transactional semantic core behavior
 - accepted-history replay behavior
-- request-level idempotency and replay/conflict distinction
+- request-level idempotency and replay / conflict distinction
 - optimistic admission / stale-write rejection in the in-memory baseline
 - Compass Layer 1 transition-truth validation
 - semantic-case and adversarial-history scenarios
@@ -51,14 +55,20 @@ This currently includes:
 - PostgreSQL-backed `PostgresEventStore` append / load / latest-event behavior
 - PostgreSQL-backed `PostgresIdempotencyStore` MISS / REPLAY / CONFLICT behavior
 - UUID, Decimal, proof-status, JSONB, and schema-version persistence checks for the durable event-store baseline
+- durable event vocabulary and proof-status schema-constraint tests
 - PostgreSQL write-side UnitOfWork commit / rollback behavior
 - Compass-guarded transactional write-side create / pay flows
 - validation-before-admission behavior
 - append + idempotency record physical transaction atomicity
+- optimistic PostgreSQL admission
+- pessimistic PostgreSQL admission
+- lock-timeout mapping
+- autocommit guard for transaction-scoped pessimistic admission
+- validation placement through `IN_TRANSACTION` and minimal `PRE_TRANSACTION`
 - destructive PostgreSQL integration test isolation through `TEST_DATABASE_URL`
 
 The test suite is therefore no longer only write-side focused.
-It now also defends durable storage, projection runtime, and transactional PostgreSQL-backed write-side boundaries.
+It now also defends durable storage, projection runtime, transactional PostgreSQL-backed write-side behavior, PostgreSQL admission, and validation placement boundaries.
 
 ---
 
@@ -152,11 +162,11 @@ These tests do not prove physical database persistence or PostgreSQL transaction
 
 ---
 
-### `tests/integration/storage/`
+### [tests/integration/storage/](integration/storage/README.md)
 
-Storage integration tests verify persistence-backed behavior against a real PostgreSQL database boundary.
+Storage integration tests verify PostgreSQL-backed durable storage behavior.
 
-Current goals:
+Typical goals:
 
 - verify `PostgresEventStore.append()`
 - verify `PostgresEventStore.load()`
@@ -164,10 +174,12 @@ Current goals:
 - verify stale expected-version rejection
 - verify append-time sequence continuity rejection
 - verify UUID / Decimal / proof-status round-trip behavior
-- verify JSONB evidence fields and `event_schema_version` are persisted as expected
+- verify JSONB evidence fields and `event_schema_version` persistence
 - verify `PostgresIdempotencyStore` MISS / REPLAY / CONFLICT behavior
 - verify idempotency records survive a new database connection
 - verify idempotency records must reference existing accepted events
+- verify semantic fingerprint behavior
+- verify durable order-event vocabulary constraints
 - verify PostgreSQL integration tests run against `TEST_DATABASE_URL`
 
 These tests answer:
@@ -184,7 +196,7 @@ These tests require a PostgreSQL-backed test environment in CI or local developm
 
 ### [tests/integration/pipeline/transactional/](integration/pipeline/transactional/README.md)
 
-Transactional pipeline integration tests verify the PostgreSQL-backed durable write-side composition.
+Transactional pipeline integration tests verify the completed Stage 3.5B PostgreSQL-backed write-side composition through PR6.
 
 Typical goals:
 
@@ -196,17 +208,20 @@ Typical goals:
 - verify validation `BLOCK` does not write `idempotency_records`
 - verify physical rollback when append succeeds but idempotency recording fails
 - verify domain legality failures leave no partial durable writes
+- verify optimistic PostgreSQL admission
+- verify pessimistic PostgreSQL admission
+- verify stale-write rejection and lock-timeout mapping
+- verify `IN_TRANSACTION` and minimal `PRE_TRANSACTION` validation placement
+- verify stale pre-validated candidates remain guarded by append-time admission
 
 These tests answer:
 
-- does the PostgreSQL-backed write-side preserve the canonical semantic flow?
+- does the PostgreSQL-backed write side preserve the canonical semantic flow?
 - do accepted event append and idempotency record persistence commit or roll back together?
 - does Compass validation remain before durable accepted-history mutation?
 - are validation-before-admission and physical transaction atomicity tested as separate boundaries?
-
-These tests do not yet prove PostgreSQL-backed concurrency admission.
-
-That boundary is deferred to PR5.
+- does PostgreSQL-backed admission reject stale or unprepared writers?
+- can validation placement move without weakening accepted-history admission?
 
 ---
 
@@ -280,7 +295,7 @@ They should not become generic object factories detached from the system’s sem
 
 ## Database-Backed Integration Tests
 
-Stage 3.5B introduces tests that require PostgreSQL.
+Stage 3.5B introduced PostgreSQL-backed tests.
 
 The local expected setup separates development and destructive test databases:
 
@@ -301,6 +316,7 @@ export DATABASE_URL=postgresql://compass_user:compass_password@localhost:5433/co
 export TEST_DATABASE_URL=postgresql://compass_user:compass_password@localhost:5433/compass_test
 
 psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
+
 pytest tests/integration/storage -q
 pytest tests/integration/pipeline/transactional -q
 ```
@@ -312,7 +328,7 @@ The integration test fixture enforces this by requiring `TEST_DATABASE_URL` and 
 The CI workflow should provide the same physical requirements:
 
 - PostgreSQL service
-- `DATABASE_URL` for creating the test database
+- `DATABASE_URL` for development-style connection or database bootstrap if needed
 - `TEST_DATABASE_URL` for destructive integration tests
 - migration application against the test database before tests
 - full pytest execution after database setup
@@ -348,6 +364,8 @@ Tests in this repository therefore aim to defend questions such as:
 - did the durable event store preserve the accepted-history facts required for replay?
 - did durable idempotency memory survive across connections?
 - did event append and idempotency record persistence commit or roll back together?
+- did PostgreSQL-backed admission reject stale or unprepared writers?
+- did validation placement preserve append-time admission as the final accepted-history guard?
 - did destructive integration tests run only against the test database?
 
 ---
@@ -366,7 +384,7 @@ That means a smaller number of semantically meaningful tests is often more valua
 
 ## Current Boundary
 
-At the current stage, the test suite is strongest on:
+At the current baseline, the test suite is strongest on:
 
 - write-side semantic correctness
 - replay safety
@@ -376,15 +394,19 @@ At the current stage, the test suite is strongest on:
 - Stage 3.5B durable idempotency behavior
 - Stage 3.5B transactional write-side commit / rollback behavior
 - Stage 3.5B Compass-guarded durable write-side flow
+- Stage 3.5B PostgreSQL-backed optimistic / pessimistic admission
+- Stage 3.5B validation placement strategy
+- Stage 3.5C PR0 durable order-event vocabulary hardening
 
 However, the current suite does **not yet** fully cover:
 
-- PostgreSQL-backed concurrency admission
-- optimistic / pessimistic durable admission gates
-- formal stale-write outcome mapping
-- durable read-side projection / checkpoint behavior
+- Stage 3.5C durable read-side projection / checkpoint behavior
+- PostgreSQL-backed projection worker behavior
 - state-level Compass Layer 2 validation
-- Stage 4 structured `SemanticOutcome` / Error Model
+- Stage 3.5D Snapshot Trust Contract
+- Stage 3.5E durable history / permission hardening
+- Stage 4 structured `SemanticOutcome`
+- retry reason classification persistence
 - validation result persistence
 - advanced runtime concerns such as DLQ, buffering, watermark semantics, or multi-worker coordination
 
@@ -411,7 +433,7 @@ integration/storage tests
 → physical persistence-boundary correctness
 
 integration/pipeline/transactional tests
-→ durable transactional write-side composition
+→ durable transactional write-side composition, admission, and validation placement
 
 semantic-case tests
 → executable semantic claims
