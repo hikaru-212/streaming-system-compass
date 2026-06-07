@@ -53,9 +53,18 @@ proof_prev_status database CHECK constraint
 order_events unique constraint rename
 ```
 
+Stage 3.5C PR1 has completed the durable read-side schema baseline:
+
+```text
+projection_states schema
+projection_checkpoints schema
+checkpoint cursor-kind / cursor-value alignment
+read-side schema constraint tests
+```
+
 These completed items are no longer tracked as deferred backlog work.
 
-This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline and Stage 3.5C PR0 schema-hardening pass.
+This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline, Stage 3.5C PR0 schema-hardening pass, and Stage 3.5C PR1 read-side schema baseline.
 
 ---
 
@@ -416,14 +425,15 @@ Stage 3.5B introduced or aligned:
 
 Stage 3.5C PR0 also added PostgreSQL schema-constraint coverage for durable order-event vocabulary hardening.
 
-These are sufficient for the current durable write-side baseline and PR0 schema-hardening pass.
+Stage 3.5C PR1 added PostgreSQL schema-constraint coverage for durable read-side table shape and checkpoint cursor alignment.
+
+These are sufficient for the current durable write-side baseline, PR0 schema-hardening pass, and PR1 read-side schema baseline.
 
 ### Remaining Future Work
 
 Possible later follow-ups:
 
 - pytest markers for DB-backed tests
-- storage integration README
 - integration root README
 - performance / benchmark test separation
 - optional test container lifecycle helpers
@@ -436,7 +446,7 @@ Later production hardening
 
 ### Suggested Timing
 
-Revisit when the test matrix expands for Stage 3.5C durable read-side persistence or when CI runtime becomes difficult to manage.
+Revisit when the test matrix expands from read-side schema constraints into PostgreSQL-backed projection stores, checkpoint stores, worker orchestration, or when CI runtime becomes difficult to manage.
 
 ---
 

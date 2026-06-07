@@ -92,6 +92,7 @@ The current system already supports:
 - PostgreSQL-backed two-phase concurrency admission through Stage 3.5B PR5
 - validation placement strategy through Stage 3.5B PR6
 - durable order-event vocabulary hardening through Stage 3.5C PR0
+- durable read-side schema baseline through Stage 3.5C PR1
 
 This means Compass is already more than a passive checker.
 
@@ -126,7 +127,7 @@ This is the gap that later stages must close.
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, and Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, and Stage 3.5C PR1 has established the durable read-side schema boundary for projection state and checkpoint progress.
 
 ---
 
@@ -311,8 +312,10 @@ Stage 3.5C provides this dependency.
 
 Stage 3.5C should provide:
 
-- durable projection state
-- durable checkpoint state
+- durable projection state schema
+- durable checkpoint state schema
+- future durable projection state store
+- future durable checkpoint store
 - persistence-backed replay / rebuild
 - state that survives restart
 - a durable target for Layer 2 validation
@@ -336,6 +339,16 @@ Layer 2 = truthfulness check for derived state
 Current major implementation focus after the Stage 3.5B durable write-side baseline.
 
 Stage 3.5C PR0 has already hardened durable order-event vocabulary before the read-side baseline begins.
+
+Stage 3.5C PR1 has now established the durable read-side schema baseline:
+
+```text
+projection_states = derived runtime view
+projection_checkpoints = worker progress metadata
+order_events = accepted-history truth
+```
+
+This gives Compass Layer 2 a future durable target for drift comparison, but it does not yet implement Layer 2 validation, PostgreSQL-backed stores, or a PostgreSQL-backed projection worker.
 
 ---
 
