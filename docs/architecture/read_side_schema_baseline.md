@@ -209,6 +209,9 @@ CREATE TABLE IF NOT EXISTS projection_states (
     last_sequence INTEGER NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
+    CONSTRAINT ck_projection_states_order_id_not_empty
+        CHECK (length(trim(order_id)) > 0),
+
     CONSTRAINT ck_projection_states_status
         CHECK (status IN ('INIT', 'CREATED', 'PAID')),
 
@@ -387,7 +390,18 @@ CREATE TABLE IF NOT EXISTS projection_checkpoints (
             'APPENDED_AT',
             'EVENT_ID',
             'GLOBAL_POSITION'
-        ))
+        )),
+
+    CONSTRAINT ck_projection_checkpoints_value_alignment
+        CHECK (
+            (cursor_kind = 'UNSPECIFIED' AND cursor_value = '') OR
+            (cursor_kind = 'GLOBAL_POSITION' AND cursor_value ~ '^[0-9]+$') OR
+            (
+                cursor_kind = 'EVENT_ID'
+                AND trim(cursor_value) ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            ) OR
+            (cursor_kind = 'APPENDED_AT' AND length(trim(cursor_value)) > 0)
+        )
 );
 ```
 
@@ -467,6 +481,7 @@ Database constraints in the read-side schema protect **minimum valid shape**.
 
 They should reject impossible or malformed rows such as:
 
+- empty projection identity
 - unknown projection status
 - negative money values
 - paid amount greater than total amount
@@ -474,10 +489,47 @@ They should reject impossible or malformed rows such as:
 - negative aggregate-local last sequence
 - empty worker name
 - unknown cursor kind
+- cursor kind / cursor value mismatch
 
 They do **not** prove that projection state is faithful to accepted history.
 
 That belongs to future replay / rebuild checks and Compass Layer 2 validation.
+
+---
+
+# Deferred Projection State Semantic Constraints
+
+Stage 3.5C PR1 intentionally does not add cross-field domain constraints such as:
+
+```sql
+status = 'PAID' implies paid_amount = total_amount
+```
+
+or:
+
+```sql
+status = 'CREATED' implies paid_amount = 0
+```
+
+Although these rules may match the current simplified order domain, they would turn the durable read-side table into a partial domain validator.
+
+At PR1, the database protects the physical shape of derived projection state and checkpoint cursor consistency.
+
+Projection semantic correctness belongs to the canonical reducer path and, later, Compass Layer 2 validation.
+
+This leaves room for future tests where a reducer bug produces a physically valid but semantically wrong projection state.
+
+For example:
+
+```text
+status = CREATED
+paid_amount = 100
+total_amount = 100
+```
+
+This row is physically valid under PR1 shape constraints, but it may be semantically wrong under the current domain model.
+
+Such cases should become future Compass Layer 2 drift-detection cases rather than being hidden by a database CHECK constraint.
 
 ---
 

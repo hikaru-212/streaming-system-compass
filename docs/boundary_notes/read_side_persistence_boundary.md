@@ -174,6 +174,29 @@ Therefore, PR1 should not force a final event-log scanning strategy.
 
 ---
 
+## Cursor Value Alignment
+
+Although PR1 defers the final worker scanning strategy, the database should still protect basic cursor shape.
+
+The checkpoint schema should enforce:
+
+```text
+UNSPECIFIED     → cursor_value must be empty
+GLOBAL_POSITION → cursor_value must be numeric
+EVENT_ID        → cursor_value must look like a UUID
+APPENDED_AT     → cursor_value must be non-empty
+```
+
+This is shape-level validation.
+
+It does not select the final scanning strategy.
+
+It does not implement the worker.
+
+It only prevents obviously inconsistent cursor rows.
+
+---
+
 ## Why `cursor_kind` Is Better Than `last_processed_sequence`
 
 `last_processed_sequence` is too specific and semantically wrong for a multi-order event log.
@@ -356,6 +379,41 @@ PostgreSQL should not own:
 
 ---
 
+## Shape Constraints vs Semantic Drift
+
+The read-side schema may reject physically invalid projection rows.
+
+Examples:
+
+- invalid status vocabulary
+- empty `order_id`
+- negative money values
+- `paid_amount > total_amount`
+- negative version
+- negative aggregate-local sequence
+- empty worker name
+- invalid cursor kind
+- cursor kind / cursor value mismatch
+
+However, the read-side schema should not become the primary validator of projection-domain semantics.
+
+For example, PR1 does not enforce:
+
+```text
+CREATED implies paid_amount = 0
+PAID implies paid_amount = total_amount
+```
+
+Those are semantic expectations derived from accepted history and reducer behavior.
+
+If the reducer produces a physically valid but semantically wrong projection state, that should become a future Compass Layer 2 drift-detection case.
+
+This is not avoiding correctness.
+
+It is assigning correctness to the appropriate layer.
+
+---
+
 ## Non-goals
 
 Stage 3.5C PR1 does not implement:
@@ -379,6 +437,7 @@ Stage 3.5C PR1 does not implement:
 The schema tests for PR1 should verify:
 
 - valid projection state can be inserted
+- empty `order_id` is rejected
 - invalid projection status is rejected
 - negative money values are rejected
 - paid amount greater than total amount is rejected
@@ -387,7 +446,8 @@ The schema tests for PR1 should verify:
 - valid checkpoint can be inserted
 - empty worker name is rejected
 - invalid `cursor_kind` is rejected
-- flexible `cursor_value` can store a token
+- invalid `cursor_kind` / `cursor_value` alignment is rejected
+- valid cursor values for `UNSPECIFIED`, `GLOBAL_POSITION`, `EVENT_ID`, and `APPENDED_AT` are accepted
 
 The tests should not verify:
 
