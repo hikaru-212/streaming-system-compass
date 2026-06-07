@@ -48,6 +48,7 @@ The project has completed an executable baseline across:
 - Stage 3.5B PR5 PostgreSQL concurrency admission boundary
 - Stage 3.5B PR6 validation placement strategy baseline
 - Stage 3.5C PR0 durable order-event vocabulary hardening
+- Stage 3.5C PR1 durable read-side schema baseline
 
 This means:
 
@@ -61,6 +62,7 @@ This means:
 - Stage 3.5B PR5 has established PostgreSQL-backed two-phase concurrency admission
 - Stage 3.5B PR6 has established validation placement strategy as a Stage 4 prelude
 - Stage 3.5C PR0 has normalized durable `event_type` vocabulary, added `proof_prev_status` database constraint enforcement, and renamed the order stream-position unique constraint before durable read-side work begins
+- Stage 3.5C PR1 has established `projection_states` and `projection_checkpoints` as the durable read-side schema baseline, including physical shape constraints and checkpoint cursor alignment
 
 The current major focus is:
 
@@ -68,7 +70,7 @@ The current major focus is:
 
 After transaction atomicity, PostgreSQL-backed concurrency admission, and validation placement strategy are clarified, the project can proceed toward:
 
-- Stage 3.5C durable read-side baseline
+- remaining Stage 3.5C durable read-side baseline work after PR1
 - Stage 3.5D persistence optimization / replay efficiency
 - Stage 3.5E durable history and permission hardening
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
@@ -844,6 +846,10 @@ checkpoint = operational progress metadata
 
 ### PR1 — Durable Read-Side Schema Baseline
 
+#### Status
+
+Completed.
+
 #### Goal
 
 Define the PostgreSQL schema boundary for durable read-side state before implementing PostgreSQL-backed read-side stores.
@@ -868,14 +874,17 @@ How does the PostgreSQL-backed worker scan accepted history?
 How does Compass Layer 2 validate projection drift?
 ```
 
-#### Main Work
+#### Completed Scope
 
 - add `projection_states` table
 - add `projection_checkpoints` table
-- define schema constraints for projection status, money values, version, sequence, worker identity, and checkpoint progress
+- define schema constraints for projection status, money values, version, sequence, and identity fields
+- define checkpoint `cursor_kind` / `cursor_value` alignment constraints
 - add schema-constraint integration tests
+- update CI to apply the durable read-side migration
 - document the durable read-side schema boundary
 - keep accepted history as the source of truth
+- preserve the distinction between physical shape constraints and future Compass Layer 2 semantic-drift validation
 
 #### Candidate Tables
 
@@ -891,15 +900,31 @@ last_sequence
 updated_at
 ```
 
-`projection_checkpoints` may include:
+`projection_checkpoints` includes:
 
 ```text
 worker_name
-last_processed_sequence or future durable event position
+cursor_kind
+cursor_value
 updated_at
 ```
 
-The exact checkpoint offset strategy may be refined when the PostgreSQL-backed projection worker is introduced.
+PR1 deliberately avoids `last_processed_sequence` because `order_events.sequence` is aggregate-local, not a global worker offset.
+
+The final checkpoint scanning strategy is deferred until the PostgreSQL-backed projection worker is introduced. The schema supports `UNSPECIFIED`, `APPENDED_AT`, `EVENT_ID`, and `GLOBAL_POSITION` cursor kinds without committing PR1 to one worker strategy.
+
+#### Boundary Decision
+
+PR1 lets PostgreSQL protect physical shape and checkpoint cursor consistency.
+
+It intentionally does not add cross-field domain constraints such as:
+
+```text
+CREATED implies paid_amount = 0
+PAID implies paid_amount = total_amount
+```
+
+Those are semantic projection-drift concerns for the canonical reducer and future Compass Layer 2 validation, not PR1 database CHECK constraints.
 
 #### Non-goals
 
