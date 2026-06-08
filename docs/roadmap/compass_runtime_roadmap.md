@@ -94,6 +94,7 @@ The current system already supports:
 - durable order-event vocabulary hardening through Stage 3.5C PR0
 - durable read-side schema baseline through Stage 3.5C PR1
 - PostgreSQL-backed projection state persistence through Stage 3.5C PR2
+- PostgreSQL-backed checkpoint progress persistence through Stage 3.5C PR3
 
 This means Compass is already more than a passive checker.
 
@@ -128,7 +129,7 @@ This is the gap that later stages must close.
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, and Stage 3.5C PR2 has made projection state durable through `PostgresProjectionStore`.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, and Stage 3.5C PR3 has made checkpoint progress durable through `PostgresCheckpointStore`.
 
 ---
 
@@ -350,9 +351,11 @@ projection_checkpoints = worker progress metadata
 order_events = accepted-history truth
 ```
 
-Stage 3.5C PR2 has now implemented `PostgresProjectionStore`, which makes `projection_states` usable from the Python storage boundary.
+Stage 3.5C PR2 has implemented `PostgresProjectionStore`, which makes `projection_states` usable from the Python storage boundary.
 
-This gives Compass Layer 2 a more concrete future durable target for drift comparison, but it does not yet implement Layer 2 validation, `PostgresCheckpointStore`, a PostgreSQL-backed projection worker, or replay / rebuild orchestration.
+Stage 3.5C PR3 has now implemented `PostgresCheckpointStore`, which makes `projection_checkpoints` usable from the Python storage boundary.
+
+This gives Compass Layer 2 a more concrete future durable target and progress boundary for drift comparison, but it does not yet implement Layer 2 validation, a PostgreSQL-backed projection worker, or replay / rebuild orchestration.
 
 ---
 

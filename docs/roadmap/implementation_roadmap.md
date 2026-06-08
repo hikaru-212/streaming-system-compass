@@ -51,6 +51,7 @@ The project has completed an executable baseline across:
 - Stage 3.5C PR0 durable order-event vocabulary hardening
 - Stage 3.5C PR1 durable read-side schema baseline
 - Stage 3.5C PR2 PostgresProjectionStore baseline
+- Stage 3.5C PR3 PostgresCheckpointStore baseline
 
 This means:
 
@@ -66,6 +67,7 @@ This means:
 - Stage 3.5C PR0 has normalized durable `event_type` vocabulary, added `proof_prev_status` database constraint enforcement, and renamed the order stream-position unique constraint before durable read-side work begins
 - Stage 3.5C PR1 has established `projection_states` and `projection_checkpoints` as the durable read-side schema baseline, including physical shape constraints and checkpoint cursor alignment
 - Stage 3.5C PR2 has implemented `PostgresProjectionStore`, making `projection_states` usable through the Python storage boundary while preserving projection state as derived and rebuildable
+- Stage 3.5C PR3 has implemented `PostgresCheckpointStore`, making `projection_checkpoints` usable through the Python storage boundary while preserving checkpoint state as operational progress metadata
 
 The current major focus is:
 
@@ -73,7 +75,7 @@ The current major focus is:
 
 After transaction atomicity, PostgreSQL-backed concurrency admission, and validation placement strategy are clarified, the project can proceed toward:
 
-- remaining Stage 3.5C durable read-side baseline work after PR2
+- remaining Stage 3.5C durable read-side baseline work after PR3
 - Stage 3.5D persistence optimization / replay efficiency
 - Stage 3.5E durable history and permission hardening
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
@@ -1018,6 +1020,10 @@ PR2 does not implement:
 ---
 
 ### PR3 — PostgresCheckpointStore
+
+#### Status
+
+Completed.
 
 #### Goal
 

@@ -5,7 +5,7 @@
 This directory contains PostgreSQL-backed storage integration tests for **Streaming System + Compass**.
 
 These tests are not general database examples.
-They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1** and **Stage 3.5C PR2**.
+They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1**, **Stage 3.5C PR2**, and **Stage 3.5C PR3**.
 
 At the current baseline, this directory covers the completed durable write-side storage foundation and the first durable read-side schema checkpoint:
 
@@ -15,6 +15,7 @@ Stage 3.5B PR3 — PostgresIdempotencyStore Baseline
 Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening
 Stage 3.5C PR1 — Durable Read-Side Schema Baseline
 Stage 3.5C PR2 — PostgresProjectionStore Baseline
+Stage 3.5C PR3 — PostgresCheckpointStore Baseline
 ```
 
 It also verifies the local PostgreSQL test-database guardrail used by destructive integration tests.
@@ -31,6 +32,7 @@ The production code under test includes:
 - `src/storage/postgres_idempotency_store.py`
 - `src/storage/postgres_connection.py`
 - `src/storage/postgres_projection_store.py`
+- `src/storage/postgres_checkpoint_store.py`
 
 The related schema objects include:
 
@@ -84,6 +86,13 @@ The current storage integration tests cover:
 - `PostgresProjectionStore.clear()` behavior
 - multiple projection states remain independent by `order_id`
 - caller-owned rollback restores connection usability after constraint failure
+- `PostgresCheckpointStore.load_checkpoint()` missing-checkpoint behavior
+- `PostgresCheckpointStore.save_checkpoint()` insert and update behavior
+- checkpoint `cursor_kind` / `cursor_value` round-trip
+- worker-specific checkpoint isolation
+- `PostgresCheckpointStore.clear()` behavior
+- invalid checkpoint cursor shape rejection through the store
+- checkpoint store transaction ownership remains caller-controlled
 
 This directory currently focuses on the PostgreSQL-backed storage baseline.
 It does not test the full transactional write-side orchestration; that belongs to `tests/integration/pipeline/transactional/`.
@@ -271,6 +280,40 @@ This boundary answers:
 
 ---
 
+
+---
+
+### 7. PostgresCheckpointStore Boundary
+
+These tests verify that `PostgresCheckpointStore` makes durable checkpoint progress usable through the Python storage boundary.
+
+They prove:
+
+- missing checkpoint state returns `None`
+- `UNSPECIFIED` checkpoint state can be saved and loaded
+- `GLOBAL_POSITION` checkpoint state can be saved and loaded
+- `EVENT_ID` checkpoint state can be saved and loaded
+- `APPENDED_AT` checkpoint state can be saved and loaded
+- saving the same `worker_name` performs an upsert rather than creating a second row
+- multiple workers do not overwrite each other
+- `clear()` removes checkpoints
+- invalid `cursor_kind` / `cursor_value` combinations are rejected
+- empty `worker_name` values are rejected
+- `save_checkpoint()` does not commit the transaction
+- after a database constraint error, caller-owned rollback restores connection usability
+
+This boundary protects the Stage 3.5C PR3 storage claim:
+
+```text
+PostgresCheckpointStore
+= durable persistence boundary for projection worker progress metadata
+```
+
+This boundary answers:
+
+> Can PostgreSQL persist and restore worker checkpoint progress without giving the store ownership of event scanning, projection state, worker orchestration, transaction commit / rollback, or Compass Layer 2 validation?
+
+
 ## What These Tests Prove
 
 These tests prove that the PostgreSQL-backed storage layer preserves the following claims:
@@ -291,8 +334,10 @@ These tests prove that the PostgreSQL-backed storage layer preserves the followi
 14. Physically valid but semantically suspicious projection rows remain available for future Layer 2 drift detection.
 15. `PostgresProjectionStore` can save, load, upsert, and clear derived projection state.
 16. `projection_states.last_sequence` is intentionally persisted from `OrderState.version` in the current projection model.
-17. Store methods preserve caller-owned transaction boundaries.
-18. Destructive PostgreSQL tests are isolated from the development database.
+17. `PostgresCheckpointStore` can save, load, upsert, and clear checkpoint progress metadata.
+18. `projection_checkpoints` preserves explicit `cursor_kind` / `cursor_value` progress evidence.
+19. Store methods preserve caller-owned transaction boundaries.
+20. Destructive PostgreSQL tests are isolated from the development database.
 
 Together, these tests make the Stage 3.5B and Stage 3.5C PR1 storage claims executable:
 
