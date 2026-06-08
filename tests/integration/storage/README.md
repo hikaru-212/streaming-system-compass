@@ -5,7 +5,7 @@
 This directory contains PostgreSQL-backed storage integration tests for **Streaming System + Compass**.
 
 These tests are not general database examples.
-They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1**.
+They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1** and **Stage 3.5C PR2**.
 
 At the current baseline, this directory covers the completed durable write-side storage foundation and the first durable read-side schema checkpoint:
 
@@ -14,6 +14,7 @@ Stage 3.5B PR2 — PostgresEventStore Baseline
 Stage 3.5B PR3 — PostgresIdempotencyStore Baseline
 Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening
 Stage 3.5C PR1 — Durable Read-Side Schema Baseline
+Stage 3.5C PR2 — PostgresProjectionStore Baseline
 ```
 
 It also verifies the local PostgreSQL test-database guardrail used by destructive integration tests.
@@ -29,6 +30,7 @@ The production code under test includes:
 - `src/storage/postgres_event_store.py`
 - `src/storage/postgres_idempotency_store.py`
 - `src/storage/postgres_connection.py`
+- `src/storage/postgres_projection_store.py`
 
 The related schema objects include:
 
@@ -75,6 +77,13 @@ The current storage integration tests cover:
 - `projection_checkpoints` schema constraints
 - checkpoint `cursor_kind` / `cursor_value` alignment
 - physically valid but semantically suspicious projection-state rows reserved for future Layer 2 drift detection
+- `PostgresProjectionStore.load_state()` missing-state behavior
+- `PostgresProjectionStore.save_state()` insert and update behavior
+- projection-state Decimal / status / version round-trip
+- `projection_states.last_sequence` persisted from `OrderState.version`
+- `PostgresProjectionStore.clear()` behavior
+- multiple projection states remain independent by `order_id`
+- caller-owned rollback restores connection usability after constraint failure
 
 This directory currently focuses on the PostgreSQL-backed storage baseline.
 It does not test the full transactional write-side orchestration; that belongs to `tests/integration/pipeline/transactional/`.
@@ -232,6 +241,36 @@ This boundary answers:
 
 ---
 
+### 6. PostgresProjectionStore Boundary
+
+These tests verify that `PostgresProjectionStore` makes durable projection state usable through the Python storage boundary.
+
+They prove:
+
+- missing projection state returns `None`
+- CREATED projection state can be saved and loaded
+- PAID projection state can be saved and loaded
+- saving the same `order_id` performs an upsert rather than creating a second row
+- Decimal money values survive PostgreSQL round-trip
+- order status and version survive PostgreSQL round-trip
+- `projection_states.last_sequence` is persisted from `OrderState.version`
+- `clear()` removes projection states
+- multiple orders do not overwrite each other
+- after a database constraint error, caller-owned rollback restores connection usability
+
+This boundary protects the Stage 3.5C PR2 storage claim:
+
+```text
+PostgresProjectionStore
+= durable persistence boundary for derived projection state
+```
+
+This boundary answers:
+
+> Can PostgreSQL persist and restore derived projection state without giving the store ownership of reducer semantics, checkpoint progress, transaction commit / rollback, or Compass Layer 2 validation?
+
+---
+
 ## What These Tests Prove
 
 These tests prove that the PostgreSQL-backed storage layer preserves the following claims:
@@ -250,13 +289,18 @@ These tests prove that the PostgreSQL-backed storage layer preserves the followi
 12. Durable schema constraints reject invalid accepted-event vocabulary.
 13. Durable read-side schema constraints reject malformed projection state and checkpoint cursor rows.
 14. Physically valid but semantically suspicious projection rows remain available for future Layer 2 drift detection.
-15. Destructive PostgreSQL tests are isolated from the development database.
+15. `PostgresProjectionStore` can save, load, upsert, and clear derived projection state.
+16. `projection_states.last_sequence` is intentionally persisted from `OrderState.version` in the current projection model.
+17. Store methods preserve caller-owned transaction boundaries.
+18. Destructive PostgreSQL tests are isolated from the development database.
 
 Together, these tests make the Stage 3.5B and Stage 3.5C PR1 storage claims executable:
 
 > The durable storage layer can preserve accepted history and idempotency memory strongly enough for the transactional write-side and future read-side projection work to rely on it.
 
-> The durable read-side schema can preserve derived projection state and checkpoint progress strongly enough for future stores, workers, rebuild logic, and Layer 2 drift validation to rely on its physical shape.
+> The durable read-side schema can preserve derived projection state and checkpoint progress strongly enough for stores, workers, rebuild logic, and Layer 2 drift validation to rely on its physical shape.
+
+> `PostgresProjectionStore` makes `projection_states` usable through a Python storage boundary while preserving projection state as derived and rebuildable.
 
 ---
 

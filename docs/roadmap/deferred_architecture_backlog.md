@@ -62,9 +62,19 @@ checkpoint cursor-kind / cursor-value alignment
 read-side schema constraint tests
 ```
 
+Stage 3.5C PR2 has completed the PostgreSQL-backed projection state store baseline:
+
+```text
+PostgresProjectionStore
+projection_states save / load / upsert / clear behavior
+Decimal / status / version round-trip tests
+last_sequence persisted from OrderState.version
+caller-owned transaction boundary preserved
+```
+
 These completed items are no longer tracked as deferred backlog work.
 
-This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline, Stage 3.5C PR0 schema-hardening pass, and Stage 3.5C PR1 read-side schema baseline.
+This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline, Stage 3.5C PR0 schema-hardening pass, Stage 3.5C PR1 read-side schema baseline, and Stage 3.5C PR2 PostgresProjectionStore baseline.
 
 ---
 
@@ -76,6 +86,9 @@ Stage 4 / evidence design
 
 Stage 4 / retry classification
 → should wait for SemanticOutcome / request-attempt evidence design
+
+Stage 4 / domain policy contract
+→ should wait until SemanticOutcome v1 exists, then may be introduced as a minimal order-domain rule / recovery contract before RuntimeDecisionPolicy v1 hardens
 
 Stage 4 / connection-pool hardening
 → should wait until structured error modeling, connection lifecycle policy, or pooled database connections exist
@@ -97,6 +110,178 @@ Later production hardening
 
 Stage 5+ / later governance hardening
 → should wait until dual-dimension governance, action safety, and agent-facing tool boundaries become concrete
+```
+
+---
+
+
+## 0. Order Domain Policy Contract v0 and Policy-Guided Recovery
+
+### Current Decision
+
+Do not build a full general-purpose policy framework during Stage 3.5C, Stage 3.5D, Stage 3.5E, or the first Layer 2 validator pass.
+
+The current project should remain focused on:
+
+- durable read-side baseline
+- replay / snapshot trust substrate
+- durable history hardening
+- Layer 2 validation
+- structured semantic outcomes
+- runtime decisions
+- action safety
+
+However, Stage 4 may introduce a small domain-specific policy contract after `SemanticOutcome` v1 exists.
+
+This contract should be limited to the current minimal order/payment domain.
+
+### Why Not Now
+
+A full policy-fabric-like system would require:
+
+- authored policy schema
+- compiled execution plan
+- policy version comparison
+- validation reports
+- replay reports
+- release / promotion workflow
+- cross-domain governance
+- agent workflow integration
+
+That would distract from the current correctness path.
+
+The project does not need that much machinery to prove the Stage 4 governance loop.
+
+### Future Work
+
+Introduce a minimal artifact such as:
+
+```text
+contracts/order_domain_policy_contract_v1.yaml
+```
+
+The first version may define:
+
+- allowed order transitions
+- forbidden order transitions
+- amount rules
+- full-payment semantics
+- idempotent replay rule
+- idempotency conflict rule
+- stale-write recovery rule
+- projection-drift rebuild / quarantine recovery hint
+
+It may also define recovery strategies such as:
+
+```yaml
+recovery_strategies:
+  BLOCK:
+    retryable: false
+    human_required: false
+
+  REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE:
+    retryable: true
+    max_attempts: 1
+    required_action: reload_accepted_history
+
+  ALLOW_REPLAY:
+    retryable: false
+    required_action: return_prior_accepted_result
+
+  BLOCK_AND_ESCALATE:
+    retryable: false
+    human_required: true
+```
+
+Then extend `SemanticOutcome` with optional policy linkage:
+
+```python
+@dataclass(frozen=True)
+class PolicyRuleRef:
+    contract_id: str
+    rule_id: str
+    version: int
+```
+
+Candidate optional `SemanticOutcome` fields:
+
+```text
+policy_ref
+recovery_hint
+retry_safety
+intent_consistency
+```
+
+### Architectural Consequence
+
+This turns Stage 4 from:
+
+```text
+structured error classification
+```
+
+into:
+
+```text
+structured semantic outcome
+→ policy-linked recovery basis
+→ runtime decision
+```
+
+It prevents agentic retry from becoming blind trial-and-error against Compass.
+
+Instead, recovery can become:
+
+```text
+replay prior accepted result
+reload accepted history and rebuild once
+rebuild projection state
+quarantine derived state
+block irreversible mutation
+escalate human review
+```
+
+### Current Classification
+
+```text
+Stage 4 / domain policy contract
+```
+
+### Suggested Timing
+
+After:
+
+```text
+Stage 4B — Structured Semantic Outcome / Error Model v1
+```
+
+and before hardening:
+
+```text
+Stage 4C — Runtime Decision Policy v1
+```
+
+This can be treated as:
+
+```text
+Stage 4B.5 — Order Domain Policy Contract v0
+```
+
+### Non-goals
+
+This future item should not become:
+
+- a full policy authoring platform
+- a replacement for Compass validation
+- a replacement for accepted-history admission
+- a cross-domain governance framework
+- a release-pack / promotion system
+- an agent workflow orchestrator
+
+The intended role is narrower:
+
+```text
+provide a stable rule and recovery source for Stage 4 SemanticOutcome and RuntimeDecisionPolicy
 ```
 
 ---
@@ -332,7 +517,80 @@ After durable read-side baseline, before or during SemanticOutcome persistence d
 
 ---
 
-## 6. Append-Only Database Hardening
+
+## 6. Projection State Version / Source Sequence Separation
+
+### Current Decision
+
+Do not rename or split `OrderState.version` during Stage 3.5C PR2.
+
+At the current projection model level:
+
+```text
+OrderState.version
+= last aggregate-local accepted event sequence reflected by this projection state
+```
+
+Therefore `PostgresProjectionStore` intentionally persists:
+
+```text
+projection_states.last_sequence = state.version
+```
+
+### Why Not Now
+
+Changing this during PR2 would turn a storage-boundary implementation into a projection model refactor.
+
+It would require coordinated changes across:
+
+- reducer logic
+- worker sequencing logic
+- projection tests
+- future checkpoint / worker integration
+
+The current durable read-side baseline does not yet require separate projection-row versioning.
+
+### Future Work
+
+Revisit this during Stage 3.5D if Snapshot Trust Contract or replay-efficiency work requires separating:
+
+```text
+source event sequence
+projection version
+reducer version
+snapshot lineage
+projection schema version
+```
+
+Possible future representation:
+
+```text
+last_sequence
+= accepted event sequence reflected by the projection
+
+projection_version
+= projection row update / rebuild version
+
+reducer_version
+= reducer version used to produce the projection
+
+schema_version
+= durable projection schema version
+```
+
+### Current Classification
+
+```text
+Stage 3.5D / snapshot trust contract
+```
+
+### Suggested Timing
+
+During Stage 3.5D Snapshot Trust Contract work, before Stage 4 Layer 2 validation depends on persisted projection-state evidence.
+
+---
+
+## 7. Append-Only Database Hardening
 
 ### Current Decision
 

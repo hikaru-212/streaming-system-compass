@@ -60,6 +60,7 @@ The project has already completed:
 - Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude
 - Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening
 - Stage 3.5C PR1 — Durable Read-Side Schema Baseline
+- Stage 3.5C PR2 — PostgresProjectionStore
 
 Stage 3.5B now forms a durable write-side baseline:
 
@@ -77,7 +78,7 @@ The current major focus is:
 Stage 3.5C — Durable Read-Side Baseline
 ```
 
-Stage 3.5C should stay focused on durable projection state, durable checkpoint state, and persistence-backed projection worker behavior. PR1 has established the durable read-side schema boundary; the remaining Stage 3.5C work should implement the PostgreSQL-backed stores, worker, and replay / rebuild validation.
+Stage 3.5C should stay focused on durable projection state, durable checkpoint state, and persistence-backed projection worker behavior. PR1 has established the durable read-side schema boundary, and PR2 has made projection state durable through `PostgresProjectionStore`; the remaining Stage 3.5C work should implement the PostgreSQL-backed checkpoint store, worker, and replay / rebuild validation.
 
 Snapshot trust, retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.
 
@@ -170,7 +171,7 @@ Stage 3.5C should be implemented as a staged durable read-side PR sequence:
 
 ```text
 PR1 — Durable Read-Side Schema Baseline ✅
-PR2 — PostgresProjectionStore
+PR2 — PostgresProjectionStore ✅
 PR3 — PostgresCheckpointStore
 PR4 — PostgreSQL-Backed Projection Worker
 PR5 — Durable Replay / Rebuild Validation
@@ -186,6 +187,16 @@ order_events = accepted-history truth
 ```
 
 It also records that database constraints should protect physical shape and checkpoint cursor consistency, while future Compass Layer 2 should detect semantic projection drift.
+
+PR2 establishes:
+
+```text
+PostgresProjectionStore = PostgreSQL-backed projection state persistence
+projection_states = durable derived state storage
+OrderState.version = current source sequence reflected by the projection state
+```
+
+PR2 keeps the projection store narrow: it saves, loads, upserts, and clears derived projection state, but it does not own checkpoints, worker orchestration, semantic drift validation, or transaction commit / rollback.
 
 The sequencing rule is:
 
