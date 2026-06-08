@@ -2,7 +2,7 @@
 
 [← Back to src README](../README.md)
 
-This module provides the persistence abstractions that surround both the transactional semantic core and the Stage 3 baseline projection runtime.
+This module provides the persistence abstractions that surround both the transactional semantic core and the projection runtime.
 
 It does **not** define domain meaning by itself.  
 Instead, it preserves, retrieves, and checkpoints the semantic artifacts produced by the core and used by the pipeline.
@@ -31,14 +31,21 @@ This module is responsible for:
 - idempotency record persistence
 - projection state persistence
 - checkpoint / offset persistence
-- future database-backed implementations
+- PostgreSQL-backed persistence implementations where the current stage requires durability
 
-Typical submodules or files may include:
+Typical submodules or files include:
 
 - `event_store.py`
+- `postgres_event_store.py`
 - `idempotency_store.py`
+- `postgres_idempotency_store.py`
 - `projection_store.py`
+- `postgres_projection_store.py`
 - `checkpoint_store.py`
+
+Future durable read-side work may add:
+
+- `postgres_checkpoint_store.py`
 
 ---
 
@@ -91,7 +98,21 @@ Typical responsibilities:
 - get last event
 - enforce version continuity at the persistence boundary
 
-This is the most important storage abstraction in the early stage of the project because accepted history is the foundation of replay and projection.
+This is the most important storage abstraction in the early durable baseline because accepted history is the foundation of replay and projection.
+
+### `postgres_event_store.py`
+
+Provides the PostgreSQL-backed accepted-history store.
+
+Typical responsibilities:
+
+- persist accepted events into `order_events`
+- load accepted events ordered by aggregate-local sequence
+- retrieve the latest accepted event
+- preserve UUID identity, Decimal amount, proof fields, and selected JSONB evidence fields
+
+This store owns accepted-history persistence only.
+It does not own idempotency, Compass validation, or transactional write-side orchestration.
 
 ---
 
@@ -107,6 +128,20 @@ Typical responsibilities:
 
 This supports retry safety and duplicate request handling.
 
+### `postgres_idempotency_store.py`
+
+Provides the PostgreSQL-backed idempotency memory.
+
+Typical responsibilities:
+
+- classify durable request state as `MISS`, `REPLAY`, or `CONFLICT`
+- persist successful request-to-accepted-event mappings
+- preserve semantic fingerprint and fingerprint-version evidence
+- ensure idempotency records reference accepted events
+
+This store owns request-level idempotency memory only.
+It does not own event append, transaction orchestration, or retry policy.
+
 ---
 
 ### `projection_store.py`
@@ -119,7 +154,68 @@ Typical responsibilities:
 - load projected state
 - update projection results incrementally
 
-At the current stage, this now exists as part of the Stage 3 baseline projection runtime in a deterministic in-memory form.
+This file defines the minimal projection-state storage boundary and the deterministic in-memory baseline.
+
+### `postgres_projection_store.py`
+
+Provides the PostgreSQL-backed projection-state store.
+
+Typical responsibilities:
+
+- persist derived projection state into `projection_states`
+- load derived projection state by `order_id`
+- upsert the current projected state for one order
+- clear projection state for tests and future rebuild paths
+
+This store owns derived projection state persistence only.
+
+It does **not**:
+
+- run the projection reducer
+- decide event sequencing policy
+- manage checkpoint progress
+- validate semantic drift
+- decide replay / rebuild orchestration
+- commit or rollback transactions
+
+Transaction ownership remains outside the store.
+
+This is important because a later PostgreSQL-backed projection worker must be able to persist:
+
+```text
+projection state
++
+checkpoint progress
+```
+
+inside one read-side transaction boundary.
+
+#### Current `last_sequence` Mapping
+
+At the current projection model level:
+
+```text
+OrderState.version
+= last aggregate-local accepted event sequence reflected by this projection state
+```
+
+Therefore `PostgresProjectionStore` persists:
+
+```text
+projection_states.last_sequence = state.version
+```
+
+This mapping is intentional for Stage 3.5C PR2.
+
+It should be revisited during Stage 3.5D if snapshot trust, reducer-version tracking, projection schema versioning, or projection-row versioning require separating:
+
+```text
+source event sequence
+projection version
+reducer version
+snapshot lineage
+projection schema version
+```
 
 ---
 
@@ -133,7 +229,9 @@ Typical responsibilities:
 - restore projection progress after restart
 - support replay / rebuild boundaries
 
-At the current stage, this also now exists as part of the Stage 3 baseline projection runtime in a deterministic in-memory form.
+At the current stage, this exists as part of the Stage 3 baseline projection runtime in a deterministic in-memory form.
+
+A PostgreSQL-backed checkpoint store is intentionally deferred to Stage 3.5C PR3.
 
 ---
 
@@ -151,8 +249,9 @@ Write-side storage currently includes:
 
 Read-side storage currently includes:
 
-- `projection_store.py` — in-memory projection state store
-- `checkpoint_store.py` — in-memory checkpoint / offset store
+- `projection_store.py` — projection state protocol and in-memory projection state store
+- `postgres_projection_store.py` — PostgreSQL-backed projection state store
+- `checkpoint_store.py` — checkpoint / offset protocol and in-memory checkpoint store
 
 The current durable write-side progress is:
 
@@ -160,10 +259,20 @@ The current durable write-side progress is:
 Stage 3.5B PR1 — PostgreSQL schema / local setup / migration ✅
 Stage 3.5B PR2 — PostgresEventStore baseline ✅
 Stage 3.5B PR3 — PostgresIdempotencyStore baseline ✅
-Stage 3.5B PR4 — transactional write-side boundary planned
+Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary ✅
+Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary ✅
+Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude ✅
 ```
 
-The current durable read-side progress is still planned for Stage 3.5C.
+The current durable read-side progress is:
+
+```text
+Stage 3.5C PR1 — Durable Read-Side Schema Baseline ✅
+Stage 3.5C PR2 — PostgresProjectionStore ✅
+Stage 3.5C PR3 — PostgresCheckpointStore planned
+Stage 3.5C PR4 — PostgreSQL-Backed Projection Worker planned
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation planned
+```
 
 ---
 
@@ -173,12 +282,16 @@ Each storage concern should ideally expose:
 
 - a minimal abstract boundary or protocol where useful
 - an in-memory implementation for early development
-- a future database-backed implementation
+- a database-backed implementation when the durable stage requires it
 
 Example progression:
 
-- in-memory baseline first
-- `postgres.py` or equivalent later
+```text
+in-memory baseline
+→ PostgreSQL-backed store
+→ worker orchestration
+→ replay / rebuild validation
+```
 
 This allows the semantic core and baseline runtime behavior to stabilize before infrastructure becomes more complex.
 
@@ -202,7 +315,9 @@ As the source of actual accepted history used to validate predecessor claims and
 
 ### `src/pipeline/projection/`
 
-As the Stage 3 baseline read-side path that now depends on projection-state and checkpoint persistence boundaries.
+As the read-side path that depends on projection-state and checkpoint persistence boundaries.
+
+Stage 3.5C PR2 makes `projection_states` usable through a Python storage boundary, but it does not yet connect that store to a PostgreSQL-backed projection worker.
 
 ---
 
@@ -237,15 +352,18 @@ For testing how storage-related guarantees behave under:
 
 At the current stage, the main storage-related invariants include:
 
-- event streams must remain append-only
+- event streams must remain append-only at the application boundary
 - event version progression must remain continuous
 - idempotency records must be stable across retries
 - persisted accepted history must support deterministic replay
-- projection state must remain consistent with processed history in the current in-memory baseline
-- checkpoint position must reflect actual baseline projection progress
+- projection state must remain derived and rebuildable
+- PostgreSQL-backed projection state must round-trip status, Decimal money values, and version evidence correctly
+- `projection_states.last_sequence` currently reflects `OrderState.version`
+- checkpoint position must reflect actual projection progress once the durable checkpoint store is added
 
 Later invariants will include:
 
+- projection state and checkpoint progress should be committed atomically by the PostgreSQL-backed projection worker
 - persistence-backed replay and incremental state must remain equivalent
 - durable checkpoint position must survive restart correctly
 - write-side and read-side persistence semantics must remain mutually consistent
@@ -257,15 +375,19 @@ Later invariants will include:
 If reading this module from scratch, the recommended order is:
 
 1. `event_store.py`
-2. `idempotency_store.py`
-3. `projection_store.py`
-4. `checkpoint_store.py`
+2. `postgres_event_store.py`
+3. `idempotency_store.py`
+4. `postgres_idempotency_store.py`
+5. `projection_store.py`
+6. `postgres_projection_store.py`
+7. `checkpoint_store.py`
 
 This reflects the current project evolution:
 
 - transactional persistence first
-- baseline read-side persistence second
-- durable storage evolution next
+- durable read-side projection state second
+- durable checkpoint progress next
+- worker orchestration after both durable stores exist
 
 ---
 
@@ -275,5 +397,3 @@ This module does not define semantic truth.
 It defines where semantic truth and runtime progress are persisted, recovered, and tracked.
 
 If the core is the system's semantic source, storage is the memory boundary that preserves that source across time.
-
-

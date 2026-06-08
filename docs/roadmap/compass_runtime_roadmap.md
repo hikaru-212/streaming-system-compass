@@ -93,6 +93,7 @@ The current system already supports:
 - validation placement strategy through Stage 3.5B PR6
 - durable order-event vocabulary hardening through Stage 3.5C PR0
 - durable read-side schema baseline through Stage 3.5C PR1
+- PostgreSQL-backed projection state persistence through Stage 3.5C PR2
 
 This means Compass is already more than a passive checker.
 
@@ -127,7 +128,7 @@ This is the gap that later stages must close.
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, and Stage 3.5C PR1 has established the durable read-side schema boundary for projection state and checkpoint progress.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, and Stage 3.5C PR2 has made projection state durable through `PostgresProjectionStore`.
 
 ---
 
@@ -141,6 +142,7 @@ write-side event truth
 → durable derived state
 → snapshot trust / replay-efficiency substrate
 → Layer 2 state validation
+→ minimal domain policy contract / policy-linked recovery basis
 → structured semantic outcomes
 → runtime decisions
 → action safety
@@ -340,7 +342,7 @@ Current major implementation focus after the Stage 3.5B durable write-side basel
 
 Stage 3.5C PR0 has already hardened durable order-event vocabulary before the read-side baseline begins.
 
-Stage 3.5C PR1 has now established the durable read-side schema baseline:
+Stage 3.5C PR1 has established the durable read-side schema baseline:
 
 ```text
 projection_states = derived runtime view
@@ -348,7 +350,9 @@ projection_checkpoints = worker progress metadata
 order_events = accepted-history truth
 ```
 
-This gives Compass Layer 2 a future durable target for drift comparison, but it does not yet implement Layer 2 validation, PostgreSQL-backed stores, or a PostgreSQL-backed projection worker.
+Stage 3.5C PR2 has now implemented `PostgresProjectionStore`, which makes `projection_states` usable from the Python storage boundary.
+
+This gives Compass Layer 2 a more concrete future durable target for drift comparison, but it does not yet implement Layer 2 validation, `PostgresCheckpointStore`, a PostgreSQL-backed projection worker, or replay / rebuild orchestration.
 
 ---
 
@@ -643,6 +647,84 @@ future same intent_id + different intent_fingerprint
 → SEMANTIC_DRIFT / BLOCK_AND_ESCALATE / AGENT_INTENT_DRIFT
 ```
 
+
+## Policy-Linked Outcomes and Recovery Basis
+
+Stage 4 may introduce a small domain-specific policy contract so that `SemanticOutcome` can reference the rule that explains why a runtime action was allowed, blocked, replayed, rebuilt, quarantined, or escalated.
+
+This should not become a full general-purpose policy authoring system during Stage 4.
+
+The intended scope is narrower:
+
+```text
+Order Domain Policy Contract v0
+→ machine-readable rules for the current minimal order/payment domain
+→ rule IDs that `SemanticOutcome` can reference
+→ recovery hints that `RuntimeDecisionPolicy` can consume
+```
+
+This addition exists to prevent retry from becoming blind trial-and-error against Compass.
+
+Without a policy / contract reference, an agent or runtime can learn:
+
+```text
+what failed
+why it failed
+```
+
+but it may not know:
+
+```text
+which correction path is semantically allowed
+```
+
+A minimal policy-linked outcome may therefore carry:
+
+```python
+@dataclass(frozen=True)
+class PolicyRuleRef:
+    contract_id: str
+    rule_id: str
+    version: int
+```
+
+and `SemanticOutcome` may later include optional fields such as:
+
+```text
+policy_ref
+recovery_hint
+retry_safety
+intent_consistency
+```
+
+Example:
+
+```json
+{
+  "decision_basis": "semantic_outcome",
+  "error_type": "STALE_WRITE",
+  "policy_ref": {
+    "contract_id": "order_domain_v1",
+    "rule_id": "order.payment.requires_fresh_version",
+    "version": 1
+  },
+  "recovery_hint": "REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE"
+}
+```
+
+This keeps the boundary clear:
+
+```text
+SemanticOutcome
+→ describes what happened and which rule was involved
+
+RuntimeDecisionPolicy
+→ decides whether to allow, block, replay, retry, rebuild, quarantine, or escalate
+
+Domain Policy Contract v0
+→ provides the rule and recovery vocabulary used by the outcome / decision path
+```
+
 ## Boundary
 
 A semantic outcome describes what happened.
@@ -650,6 +732,169 @@ A semantic outcome describes what happened.
 It should not directly own the final control action.
 
 That responsibility belongs to `RuntimeDecisionPolicy`.
+
+---
+
+
+# Phase 5.5 — Order Domain Policy Contract v0
+
+## Goal
+
+Introduce a minimal machine-readable contract for the current order domain so that structured semantic outcomes can point to stable rule IDs and recovery hints.
+
+This is a Stage 4B.5-style optional extension between:
+
+```text
+Structured Semantic Outcomes
+```
+
+and:
+
+```text
+Runtime Decision Policy
+```
+
+## Why
+
+`SemanticOutcome` can explain what failed.
+
+However, agentic retry and governed recovery also need a comparison source that says:
+
+```text
+which rule was violated
+which recovery path is allowed
+whether retry is safe
+whether replay is allowed
+whether human review is required
+```
+
+Without this layer, an agent may repeatedly modify a candidate action until Compass allows it.
+That is not policy-guided recovery.
+It is trial-and-error against the runtime gate.
+
+## Minimal Contract Scope
+
+The first contract should remain domain-specific and small.
+
+It should cover only the current v1 order world:
+
+- `INIT → CREATED`
+- `CREATED → PAID`
+- full-payment semantics
+- positive amount rules
+- idempotent replay rules
+- idempotency conflict rules
+- stale-write / reload-oriented recovery
+- projection-drift rebuild-oriented recovery
+
+It should not attempt to define:
+
+- a general policy language
+- policy promotion workflows
+- release packs
+- cross-domain governance
+- full agent workflow orchestration
+
+## Candidate Artifact
+
+A future file may look like:
+
+```text
+contracts/order_domain_policy_contract_v1.yaml
+```
+
+Candidate shape:
+
+```yaml
+contract_id: order_domain_v1
+domain: order
+version: 1
+
+rules:
+  - id: order.transition.init_to_created
+    type: transition
+    from: INIT
+    to: CREATED
+    allowed: true
+
+  - id: order.transition.created_to_paid
+    type: transition
+    from: CREATED
+    to: PAID
+    allowed: true
+
+  - id: order.transition.init_to_paid
+    type: transition
+    from: INIT
+    to: PAID
+    allowed: false
+    violation: DOMAIN_TRANSITION_VIOLATION
+    recovery: BLOCK
+
+  - id: order.payment.requires_fresh_version
+    type: admission
+    violation: STALE_WRITE
+    recovery: REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE
+
+  - id: order.request.same_id_same_fingerprint
+    type: idempotency
+    outcome: IDEMPOTENT_REPLAY
+    recovery: ALLOW_REPLAY
+
+  - id: order.request.same_id_different_fingerprint
+    type: idempotency
+    violation: IDEMPOTENCY_CONFLICT
+    recovery: BLOCK
+
+recovery_strategies:
+  BLOCK:
+    retryable: false
+    human_required: false
+
+  REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE:
+    retryable: true
+    max_attempts: 1
+    required_action: reload_accepted_history
+
+  ALLOW_REPLAY:
+    retryable: false
+    required_action: return_prior_accepted_result
+
+  BLOCK_AND_ESCALATE:
+    retryable: false
+    human_required: true
+```
+
+## Runtime Meaning
+
+This contract gives `SemanticOutcome` and `RuntimeDecisionPolicy` a stable rule source.
+
+The runtime path becomes:
+
+```text
+Compass validation result
+→ SemanticOutcome
+→ optional policy_ref / recovery_hint
+→ RuntimeDecisionPolicy
+→ RuntimeDecision
+→ ActionSafetyGate
+```
+
+## Completion Criteria
+
+This phase is minimally useful when:
+
+- an order-domain policy contract file exists
+- rule IDs correspond to existing domain rules
+- selected `SemanticOutcome` objects can reference `policy_ref`
+- recovery hints cover at least block, replay, reload/rebuild-once, and escalate paths
+- tests prove that policy-linked outcomes can drive runtime decisions
+
+## Boundary
+
+This is not a full policy governance system.
+
+It is a domain-specific contract layer that makes Stage 4 outcomes more useful for agentic retry, recovery, replay, and audit.
 
 ---
 

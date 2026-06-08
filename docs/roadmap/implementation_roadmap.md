@@ -23,6 +23,7 @@ This version updates the roadmap to reflect the current Stage 3.5B direction:
 - Stage 3.5E is introduced as a durable history and permission-hardening stage before broader runtime semantic governance
 - Stage 4 is not only an error taxonomy stage; it becomes a structured semantic outcome and runtime decision boundary
 - Stage 4 explicitly includes retry reason classification and intent consistency as part of SemanticOutcome / runtime evidence design
+- Stage 4 may introduce a minimal Order Domain Policy Contract v0 so SemanticOutcome can reference rule IDs and recovery strategies without turning the project into a full policy-authoring system
 - Stage 5 becomes the dual-dimension governance demo: semantic correctness × operational freshness → action safety
 - Stage 5+ may later evaluate isolated derived-state runtime / oblivious agent runtime as an agent-governance hardening direction
 
@@ -49,6 +50,7 @@ The project has completed an executable baseline across:
 - Stage 3.5B PR6 validation placement strategy baseline
 - Stage 3.5C PR0 durable order-event vocabulary hardening
 - Stage 3.5C PR1 durable read-side schema baseline
+- Stage 3.5C PR2 PostgresProjectionStore baseline
 
 This means:
 
@@ -63,6 +65,7 @@ This means:
 - Stage 3.5B PR6 has established validation placement strategy as a Stage 4 prelude
 - Stage 3.5C PR0 has normalized durable `event_type` vocabulary, added `proof_prev_status` database constraint enforcement, and renamed the order stream-position unique constraint before durable read-side work begins
 - Stage 3.5C PR1 has established `projection_states` and `projection_checkpoints` as the durable read-side schema baseline, including physical shape constraints and checkpoint cursor alignment
+- Stage 3.5C PR2 has implemented `PostgresProjectionStore`, making `projection_states` usable through the Python storage boundary while preserving projection state as derived and rebuildable
 
 The current major focus is:
 
@@ -70,7 +73,7 @@ The current major focus is:
 
 After transaction atomicity, PostgreSQL-backed concurrency admission, and validation placement strategy are clarified, the project can proceed toward:
 
-- remaining Stage 3.5C durable read-side baseline work after PR1
+- remaining Stage 3.5C durable read-side baseline work after PR2
 - Stage 3.5D persistence optimization / replay efficiency
 - Stage 3.5E durable history and permission hardening
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
@@ -943,6 +946,10 @@ PR1 does not implement:
 
 ### PR2 — PostgresProjectionStore
 
+#### Status
+
+Completed.
+
 #### Goal
 
 Implement PostgreSQL-backed persistence for derived projection state.
@@ -953,15 +960,49 @@ The current Stage 3 projection state exists only in the in-memory baseline.
 
 PR2 moves projection state toward durable persistence while preserving the rule that projection state is derived and rebuildable, not the source of truth.
 
-#### Main Work
+#### Completed Scope
 
 - implement `PostgresProjectionStore`
 - support loading projection state by `order_id`
-- support inserting or updating projection state
+- support inserting or updating projection state through `projection_states`
 - preserve Decimal money values across write / read
-- preserve status, version, and last-sequence semantics
-- add integration tests for store behavior
-- ensure stored projection state can survive a new database connection
+- preserve status and version semantics
+- persist `projection_states.last_sequence` from `OrderState.version`
+- support `clear()` for tests and future rebuild paths
+- add integration tests for save / load / upsert / clear behavior
+- verify multiple orders remain independent
+- verify stored projection state survives the PostgreSQL round trip
+- verify caller-owned rollback restores connection usability after constraint failure
+
+#### Boundary Decision
+
+`PostgresProjectionStore` persists derived projection state only.
+
+It does not:
+
+- run the projection reducer
+- decide event sequencing policy
+- manage checkpoint progress
+- validate semantic drift
+- decide replay / rebuild orchestration
+- commit or rollback transactions
+
+Transaction ownership remains outside the store so that a later PostgreSQL-backed projection worker can commit projection-state updates and checkpoint progress atomically.
+
+At the current projection model level:
+
+```text
+OrderState.version
+= last aggregate-local accepted event sequence reflected by this projection state
+```
+
+Therefore PR2 persists:
+
+```text
+projection_states.last_sequence = state.version
+```
+
+This mapping should be revisited during Stage 3.5D if snapshot trust, reducer-version tracking, projection schema versioning, or projection-row versioning require separating source event sequence from projection version metadata.
 
 #### Non-goals
 
@@ -1736,6 +1777,209 @@ It does not decide what the runtime should do.
 
 ---
 
+
+## Stage 4B.5 — Order Domain Policy Contract v0
+
+### Goal
+
+Add a small domain-specific policy contract for the current order/payment model so that `SemanticOutcome` can reference stable rule IDs and recovery strategies.
+
+This stage should be treated as an optional Stage 4 extension between structured outcomes and runtime decisions.
+
+It should not become a general-purpose policy framework.
+
+### Why
+
+Stage 4B gives the system structured semantic outcomes.
+
+However, an outcome that only says:
+
+```text
+what failed
+why it failed
+```
+
+is still not enough for governed agentic retry.
+
+A retrying agent or workflow also needs to know:
+
+```text
+which rule was violated
+whether retry is allowed
+which recovery path is semantically valid
+whether replay is allowed
+whether the action must be blocked or escalated
+```
+
+Without a rule / recovery source, retry can degrade into blind trial-and-error against Compass.
+
+The purpose of Stage 4B.5 is to provide a minimal comparison source for policy-guided recovery.
+
+### Candidate Artifact
+
+Introduce a narrow contract file such as:
+
+```text
+contracts/order_domain_policy_contract_v1.yaml
+```
+
+The contract should be derived from the existing Order Domain v1 rules and should cover only the current minimal commerce model.
+
+Candidate scope:
+
+- allowed transitions: `INIT → CREATED`, `CREATED → PAID`
+- forbidden transitions: `INIT → PAID`, `PAID → PAID` for new requests
+- positive amount rules
+- full-payment semantics for v1
+- idempotent replay with same request identity and same semantic fingerprint
+- idempotency conflict for same request identity with different semantic fingerprint
+- stale-write recovery by reloading accepted history and rebuilding the candidate once
+- projection drift recovery by rebuild / quarantine decision
+
+### Candidate YAML Shape
+
+```yaml
+contract_id: order_domain_v1
+domain: order
+version: 1
+
+rules:
+  - id: order.transition.init_to_created
+    type: transition
+    from: INIT
+    to: CREATED
+    allowed: true
+
+  - id: order.transition.created_to_paid
+    type: transition
+    from: CREATED
+    to: PAID
+    allowed: true
+
+  - id: order.transition.init_to_paid
+    type: transition
+    from: INIT
+    to: PAID
+    allowed: false
+    violation: DOMAIN_TRANSITION_VIOLATION
+    recovery: BLOCK
+
+  - id: order.transition.paid_to_paid_new_request
+    type: transition
+    from: PAID
+    to: PAID
+    allowed: false
+    violation: DUPLICATE_PAYMENT_ATTEMPT
+    recovery: BLOCK
+
+  - id: order.request.same_id_same_fingerprint
+    type: idempotency
+    outcome: IDEMPOTENT_REPLAY
+    recovery: ALLOW_REPLAY
+
+  - id: order.request.same_id_different_fingerprint
+    type: idempotency
+    violation: IDEMPOTENCY_CONFLICT
+    recovery: BLOCK
+
+  - id: order.admission.requires_fresh_version
+    type: admission
+    violation: STALE_WRITE
+    recovery: REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE
+
+recovery_strategies:
+  BLOCK:
+    retryable: false
+    human_required: false
+
+  REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE:
+    retryable: true
+    max_attempts: 1
+    required_action: reload_accepted_history
+
+  ALLOW_REPLAY:
+    retryable: false
+    required_action: return_prior_accepted_result
+
+  BLOCK_AND_ESCALATE:
+    retryable: false
+    human_required: true
+```
+
+### SemanticOutcome Extension
+
+Stage 4B.5 may add a small policy reference type:
+
+```python
+@dataclass(frozen=True)
+class PolicyRuleRef:
+    contract_id: str
+    rule_id: str
+    version: int
+```
+
+`SemanticOutcome` may then include optional fields such as:
+
+```python
+policy_ref: PolicyRuleRef | None
+recovery_hint: str | None
+```
+
+The important point is that `SemanticOutcome` remains descriptive.
+
+It may identify the violated or relevant rule, but it should not directly execute the recovery decision.
+
+### Relationship to Stage 4C
+
+Stage 4C can consume:
+
+```text
+SemanticOutcome.error_type
+SemanticOutcome.policy_ref
+SemanticOutcome.recovery_hint
+```
+
+and produce:
+
+```text
+RuntimeDecision
+```
+
+This keeps the flow explicit:
+
+```text
+Domain Policy Contract
+→ SemanticOutcome
+→ RuntimeDecisionPolicy
+→ RuntimeDecision
+→ ActionSafetyGate
+```
+
+### Completion Criteria
+
+Stage 4B.5 is minimally complete when:
+
+- `contracts/order_domain_policy_contract_v1.yaml` exists
+- it contains rule IDs for the current v1 order/payment model
+- it contains recovery strategies for block, replay, reload/rebuild-once, and escalate
+- `SemanticOutcome` can optionally reference `policy_ref`
+- tests prove at least a few outcomes are linked to rule IDs
+- runtime decision tests can consume recovery hints without hardcoding every rule directly in the decision policy
+
+### Non-goals
+
+Stage 4B.5 does not implement:
+
+- a general policy authoring platform
+- compiled execution plans
+- release packs
+- policy promotion workflow
+- policy diff tooling
+- cross-domain governance
+- agent workflow orchestration
+
+---
+
 ## Stage 4C — Runtime Decision Policy v1
 
 ### Goal
@@ -1743,6 +1987,8 @@ It does not decide what the runtime should do.
 Convert `SemanticOutcome` into `RuntimeDecision`.
 
 This is the detect → classify → decide step.
+
+If Stage 4B.5 is implemented, this policy may also consume `policy_ref` and `recovery_hint` from `SemanticOutcome` so that decisions are guided by the order-domain contract rather than only by hardcoded error-code mapping.
 
 ### Minimal Structure
 
@@ -2143,6 +2389,7 @@ Stage 4:
 Runtime Semantic Validation and Runtime Decision Boundary
   4A Layer 2 Minimal Validator
   4B Structured Semantic Outcome / Error Model v1
+  4B.5 Order Domain Policy Contract v0
   4C Runtime Decision Policy v1
   4D Layer 1 / Layer 2 Outcome + Decision Alignment
   4E Domain Action Safety Gate
