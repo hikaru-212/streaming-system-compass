@@ -42,9 +42,6 @@ Typical submodules or files include:
 - `projection_store.py`
 - `postgres_projection_store.py`
 - `checkpoint_store.py`
-
-Future durable read-side work may add:
-
 - `postgres_checkpoint_store.py`
 
 ---
@@ -231,7 +228,40 @@ Typical responsibilities:
 
 At the current stage, this exists as part of the Stage 3 baseline projection runtime in a deterministic in-memory form.
 
-A PostgreSQL-backed checkpoint store is intentionally deferred to Stage 3.5C PR3.
+### `postgres_checkpoint_store.py`
+
+Provides the PostgreSQL-backed projection checkpoint store.
+
+Typical responsibilities:
+
+- persist projection worker progress into `projection_checkpoints`
+- load projection worker progress by `worker_name`
+- upsert checkpoint cursor state
+- clear checkpoint progress for tests and future rebuild paths
+
+This store owns durable checkpoint persistence only.
+
+It does **not**:
+
+- scan accepted history
+- decide the final cursor strategy
+- run the projection worker
+- persist projection state
+- validate semantic drift
+- decide replay / rebuild orchestration
+- commit or rollback transactions
+
+Transaction ownership remains outside the store.
+
+This is important because a later PostgreSQL-backed projection worker must be able to persist:
+
+```text
+projection state
++
+checkpoint progress
+```
+
+inside one read-side transaction boundary.
 
 ---
 
@@ -252,6 +282,7 @@ Read-side storage currently includes:
 - `projection_store.py` — projection state protocol and in-memory projection state store
 - `postgres_projection_store.py` — PostgreSQL-backed projection state store
 - `checkpoint_store.py` — checkpoint / offset protocol and in-memory checkpoint store
+- `postgres_checkpoint_store.py` — PostgreSQL-backed checkpoint store
 
 The current durable write-side progress is:
 
@@ -269,7 +300,7 @@ The current durable read-side progress is:
 ```text
 Stage 3.5C PR1 — Durable Read-Side Schema Baseline ✅
 Stage 3.5C PR2 — PostgresProjectionStore ✅
-Stage 3.5C PR3 — PostgresCheckpointStore planned
+Stage 3.5C PR3 — PostgresCheckpointStore ✅
 Stage 3.5C PR4 — PostgreSQL-Backed Projection Worker planned
 Stage 3.5C PR5 — Durable Replay / Rebuild Validation planned
 ```
