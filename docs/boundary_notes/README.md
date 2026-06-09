@@ -50,6 +50,7 @@ Boundary notes are especially useful when asking questions such as:
 - Why is projection split into reducer and worker rather than one mixed component?
 - Why does transactional consistency not mean boundary merge?
 - Why does a projection worker need a global cursor instead of aggregate-local sequence?
+- Why does replay validation compare against projection state without making projection state the source of truth?
 
 These are not merely coding-style questions.  
 They are boundary questions.
@@ -92,6 +93,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Projection Runtime Boundary](projection_boundary.md)
 - [Checkpoint Module Boundary](checkpoint_module.md)
 - [Global-Position Projection Worker Boundary](global_position_projection_worker_boundary.md)
+- [Durable Replay / Rebuild Validation Boundary](durable_replay_rebuild_validation_boundary.md)
 - [Compass Layer Boundary](compass_layer_boundary.md)
 - [Persistence Boundary](persistence_boundary.md)
 - [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
@@ -109,6 +111,8 @@ Two projection-related notes are intentionally preserved:
 - **Projection Runtime Boundary** describes the internal Stage 3 boundary between reducer, worker, projection store, and checkpoint store.
 
 The global-position projection worker note extends the projection runtime boundary for Stage 3.5C PR4. It clarifies why a durable PostgreSQL-backed projection worker needs a global event-log cursor instead of using aggregate-local `order_events.sequence`.
+
+The durable replay / rebuild validation note extends the projection boundary for Stage 3.5C PR5. It clarifies how accepted history should be replayed through the canonical reducer and compared with durable projection state without turning projection state into the source of truth or prematurely introducing Compass Layer 2.
 
 The persistence-related notes are also intentionally separate:
 
@@ -135,10 +139,11 @@ A practical reading order is:
 11. [Projection Runtime Boundary](projection_boundary.md)
 12. [Checkpoint Module Boundary](checkpoint_module.md)
 13. [Global-Position Projection Worker Boundary](global_position_projection_worker_boundary.md)
-14. [Compass Layer Boundary](compass_layer_boundary.md)
-15. [Persistence Boundary](persistence_boundary.md)
-16. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
-17. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+14. [Durable Replay / Rebuild Validation Boundary](durable_replay_rebuild_validation_boundary.md)
+15. [Compass Layer Boundary](compass_layer_boundary.md)
+16. [Persistence Boundary](persistence_boundary.md)
+17. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+18. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -155,6 +160,7 @@ This roughly follows the intended semantic development order of the project:
 - define projection runtime internals
 - define runtime progress boundaries
 - define durable worker cursor strategy
+- define durable replay / rebuild validation against accepted history
 - define semantic validation layers
 - define durable-world persistence discipline
 - define read-side persistence semantics
@@ -169,6 +175,7 @@ These notes should be read together with:
 - [Order Core README](../../src/core/order/README.md)
 - [Storage README](../../src/storage/README.md)
 - [Pipeline README](../../src/pipeline/README.md)
+- [Projection Pipeline README](../../src/pipeline/projection/README.md)
 - [Compass README](../../src/compass/README.md)
 - [Transactional Core](../architecture/transactional_core.md)
 - [Compass Layers](../architecture/compass_layers.md)
@@ -177,6 +184,8 @@ These notes should be read together with:
 - [Write-Side Schema Baseline](../architecture/write_side_schema_baseline.md)
 - [Read-Side Schema Baseline](../architecture/read_side_schema_baseline.md)
 - [Implementation Roadmap](../roadmap/implementation_roadmap.md)
+- [Compass Runtime Roadmap](../roadmap/compass_runtime_roadmap.md)
+- [Deferred Architecture Backlog](../roadmap/deferred_architecture_backlog.md)
 - [Concurrency Control, Idempotency, and Retry Safety](../adr/0003_concurrency_idempotency_and_retry_safety.md)
 - [Persistent Storage Baseline Strategy](../adr/0005_persistent_storage_baseline_strategy.md)
 - [Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
