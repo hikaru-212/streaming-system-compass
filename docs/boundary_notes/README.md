@@ -49,8 +49,7 @@ Boundary notes are especially useful when asking questions such as:
 - Why does Compass validation not replace persistence admission?
 - Why is projection split into reducer and worker rather than one mixed component?
 - Why does transactional consistency not mean boundary merge?
-- Why is read-side state derived and rebuildable rather than source-of-truth state?
-- Why must a projection worker checkpoint not use aggregate-local event sequence as a global cursor?
+- Why does a projection worker need a global cursor instead of aggregate-local sequence?
 
 These are not merely coding-style questions.  
 They are boundary questions.
@@ -92,6 +91,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Projection Module Boundary](projection_module.md)
 - [Projection Runtime Boundary](projection_boundary.md)
 - [Checkpoint Module Boundary](checkpoint_module.md)
+- [Global-Position Projection Worker Boundary](global_position_projection_worker_boundary.md)
 - [Compass Layer Boundary](compass_layer_boundary.md)
 - [Persistence Boundary](persistence_boundary.md)
 - [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
@@ -108,11 +108,13 @@ Two projection-related notes are intentionally preserved:
 - **Projection Module Boundary** describes the external role of projection as a whole.
 - **Projection Runtime Boundary** describes the internal Stage 3 boundary between reducer, worker, projection store, and checkpoint store.
 
+The global-position projection worker note extends the projection runtime boundary for Stage 3.5C PR4. It clarifies why a durable PostgreSQL-backed projection worker needs a global event-log cursor instead of using aggregate-local `order_events.sequence`.
+
 The persistence-related notes are also intentionally separate:
 
 - **Persistence Boundary** explains how durable storage should be introduced without collapsing the boundaries between event store, idempotency store, projection state, and checkpoint progress.
+- **Read-Side Persistence Boundary** explains how `projection_states` and `projection_checkpoints` should be treated as derived state and operational metadata rather than accepted-history truth.
 - **Stage 3.5B Write-Side Schema Translation Note** explains how Python-side guarantees such as `frozen=True`, append-only accepted history, and exact money semantics should be translated into database-side physical constraints before durable write-side implementation begins.
-- **Read-Side Persistence Boundary** explains how Stage 3.5C durable read-side persistence should preserve the distinction between accepted history, derived projection state, worker checkpoint progress, and future worker cursor strategy.
 
 ---
 
@@ -132,10 +134,11 @@ A practical reading order is:
 10. [Projection Module Boundary](projection_module.md)
 11. [Projection Runtime Boundary](projection_boundary.md)
 12. [Checkpoint Module Boundary](checkpoint_module.md)
-13. [Compass Layer Boundary](compass_layer_boundary.md)
-14. [Persistence Boundary](persistence_boundary.md)
-15. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+13. [Global-Position Projection Worker Boundary](global_position_projection_worker_boundary.md)
+14. [Compass Layer Boundary](compass_layer_boundary.md)
+15. [Persistence Boundary](persistence_boundary.md)
 16. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+17. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -151,10 +154,11 @@ This roughly follows the intended semantic development order of the project:
 - define projection as read-side derivation
 - define projection runtime internals
 - define runtime progress boundaries
+- define durable worker cursor strategy
 - define semantic validation layers
 - define durable-world persistence discipline
+- define read-side persistence semantics
 - define how Python-side semantic guarantees are restated at the database boundary
-- define how durable read-side state remains derived, rebuildable, and checkpoint-aware without redefining accepted history
 
 ---
 

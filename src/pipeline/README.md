@@ -118,18 +118,46 @@ Typical responsibilities:
 - recover through replay / rebuild
 - enforce baseline sequencing assumptions
 
-At the current stage, a Stage 3 baseline projection runtime now exists in deterministic in-memory form, built around:
+The projection runtime now has two baseline forms:
 
-- a pure reducer
-- a checkpoint-aware worker
-- projection-state persistence boundary
-- checkpoint persistence boundary
-- replay / rebuild through the same runtime path
+1. a deterministic in-memory Stage 3 baseline
+2. a PostgreSQL-backed Stage 3.5C PR4 baseline
+
+The current PostgreSQL-backed projection worker connects:
+
+```text
+order_events
+→ PostgresProjectionEventSource
+→ canonical reducer
+→ PostgresProjectionStore
+→ PostgresCheckpointStore
+```
+
+and persists:
+
+```text
+projection state
++
+checkpoint progress
+```
+
+inside one read-side transaction boundary.
+
+The PostgreSQL-backed worker uses:
+
+```text
+cursor_kind = GLOBAL_POSITION
+cursor_value = latest processed order_events.global_position
+```
+
+as the first durable accepted-history consumption strategy.
 
 For the higher-level projection design, see:
 
 - [Projection Pipeline](../../docs/architecture/projection_pipeline.md)
 - [Projection Boundary](../../docs/boundary_notes/projection_boundary.md)
+- [Global-Position Projection Worker Boundary](../../docs/boundary_notes/global_position_projection_worker_boundary.md)
+- [Projection README](projection/README.md)
 
 ---
 
@@ -153,8 +181,8 @@ This layer is intentionally deferred until the transactional and projection base
 
 At the current stage, the implemented focus now includes:
 
-1. [transactional/](transactional/)
-2. [projection/](projection/)
+1. [transactional/](transactional/README.md)
+2. [projection/](projection/README.md)
 
 while:
 
@@ -184,9 +212,7 @@ The first important pipeline path is:
 8. apply event to aggregate state
 9. return result
 
-This is the minimum runtime path of the transactional system.
-
-That write-side path now exists as the current baseline.
+This write-side path exists as the current durable PostgreSQL-backed baseline after Stage 3.5B.
 
 ---
 
@@ -200,23 +226,38 @@ into:
 
 - a baseline projection runtime with worker / reducer separation
 
-The current Stage 3 baseline now supports:
+The Stage 3 in-memory projection baseline supports:
 
 - incremental application
 - replayability
 - checkpoint-aware sequencing
 - deterministic replay / rebuild through the same runtime path
 
-However, it still does **not yet** include:
+Stage 3.5C PR4 extends the projection path into a PostgreSQL-backed durable runtime baseline.
 
-- persistent storage-backed semantics
+It now supports:
+
+- durable accepted-history scanning through `order_events.global_position`
+- storage-side event loading through `PostgresProjectionEventSource`
+- shared order-event hydration through `order_event_hydration.py`
+- durable projection state through `PostgresProjectionStore`
+- durable checkpoint progress through `PostgresCheckpointStore`
+- atomic projection-state and checkpoint-progress persistence through `PostgresProjectionWorker`
+- fail-fast handling for projection-state / checkpoint mismatch
+
+It still does **not yet** include:
+
+- durable replay / rebuild validation
+- Compass Layer 2 validation
 - advanced recovery logic
 - out-of-order buffering
 - DLQ handling
 - watermark semantics
+- worker leasing
+- checkpoint row locking
 - multi-worker coordination
 
-Those concerns are intentionally deferred until after the durable persistence baseline is introduced.
+Those concerns are intentionally deferred until after the durable projection worker baseline.
 
 ---
 
@@ -230,7 +271,7 @@ For event production and aggregate rehydration.
 
 ### `src/storage/`
 
-For event persistence, idempotency storage, projection state, and checkpointing.
+For event persistence, idempotency storage, projection state, event-source loading, and checkpointing.
 
 ### `src/compass/transition/`
 
@@ -244,7 +285,7 @@ Later, this module will also connect heavily with:
 
 ### persistence-backed storage evolution
 
-To strengthen write-side and read-side restart semantics beyond the current in-memory baseline.
+To strengthen write-side and read-side restart semantics beyond the current durable baseline.
 
 ### `src/compass/state/`
 
@@ -270,7 +311,8 @@ At the current stage, the main pipeline-related invariants include:
 - transactional event admission must preserve domain legality
 - replay must rebuild aggregate state deterministically
 - projection must produce state consistent with processed accepted history
-- projection progress must align with actual consumed sequence or offset
+- projection progress must align with the actual accepted-history cursor
+- PostgreSQL-backed projection must persist projection state and checkpoint progress atomically
 - replay / rebuild must follow the same baseline projection semantics as incremental processing
 
 Later analytical invariants may include:
