@@ -65,7 +65,7 @@ jobs:
         run: |
           psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
           psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
-
+          psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql         
       - name: Lint with Flake8
         run: |
           pip install flake8
