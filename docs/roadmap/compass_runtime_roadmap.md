@@ -95,6 +95,9 @@ The current system already supports:
 - durable read-side schema baseline through Stage 3.5C PR1
 - PostgreSQL-backed projection state persistence through Stage 3.5C PR2
 - PostgreSQL-backed checkpoint progress persistence through Stage 3.5C PR3
+- global-position accepted-history consumption through Stage 3.5C PR4
+- PostgreSQL-backed projection worker orchestration through Stage 3.5C PR4
+- atomic projection-state and checkpoint-progress persistence through Stage 3.5C PR4
 
 This means Compass is already more than a passive checker.
 
@@ -105,13 +108,25 @@ invalid candidate event
 → blocked before accepted history
 ```
 
-PR4 extends this authority into the durable PostgreSQL-backed write-side path:
+Stage 3.5B PR4 extended this authority into the durable PostgreSQL-backed write-side path:
 
 ```text
 candidate event
 → Compass Layer 1 validation
 → append accepted event + record idempotency in one transaction
 ```
+
+Stage 3.5C PR4 extends the durable read-side dependency by introducing the first PostgreSQL-backed projection worker baseline:
+
+```text
+order_events
+→ global-position projection event source
+→ canonical reducer
+→ PostgresProjectionStore
+→ PostgresCheckpointStore
+```
+
+This does not make Compass Layer 2 active yet. It provides the durable read-side runtime substrate that Layer 2 can later validate.
 
 ---
 
@@ -129,7 +144,7 @@ This is the gap that later stages must close.
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, and Stage 3.5C PR3 has made checkpoint progress durable through `PostgresCheckpointStore`.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline.
 
 ---
 
@@ -353,9 +368,20 @@ order_events = accepted-history truth
 
 Stage 3.5C PR2 has implemented `PostgresProjectionStore`, which makes `projection_states` usable from the Python storage boundary.
 
-Stage 3.5C PR3 has now implemented `PostgresCheckpointStore`, which makes `projection_checkpoints` usable from the Python storage boundary.
+Stage 3.5C PR3 has implemented `PostgresCheckpointStore`, which makes `projection_checkpoints` usable from the Python storage boundary.
 
-This gives Compass Layer 2 a more concrete future durable target and progress boundary for drift comparison, but it does not yet implement Layer 2 validation, a PostgreSQL-backed projection worker, or replay / rebuild orchestration.
+Stage 3.5C PR4 has implemented the first PostgreSQL-backed projection worker baseline. It introduces `order_events.global_position` as the durable accepted-history consumption cursor, adds a PostgreSQL projection event source, and coordinates:
+
+```text
+accepted history
+→ canonical reducer
+→ durable projection state
+→ durable checkpoint progress
+```
+
+inside one read-side transaction boundary.
+
+This gives Compass Layer 2 a concrete future durable target and progress boundary for drift comparison, but it does not yet implement Layer 2 validation or durable replay / rebuild validation.
 
 ---
 

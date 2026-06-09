@@ -1,11 +1,11 @@
 # Storage Integration Tests
 
-[← Back to Tests README](../../README.md)
+[← Back to Integration Tests](../README.md)
 
 This directory contains PostgreSQL-backed storage integration tests for **Streaming System + Compass**.
 
 These tests are not general database examples.
-They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1**, **Stage 3.5C PR2**, and **Stage 3.5C PR3**.
+They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1**, **Stage 3.5C PR2**, **Stage 3.5C PR3**, and the storage-side part of **Stage 3.5C PR4**.
 
 At the current baseline, this directory covers the completed durable write-side storage foundation and the first durable read-side schema checkpoint:
 
@@ -16,6 +16,7 @@ Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening
 Stage 3.5C PR1 — Durable Read-Side Schema Baseline
 Stage 3.5C PR2 — PostgresProjectionStore Baseline
 Stage 3.5C PR3 — PostgresCheckpointStore Baseline
+Stage 3.5C PR4 — Global-Position Projection Event Source Baseline
 ```
 
 It also verifies the local PostgreSQL test-database guardrail used by destructive integration tests.
@@ -33,6 +34,8 @@ The production code under test includes:
 - `src/storage/postgres_connection.py`
 - `src/storage/postgres_projection_store.py`
 - `src/storage/postgres_checkpoint_store.py`
+- `src/storage/postgres_projection_event_source.py`
+- `src/storage/order_event_hydration.py`
 
 The related schema objects include:
 
@@ -93,9 +96,17 @@ The current storage integration tests cover:
 - `PostgresCheckpointStore.clear()` behavior
 - invalid checkpoint cursor shape rejection through the store
 - checkpoint store transaction ownership remains caller-controlled
+- `order_events.global_position` exists as the durable global event-log position
+- inserted events receive ordered global positions
+- global positions remain unique
+- `PostgresProjectionEventSource.load_after()` returns accepted events ordered by `global_position`
+- projection event records preserve event identity while keeping `global_position` outside `OrderEvent`
 
-This directory currently focuses on the PostgreSQL-backed storage baseline.
+This directory currently focuses on the PostgreSQL-backed storage baseline and storage-side accepted-history loading for projection workers.
+
 It does not test the full transactional write-side orchestration; that belongs to `tests/integration/pipeline/transactional/`.
+
+It also does not test the PostgreSQL-backed projection worker transaction boundary; that belongs to `tests/integration/pipeline/projection/`.
 
 ---
 

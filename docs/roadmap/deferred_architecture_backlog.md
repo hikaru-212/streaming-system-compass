@@ -72,9 +72,32 @@ last_sequence persisted from OrderState.version
 caller-owned transaction boundary preserved
 ```
 
+Stage 3.5C PR3 has completed the PostgreSQL-backed checkpoint store baseline:
+
+```text
+PostgresCheckpointStore
+projection_checkpoints save / load / upsert / clear behavior
+cursor_kind / cursor_value round-trip tests
+worker-specific checkpoint isolation
+caller-owned transaction boundary preserved
+```
+
+Stage 3.5C PR4 has completed the global-position projection worker baseline:
+
+```text
+order_events.global_position
+PostgresProjectionEventSource
+ProjectionEventRecord envelope
+shared order-event hydration helper
+PostgresProjectionWorker
+projection state + checkpoint progress in one read-side transaction
+GLOBAL_POSITION checkpoint persistence
+single-worker baseline with worker concurrency intentionally deferred
+```
+
 These completed items are no longer tracked as deferred backlog work.
 
-This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline, Stage 3.5C PR0 schema-hardening pass, Stage 3.5C PR1 read-side schema baseline, and Stage 3.5C PR2 PostgresProjectionStore baseline.
+This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline, Stage 3.5C PR0 schema-hardening pass, Stage 3.5C PR1 read-side schema baseline, Stage 3.5C PR2 PostgresProjectionStore baseline, Stage 3.5C PR3 PostgresCheckpointStore baseline, and Stage 3.5C PR4 global-position projection worker baseline.
 
 ---
 
@@ -113,6 +136,83 @@ Stage 5+ / later governance hardening
 ```
 
 ---
+
+---
+
+## Projection Worker Lease / Checkpoint Row Locking
+
+### Current Decision
+
+Do not implement worker leasing, checkpoint row locking, `SELECT ... FOR UPDATE`, `SKIP LOCKED`, worker heartbeat, or distributed projection-worker coordination during Stage 3.5C PR4.
+
+Stage 3.5C PR4 intentionally establishes a single-worker durable projection baseline.
+
+The worker assumes:
+
+```text
+one active process per worker_name
+```
+
+### Why Not Now
+
+The current PR4 boundary is:
+
+```text
+accepted history
+→ global-position event source
+→ canonical reducer
+→ projection state
+→ checkpoint progress
+```
+
+with projection state and checkpoint progress persisted atomically.
+
+Adding worker leasing or checkpoint row locking would expand PR4 from a deterministic durable baseline into runtime coordination hardening.
+
+That would mix two separate concerns:
+
+```text
+read-side atomicity
+≠
+distributed worker coordination
+```
+
+### Future Work
+
+A later hardening pass may introduce:
+
+- single active worker enforcement per `worker_name`
+- checkpoint-row locking
+- worker lease records
+- heartbeat and lease expiry
+- `SELECT ... FOR UPDATE`
+- `SKIP LOCKED`
+- partitioned projection workers
+- recovery rules for crashed workers
+
+### Architectural Consequence
+
+This future work should preserve the current PR4 invariant:
+
+```text
+projection state
++
+checkpoint progress
+```
+
+must remain atomic.
+
+It should add runtime coordination around the worker boundary without moving projection semantics into storage.
+
+### Current Classification
+
+```text
+Later production hardening
+```
+
+### Suggested Timing
+
+After durable replay / rebuild validation exists and before any multi-worker or production deployment story depends on concurrent projection workers.
 
 
 ## 0. Order Domain Policy Contract v0 and Policy-Guided Recovery

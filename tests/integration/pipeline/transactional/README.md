@@ -1,6 +1,6 @@
 # Transactional Pipeline Integration Tests
 
-[← Back to Tests README](../../../README.md)
+[← Back to Pipeline Integration Tests](../README.md)
 
 This directory contains integration tests for the PostgreSQL-backed transactional write-side pipeline.
 

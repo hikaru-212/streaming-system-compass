@@ -37,6 +37,8 @@ Typical submodules or files include:
 
 - `event_store.py`
 - `postgres_event_store.py`
+- `order_event_hydration.py`
+- `postgres_projection_event_source.py`
 - `idempotency_store.py`
 - `postgres_idempotency_store.py`
 - `projection_store.py`
@@ -110,6 +112,42 @@ Typical responsibilities:
 
 This store owns accepted-history persistence only.
 It does not own idempotency, Compass validation, or transactional write-side orchestration.
+
+### `order_event_hydration.py`
+
+Provides the shared database-row-to-domain-event hydration boundary.
+
+Typical responsibilities:
+
+- define the canonical `order_events` SELECT column set used by storage readers
+- hydrate an `OrderEvent` from a database row
+- preserve the mapping between PostgreSQL UUID values and the Python `OrderEvent.event_id` string contract
+- keep storage metadata such as `global_position` outside the domain event
+
+This helper prevents multiple PostgreSQL readers from copying their own row-to-event mapping logic.
+
+### `postgres_projection_event_source.py`
+
+Provides the PostgreSQL-backed accepted-history event source for projection workers.
+
+Typical responsibilities:
+
+- load accepted events after a durable global event-log position
+- order accepted-history consumption by `order_events.global_position`
+- return `ProjectionEventRecord` values containing:
+  - `global_position` as storage / worker metadata
+  - `OrderEvent` as domain event meaning
+
+This source only reads accepted history.
+
+It does **not**:
+
+- run the projection reducer
+- update projection state
+- update checkpoint progress
+- commit or rollback transactions
+- validate projection drift
+- decide replay / rebuild orchestration
 
 ---
 
@@ -283,6 +321,8 @@ Read-side storage currently includes:
 - `postgres_projection_store.py` — PostgreSQL-backed projection state store
 - `checkpoint_store.py` — checkpoint / offset protocol and in-memory checkpoint store
 - `postgres_checkpoint_store.py` — PostgreSQL-backed checkpoint store
+- `postgres_projection_event_source.py` — PostgreSQL-backed accepted-history event source for projection workers
+- `order_event_hydration.py` — shared database-row-to-domain-event hydration helper
 
 The current durable write-side progress is:
 
@@ -301,11 +341,23 @@ The current durable read-side progress is:
 Stage 3.5C PR1 — Durable Read-Side Schema Baseline ✅
 Stage 3.5C PR2 — PostgresProjectionStore ✅
 Stage 3.5C PR3 — PostgresCheckpointStore ✅
-Stage 3.5C PR4 — PostgreSQL-Backed Projection Worker planned
+Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
 Stage 3.5C PR5 — Durable Replay / Rebuild Validation planned
 ```
 
+Stage 3.5C PR4 adds storage-side accepted-history consumption for the durable projection worker:
+
+```text
+order_events.global_position
+→ PostgresProjectionEventSource
+→ ProjectionEventRecord
+```
+
+The event source keeps global worker cursor metadata outside `OrderEvent`.
+
 ---
+
+
 
 ## Implementation Strategy
 

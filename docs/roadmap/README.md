@@ -62,6 +62,7 @@ The project has already completed:
 - Stage 3.5C PR1 — Durable Read-Side Schema Baseline
 - Stage 3.5C PR2 — PostgresProjectionStore
 - Stage 3.5C PR3 — PostgresCheckpointStore
+- Stage 3.5C PR4 — Global-Position Projection Worker Baseline
 
 Stage 3.5B now forms a durable write-side baseline:
 
@@ -79,7 +80,19 @@ The current major focus is:
 Stage 3.5C — Durable Read-Side Baseline
 ```
 
-Stage 3.5C should stay focused on durable projection state, durable checkpoint state, and persistence-backed projection worker behavior. PR1 has established the durable read-side schema boundary, PR2 has made projection state durable through `PostgresProjectionStore`, and PR3 has made checkpoint progress durable through `PostgresCheckpointStore`; the remaining Stage 3.5C work should implement the PostgreSQL-backed worker and replay / rebuild validation.
+Stage 3.5C should stay focused on durable projection state, durable checkpoint state, and persistence-backed projection worker behavior. PR1 has established the durable read-side schema boundary, PR2 has made projection state durable through `PostgresProjectionStore`, PR3 has made checkpoint progress durable through `PostgresCheckpointStore`, and PR4 has introduced the first PostgreSQL-backed projection worker baseline using `GLOBAL_POSITION` as the accepted-history consumption cursor. The remaining Stage 3.5C work should implement durable replay / rebuild validation.
+
+PR4 establishes:
+
+```text
+order_events.global_position = durable global event-log position
+PostgresProjectionEventSource = accepted-history stream reader
+PostgresProjectionWorker = PostgreSQL-backed read-side orchestration
+PostgresProjectionStore + PostgresCheckpointStore = atomic read-side persistence pair
+```
+
+PR4 keeps the reducer storage-agnostic, stores checkpoint progress as `cursor_kind = GLOBAL_POSITION`, and assumes a single active worker process per `worker_name`. Worker leasing, checkpoint row locking, DLQ, watermark semantics, distributed multi-worker coordination, and Compass Layer 2 validation remain deferred.
+
 
 Snapshot trust, retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.
 
@@ -174,7 +187,7 @@ Stage 3.5C should be implemented as a staged durable read-side PR sequence:
 PR1 — Durable Read-Side Schema Baseline ✅
 PR2 — PostgresProjectionStore ✅
 PR3 — PostgresCheckpointStore ✅
-PR4 — PostgreSQL-Backed Projection Worker
+PR4 — Global-Position Projection Worker Baseline ✅
 PR5 — Durable Replay / Rebuild Validation
 PR6 — Stage 3.5C Documentation and Completion Alignment
 ```

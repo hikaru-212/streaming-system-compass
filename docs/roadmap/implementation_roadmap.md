@@ -52,6 +52,7 @@ The project has completed an executable baseline across:
 - Stage 3.5C PR1 durable read-side schema baseline
 - Stage 3.5C PR2 PostgresProjectionStore baseline
 - Stage 3.5C PR3 PostgresCheckpointStore baseline
+- Stage 3.5C PR4 Global-Position Projection Worker baseline
 
 This means:
 
@@ -68,6 +69,7 @@ This means:
 - Stage 3.5C PR1 has established `projection_states` and `projection_checkpoints` as the durable read-side schema baseline, including physical shape constraints and checkpoint cursor alignment
 - Stage 3.5C PR2 has implemented `PostgresProjectionStore`, making `projection_states` usable through the Python storage boundary while preserving projection state as derived and rebuildable
 - Stage 3.5C PR3 has implemented `PostgresCheckpointStore`, making `projection_checkpoints` usable through the Python storage boundary while preserving checkpoint state as operational progress metadata
+- Stage 3.5C PR4 has introduced `order_events.global_position`, `PostgresProjectionEventSource`, and `PostgresProjectionWorker`, connecting accepted history, the canonical reducer, durable projection state, and durable checkpoint progress through one PostgreSQL-backed read-side transaction boundary
 
 The current major focus is:
 
@@ -75,7 +77,7 @@ The current major focus is:
 
 After transaction atomicity, PostgreSQL-backed concurrency admission, and validation placement strategy are clarified, the project can proceed toward:
 
-- remaining Stage 3.5C durable read-side baseline work after PR3
+- remaining Stage 3.5C durable replay / rebuild validation work after PR4
 - Stage 3.5D persistence optimization / replay efficiency
 - Stage 3.5E durable history and permission hardening
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
@@ -1059,52 +1061,113 @@ PR3 does not implement:
 
 ---
 
-### PR4 — PostgreSQL-Backed Projection Worker
+### PR4 — Global-Position Projection Worker Baseline
+
+#### Status
+
+Completed.
 
 #### Goal
 
-Connect accepted history, the canonical reducer, durable projection state, and durable checkpoint progress into one PostgreSQL-backed read-side worker path.
+Connect accepted history, the canonical reducer, durable projection state, and durable checkpoint progress into the first PostgreSQL-backed read-side worker path.
 
 #### Why
 
 Stage 3 already established the reducer / worker model in memory.
 
-PR4 proves that the same conceptual read-side runtime can operate against durable storage.
+PR4 proves that the same conceptual read-side runtime can operate against durable storage without turning PostgreSQL into a second reconstruction algorithm.
 
-The canonical reducer should remain the source of projection derivation logic.
+This PR also makes the worker cursor strategy explicit before durable replay / rebuild validation and future Compass Layer 2 projection-drift validation are introduced.
 
-PostgreSQL should provide persistence, not a second reconstruction algorithm.
+#### Completed Scope
 
-#### Main Work
-
-- introduce a PostgreSQL-backed projection worker or adapt the existing worker through store injection
-- read accepted events from durable `order_events`
+- add `order_events.global_position`
+- add a migration for the global event-log position
+- update CI migration setup
+- document the global-position worker cursor boundary
+- add `PostgresProjectionEventSource`
+- add `ProjectionEventRecord` as the envelope between storage metadata and domain event meaning
+- add shared order-event hydration through `order_event_hydration.py`
+- load accepted events after a global position
+- order accepted-history consumption by `global_position`
+- add `PostgresProjectionWorker`
 - apply the canonical projection reducer
-- persist derived state through `PostgresProjectionStore`
-- persist progress through `PostgresCheckpointStore`
-- verify resume behavior from checkpoint
-- verify replay-safe sequencing behavior
-- keep accepted history as the source of truth
+- persist projection state through `PostgresProjectionStore`
+- persist checkpoint progress through `PostgresCheckpointStore`
+- store checkpoint progress as `cursor_kind = GLOBAL_POSITION`
+- persist projection state and checkpoint progress in one PostgreSQL transaction
+- add integration tests for global-position event loading
+- add integration tests for worker processing
+- add rollback tests for projection-state / checkpoint atomicity
+- document the single-worker baseline and defer worker leasing / checkpoint locking
+
+#### Cursor Boundary
+
+PR4 preserves this distinction:
+
+```text
+aggregate-local sequence
+≠
+global event-log position
+≠
+worker checkpoint cursor
+```
+
+`order_events.sequence` remains aggregate-local and protects per-order continuity.
+
+`order_events.global_position` provides a durable total order for accepted-history consumption.
+
+`projection_checkpoints.cursor_value` records where a worker should resume.
+
+#### Transaction Boundary
+
+The PostgreSQL-backed projection worker owns the read-side transaction boundary.
+
+It commits:
+
+```text
+projection state
++
+checkpoint progress
+```
+
+together.
+
+If either write fails, both writes roll back.
+
+This is the read-side equivalent of the Stage 3.5B write-side atomicity boundary:
+
+```text
+accepted event append
++
+idempotency record write
+```
 
 #### Design Boundary
 
-`reducer.py` should remain storage-agnostic.
+`reducer.py` remains storage-agnostic.
 
-Do not create a PostgreSQL-specific reducer.
+`PostgresProjectionWorker` orchestrates storage access and reducer execution.
 
-If a PostgreSQL-specific worker is needed, it should orchestrate storage access and reducer execution, not duplicate reduction rules.
+It does not duplicate reduction rules.
 
 #### Non-goals
 
 PR4 does not implement:
 
+- durable replay / rebuild validation
 - Compass Layer 2 validation
-- snapshot-assisted replay
+- Snapshot Trust Contract
+- structured `SemanticOutcome`
+- runtime decision policy
 - out-of-order buffering
 - DLQ
 - watermark semantics
-- multi-worker distributed coordination
+- distributed multi-worker coordination
+- worker leasing / checkpoint row locking
+- multi-region / sharded / multi-primary event-log cursor models
 - production database role hardening
+- append-only trigger enforcement
 
 ---
 
@@ -1216,19 +1279,28 @@ Possible fields:
 
 ### `projection_checkpoints`
 
-Possible fields:
+Current fields:
 
 - `worker_name`
-- `last_consumed_order_id` or stream position
-- `last_processed_sequence`
+- `cursor_kind`
+- `cursor_value`
 - `updated_at`
 
-Exact shape should follow the current projection worker and checkpoint model.
+For the Stage 3.5C PR4 worker baseline, checkpoint progress is stored as:
+
+```text
+cursor_kind = GLOBAL_POSITION
+cursor_value = latest processed order_events.global_position
+```
+
+This keeps worker progress as operational metadata rather than business truth.
 
 ## Completion Criteria
 
 - projection state survives restart
 - checkpoint survives restart
+- worker can consume accepted history through `GLOBAL_POSITION`
+- worker can persist projection state and checkpoint progress atomically
 - worker can resume from checkpoint
 - projection can rebuild from accepted history
 - read-side persistence does not redefine source of truth
