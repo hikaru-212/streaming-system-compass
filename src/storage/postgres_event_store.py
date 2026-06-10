@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from decimal import Decimal
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
-from src.core.order.enums import EventType, OrderStatus
 from src.core.order.events import OrderEvent
-from src.core.order.proofs import Proof
+from src.storage.order_event_hydration import (
+    ORDER_EVENT_SELECT_COLUMNS,
+    row_to_order_event,
+)
 
 
 class PostgresEventStore:
@@ -116,18 +117,9 @@ class PostgresEventStore:
         """
         with self._connection.cursor(row_factory=dict_row) as cursor:
             cursor.execute(
-                """
+                f"""
                 SELECT
-                    accepted_event_id,
-                    order_id,
-                    sequence,
-                    event_type,
-                    request_id,
-                    amount,
-                    occurred_at_ms,
-                    proof_prev_event_id,
-                    proof_prev_version,
-                    proof_prev_status
+                    {ORDER_EVENT_SELECT_COLUMNS}
                 FROM order_events
                 WHERE order_id = %(order_id)s
                 ORDER BY sequence ASC
@@ -137,7 +129,7 @@ class PostgresEventStore:
 
             rows = cursor.fetchall()
 
-        return [self._row_to_event(row) for row in rows]
+        return [row_to_order_event(row) for row in rows]
 
     def last_event(self, order_id: str) -> Optional[OrderEvent]:
         """
@@ -145,18 +137,9 @@ class PostgresEventStore:
         """
         with self._connection.cursor(row_factory=dict_row) as cursor:
             cursor.execute(
-                """
+                f"""
                 SELECT
-                    accepted_event_id,
-                    order_id,
-                    sequence,
-                    event_type,
-                    request_id,
-                    amount,
-                    occurred_at_ms,
-                    proof_prev_event_id,
-                    proof_prev_version,
-                    proof_prev_status
+                    {ORDER_EVENT_SELECT_COLUMNS}  
                 FROM order_events
                 WHERE order_id = %(order_id)s
                 ORDER BY sequence DESC
@@ -170,7 +153,7 @@ class PostgresEventStore:
         if row is None:
             return None
 
-        return self._row_to_event(row)
+        return row_to_order_event(row)
 
     def _current_version(self, order_id: str) -> int:
         with self._connection.cursor() as cursor:
@@ -186,23 +169,3 @@ class PostgresEventStore:
             result = cursor.fetchone()
 
         return int(result[0])
-
-    def _row_to_event(self, row: dict[str, Any]) -> OrderEvent:
-        return OrderEvent(
-            event_id=str(row["accepted_event_id"]),
-            request_id=row["request_id"],
-            order_id=row["order_id"],
-            sequence=row["sequence"],
-            event_type=EventType(row["event_type"]),
-            amount=Decimal(row["amount"]),
-            occurred_at_ms=row["occurred_at_ms"],
-            proof=Proof(
-                prev_event_id=(
-                    str(row["proof_prev_event_id"])
-                    if row["proof_prev_event_id"] is not None
-                    else None
-                ),
-                prev_version=row["proof_prev_version"],
-                prev_status=OrderStatus(row["proof_prev_status"]),
-            ),
-        )

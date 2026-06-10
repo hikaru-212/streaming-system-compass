@@ -30,7 +30,7 @@ This Compass runtime roadmap answers:
 
 > How does Compass become more capable as a runtime semantic control layer?
 
-The two roadmaps overlap around Stage 3.5B, Stage 3.5C, and Stage 3.5D because Compass depends on durable write-side, durable read-side, and replay-efficiency boundaries before stronger runtime validation grows.
+The two roadmaps overlap around Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E because Compass depends on durable write-side, durable read-side, replay-efficiency, and accepted-history hardening boundaries before stronger runtime validation grows.
 
 However, this document avoids repeating detailed schema columns, migration details, and store test matrices.
 
@@ -55,7 +55,7 @@ Project Stage = repository-wide implementation milestone
 
 For example:
 
-- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, and the Stage 3.5D replay-efficiency substrate.
+- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, the Stage 3.5D replay-efficiency substrate, and the Stage 3.5E durable history hardening boundary.
 - Compass Phase 4 roughly maps to the beginning of Stage 4 Layer 2 validation work.
 - Compass Phases 5–7 roughly map to Stage 4 structured semantic outcomes, runtime decision policy, and action safety.
 - Compass Phase 8 maps to the Stage 5 dual-dimension governance demo.
@@ -92,6 +92,13 @@ The current system already supports:
 - PostgreSQL-backed two-phase concurrency admission through Stage 3.5B PR5
 - validation placement strategy through Stage 3.5B PR6
 - durable order-event vocabulary hardening through Stage 3.5C PR0
+- durable read-side schema baseline in Stage 3.5C PR1
+- PostgreSQL-backed projection state persistence through Stage 3.5C PR2
+- PostgreSQL-backed checkpoint progress persistence through Stage 3.5C PR3
+- global-position accepted-history consumption through Stage 3.5C PR4
+- PostgreSQL-backed projection worker orchestration through Stage 3.5C PR4
+- atomic projection-state and checkpoint-progress persistence through Stage 3.5C PR4
+- durable replay / rebuild validation through Stage 3.5C PR5
 
 This means Compass is already more than a passive checker.
 
@@ -102,7 +109,7 @@ invalid candidate event
 → blocked before accepted history
 ```
 
-PR4 extends this authority into the durable PostgreSQL-backed write-side path:
+Stage 3.5B PR4 extended this authority into the durable PostgreSQL-backed write-side path:
 
 ```text
 candidate event
@@ -110,23 +117,39 @@ candidate event
 → append accepted event + record idempotency in one transaction
 ```
 
+Stage 3.5C PR4 extends the durable read-side dependency by introducing the first PostgreSQL-backed projection worker baseline:
+
+```text
+order_events
+→ global-position projection event source
+→ canonical reducer
+→ PostgresProjectionStore
+→ PostgresCheckpointStore
+```
+
+Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state.
+
+This does not make Compass Layer 2 active yet. It provides the durable read-side correctness evidence that Layer 2 can later classify and govern.
+
 ---
 
 ## Current Limitation
 
-Compass does not yet fully protect derived runtime state.
+Compass does not yet make runtime governance decisions for derived state.
 
-The current Stage 3 projection baseline can derive state through a deterministic reducer / worker path, but Compass has not yet become a state-level validator.
+Stage 3.5C now provides durable read-side correctness evidence by allowing persisted projection state to be compared against accepted-history replay.
 
-That means the following question is not yet fully answered:
+However, Compass has not yet become a full state-level governance layer.
 
-> Even if accepted history is valid, is the current read-side projection still faithful to that history?
+That means the next question is no longer only whether drift can be detected. The next question is:
 
-This is the gap that later stages must close.
+> If derived-state drift is detected, what does it mean, and what should the runtime do?
+
+That interpretation and decision boundary belongs to later Compass Layer 2, structured `SemanticOutcome`, runtime decision policy, and action safety work.
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, and Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline. Stage 3.5C PR5 adds durable replay / rebuild validation so persisted projection state can be checked against accepted-history replay.
 
 ---
 
@@ -138,12 +161,16 @@ Compass should evolve from:
 write-side event truth
 → durable accepted history
 → durable derived state
+→ snapshot trust / replay-efficiency substrate
 → Layer 2 state validation
+→ minimal domain policy contract / policy-linked recovery basis
 → structured semantic outcomes
 → runtime decisions
 → action safety
 → dual-dimension governance
 ```
+
+Stage 3.5D is the next implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state.
 
 The key principle is:
 
@@ -310,8 +337,10 @@ Stage 3.5C provides this dependency.
 
 Stage 3.5C should provide:
 
-- durable projection state
-- durable checkpoint state
+- durable projection state schema
+- durable checkpoint state schema
+- future durable projection state store
+- future durable checkpoint store
 - persistence-backed replay / rebuild
 - state that survives restart
 - a durable target for Layer 2 validation
@@ -335,6 +364,31 @@ Layer 2 = truthfulness check for derived state
 Current major implementation focus after the Stage 3.5B durable write-side baseline.
 
 Stage 3.5C PR0 has already hardened durable order-event vocabulary before the read-side baseline begins.
+
+Stage 3.5C PR1 has established the durable read-side schema baseline:
+
+```text
+projection_states = derived runtime view
+projection_checkpoints = worker progress metadata
+order_events = accepted-history truth
+```
+
+Stage 3.5C PR2 has implemented `PostgresProjectionStore`, which makes `projection_states` usable from the Python storage boundary.
+
+Stage 3.5C PR3 has implemented `PostgresCheckpointStore`, which makes `projection_checkpoints` usable from the Python storage boundary.
+
+Stage 3.5C PR4 has implemented the first PostgreSQL-backed projection worker baseline. It introduces `order_events.global_position` as the durable accepted-history consumption cursor, adds a PostgreSQL projection event source, and coordinates:
+
+```text
+accepted history
+→ canonical reducer
+→ durable projection state
+→ durable checkpoint progress
+```
+
+inside one read-side transaction boundary.
+
+This gives Compass Layer 2 a concrete future durable target and progress boundary for drift comparison, but it does not yet implement Layer 2 validation or durable replay / rebuild validation.
 
 ---
 
@@ -365,12 +419,54 @@ Compass-relevant outcomes include:
 - aggregate snapshot lineage back to accepted history
 - snapshot-assisted replay that remains equivalent to full replay
 - snapshot validity rules
+- lineage, tail-continuity, schema-version, reducer-version, and payload-integrity checks
+- fast-path vs authority-path distinction
 - replay cost measurement
 - safer persistence substrate before Layer 2 drift validation
 
 This stage should remain persistence / replay hardening.
 
+It qualifies snapshots for fast-path use, but it does not make snapshots the source of truth.
+
 It should not absorb structured semantic outcomes, runtime decision policy, action safety, or dual-dimension governance.
+
+---
+
+
+# Stage 3.5E Dependency — Durable History and Permission Hardening
+
+Before Compass grows into stronger runtime governance, the accepted-history substrate should be hardened against accidental or improper database mutation.
+
+```text
+Stage 3.5E — Durable History and Permission Hardening
+```
+
+This stage does not implement Layer 2 validation, structured semantic outcomes, or runtime decision policy.
+
+Instead, it clarifies database authority around accepted history and derived state.
+
+Compass depends on this distinction because later runtime governance will treat accepted history as durable evidence:
+
+```text
+accepted history = source of truth / durable evidence
+projection state = derived runtime view
+checkpoint = operational progress metadata
+```
+
+Stage 3.5E should therefore harden `order_events` without accidentally making mutable read-side tables immutable.
+
+Compass-relevant outcomes include:
+
+- clearer database role boundaries
+- write-side runtime authority limited to accepted-history append behavior
+- projection worker authority separated from write-side admission authority
+- accepted-history tables protected from casual `UPDATE` / `DELETE`
+- read-side tables left mutable for upsert, resume, reset, and rebuild
+- stronger confidence that later Layer 2 comparisons are grounded in a hardened accepted-history source
+
+This stage should remain durable storage / authority hardening.
+
+It should not absorb Layer 2 validation, `SemanticOutcome`, runtime decision policy, action safety, or dual-dimension governance.
 
 ---
 
@@ -400,6 +496,12 @@ Layer 2 should detect:
 - replay vs persisted-state mismatch
 - reducer mismatch
 - checkpoint / state mismatch
+- snapshot metadata invalidity
+- snapshot hash mismatch
+- unsupported snapshot schema
+- untrusted snapshot reducer version
+- snapshot tail discontinuity
+- snapshot replay mismatch
 
 ## Minimal Flow
 
@@ -538,6 +640,127 @@ raise ValueError(...)
 → layered trust / governance
 ```
 
+## Retry Reason Classification and Intent Consistency
+
+Stage 4 structured outcomes should explicitly classify retry-like situations.
+
+Retry is not a single category.
+
+Possible retry-related outcomes include:
+
+- idempotent replay of the same request identity
+- idempotency conflict where the same request identity carries different command meaning
+- stale-write retry caused by concurrency admission
+- transient infrastructure retry
+- rebuild-oriented retry caused by projection or snapshot drift
+- future agent intent drift where the agent claims to retry the same task but changes the intended meaning
+
+This classification belongs in `SemanticOutcome` / request-attempt evidence design.
+
+It should not be stored directly in `idempotency_records`, because `idempotency_records` remain successful request-result memory.
+
+Suggested concepts:
+
+```text
+retry_class
+retry_safety
+intent_consistency
+```
+
+Examples:
+
+```text
+same request_id + same semantic_fingerprint
+→ IDEMPOTENT_REPLAY / SAFE_TO_REPLAY / SAME_INTENT
+
+same request_id + different semantic_fingerprint
+→ SEMANTIC_CONFLICT / NOT_RETRYABLE / SAME_IDENTITY_DIFFERENT_MEANING
+
+stale expected_version
+→ CONCURRENCY_RETRY / SAFE_TO_RETRY_AFTER_RELOAD / NOT_AN_IDEMPOTENCY_REPLAY
+
+future same intent_id + different intent_fingerprint
+→ SEMANTIC_DRIFT / BLOCK_AND_ESCALATE / AGENT_INTENT_DRIFT
+```
+
+
+## Policy-Linked Outcomes and Recovery Basis
+
+Stage 4 may introduce a small domain-specific policy contract so that `SemanticOutcome` can reference the rule that explains why a runtime action was allowed, blocked, replayed, rebuilt, quarantined, or escalated.
+
+This should not become a full general-purpose policy authoring system during Stage 4.
+
+The intended scope is narrower:
+
+```text
+Order Domain Policy Contract v0
+→ machine-readable rules for the current minimal order/payment domain
+→ rule IDs that `SemanticOutcome` can reference
+→ recovery hints that `RuntimeDecisionPolicy` can consume
+```
+
+This addition exists to prevent retry from becoming blind trial-and-error against Compass.
+
+Without a policy / contract reference, an agent or runtime can learn:
+
+```text
+what failed
+why it failed
+```
+
+but it may not know:
+
+```text
+which correction path is semantically allowed
+```
+
+A minimal policy-linked outcome may therefore carry:
+
+```python
+@dataclass(frozen=True)
+class PolicyRuleRef:
+    contract_id: str
+    rule_id: str
+    version: int
+```
+
+and `SemanticOutcome` may later include optional fields such as:
+
+```text
+policy_ref
+recovery_hint
+retry_safety
+intent_consistency
+```
+
+Example:
+
+```json
+{
+  "decision_basis": "semantic_outcome",
+  "error_type": "STALE_WRITE",
+  "policy_ref": {
+    "contract_id": "order_domain_v1",
+    "rule_id": "order.payment.requires_fresh_version",
+    "version": 1
+  },
+  "recovery_hint": "REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE"
+}
+```
+
+This keeps the boundary clear:
+
+```text
+SemanticOutcome
+→ describes what happened and which rule was involved
+
+RuntimeDecisionPolicy
+→ decides whether to allow, block, replay, retry, rebuild, quarantine, or escalate
+
+Domain Policy Contract v0
+→ provides the rule and recovery vocabulary used by the outcome / decision path
+```
+
 ## Boundary
 
 A semantic outcome describes what happened.
@@ -545,6 +768,169 @@ A semantic outcome describes what happened.
 It should not directly own the final control action.
 
 That responsibility belongs to `RuntimeDecisionPolicy`.
+
+---
+
+
+# Phase 5.5 — Order Domain Policy Contract v0
+
+## Goal
+
+Introduce a minimal machine-readable contract for the current order domain so that structured semantic outcomes can point to stable rule IDs and recovery hints.
+
+This is a Stage 4B.5-style optional extension between:
+
+```text
+Structured Semantic Outcomes
+```
+
+and:
+
+```text
+Runtime Decision Policy
+```
+
+## Why
+
+`SemanticOutcome` can explain what failed.
+
+However, agentic retry and governed recovery also need a comparison source that says:
+
+```text
+which rule was violated
+which recovery path is allowed
+whether retry is safe
+whether replay is allowed
+whether human review is required
+```
+
+Without this layer, an agent may repeatedly modify a candidate action until Compass allows it.
+That is not policy-guided recovery.
+It is trial-and-error against the runtime gate.
+
+## Minimal Contract Scope
+
+The first contract should remain domain-specific and small.
+
+It should cover only the current v1 order world:
+
+- `INIT → CREATED`
+- `CREATED → PAID`
+- full-payment semantics
+- positive amount rules
+- idempotent replay rules
+- idempotency conflict rules
+- stale-write / reload-oriented recovery
+- projection-drift rebuild-oriented recovery
+
+It should not attempt to define:
+
+- a general policy language
+- policy promotion workflows
+- release packs
+- cross-domain governance
+- full agent workflow orchestration
+
+## Candidate Artifact
+
+A future file may look like:
+
+```text
+contracts/order_domain_policy_contract_v1.yaml
+```
+
+Candidate shape:
+
+```yaml
+contract_id: order_domain_v1
+domain: order
+version: 1
+
+rules:
+  - id: order.transition.init_to_created
+    type: transition
+    from: INIT
+    to: CREATED
+    allowed: true
+
+  - id: order.transition.created_to_paid
+    type: transition
+    from: CREATED
+    to: PAID
+    allowed: true
+
+  - id: order.transition.init_to_paid
+    type: transition
+    from: INIT
+    to: PAID
+    allowed: false
+    violation: DOMAIN_TRANSITION_VIOLATION
+    recovery: BLOCK
+
+  - id: order.payment.requires_fresh_version
+    type: admission
+    violation: STALE_WRITE
+    recovery: REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE
+
+  - id: order.request.same_id_same_fingerprint
+    type: idempotency
+    outcome: IDEMPOTENT_REPLAY
+    recovery: ALLOW_REPLAY
+
+  - id: order.request.same_id_different_fingerprint
+    type: idempotency
+    violation: IDEMPOTENCY_CONFLICT
+    recovery: BLOCK
+
+recovery_strategies:
+  BLOCK:
+    retryable: false
+    human_required: false
+
+  REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE:
+    retryable: true
+    max_attempts: 1
+    required_action: reload_accepted_history
+
+  ALLOW_REPLAY:
+    retryable: false
+    required_action: return_prior_accepted_result
+
+  BLOCK_AND_ESCALATE:
+    retryable: false
+    human_required: true
+```
+
+## Runtime Meaning
+
+This contract gives `SemanticOutcome` and `RuntimeDecisionPolicy` a stable rule source.
+
+The runtime path becomes:
+
+```text
+Compass validation result
+→ SemanticOutcome
+→ optional policy_ref / recovery_hint
+→ RuntimeDecisionPolicy
+→ RuntimeDecision
+→ ActionSafetyGate
+```
+
+## Completion Criteria
+
+This phase is minimally useful when:
+
+- an order-domain policy contract file exists
+- rule IDs correspond to existing domain rules
+- selected `SemanticOutcome` objects can reference `policy_ref`
+- recovery hints cover at least block, replay, reload/rebuild-once, and escalate paths
+- tests prove that policy-linked outcomes can drive runtime decisions
+
+## Boundary
+
+This is not a full policy governance system.
+
+It is a domain-specific contract layer that makes Stage 4 outcomes more useful for agentic retry, recovery, replay, and audit.
 
 ---
 
@@ -611,6 +997,24 @@ REPLAY_REDUCER_MISMATCH
 
 IRREVERSIBLE_BOUNDARY_RISK
 → BLOCK
+
+IDEMPOTENT_REPLAY
+→ ALLOW_REPLAY
+
+SEMANTIC_CONFLICT / IDEMPOTENCY_CONFLICT
+→ BLOCK
+
+CONCURRENCY_RETRY
+→ RETRY_AFTER_RELOAD or BLOCK
+
+INFRASTRUCTURE_RETRY
+→ RETRY_WITH_BACKOFF or ESCALATE
+
+REBUILD_REQUIRED
+→ REBUILD or QUARANTINE
+
+AGENT_INTENT_DRIFT
+→ BLOCK_AND_ESCALATE
 ```
 
 ## Runtime Meaning
@@ -726,6 +1130,8 @@ Is this state true enough, fresh enough, and safe enough to act on?
 A system can be semantically correct but operationally stale.
 
 A system can be operationally fresh but semantically wrong.
+
+Snapshot and projection trust should contribute to the semantic correctness signal. A state can be fresh but unsafe if snapshot trust checks fail, reducer version is untrusted, checkpoint and state disagree, or projection differs from accepted-history replay.
 
 Therefore, action safety cannot depend on a single trusted / untrusted boolean.
 
@@ -860,6 +1266,9 @@ After the minimal governance demo is coherent, Compass can grow toward richer fa
 - chaos testing
 - semantic alerts
 - agent tool interface
+- isolated derived-state runtime / oblivious agent runtime
+- separate read-side projection DB for untrusted agent observation
+- controlled agent read API
 - generalized semantic governance protocol
 
 These are intentionally deferred.
@@ -869,6 +1278,7 @@ The project should first prove:
 ```text
 semantic truth
 → durable evidence
+→ hardened accepted history
 → structured outcome
 → runtime decision
 → action safety
@@ -892,6 +1302,7 @@ Stage 3.5B PR5 concurrency admission ✅
 Dependency:
 Stage 3.5C durable read-side baseline
 Stage 3.5D replay-efficiency substrate
+Stage 3.5E durable history hardening
 
 Next Compass Growth:
 Layer 2 state-level validation
@@ -905,6 +1316,7 @@ Later:
 chaos hardening
 richer governance
 agent-facing runtime protocol
+isolated derived-state runtime
 ```
 
 ---

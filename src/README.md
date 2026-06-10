@@ -67,8 +67,16 @@ Use this directory when you want to understand:
 - how projection state is stored
 - how checkpoint progress is tracked
 - how PostgreSQL-backed durable storage is being introduced
+- how accepted history is loaded for durable projection workers
 
-At the current Stage 3.5B PR2 checkpoint, storage includes the first PostgreSQL-backed accepted-history implementation through `PostgresEventStore`.
+At the current baseline, storage includes:
+
+- PostgreSQL-backed accepted-history persistence through `PostgresEventStore`
+- PostgreSQL-backed idempotency memory through `PostgresIdempotencyStore`
+- PostgreSQL-backed projection state through `PostgresProjectionStore`
+- PostgreSQL-backed checkpoint progress through `PostgresCheckpointStore`
+- global-position accepted-history loading through `PostgresProjectionEventSource`
+- shared database-row-to-domain-event hydration through `order_event_hydration.py`
 
 ---
 
@@ -81,7 +89,16 @@ Use this directory when you want to understand:
 - transactional command handling
 - replay / rehydration flow
 - projection runtime execution
+- PostgreSQL-backed write-side orchestration
+- PostgreSQL-backed read-side projection worker orchestration
 - later analytical pipeline evolution
+
+At the current baseline, pipeline includes:
+
+- the durable transactional write-side path completed in Stage 3.5B
+- the deterministic in-memory projection baseline from Stage 3
+- the PostgreSQL-backed projection worker baseline completed in Stage 3.5C PR4
+- the durable replay / rebuild validation baseline completed in Stage 3.5C PR5
 
 ---
 
@@ -94,6 +111,10 @@ Use this directory when you want to understand:
 - write-side transition-truth validation
 - later state-level validation
 - how semantic trust is checked separately from persistence and flow
+
+At the current baseline, Compass Layer 1 protects accepted-history admission on the write side.
+
+Future Compass layers will validate derived read-side state, structured semantic outcomes, runtime decisions, action safety, and dual-dimension governance.
 
 ---
 
@@ -141,42 +162,81 @@ Another useful way to think about it is:
 
 ## Current Baseline
 
-At the current stage, `src/` already contains an executable baseline across:
+At the current stage, after Stage 3.5C durable read-side completion, `src/` contains an executable baseline across:
 
 - transactional write-side semantics
 - accepted-history persistence and replay
 - request-level idempotency handling
-- optimistic admission / stale-write rejection
+- optimistic and pessimistic PostgreSQL-backed admission
 - Compass Layer 1 transition-truth validation
+- validation placement strategy
 - Stage 3 baseline projection runtime in deterministic in-memory form
 - Stage 3.5A exact-money hardening
-- Stage 3.5B PR1 PostgreSQL schema / local setup / migration baseline
-- Stage 3.5B PR2 PostgreSQL-backed accepted-history baseline through `PostgresEventStore`
+- Stage 3.5B durable write-side baseline through PostgreSQL
+- Stage 3.5C durable read-side schema baseline
+- PostgreSQL-backed projection state persistence
+- PostgreSQL-backed checkpoint progress persistence
+- PostgreSQL-backed global-position projection worker baseline
+- durable replay / rebuild validation against accepted history
+- Stage 3.5C durable read-side baseline is complete
 
 This means `src/` is no longer only a semantic skeleton.
-It already contains the first closed executable loop for both:
 
-- write-side admission
-- read-side projection baseline
+It now contains durable executable loops for both:
 
-It is also now beginning to support durable write-side persistence.
+- write-side accepted-history mutation
+- read-side projection-state derivation
+- accepted-history replay validation against persisted projection state
 
 ---
 
 ## Current Durable Persistence Position
 
-The current durable write-side path is intentionally staged:
+The durable write-side path is complete at the Stage 3.5B baseline level:
 
 ```text
 Stage 3.5B PR1 — PostgreSQL schema / local setup / migration ✅
 Stage 3.5B PR2 — PostgresEventStore baseline ✅
-Stage 3.5B PR3 — PostgresIdempotencyStore planned
-Stage 3.5B PR4 — transactional write-side boundary planned
+Stage 3.5B PR3 — PostgresIdempotencyStore ✅
+Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary ✅
+Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary ✅
+Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude ✅
 ```
 
-The current durable baseline means accepted event history can now be persisted through PostgreSQL-backed storage.
+The durable read-side path is now complete through the Stage 3.5C baseline:
 
-However, the full durable write-side flow is not complete until idempotency persistence and transaction coordination are also implemented.
+```text
+Stage 3.5C PR1 — Durable Read-Side Schema Baseline ✅
+Stage 3.5C PR2 — PostgresProjectionStore ✅
+Stage 3.5C PR3 — PostgresCheckpointStore ✅
+Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
+```
+
+The current read-side durable worker path is:
+
+```text
+order_events
+→ PostgresProjectionEventSource
+→ canonical reducer
+→ PostgresProjectionStore
+→ PostgresCheckpointStore
+
+accepted history
+→ durable replay validator
+→ expected projection state
+→ persisted projection state comparison
+```
+
+The worker persists:
+
+```text
+projection state
++
+checkpoint progress
+```
+
+inside one PostgreSQL transaction boundary.
 
 ---
 
@@ -193,6 +253,8 @@ That means:
 - keep semantic validation separate from persistence admission
 - keep composition separate from business logic
 - keep durable persistence separate from domain meaning
+- keep projection state as derived state, not accepted-history truth
+- keep checkpoint state as operational progress metadata, not business truth
 
 This separation is especially important because the project is concerned with correctness under failure, not just successful execution.
 
@@ -200,17 +262,57 @@ This separation is especially important because the project is concerned with co
 
 ## What `src/` Does Not Yet Fully Solve
 
-At the current stage, the source tree does **not yet** fully solve:
+After the completed Stage 3.5C durable read-side baseline, the source tree does **not yet** fully solve:
 
-- fully transactionally coordinated durable write-side behavior
-- durable idempotency storage
-- durable read-side projection / checkpoint storage
+- Stage 3.5D Snapshot Trust Contract / replay-efficiency work
 - state-level Compass Layer 2 validation
-- advanced runtime concerns such as DLQ, buffering, watermarking, or multi-worker coordination
+- Snapshot Trust Contract
+- structured `SemanticOutcome`
+- runtime decision policy
+- action safety
+- advanced runtime concerns such as DLQ, buffering, watermarking, worker leasing, checkpoint row locking, or multi-worker coordination
 - full analytical pipeline implementation
-- governance behavior beyond the earlier validation / enforcement boundary
+- production database role hardening
+- append-only trigger enforcement
+- governance behavior beyond the current validation / enforcement boundary
 
 Those remain later stages of the repository.
+
+---
+
+## Current Boundary Summary
+
+The current source-tree boundaries can be summarized as:
+
+```text
+core/
+= domain meaning and transition legality
+
+storage/
+= durable accepted history, idempotency memory, projection state, checkpoint progress, and accepted-history loading
+
+pipeline/
+= runtime orchestration for write-side commands and read-side projection workers
+
+compass/
+= semantic validation and future governance
+
+bootstrap/
+= concrete runtime wiring
+```
+
+The most important current source-of-truth distinction is:
+
+```text
+order_events
+= accepted-history truth
+
+projection_states
+= derived runtime view
+
+projection_checkpoints
+= operational worker progress
+```
 
 ---
 

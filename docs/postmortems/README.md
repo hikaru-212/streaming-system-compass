@@ -47,6 +47,8 @@ Postmortems help preserve:
 | [from_durable_persistence_to_semantic_gate_preservation](from_durable_persistence_to_semantic_gate_preservation.md) | Semantic Gate / Validation Preservation | Records the PR4 lesson that durable persistence hardening can preserve physical transaction correctness while accidentally bypassing Compass semantic gates. |
 | [autocommit_boundary_and_partial_write_risk](autocommit_boundary_and_partial_write_risk.md) | Transaction Boundary / Concurrency | Explains why `autocommit`, transaction-scoped advisory locks, and partial-write risks must be treated as physical transaction-boundary concerns in the durable write-side pipeline. |
 | [pre_transaction_read_cleanup_boundary](pre_transaction_read_cleanup_boundary.md) | Connection Reliability / Infrastructure | Explains why `PRE_TRANSACTION` validation must explicitly clean up implicit read transactions before CPU-side validation, and why cleanup failure handling is deferred to Stage 4 / production hardening. |
+| [from_snapshot_as_fast_state_to_snapshot_trust_contract](from_snapshot_as_fast_state_to_snapshot_trust_contract.md) | Snapshot Trust / Derived State | Records the reasoning shift from treating snapshots as replay optimization to treating them as derived-state artifacts that need a trust contract before being used on the fast path. |
+| [from_replay_rebuild_validation_to_layer2_governance](from_replay_rebuild_validation_to_layer2_governance.md) | Replay / Layer 2 Boundary | Clarifies why Stage 3.5C PR5 replay / rebuild validation is the durable correctness substrate for derived state, while Compass Layer 2 remains the later semantic governance and runtime decision layer. |
 
 ---
 
@@ -71,6 +73,15 @@ The postmortem [Autocommit, Transaction Boundaries, and Partial-Write Risk](auto
 - PR5 introduces PostgreSQL-backed admission and transaction-scoped lock semantics.
 - The postmortem explains why `autocommit=False` is a physical requirement for transaction-scoped pessimistic admission.
 - This directly supports [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md), especially the physical transaction-boundary requirement behind `prepare_stream(order_id)`.
+
+---
+
+The postmortem [From Snapshot as Fast State to Snapshot Trust Contract](from_snapshot_as_fast_state_to_snapshot_trust_contract.md) is related to the Stage 3.5D / Stage 4 transition:
+
+- Stage 3.5D may introduce snapshots as replay-efficiency artifacts after the durable read-side baseline exists.
+- Snapshot support creates a trust-boundary problem because derived state may be fast but not automatically trustworthy.
+- The postmortem explains why snapshots need lineage, tail continuity, schema / reducer version checks, payload integrity checks, and fallback-to-replay behavior.
+- This directly supports future Stage 4 Layer 2 and `SemanticOutcome` work for snapshot / projection trust failures.
 
 ---
 

@@ -73,8 +73,15 @@ def clean_database(db_connection: Connection) -> None:
     Reset write-side persistence tables before each DB integration test.
     """
     with db_connection.cursor() as cursor:
-        cursor.execute(
-            "TRUNCATE idempotency_records, order_events RESTART IDENTITY CASCADE"
+       cursor.execute(
+            """
+            TRUNCATE
+                projection_checkpoints,
+                projection_states,
+                idempotency_records,
+                order_events
+            RESTART IDENTITY CASCADE
+            """
         )
 
     db_connection.commit()
