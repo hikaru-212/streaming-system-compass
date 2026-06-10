@@ -63,6 +63,7 @@ The project has already completed:
 - Stage 3.5C PR2 — PostgresProjectionStore
 - Stage 3.5C PR3 — PostgresCheckpointStore
 - Stage 3.5C PR4 — Global-Position Projection Worker Baseline
+- Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
 
 Stage 3.5B now forms a durable write-side baseline:
 
@@ -80,7 +81,7 @@ The current major focus is:
 Stage 3.5C — Durable Read-Side Baseline
 ```
 
-Stage 3.5C should stay focused on durable projection state, durable checkpoint state, and persistence-backed projection worker behavior. PR1 has established the durable read-side schema boundary, PR2 has made projection state durable through `PostgresProjectionStore`, PR3 has made checkpoint progress durable through `PostgresCheckpointStore`, and PR4 has introduced the first PostgreSQL-backed projection worker baseline using `GLOBAL_POSITION` as the accepted-history consumption cursor. The remaining Stage 3.5C work should implement durable replay / rebuild validation.
+Stage 3.5C should stay focused on durable projection state, durable checkpoint state, and persistence-backed projection worker behavior. PR1 has established the durable read-side schema boundary, PR2 has made projection state durable through `PostgresProjectionStore`, PR3 has made checkpoint progress durable through `PostgresCheckpointStore`, and PR4 has introduced the first PostgreSQL-backed projection worker baseline using `GLOBAL_POSITION` as the accepted-history consumption cursor. Stage 3.5C now includes durable replay / rebuild validation as the first accepted-history replay check against persisted projection state.
 
 PR4 establishes:
 
@@ -91,7 +92,7 @@ PostgresProjectionWorker = PostgreSQL-backed read-side orchestration
 PostgresProjectionStore + PostgresCheckpointStore = atomic read-side persistence pair
 ```
 
-PR4 keeps the reducer storage-agnostic, stores checkpoint progress as `cursor_kind = GLOBAL_POSITION`, and assumes a single active worker process per `worker_name`. Worker leasing, checkpoint row locking, DLQ, watermark semantics, distributed multi-worker coordination, and Compass Layer 2 validation remain deferred.
+PR4 keeps the reducer storage-agnostic, stores checkpoint progress as `cursor_kind = GLOBAL_POSITION`, and assumes a single active worker process per `worker_name`. PR5 adds the durable replay / rebuild validation baseline by comparing accepted-history replay with persisted projection state. Worker leasing, checkpoint row locking, DLQ, watermark semantics, distributed multi-worker coordination, and Compass Layer 2 governance remain deferred.
 
 
 Snapshot trust, retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.

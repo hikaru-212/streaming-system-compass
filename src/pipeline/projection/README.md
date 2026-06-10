@@ -28,7 +28,7 @@ It coordinates:
 - replay / rebuild behavior
 - storage-backed projection execution
 
-The module started as a deterministic in-memory Stage 3 baseline and now includes a PostgreSQL-backed Stage 3.5C PR4 worker baseline.
+The module started as a deterministic in-memory Stage 3 baseline and now includes a PostgreSQL-backed Stage 3.5C PR4 worker baseline plus a Stage 3.5C PR5 durable replay / rebuild validation baseline.
 
 ---
 
@@ -138,6 +138,25 @@ It does not implement worker leasing, checkpoint row locking, or distributed mul
 
 ---
 
+### `replay_validator.py`
+
+Defines the durable replay / rebuild validation baseline introduced in Stage 3.5C PR5.
+
+It compares accepted-history replay through the canonical reducer with persisted projection state.
+
+The minimal validation statuses are:
+
+```text
+MATCH
+MISSING_PROJECTION
+DRIFT
+NO_ACCEPTED_HISTORY
+```
+
+This validator does not mutate accepted history, rebuild projection state automatically, advance checkpoint progress, produce `SemanticOutcome`, or make runtime recovery decisions.
+
+---
+
 ## PostgreSQL-Backed Projection Flow
 
 The Stage 3.5C PR4 durable projection flow is:
@@ -163,6 +182,32 @@ order_events
 → PostgresProjectionStore
 → PostgresCheckpointStore
 ```
+
+---
+
+## Durable Replay Validation Flow
+
+The Stage 3.5C PR5 durable replay validation flow is:
+
+```text
+1. choose an order_id
+2. load accepted history for that order
+3. replay events through the canonical reducer
+4. produce expected OrderState
+5. load persisted projection state
+6. compare expected state with persisted state
+7. return a minimal validation result
+```
+
+The purpose is to answer:
+
+```text
+Does persisted projection state still match accepted-history replay?
+```
+
+It does not answer what runtime decision should be made if drift is detected.
+
+That belongs to later Compass Layer 2, structured outcome, runtime decision, and recovery policy work.
 
 ---
 
@@ -277,7 +322,7 @@ Stage 3.5C PR1 — Durable Read-Side Schema Baseline ✅
 Stage 3.5C PR2 — PostgresProjectionStore ✅
 Stage 3.5C PR3 — PostgresCheckpointStore ✅
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
-Stage 3.5C PR5 — Durable Replay / Rebuild Validation planned
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
 ```
 
 ---

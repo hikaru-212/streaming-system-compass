@@ -184,12 +184,13 @@ Stage 3.5C PR1 — Durable Read-Side Schema Baseline
 Stage 3.5C PR2 — PostgresProjectionStore
 Stage 3.5C PR3 — PostgresCheckpointStore
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
 ```
 
-The next planned Stage 3.5C integration direction is:
+The current Stage 3.5C integration direction now includes durable replay / rebuild validation:
 
 ```text
-Stage 3.5C PR5 — Durable Replay / Rebuild Validation
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
 ```
 
 ---
@@ -207,6 +208,8 @@ Together, the integration tests prove that:
 7. Durable projection state and checkpoint progress can be persisted through PostgreSQL stores.
 8. The projection worker can consume accepted history through `GLOBAL_POSITION`.
 9. Projection state and checkpoint progress are persisted atomically by the PostgreSQL-backed projection worker.
+10. Durable replay validation can compare accepted-history replay with persisted projection state.
+11. Durable replay validation can detect `MATCH`, `MISSING_PROJECTION`, `DRIFT`, and `NO_ACCEPTED_HISTORY`.
 10. In-memory baselines still explain the conceptual runtime model that the durable paths extend.
 
 ---
@@ -215,7 +218,6 @@ Together, the integration tests prove that:
 
 These tests do not yet prove:
 
-- durable replay / rebuild validation
 - Compass Layer 2 projection-drift validation
 - Snapshot Trust Contract
 - structured `SemanticOutcome`

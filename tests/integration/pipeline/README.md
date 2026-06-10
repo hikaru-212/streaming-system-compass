@@ -82,10 +82,11 @@ See:
 
 Contains integration tests for the PostgreSQL-backed projection pipeline.
 
-This directory covers the Stage 3.5C PR4 durable read-side projection worker baseline:
+This directory covers the Stage 3.5C PR4 durable read-side projection worker baseline and the Stage 3.5C PR5 durable replay / rebuild validation baseline:
 
 ```text
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
 ```
 
 The projection tests verify:
@@ -100,6 +101,9 @@ The projection tests verify:
 - rollback behavior when checkpoint persistence fails
 - fail-fast behavior for unsupported checkpoint cursor kinds
 - fail-fast behavior when projection state is ahead of checkpoint progress
+- durable replay validation against accepted history
+- `MATCH`, `MISSING_PROJECTION`, `DRIFT`, and `NO_ACCEPTED_HISTORY` result coverage
+- no-mutation checks for accepted history and checkpoint progress
 
 The main claim is:
 
@@ -171,7 +175,6 @@ Together, the pipeline integration tests prove:
 
 These tests do not yet prove:
 
-- durable replay / rebuild validation
 - Compass Layer 2 projection-drift validation
 - Snapshot Trust Contract
 - structured `SemanticOutcome`
@@ -281,7 +284,7 @@ Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary ✅
 Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary ✅
 Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude ✅
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
-Stage 3.5C PR5 — Durable Replay / Rebuild Validation planned
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
 ```
 
 ---

@@ -53,6 +53,7 @@ The project has completed an executable baseline across:
 - Stage 3.5C PR2 PostgresProjectionStore baseline
 - Stage 3.5C PR3 PostgresCheckpointStore baseline
 - Stage 3.5C PR4 Global-Position Projection Worker baseline
+- Stage 3.5C PR5 Durable Replay / Rebuild Validation baseline
 
 This means:
 
@@ -77,7 +78,7 @@ The current major focus is:
 
 After transaction atomicity, PostgreSQL-backed concurrency admission, and validation placement strategy are clarified, the project can proceed toward:
 
-- remaining Stage 3.5C durable replay / rebuild validation work after PR4
+- Stage 3.5C PR5 durable replay / rebuild validation baseline completion
 - Stage 3.5D persistence optimization / replay efficiency
 - Stage 3.5E durable history and permission hardening
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
@@ -1321,6 +1322,60 @@ event log
 
 This durable read-side target is required before later stages can validate, rebuild, optimize, or isolate derived state.
 
+
+---
+
+
+### PR5 — Durable Replay / Rebuild Validation Baseline
+
+#### Status
+
+Completed at the baseline level.
+
+#### Goal
+
+Validate persisted projection state against accepted-history replay.
+
+#### Main Work
+
+- add durable replay / rebuild validation boundary note
+- introduce minimal replay validation statuses
+- introduce replay validation result object
+- implement durable replay validator for one `order_id`
+- load accepted history through the existing accepted-history store path
+- replay accepted events through the canonical reducer
+- compare replay-derived `OrderState` with persisted projection state
+- detect `MATCH`
+- detect `MISSING_PROJECTION`
+- detect `DRIFT`
+- detect `NO_ACCEPTED_HISTORY`
+- prove replay validation does not mutate accepted history
+- prove replay validation does not advance checkpoint progress
+
+#### Boundary
+
+PR5 does not implement Compass Layer 2.
+
+It provides the durable comparison substrate that future Layer 2 validation can consume:
+
+```text
+accepted-history replay
+vs
+persisted projection state
+```
+
+#### Non-goals
+
+PR5 does not implement:
+
+- structured `SemanticOutcome`
+- runtime decision policy
+- automatic repair policy
+- Snapshot Trust Contract
+- snapshot-assisted replay
+- worker leasing
+- checkpoint row locking
+- distributed multi-worker coordination
 
 ---
 
