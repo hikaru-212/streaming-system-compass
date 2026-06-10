@@ -20,18 +20,19 @@ An item should remain here only if it has at least one of the following:
 
 Pure naming preference, style cleanup, or already-completed implementation work should not remain in this backlog.
 
-Completed Stage 3.5B work and completed Stage 3.5C PR0 schema-hardening work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
+Completed Stage 3.5B work and completed Stage 3.5C durable read-side work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
 
 Current focus:
 
 ```text
-Stage 3.5C — Durable Read-Side Baseline
+Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
 ```
 
-Recently completed baseline:
+Recently completed baselines:
 
 ```text
 Stage 3.5B — Durable Write-Side Baseline
+Stage 3.5C — Durable Read-Side Baseline
 ```
 
 Stage 3.5B now includes:
@@ -110,7 +111,7 @@ no checkpoint progress advancement
 
 These completed items are no longer tracked as deferred backlog work.
 
-This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline, Stage 3.5C PR0 schema-hardening pass, Stage 3.5C PR1 read-side schema baseline, Stage 3.5C PR2 PostgresProjectionStore baseline, Stage 3.5C PR3 PostgresCheckpointStore baseline, and Stage 3.5C PR4 global-position projection worker baseline.
+This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline and the completed Stage 3.5C durable read-side baseline.
 
 ---
 
@@ -156,9 +157,9 @@ Stage 5+ / later governance hardening
 
 ### Current Decision
 
-Do not implement worker leasing, checkpoint row locking, `SELECT ... FOR UPDATE`, `SKIP LOCKED`, worker heartbeat, or distributed projection-worker coordination during Stage 3.5C PR4.
+Do not implement worker leasing, checkpoint row locking, `SELECT ... FOR UPDATE`, `SKIP LOCKED`, worker heartbeat, or distributed projection-worker coordination during the completed Stage 3.5C durable read-side baseline.
 
-Stage 3.5C PR4 intentionally establishes a single-worker durable projection baseline.
+Stage 3.5C intentionally established a single-worker durable projection baseline.
 
 The worker assumes:
 

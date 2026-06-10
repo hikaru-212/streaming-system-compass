@@ -135,15 +135,17 @@ This does not make Compass Layer 2 active yet. It provides the durable read-side
 
 ## Current Limitation
 
-Compass does not yet fully protect derived runtime state.
+Compass does not yet make runtime governance decisions for derived state.
 
-The current Stage 3 projection baseline can derive state through a deterministic reducer / worker path, but Compass has not yet become a state-level validator.
+Stage 3.5C now provides durable read-side correctness evidence by allowing persisted projection state to be compared against accepted-history replay.
 
-That means the following question is not yet fully answered:
+However, Compass has not yet become a full state-level governance layer.
 
-> Even if accepted history is valid, is the current read-side projection still faithful to that history?
+That means the next question is no longer only whether drift can be detected. The next question is:
 
-This is the gap that later stages must close.
+> If derived-state drift is detected, what does it mean, and what should the runtime do?
+
+That interpretation and decision boundary belongs to later Compass Layer 2, structured `SemanticOutcome`, runtime decision policy, and action safety work.
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
@@ -167,6 +169,8 @@ write-side event truth
 → action safety
 → dual-dimension governance
 ```
+
+Stage 3.5D is the next implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state.
 
 The key principle is:
 

@@ -98,6 +98,7 @@ At the current baseline, pipeline includes:
 - the durable transactional write-side path completed in Stage 3.5B
 - the deterministic in-memory projection baseline from Stage 3
 - the PostgreSQL-backed projection worker baseline completed in Stage 3.5C PR4
+- the durable replay / rebuild validation baseline completed in Stage 3.5C PR5
 
 ---
 
@@ -161,7 +162,7 @@ Another useful way to think about it is:
 
 ## Current Baseline
 
-At the current stage, `src/` contains an executable baseline across:
+At the current stage, after Stage 3.5C durable read-side completion, `src/` contains an executable baseline across:
 
 - transactional write-side semantics
 - accepted-history persistence and replay
@@ -176,6 +177,8 @@ At the current stage, `src/` contains an executable baseline across:
 - PostgreSQL-backed projection state persistence
 - PostgreSQL-backed checkpoint progress persistence
 - PostgreSQL-backed global-position projection worker baseline
+- durable replay / rebuild validation against accepted history
+- Stage 3.5C durable read-side baseline is complete
 
 This means `src/` is no longer only a semantic skeleton.
 
@@ -183,6 +186,7 @@ It now contains durable executable loops for both:
 
 - write-side accepted-history mutation
 - read-side projection-state derivation
+- accepted-history replay validation against persisted projection state
 
 ---
 
@@ -199,14 +203,14 @@ Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary ✅
 Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude ✅
 ```
 
-The durable read-side path is now complete through the first PostgreSQL-backed projection worker baseline:
+The durable read-side path is now complete through the Stage 3.5C baseline:
 
 ```text
 Stage 3.5C PR1 — Durable Read-Side Schema Baseline ✅
 Stage 3.5C PR2 — PostgresProjectionStore ✅
 Stage 3.5C PR3 — PostgresCheckpointStore ✅
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
-Stage 3.5C PR5 — Durable Replay / Rebuild Validation planned
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
 ```
 
 The current read-side durable worker path is:
@@ -217,6 +221,11 @@ order_events
 → canonical reducer
 → PostgresProjectionStore
 → PostgresCheckpointStore
+
+accepted history
+→ durable replay validator
+→ expected projection state
+→ persisted projection state comparison
 ```
 
 The worker persists:
@@ -253,9 +262,9 @@ This separation is especially important because the project is concerned with co
 
 ## What `src/` Does Not Yet Fully Solve
 
-At the current stage, the source tree does **not yet** fully solve:
+After the completed Stage 3.5C durable read-side baseline, the source tree does **not yet** fully solve:
 
-- durable replay / rebuild validation
+- Stage 3.5D Snapshot Trust Contract / replay-efficiency work
 - state-level Compass Layer 2 validation
 - Snapshot Trust Contract
 - structured `SemanticOutcome`

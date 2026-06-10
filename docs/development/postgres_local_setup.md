@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This document explains how to start the local PostgreSQL environment and run the PostgreSQL-backed integration tests for **Streaming System + Compass** through **Stage 3.5C PR1**.
+This document explains how to start the local PostgreSQL environment and run the PostgreSQL-backed integration tests for **Streaming System + Compass** through the completed **Stage 3.5C Durable Read-Side Baseline**.
 
 The local PostgreSQL environment is used for:
 
@@ -16,13 +16,19 @@ The local PostgreSQL environment is used for:
 - PostgreSQL-backed concurrency admission tests
 - durable order-event vocabulary / schema-constraint tests
 - durable read-side schema-constraint tests
+- `PostgresProjectionStore` integration tests
+- `PostgresCheckpointStore` integration tests
+- PostgreSQL-backed projection worker integration tests
+- durable replay / rebuild validation integration tests
 
 At the current stage, PostgreSQL is used for:
 
 - the durable write-side baseline
-- the durable read-side schema baseline
+- the durable read-side baseline
+- global-position projection worker execution
+- durable replay / rebuild validation
 
-PostgreSQL-backed read-side stores and worker orchestration are not part of this setup yet.
+PostgreSQL-backed read-side stores, checkpoint stores, projection worker orchestration, and replay validation are now part of the local setup.
 
 ---
 
@@ -158,11 +164,12 @@ compass_test
 
 ## Run Migrations
 
-Through Stage 3.5C PR1, the local PostgreSQL setup uses two baseline migrations:
+Through the completed Stage 3.5C durable read-side baseline, the local PostgreSQL setup uses three baseline migrations:
 
 ```text
 db/migrations/001_create_write_side_tables.sql
 db/migrations/002_create_read_side_tables.sql
+db/migrations/003_add_order_events_global_position.sql
 ```
 
 Apply them to the development database when you want to inspect tables manually:
@@ -170,6 +177,7 @@ Apply them to the development database when you want to inspect tables manually:
 ```bash
 psql "$DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
 psql "$DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
+psql "$DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
 ```
 
 Apply them to the test database before running PostgreSQL integration tests:
@@ -177,6 +185,7 @@ Apply them to the test database before running PostgreSQL integration tests:
 ```bash
 psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
 ```
 
 The write-side migration creates:
@@ -200,6 +209,14 @@ The read-side migration creates:
 projection_states
 projection_checkpoints
 ```
+
+The global-position migration adds:
+
+```text
+order_events.global_position
+```
+
+This column is used by the PostgreSQL-backed projection worker as the durable accepted-history consumption cursor.
 
 The read-side schema baseline includes:
 
@@ -256,6 +273,24 @@ projection_states
 projection_checkpoints
 ```
 
+Expected additional event-log column after migration 003:
+
+```text
+order_events.global_position
+```
+
+To inspect the global event-log position and read-side table constraints:
+
+```bash
+psql "$TEST_DATABASE_URL" -c "\d order_events"
+```
+
+Expected order-events columns include:
+
+```text
+global_position
+```
+
 To inspect the read-side table constraints:
 
 ```bash
@@ -282,17 +317,24 @@ ck_projection_checkpoints_value_alignment
 
 ## Run PostgreSQL Integration Tests
 
-After setting `TEST_DATABASE_URL` and applying both migrations to `compass_test`, run:
+After setting `TEST_DATABASE_URL` and applying all migrations to `compass_test`, run:
 
 ```bash
 pytest tests/integration -v
 ```
 
-Or run only PostgreSQL storage / transactional integration tests if needed:
+Or run only PostgreSQL storage / pipeline integration tests if needed:
 
 ```bash
 pytest tests/integration/storage -v
 pytest tests/integration/pipeline -v
+pytest tests/integration/pipeline/projection -v
+```
+
+To run durable replay / rebuild validation tests only:
+
+```bash
+pytest tests/integration/pipeline/projection/test_durable_replay_validation.py -v
 ```
 
 To run only the durable read-side schema constraint tests:
@@ -392,6 +434,10 @@ This setup is current through:
 Stage 3.5B — Durable Write-Side Baseline
 Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening
 Stage 3.5C PR1 — Durable Read-Side Schema Baseline
+Stage 3.5C PR2 — PostgresProjectionStore
+Stage 3.5C PR3 — PostgresCheckpointStore
+Stage 3.5C PR4 — Global-Position Projection Worker Baseline
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
 ```
 
 It supports:
@@ -400,6 +446,11 @@ It supports:
 - durable idempotency memory through `idempotency_records`
 - durable projection state schema through `projection_states`
 - durable checkpoint schema through `projection_checkpoints`
+- durable projection state persistence through `PostgresProjectionStore`
+- durable checkpoint progress persistence through `PostgresCheckpointStore`
+- global-position accepted-history consumption through `order_events.global_position`
+- PostgreSQL-backed projection worker orchestration
+- durable replay / rebuild validation against accepted history
 - PostgreSQL-backed transactional write-side execution
 - PostgreSQL-backed concurrency admission
 - durable event vocabulary and proof-status schema constraints
@@ -408,10 +459,6 @@ It supports:
 
 It does not yet include:
 
-- `PostgresProjectionStore`
-- `PostgresCheckpointStore`
-- PostgreSQL-backed projection worker
-- durable replay / rebuild orchestration
 - Snapshot Trust Contract
 - Compass Layer 2 validation
 - production-grade DB roles / permissions
@@ -419,20 +466,22 @@ It does not yet include:
 
 Those belong to later stages.
 
+The next local setup expansion is expected during Stage 3.5D if snapshot tables, snapshot trust metadata, or replay-efficiency migrations are introduced.
+
 ---
 
-## Future Stage 3.5C Note
+## Stage 3.5C Completion Note
 
-Stage 3.5C PR1 adds the durable read-side schema baseline only.
+Stage 3.5C now includes the durable read-side baseline:
 
-Future Stage 3.5C PRs should extend this setup when implementation code is added:
-
+- durable read-side schema
 - `PostgresProjectionStore`
 - `PostgresCheckpointStore`
+- `order_events.global_position`
 - PostgreSQL-backed projection worker
 - durable replay / rebuild validation
 
-The core separation should remain the same:
+The core separation remains the same:
 
 ```text
 DATABASE_URL      → compass_dev  → local development / manual inspection
@@ -463,7 +512,8 @@ export TEST_DATABASE_URL="postgresql://compass_user:compass_password@localhost:5
 # 4. Apply migrations to the test database
 psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
 
-# 5. Run tests
+# 6. Run tests
 pytest tests/integration -v
 ```

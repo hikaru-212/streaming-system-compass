@@ -71,15 +71,17 @@ This means:
 - Stage 3.5C PR2 has implemented `PostgresProjectionStore`, making `projection_states` usable through the Python storage boundary while preserving projection state as derived and rebuildable
 - Stage 3.5C PR3 has implemented `PostgresCheckpointStore`, making `projection_checkpoints` usable through the Python storage boundary while preserving checkpoint state as operational progress metadata
 - Stage 3.5C PR4 has introduced `order_events.global_position`, `PostgresProjectionEventSource`, and `PostgresProjectionWorker`, connecting accepted history, the canonical reducer, durable projection state, and durable checkpoint progress through one PostgreSQL-backed read-side transaction boundary
+- Stage 3.5C PR5 has introduced durable replay / rebuild validation, comparing accepted-history replay with persisted projection state
+- Stage 3.5C is complete at the durable read-side baseline level
 
 The current major focus is:
 
-- **Stage 3.5C — Durable Read-Side Baseline**
+- **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**
 
-After transaction atomicity, PostgreSQL-backed concurrency admission, and validation placement strategy are clarified, the project can proceed toward:
+After the completed Stage 3.5C durable read-side baseline, the project can proceed toward:
 
-- Stage 3.5C PR5 durable replay / rebuild validation baseline completion
 - Stage 3.5D persistence optimization / replay efficiency
+- Stage 3.5D Snapshot Trust Contract
 - Stage 3.5E durable history and permission hardening
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
 - Stage 5 dual-dimension governance demo

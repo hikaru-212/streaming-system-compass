@@ -12,8 +12,8 @@ Use roadmap documents to understand:
 - what depends on what
 - which features are intentionally deferred
 - how the project moves from durable truth toward runtime governance
-- which Stage 3.5B and Stage 3.5C PR0 concerns are complete and which later concerns are intentionally deferred
-- why Stage 3.5C is the current implementation focus after the durable write-side baseline
+- which Stage 3.5B and Stage 3.5C concerns are complete and which later concerns are intentionally deferred
+- why Stage 3.5C is now complete as the durable read-side baseline
 - why Stage 3.5D is kept as a later Snapshot Trust Contract / replay-efficiency stage
 - why Stage 4 should classify retry reasons and intent consistency through `SemanticOutcome` / runtime evidence design
 - why Stage 5+ may later evaluate isolated derived-state runtime / oblivious agent runtime as an agent-governance hardening direction
@@ -78,10 +78,10 @@ durable accepted history
 The current major focus is:
 
 ```text
-Stage 3.5C — Durable Read-Side Baseline
+Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
 ```
 
-Stage 3.5C should stay focused on durable projection state, durable checkpoint state, and persistence-backed projection worker behavior. PR1 has established the durable read-side schema boundary, PR2 has made projection state durable through `PostgresProjectionStore`, PR3 has made checkpoint progress durable through `PostgresCheckpointStore`, and PR4 has introduced the first PostgreSQL-backed projection worker baseline using `GLOBAL_POSITION` as the accepted-history consumption cursor. Stage 3.5C now includes durable replay / rebuild validation as the first accepted-history replay check against persisted projection state.
+Stage 3.5C is now complete at the durable read-side baseline level. PR1 established the durable read-side schema boundary, PR2 made projection state durable through `PostgresProjectionStore`, PR3 made checkpoint progress durable through `PostgresCheckpointStore`, PR4 introduced the first PostgreSQL-backed projection worker baseline using `GLOBAL_POSITION` as the accepted-history consumption cursor, and PR5 added durable replay / rebuild validation as the first accepted-history replay check against persisted projection state.
 
 PR4 establishes:
 
@@ -95,7 +95,7 @@ PostgresProjectionStore + PostgresCheckpointStore = atomic read-side persistence
 PR4 keeps the reducer storage-agnostic, stores checkpoint progress as `cursor_kind = GLOBAL_POSITION`, and assumes a single active worker process per `worker_name`. PR5 adds the durable replay / rebuild validation baseline by comparing accepted-history replay with persisted projection state. Worker leasing, checkpoint row locking, DLQ, watermark semantics, distributed multi-worker coordination, and Compass Layer 2 governance remain deferred.
 
 
-Snapshot trust, retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.
+Snapshot trust is now the next Stage 3.5D focus. Retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.
 
 ---
 

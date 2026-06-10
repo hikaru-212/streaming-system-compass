@@ -19,7 +19,7 @@ PostgreSQL is used to support:
 
 - the Stage 3.5B durable write-side baseline
 - the Stage 3.5C PR0 durable order-event vocabulary hardening pass
-- the Stage 3.5C PR1 durable read-side schema baseline
+- the completed Stage 3.5C durable read-side baseline
 
 ---
 
@@ -42,6 +42,7 @@ This directory currently covers:
 - development database vs test database separation
 - `DATABASE_URL` vs `TEST_DATABASE_URL`
 - local write-side and read-side migration commands
+- global-position migration command
 - destructive PostgreSQL integration test guardrails
 - development-only infrastructure boundaries
 
@@ -95,6 +96,10 @@ This setup is current through:
 Stage 3.5B — Durable Write-Side Baseline
 Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening
 Stage 3.5C PR1 — Durable Read-Side Schema Baseline
+Stage 3.5C PR2 — PostgresProjectionStore
+Stage 3.5C PR3 — PostgresCheckpointStore
+Stage 3.5C PR4 — Global-Position Projection Worker Baseline
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
 ```
 
 The current durable write-side tables are:
@@ -129,17 +134,18 @@ projection_checkpoints
 = durable projection worker progress metadata
 ```
 
-At this stage, the read-side schema exists, but the PostgreSQL-backed projection store, checkpoint store, and projection worker are not implemented yet.
+At this stage, the read-side durable baseline includes PostgreSQL-backed projection state persistence, checkpoint progress persistence, global-position projection worker orchestration, and durable replay / rebuild validation.
 
 ---
 
 ## Current Migrations
 
-Through Stage 3.5C PR1, local PostgreSQL setup requires two migrations:
+Through the completed Stage 3.5C durable read-side baseline, local PostgreSQL setup requires three migrations:
 
 ```text
 db/migrations/001_create_write_side_tables.sql
 db/migrations/002_create_read_side_tables.sql
+db/migrations/003_add_order_events_global_position.sql
 ```
 
 The expected migration order is:
@@ -147,6 +153,7 @@ The expected migration order is:
 ```bash
 psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
 ```
 
 Use `DATABASE_URL` instead of `TEST_DATABASE_URL` only when applying migrations to the local development database for manual inspection.
@@ -169,10 +176,12 @@ Production-grade concerns such as database role hardening, managed secrets, depl
 Current roadmap alignment:
 
 ```text
-Stage 3.5C = durable read-side baseline
-Stage 3.5D = snapshot trust / replay-efficiency work
+Stage 3.5C = durable read-side baseline completed
+Stage 3.5D = next snapshot trust / replay-efficiency work
 Stage 3.5E = durable history and permission hardening
 ```
+
+The next expected development setup expansion is Stage 3.5D, if snapshot trust or replay-efficiency work introduces new local migrations or test setup requirements.
 
 ---
 
@@ -204,7 +213,9 @@ Then continue with the current architecture and boundary notes:
 2. [Read-Side Schema Baseline](../architecture/read_side_schema_baseline.md)
 3. [Stage 3.5B Write-Side Schema Translation Note](../boundary_notes/stage3.5B_write_side_schema_translation_note.md)
 4. [Read-Side Persistence Boundary](../boundary_notes/read_side_persistence_boundary.md)
-5. [Implementation Roadmap](../roadmap/implementation_roadmap.md)
+5. [Global-Position Projection Worker Boundary](../boundary_notes/global_position_projection_worker_boundary.md)
+6. [Durable Replay / Rebuild Validation Boundary](../boundary_notes/durable_replay_rebuild_validation_boundary.md)
+7. [Implementation Roadmap](../roadmap/implementation_roadmap.md)
 
 ---
 

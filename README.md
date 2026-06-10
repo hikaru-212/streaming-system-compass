@@ -27,14 +27,17 @@ The project currently has:
 - a completed Stage 3.5A decimal / money hardening step before durable persistence
 - a completed Stage 3.5B durable write-side baseline, including PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and validation placement strategy
 - Stage 3.5C PR0 durable order-event vocabulary hardening, including uppercase `event_type` vocabulary, `proof_prev_status` database constraint, and stream-position unique-constraint rename
+- a completed Stage 3.5C durable read-side baseline, including PostgreSQL-backed projection state, checkpoint progress, global-position projection worker orchestration, and durable replay / rebuild validation
 - executable tests defending both write-side and read-side baseline semantics
 
-The next major steps are:
+The next major step is:
 
-- **Stage 3.5C — durable read-side baseline**
-- **Stage 3.5D — snapshot trust, persistence optimization, and replay efficiency**
+- **Stage 3.5D — Snapshot Trust Contract, persistence optimization, and replay efficiency**
+
+After that, the roadmap continues toward:
+
 - **Stage 3.5E — durable history and permission hardening**
-- followed later by **runtime semantic validation, structured semantic outcomes, runtime decision policy, and action safety**
+- **Stage 4 — runtime semantic validation, structured semantic outcomes, runtime decision policy, and action safety**
 
 ---
 
@@ -82,8 +85,8 @@ If you want to understand how the repository thinks rather than only what it imp
 - **Durable write-side baseline**  
   Stage 3.5B establishes PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and configurable validation placement.
 
-- **Durable vocabulary hardening before read-side persistence**  
-  Stage 3.5C PR0 normalizes durable accepted-event vocabulary and adds database-side proof-status constraints before read-side consumers depend on stored events.
+- **Durable read-side baseline**  
+  Stage 3.5C establishes PostgreSQL-backed projection state, checkpoint progress, global-position worker orchestration, and durable replay / rebuild validation against accepted history.
 
 - **Planned durable-history hardening**  
   Stage 3.5E is reserved for database authority and permission hardening after durable write-side, durable read-side, and replay-efficiency boundaries become clear.
@@ -390,12 +393,13 @@ Everything else grows around this core:
 ### Phase 3.5B / 3.5C / 3.5D / 3.5E — Durable Persistence and Replay Hardening
 
 - Stage 3.5B durable write-side baseline completed
-- Stage 3.5C PR0 durable order-event vocabulary hardening completed
+- Stage 3.5C durable read-side baseline completed
 - PostgreSQL-backed accepted history and idempotency memory
 - transactional event append + idempotency record persistence
 - two-phase concurrency admission and validation placement strategy
-- Stage 3.5C durable read-side baseline next
+- Stage 3.5C durable read-side baseline completed completed
 - durable projection state and checkpoint state
+- global-position projection worker orchestration
 - persistence-backed replay / rebuild validation
 - Stage 3.5D snapshot trust, replay-efficiency, and persistence optimization
 - Stage 3.5E durable history and permission hardening
@@ -457,11 +461,15 @@ Current baseline completed:
   - transactional event append and idempotency record persistence
   - two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
   - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION`
-- Stage 3.5C PR0 durable order-event vocabulary hardening:
-  - uppercase durable `event_type` vocabulary: `CREATED`, `PAID`
-  - `proof_prev_status` database CHECK constraint
-  - explicit stream-position unique constraint name: `uq_order_events_order_id_sequence`
-  - PostgreSQL schema constraint tests
+- Stage 3.5C durable read-side baseline:
+  - durable order-event vocabulary hardening
+  - durable read-side schema for `projection_states` and `projection_checkpoints`
+  - PostgreSQL-backed `PostgresProjectionStore`
+  - PostgreSQL-backed `PostgresCheckpointStore`
+  - `order_events.global_position`
+  - PostgreSQL-backed projection worker orchestration
+  - durable replay / rebuild validation against accepted history
+  - PostgreSQL schema, storage, worker, and replay-validation tests
 
 Current boundary of completion:
 
@@ -475,7 +483,7 @@ Current boundary of completion:
 
 Next implementation milestones:
 
-- Stage 3.5C durable read-side baseline
+- Stage 3.5C durable read-side baseline completed
 - Stage 3.5D snapshot trust, persistence optimization, and replay efficiency
 - Stage 3.5E durable history and permission hardening
 - later Stage 4 runtime semantic validation, semantic outcome structuring, runtime decision policy, and action safety

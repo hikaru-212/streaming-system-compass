@@ -28,6 +28,8 @@ They also exist to defend the semantic boundaries of the system, including:
 - global-position accepted-history consumption
 - PostgreSQL-backed projection worker behavior
 - read-side projection-state / checkpoint atomicity
+- durable replay validation against accepted history
+- `MATCH`, `MISSING_PROJECTION`, `DRIFT`, and `NO_ACCEPTED_HISTORY` replay validation coverage
 - destructive PostgreSQL test database isolation
 
 In this project, tests are part of the architecture argument.
@@ -50,6 +52,7 @@ At the current baseline, the strongest test coverage spans:
 - the Stage 3.5C PR2 PostgreSQL-backed projection state store baseline
 - the Stage 3.5C PR3 PostgreSQL-backed checkpoint store baseline
 - the Stage 3.5C PR4 global-position projection worker baseline
+- the Stage 3.5C PR5 durable replay / rebuild validation baseline
 
 This currently includes:
 
@@ -85,7 +88,7 @@ This currently includes:
 - destructive PostgreSQL integration test isolation through `TEST_DATABASE_URL`
 
 The test suite is therefore no longer only write-side focused.
-It now also defends durable storage, projection runtime, transactional PostgreSQL-backed write-side behavior, PostgreSQL admission, validation placement, and durable read-side worker boundaries.
+It now also defends durable storage, projection runtime, transactional PostgreSQL-backed write-side behavior, PostgreSQL admission, validation placement, durable read-side worker boundaries, and durable replay validation against accepted history.
 
 ---
 
@@ -273,7 +276,7 @@ These tests answer:
 
 ### [tests/integration/pipeline/projection/](integration/pipeline/projection/README.md)
 
-Projection pipeline integration tests verify the Stage 3.5C PR4 PostgreSQL-backed read-side projection worker baseline.
+Projection pipeline integration tests verify the Stage 3.5C PR4 PostgreSQL-backed read-side projection worker baseline and the Stage 3.5C PR5 durable replay / rebuild validation baseline.
 
 Typical goals:
 
@@ -287,6 +290,12 @@ Typical goals:
 - verify rollback when checkpoint persistence fails after projection state save
 - verify fail-fast behavior for non-`GLOBAL_POSITION` checkpoints
 - verify fail-fast behavior when projection state is ahead of checkpoint progress
+- verify durable replay validation against accepted history
+- verify `MATCH`, `MISSING_PROJECTION`, `DRIFT`, and `NO_ACCEPTED_HISTORY`
+- verify replay validation does not mutate accepted history
+- verify replay validation does not advance checkpoint progress
+- verify aggregate-local replay ordering
+- verify Decimal round-trip comparison safety
 
 These tests answer:
 
@@ -444,7 +453,7 @@ That means a smaller number of semantically meaningful tests is often more valua
 
 ## Current Boundary
 
-At the current baseline, the test suite is strongest on:
+At the current baseline, after Stage 3.5C durable read-side completion, the test suite is strongest on:
 
 - write-side semantic correctness
 - replay safety
@@ -461,10 +470,10 @@ At the current baseline, the test suite is strongest on:
 - Stage 3.5C PR2 PostgreSQL-backed projection state persistence
 - Stage 3.5C PR3 PostgreSQL-backed checkpoint persistence
 - Stage 3.5C PR4 global-position projection worker baseline
+- Stage 3.5C PR5 durable replay / rebuild validation baseline
 
 However, the current suite does **not yet** fully cover:
 
-- durable replay / rebuild validation
 - state-level Compass Layer 2 validation
 - Stage 3.5D Snapshot Trust Contract
 - Stage 3.5E durable history / permission hardening
@@ -511,7 +520,7 @@ fixtures
 → semantic test-data construction
 ```
 
-As the project evolves beyond the Stage 3.5C PR4 durable projection worker baseline, the test suite should continue to grow in the same spirit:
+As the project moves from the completed Stage 3.5C durable read-side baseline into Stage 3.5D snapshot trust / replay-efficiency work, the test suite should continue to grow in the same spirit:
 
 - not only testing whether the system runs
 - but testing whether the system remains semantically trustworthy
