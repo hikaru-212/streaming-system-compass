@@ -95,6 +95,19 @@ GLOBAL_POSITION checkpoint persistence
 single-worker baseline with worker concurrency intentionally deferred
 ```
 
+Stage 3.5C PR5 has completed the durable replay / rebuild validation baseline:
+
+```text
+DurableReplayValidator
+ReplayValidationStatus
+ReplayValidationResult
+accepted-history replay through canonical reducer
+comparison against persisted projection state
+MATCH / MISSING_PROJECTION / DRIFT / NO_ACCEPTED_HISTORY
+no accepted-history mutation
+no checkpoint progress advancement
+```
+
 These completed items are no longer tracked as deferred backlog work.
 
 This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline, Stage 3.5C PR0 schema-hardening pass, Stage 3.5C PR1 read-side schema baseline, Stage 3.5C PR2 PostgresProjectionStore baseline, Stage 3.5C PR3 PostgresCheckpointStore baseline, and Stage 3.5C PR4 global-position projection worker baseline.

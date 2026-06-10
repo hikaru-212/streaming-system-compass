@@ -98,6 +98,7 @@ The current system already supports:
 - global-position accepted-history consumption through Stage 3.5C PR4
 - PostgreSQL-backed projection worker orchestration through Stage 3.5C PR4
 - atomic projection-state and checkpoint-progress persistence through Stage 3.5C PR4
+- durable replay / rebuild validation through Stage 3.5C PR5
 
 This means Compass is already more than a passive checker.
 
@@ -126,7 +127,9 @@ order_events
 → PostgresCheckpointStore
 ```
 
-This does not make Compass Layer 2 active yet. It provides the durable read-side runtime substrate that Layer 2 can later validate.
+Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state.
+
+This does not make Compass Layer 2 active yet. It provides the durable read-side correctness evidence that Layer 2 can later classify and govern.
 
 ---
 
@@ -144,7 +147,7 @@ This is the gap that later stages must close.
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline. Stage 3.5C PR5 adds durable replay / rebuild validation so persisted projection state can be checked against accepted-history replay.
 
 ---
 

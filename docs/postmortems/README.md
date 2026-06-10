@@ -48,6 +48,7 @@ Postmortems help preserve:
 | [autocommit_boundary_and_partial_write_risk](autocommit_boundary_and_partial_write_risk.md) | Transaction Boundary / Concurrency | Explains why `autocommit`, transaction-scoped advisory locks, and partial-write risks must be treated as physical transaction-boundary concerns in the durable write-side pipeline. |
 | [pre_transaction_read_cleanup_boundary](pre_transaction_read_cleanup_boundary.md) | Connection Reliability / Infrastructure | Explains why `PRE_TRANSACTION` validation must explicitly clean up implicit read transactions before CPU-side validation, and why cleanup failure handling is deferred to Stage 4 / production hardening. |
 | [from_snapshot_as_fast_state_to_snapshot_trust_contract](from_snapshot_as_fast_state_to_snapshot_trust_contract.md) | Snapshot Trust / Derived State | Records the reasoning shift from treating snapshots as replay optimization to treating them as derived-state artifacts that need a trust contract before being used on the fast path. |
+| [from_replay_rebuild_validation_to_layer2_governance](from_replay_rebuild_validation_to_layer2_governance.md) | Replay / Layer 2 Boundary | Clarifies why Stage 3.5C PR5 replay / rebuild validation is the durable correctness substrate for derived state, while Compass Layer 2 remains the later semantic governance and runtime decision layer. |
 
 ---
 

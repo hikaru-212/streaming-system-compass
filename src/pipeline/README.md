@@ -116,12 +116,14 @@ Typical responsibilities:
 - persist projection state
 - track checkpoints / offsets
 - recover through replay / rebuild
+- validate durable projection state against accepted-history replay
 - enforce baseline sequencing assumptions
 
-The projection runtime now has two baseline forms:
+The projection runtime now has three baseline forms:
 
 1. a deterministic in-memory Stage 3 baseline
-2. a PostgreSQL-backed Stage 3.5C PR4 baseline
+2. a PostgreSQL-backed Stage 3.5C PR4 worker baseline
+3. a Stage 3.5C PR5 durable replay / rebuild validation baseline
 
 The current PostgreSQL-backed projection worker connects:
 
@@ -152,6 +154,16 @@ cursor_value = latest processed order_events.global_position
 
 as the first durable accepted-history consumption strategy.
 
+Durable replay validation compares:
+
+```text
+accepted-history replay
+vs
+persisted projection state
+```
+
+This prepares the project for future Compass Layer 2 projection-drift validation without implementing Layer 2 runtime governance yet.
+
 For the higher-level projection design, see:
 
 - [Projection Pipeline](../../docs/architecture/projection_pipeline.md)
@@ -181,8 +193,8 @@ This layer is intentionally deferred until the transactional and projection base
 
 At the current stage, the implemented focus now includes:
 
-1. [transactional/](transactional/README.md)
-2. [projection/](projection/README.md)
+1. [transactional/](transactional/)
+2. [projection/](projection/)
 
 while:
 

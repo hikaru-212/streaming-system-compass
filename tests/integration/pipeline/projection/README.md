@@ -6,7 +6,7 @@ This directory contains integration tests for the projection pipeline.
 
 These tests are executable architecture claims for the read-side runtime boundary.
 
-At the current Stage 3.5C PR4 baseline, the tests focus on the PostgreSQL-backed projection worker path:
+At the current Stage 3.5C PR5 baseline, the tests cover both the PostgreSQL-backed projection worker path and durable replay / rebuild validation:
 
 ```text
 order_events
@@ -21,7 +21,7 @@ order_events
 
 ## Purpose
 
-The purpose of these tests is to verify that accepted history can be consumed by a durable projection worker and turned into persisted read-side state without splitting projection progress from projection state.
+The purpose of these tests is to verify that accepted history can be consumed by a durable projection worker and that persisted read-side state can be checked against accepted-history replay.
 
 The key invariant is:
 
@@ -93,6 +93,22 @@ It covers:
 - projection-state / checkpoint mismatch fails fast
 - projection state and checkpoint progress roll back together when checkpoint persistence fails
 
+### `test_durable_replay_validation.py`
+
+This file verifies the Stage 3.5C PR5 durable replay / rebuild validation baseline.
+
+It covers:
+
+- `MATCH` when persisted projection state equals replay-derived state
+- `MISSING_PROJECTION` when accepted history exists but projection state is missing
+- `DRIFT` when persisted projection state differs from replay-derived state
+- `DRIFT` when persisted projection state is ahead of accepted-history replay
+- `NO_ACCEPTED_HISTORY` when no accepted events exist for the order
+- validation does not mutate `order_events`
+- validation does not advance `projection_checkpoints`
+- replay uses aggregate-local sequence order instead of global worker cursor order
+- Decimal round-trip differences do not create false drift
+
 ---
 
 ## Transaction Boundary Claim
@@ -150,6 +166,20 @@ Repair, rebuild, and recovery policy belong to later stages.
 
 ---
 
+## Replay Validation Boundary Claim
+
+Durable replay validation compares accepted-history replay through the canonical reducer with persisted projection state.
+
+It does not mutate accepted history.
+
+It does not advance checkpoint progress.
+
+It does not decide Compass Layer 2 runtime policy.
+
+The validation result remains a minimal physical correctness signal, not a Stage 4 `SemanticOutcome`.
+
+---
+
 ## Test Database Boundary
 
 These tests are destructive PostgreSQL integration tests.
@@ -202,7 +232,7 @@ pytest -v --durations=10 --cov=src --cov-report=term-missing --cov-fail-under=80
 
 ```text
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
-Stage 3.5C PR5 — Durable Replay / Rebuild Validation planned
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
 ```
 
 ---
