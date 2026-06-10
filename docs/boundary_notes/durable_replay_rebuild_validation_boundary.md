@@ -28,6 +28,37 @@ It validates projection state against accepted history.
 
 ---
 
+## Status
+
+Stage 3.5C PR5 is complete at the baseline level.
+
+This boundary has been implemented through:
+
+```text
+ReplayValidationStatus
+ReplayValidationResult
+DurableReplayValidator
+```
+
+with integration coverage for:
+
+```text
+MATCH
+MISSING_PROJECTION
+DRIFT
+NO_ACCEPTED_HISTORY
+```
+
+This completes the Stage 3.5C durable read-side baseline together with PR1 through PR4.
+
+The next stage is:
+
+```text
+Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
+```
+
+---
+
 ## Core Boundary
 
 The core PR5 boundary is:
@@ -52,7 +83,7 @@ projection_checkpoints
 = operational worker progress
 ```
 
-PR5 should not change that relationship.
+PR5 does not change that relationship.
 
 ---
 
@@ -66,9 +97,9 @@ Stage 3.5C PR3 made `projection_checkpoints` usable through `PostgresCheckpointS
 
 Stage 3.5C PR4 connected accepted history, the canonical reducer, projection state, and checkpoint progress through a PostgreSQL-backed projection worker.
 
-However, PR4 only proves that the worker can process accepted events incrementally.
+However, PR4 only proved that the worker can process accepted events incrementally.
 
-PR5 should prove that the persisted read-side state can be independently checked by replaying accepted history.
+PR5 proves that persisted read-side state can be independently checked by replaying accepted history.
 
 That matters because projection state is derived.
 
@@ -78,7 +109,7 @@ A derived state can be stale, incomplete, corrupted, or inconsistent even if acc
 
 ## Validation Model
 
-PR5 should introduce a minimal validation model that compares:
+PR5 introduces a minimal validation model that compares:
 
 ```text
 expected state from accepted-history replay
@@ -90,7 +121,7 @@ against:
 persisted state from projection_states
 ```
 
-A minimal result model may distinguish:
+The baseline result model distinguishes:
 
 ```text
 MATCH
@@ -112,9 +143,9 @@ It is a PR5 validation result, not the final governance model.
 
 ---
 
-## Candidate Runtime Flow
+## Runtime Flow
 
-A minimal durable replay / rebuild validation flow may be:
+The durable replay validation flow is:
 
 ```text
 1. choose an order_id
@@ -132,7 +163,7 @@ The important constraint is:
 replay must use the same canonical reducer path as incremental projection
 ```
 
-PR5 should not create a second ad hoc reconstruction algorithm.
+PR5 does not create a second ad hoc reconstruction algorithm.
 
 ---
 
@@ -148,7 +179,7 @@ ORDER BY sequence ASC
 
 `sequence` is the causal ordering boundary inside one aggregate stream.
 
-Therefore, PR5 should reuse the accepted-history loading path that returns one order's events ordered by `sequence ASC`, such as `PostgresEventStore.load(order_id)`.
+Therefore, PR5 reuses the accepted-history loading path that returns one order's events ordered by `sequence ASC`, such as `PostgresEventStore.load(order_id)`.
 
 This keeps PR5 aligned with the aggregate-local replay rule instead of accidentally replaying one order by a global worker cursor.
 
@@ -156,21 +187,25 @@ This keeps PR5 aligned with the aggregate-local replay rule instead of accidenta
 
 ## Comparison Boundary
 
-The first PR5 comparison should remain explicit and narrow.
+The PR5 comparison remains explicit and narrow.
 
-It should compare the replay-derived `OrderState` with the persisted projection `OrderState`.
+It compares the replay-derived `OrderState` with the persisted projection `OrderState`.
 
-The implementation should avoid comparing unrelated operational metadata such as checkpoint progress, worker name, cursor kind, cursor value, or database timestamps.
+The implementation avoids comparing unrelated operational metadata such as checkpoint progress, worker name, cursor kind, cursor value, or database timestamps.
 
-The comparison should also preserve exact-value behavior for money-like fields.
+The comparison preserves exact-value behavior for money-like fields.
 
-For Decimal values, the tests should include database round-trip cases so that the project does not accidentally classify formatting or quantization differences as semantic drift.
+For Decimal values, integration tests include database round-trip cases so that the project does not accidentally classify formatting or quantization differences as semantic drift.
 
 ---
 
 ## Rebuild Boundary
 
-PR5 may include a minimal rebuild helper if needed, but rebuild should remain narrow:
+PR5 establishes the validation baseline only.
+
+It does not perform automatic rebuild mutation.
+
+The rebuild boundary remains future work:
 
 ```text
 delete or reset projection state
@@ -178,26 +213,26 @@ delete or reset projection state
 → save rebuilt projection state
 ```
 
-If rebuild is included, it should still preserve:
+Future rebuild work must still preserve:
 
 ```text
 accepted history = source of truth
 projection state = derived state
 ```
 
-Rebuild should not mutate accepted history.
+Rebuild must not mutate accepted history.
 
-Rebuild should not infer new business facts.
+Rebuild must not infer new business facts.
 
-Rebuild should not advance a worker checkpoint unless the design explicitly defines that behavior.
+Rebuild must not advance a worker checkpoint unless the design explicitly defines that behavior.
 
 If checkpoint behavior is included, it must be documented separately because checkpoint progress is operational metadata, not business correctness.
 
 ---
 
-## What PR5 Should Prove
+## What PR5 Proves
 
-PR5 should prove:
+PR5 proves:
 
 - accepted history can be replayed from PostgreSQL
 - replay uses the canonical reducer
@@ -205,6 +240,7 @@ PR5 should prove:
 - matching projection state is recognized as valid
 - missing projection state is detected
 - drifted projection state is detected
+- projection state ahead of accepted-history replay is detected as drift
 - projection validation does not mutate accepted history
 - projection validation does not silently advance checkpoint progress
 - projection validation does not become Compass Layer 2 yet
@@ -253,15 +289,15 @@ classify projection drift semantically
 → decide rebuild / quarantine / block / continue
 ```
 
-PR5 should produce the durable comparison substrate that Layer 2 can later use.
+PR5 produces the durable comparison substrate that Layer 2 can later use.
 
 ---
 
 ## Relationship to Stage 3.5D Snapshot Trust Contract
 
-PR5 should use full accepted-history replay as the authority path.
+PR5 uses full accepted-history replay as the authority path.
 
-Stage 3.5D may later introduce snapshot-assisted replay as a fast path.
+Stage 3.5D is the next stage and may introduce snapshot-assisted replay as a fast path.
 
 That future work must prove:
 
@@ -271,20 +307,20 @@ snapshot-assisted replay
 full accepted-history replay
 ```
 
-PR5 should not depend on snapshots.
+PR5 does not depend on snapshots.
 
 ---
 
-## Suggested First Implementation Boundary
+## Implementation Boundary
 
-A minimal first implementation may introduce:
+The baseline implementation introduces:
 
 ```text
 src/pipeline/projection/replay_validator.py
-tests/integration/pipeline/projection/test_durable_replay_rebuild_validation.py
+tests/integration/pipeline/projection/test_durable_replay_validation.py
 ```
 
-Possible types:
+Core types:
 
 ```python
 ReplayValidationStatus
@@ -292,17 +328,17 @@ ReplayValidationResult
 DurableReplayValidator
 ```
 
-The first version should stay small and explicit.
+The first version stays small and explicit.
 
-It should compare one `order_id` at a time before expanding into batch validation, rebuild orchestration, or Compass Layer 2 integration.
+It compares one `order_id` at a time before expanding into batch validation, rebuild orchestration, or Compass Layer 2 integration.
 
 ---
 
 ## Current Decision
 
-Stage 3.5C PR5 should implement a minimal durable replay / rebuild validation baseline.
+Stage 3.5C PR5 implements a minimal durable replay / rebuild validation baseline.
 
-It should validate derived read-side state against accepted history without changing the source-of-truth model.
+It validates derived read-side state against accepted history without changing the source-of-truth model.
 
 The core rule is:
 
@@ -312,3 +348,5 @@ projection state is derived
 replay result is the expected derived state
 validation compares expected derived state with persisted derived state
 ```
+
+This completes Stage 3.5C at the durable read-side baseline level.

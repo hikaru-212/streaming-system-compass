@@ -25,6 +25,23 @@ Stage 3.5C PR4 should therefore make the worker cursor strategy explicit before 
 
 ---
 
+## Status
+
+Stage 3.5C PR4 is complete.
+
+This note defines the cursor strategy that the PostgreSQL-backed projection worker baseline adopted:
+
+```text
+cursor_kind = GLOBAL_POSITION
+cursor_value = latest processed order_events.global_position
+```
+
+Stage 3.5C PR5 later added durable replay / rebuild validation on top of this baseline.
+
+The next related stage is Stage 3.5D, where snapshot trust and replay efficiency may be introduced without replacing the `GLOBAL_POSITION` worker baseline.
+
+---
+
 ## Problem
 
 The durable write-side already stores accepted events in `order_events`.
@@ -193,7 +210,7 @@ It answers:
 
 ## Decision
 
-Stage 3.5C PR4 should use:
+Stage 3.5C PR4 uses:
 
 ```text
 GLOBAL_POSITION
@@ -201,7 +218,7 @@ GLOBAL_POSITION
 
 as the durable projection worker cursor strategy.
 
-This implies adding a global event-log position to `order_events`.
+This adds a global event-log position to `order_events`.
 
 The intended query shape is:
 
@@ -331,7 +348,7 @@ The purpose of PR4 is to establish the first deterministic durable projection wo
 
 ## PR4 Boundary
 
-Stage 3.5C PR4 should introduce the first PostgreSQL-backed projection worker baseline.
+Stage 3.5C PR4 introduces the first PostgreSQL-backed projection worker baseline.
 
 The intended flow is:
 
@@ -343,15 +360,15 @@ order_events
 → PostgresCheckpointStore
 ```
 
-The worker should:
+The worker:
 
-1. load current checkpoint
-2. load the next accepted event after the checkpoint
-3. load current projection state for the event's `order_id`
-4. apply the canonical reducer
-5. save projection state
-6. save checkpoint progress
-7. commit both updates together
+1. loads current checkpoint
+2. loads the next accepted event after the checkpoint
+3. loads current projection state for the event's `order_id`
+4. applies the canonical reducer
+5. saves projection state
+6. saves checkpoint progress
+7. commits both updates together
 
 ---
 
@@ -403,9 +420,9 @@ checkpoint progress update
 
 ---
 
-## What PR4 Should Add
+## What PR4 Adds
 
-Stage 3.5C PR4 should add:
+Stage 3.5C PR4 adds:
 
 - `order_events.global_position`
 - migration for the global event-log position
@@ -418,9 +435,9 @@ Stage 3.5C PR4 should add:
 
 ---
 
-## What PR4 Should Not Add
+## What PR4 Does Not Add
 
-Stage 3.5C PR4 should not implement:
+Stage 3.5C PR4 does not implement:
 
 - Snapshot Trust Contract
 - durable replay / rebuild validation
@@ -479,19 +496,17 @@ Checkpoint state remains operational progress metadata.
 
 ## Future Work
 
-After PR4, the next likely work is durable replay / rebuild validation.
-
-That later stage should prove:
+Stage 3.5C PR5 has completed the next likely work after PR4:
 
 ```text
 accepted history replay
-=
+vs
 durable projection state
 ```
 
-or produce evidence when they differ.
+and produces evidence when they differ.
 
-Future stages may also revisit:
+Future stages may still revisit:
 
 - batch processing
 - out-of-order handling
@@ -506,7 +521,7 @@ Future stages may also revisit:
 
 ## Summary
 
-Stage 3.5C PR4 should use `GLOBAL_POSITION` as the first durable projection worker cursor strategy.
+Stage 3.5C PR4 uses `GLOBAL_POSITION` as the first durable projection worker cursor strategy.
 
 The essential rule is:
 

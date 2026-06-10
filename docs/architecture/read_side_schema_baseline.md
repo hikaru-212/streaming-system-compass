@@ -18,6 +18,30 @@ It defines the schema-level reasoning that supports that later implementation.
 
 ---
 
+## Stage 3.5C Completion Note
+
+This document was originally written for Stage 3.5C PR1.
+
+Stage 3.5C is now complete at the durable read-side baseline level:
+
+```text
+PR1 — Durable Read-Side Schema Baseline
+PR2 — PostgresProjectionStore
+PR3 — PostgresCheckpointStore
+PR4 — Global-Position Projection Worker Baseline
+PR5 — Durable Replay / Rebuild Validation Baseline
+```
+
+This architecture note should now be read as the schema foundation that enabled PR2–PR5.
+
+The next stage is:
+
+```text
+Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
+```
+
+---
+
 ## Why This Note Exists
 
 Stage 3 established a deterministic in-memory projection runtime baseline.
@@ -47,20 +71,27 @@ This document covers the first durable read-side schema baseline for:
 - `projection_states`
 - `projection_checkpoints`
 
-It does **not yet** cover:
+At PR1, this document did not yet cover the later implementation PRs.
 
-- `PostgresProjectionStore`
-- `PostgresCheckpointStore`
-- PostgreSQL-backed projection worker implementation
-- final event-log scanning strategy
-- `order_events.global_position`
+Those later Stage 3.5C responsibilities are now complete:
+
+```text
+PR2 — PostgresProjectionStore
+PR3 — PostgresCheckpointStore
+PR4 — PostgreSQL-backed projection worker and GLOBAL_POSITION cursor
+PR5 — Durable replay / rebuild validation
+```
+
+The following remain outside the completed Stage 3.5C schema baseline:
+
 - snapshot trust
-- replay optimization
+- snapshot-assisted replay optimization
 - Compass Layer 2 validation
 - structured `SemanticOutcome`
+- runtime decision policy
+- action safety
 - database role hardening
-
-Those belong to later PRs or later stages.
+- append-only trigger enforcement
 
 ---
 
@@ -469,9 +500,9 @@ over maximum write throughput.
 
 A global event-log position makes projection worker behavior easier to test, replay, resume, and explain.
 
-However, PR1 deliberately avoids introducing `order_events.global_position`.
+PR1 deliberately avoided introducing `order_events.global_position`.
 
-That decision should be made when the PostgreSQL-backed projection worker is introduced, likely around Stage 3.5C PR4 or a small PR4-preparation migration.
+That decision was later made in Stage 3.5C PR4 when the PostgreSQL-backed projection worker was introduced.
 
 ---
 
@@ -549,11 +580,11 @@ The `projection_states` table should be treated as a durable cache of derived tr
 
 ---
 
-# Relation to Future Layer 2
+# Relation to Replay Validation and Future Layer 2
 
-Stage 3.5C PR1 creates the durable target that future Layer 2 validation can inspect.
+Stage 3.5C PR1 created the durable target that later validation can inspect.
 
-Future Layer 2 validation may compare:
+Stage 3.5C PR5 now compares:
 
 ```text
 accepted-history replay result
@@ -563,14 +594,14 @@ persisted projection state
 
 to detect:
 
+- matching projection state
+- missing projection state
 - projection drift
-- reducer mismatch
-- checkpoint / state mismatch
-- snapshot trust failure
+- no accepted history for the target order
 
-PR1 does not implement that validation.
+Future Compass Layer 2 may build on that evidence to classify semantic severity and connect drift detection to runtime decisions.
 
-It only creates the durable read-side shape required before that validation becomes meaningful.
+PR1 created the durable read-side shape required before that validation became meaningful.
 
 ---
 
@@ -589,17 +620,23 @@ At the current stage, the following are directionally accepted:
 
 ---
 
-# Questions Still Open
+# Resolved and Deferred Questions
 
-The following still require final implementation decisions:
+Stage 3.5C resolved the following questions:
 
-- whether Stage 3.5C PR4 should introduce `order_events.global_position`
-- whether `APPENDED_AT` polling should be implemented as an interim worker strategy
-- whether `accepted_event_id` should be used as a tie-breaker for time-based polling
+- Stage 3.5C PR4 introduced `order_events.global_position`.
+- PR4 chose `GLOBAL_POSITION` as the first PostgreSQL-backed projection worker cursor strategy.
+- PR4 coordinated projection state and checkpoint progress in one read-side transaction.
+- PR5 added durable replay / rebuild validation against accepted history.
+
+The following remain deferred:
+
+- whether `APPENDED_AT` polling is ever needed for a different workload
+- whether `accepted_event_id` should be used as a tie-breaker for future cursor strategies
 - whether checkpoint rows should eventually include heartbeat / freshness fields
-- whether one worker checkpoint is sufficient or whether multiple projection pipelines require separate checkpoint namespaces
+- whether one worker checkpoint is sufficient for multiple future projection pipelines
 - whether rebuild should reset checkpoints or use a separate rebuild cursor
-- how checkpoint updates should be transactionally coordinated with projection state updates
+- how snapshot-assisted replay should be trusted in Stage 3.5D
 
 ---
 
@@ -638,7 +675,7 @@ The worker cursor must remain a separate concept.
 
 ## Closing Rule
 
-The most important reminder for Stage 3.5C PR1 is:
+The most important reminder preserved from Stage 3.5C PR1 is:
 
 > Do not let durable read-side state redefine accepted history.
 

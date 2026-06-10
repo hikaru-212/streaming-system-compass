@@ -16,9 +16,19 @@ It also records the checkpoint cursor decision made during PR1 planning:
 
 ## Status
 
-Stage 3.5C PR1 planning / durable read-side schema boundary.
+Originally written as the Stage 3.5C PR1 planning / durable read-side schema boundary.
 
-This note is intentionally written before `PostgresProjectionStore`, `PostgresCheckpointStore`, or the PostgreSQL-backed projection worker is implemented.
+Stage 3.5C is now complete at the durable read-side baseline level:
+
+```text
+PR1 — Durable Read-Side Schema Baseline
+PR2 — PostgresProjectionStore
+PR3 — PostgresCheckpointStore
+PR4 — Global-Position Projection Worker Baseline
+PR5 — Durable Replay / Rebuild Validation Baseline
+```
+
+This note should now be read as the foundational read-side persistence boundary that the later PR2–PR5 work completed and preserved.
 
 ---
 
@@ -335,11 +345,13 @@ It should not introduce a second projection algorithm.
 
 The canonical projection reducer remains the source of derived-state logic.
 
-### Rule 6: Final worker cursor strategy is deferred
+### Rule 6: Worker cursor strategy is explicit after PR4
 
-PR1 should define a cursor-compatible checkpoint schema.
+PR1 defined a cursor-compatible checkpoint schema.
 
-The final event-log scanning strategy should be decided when the PostgreSQL-backed projection worker is introduced.
+PR4 later chose `GLOBAL_POSITION` as the first durable event-log scanning strategy for the PostgreSQL-backed projection worker.
+
+This preserves the original PR1 boundary: checkpoint progress is a worker cursor, not aggregate-local business state.
 
 ---
 
@@ -416,18 +428,27 @@ It is assigning correctness to the appropriate layer.
 
 ## Non-goals
 
-Stage 3.5C PR1 does not implement:
+Stage 3.5C PR1 did not implement the later durable read-side components by itself.
 
-- `PostgresProjectionStore`
-- `PostgresCheckpointStore`
-- PostgreSQL-backed projection worker
-- final cursor strategy
-- `order_events.global_position`
+Those later Stage 3.5C responsibilities were completed in subsequent PRs:
+
+```text
+PR2 — PostgresProjectionStore
+PR3 — PostgresCheckpointStore
+PR4 — GLOBAL_POSITION projection worker
+PR5 — Durable replay / rebuild validation
+```
+
+The following remain non-goals after Stage 3.5C completion:
+
 - snapshot trust
-- replay optimization
+- replay optimization through trusted snapshots
 - Compass Layer 2
 - `SemanticOutcome`
+- runtime decision policy
+- action safety
 - database role hardening
+- append-only trigger enforcement
 - CDC / WAL streaming
 
 ---
@@ -459,9 +480,9 @@ because that field should not exist.
 
 ---
 
-## Future ADR Candidate
+## Historical ADR Candidate Note
 
-When the PostgreSQL-backed projection worker is introduced, the project should likely add an ADR such as:
+When the PostgreSQL-backed projection worker was being planned, the project identified a possible ADR such as:
 
 ```text
 ADR 0013 — Projection Worker Cursor Strategy
@@ -474,13 +495,13 @@ That ADR should compare:
 - event-id tie-breakers
 - CDC / WAL-based streaming
 
-The likely decision is:
+Stage 3.5C PR4 made the practical baseline decision:
 
 ```text
 GLOBAL_POSITION
 ```
 
-if the project continues to prioritize deterministic replay, auditability, and semantic correctness over maximum write throughput.
+This choice matches the project's priority on deterministic replay, auditability, and semantic correctness over maximum write throughput.
 
 ---
 
