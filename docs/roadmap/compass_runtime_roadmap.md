@@ -92,7 +92,7 @@ The current system already supports:
 - PostgreSQL-backed two-phase concurrency admission through Stage 3.5B PR5
 - validation placement strategy through Stage 3.5B PR6
 - durable order-event vocabulary hardening through Stage 3.5C PR0
-- durable read-side schema baseline through Stage 3.5C PR1
+- durable read-side schema baseline in Stage 3.5C PR1
 - PostgreSQL-backed projection state persistence through Stage 3.5C PR2
 - PostgreSQL-backed checkpoint progress persistence through Stage 3.5C PR3
 - global-position accepted-history consumption through Stage 3.5C PR4

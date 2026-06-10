@@ -342,7 +342,7 @@ Stage 3.5C PR1 — Durable Read-Side Schema Baseline ✅
 Stage 3.5C PR2 — PostgresProjectionStore ✅
 Stage 3.5C PR3 — PostgresCheckpointStore ✅
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
-Stage 3.5C PR5 — Durable Replay / Rebuild Validation planned
+Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
 ```
 
 Stage 3.5C PR4 adds storage-side accepted-history consumption for the durable projection worker:
