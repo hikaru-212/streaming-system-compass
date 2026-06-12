@@ -250,21 +250,7 @@ Stage 3.5C should not implement:
 
 Stage 3.5D should not be mixed into the Stage 3.5C durable read-side baseline.
 
-It is reserved for **Snapshot Trust Contract and replay efficiency** after durable write-side and durable read-side baselines are both coherent.
-
-Possible Stage 3.5D work includes:
-
-- aggregate snapshots
-- snapshot metadata and lineage
-- snapshot validity rules
-- lineage checks using aggregate / order identity, snapshot version, source event identity, and source event sequence
-- tail continuity checks after the snapshot version
-- snapshot schema version and reducer version tracking
-- payload hash / checksum as a baseline integrity check
-- invalid snapshot fallback to full accepted-history replay
-- projection rebuild optimization
-- replay cost measurement
-- evidence hooks for future Stage 4 `SemanticOutcome`
+It is reserved for **Snapshot Trust Contract / Replay Efficiency** after durable write-side and durable read-side baselines are both coherent.
 
 The source-of-truth rule remains unchanged:
 
@@ -272,6 +258,7 @@ The source-of-truth rule remains unchanged:
 accepted history = source of truth
 snapshot = derived state compression
 projection state = derived runtime view
+checkpoint = operational progress metadata
 ```
 
 The important Stage 3.5D distinction is:
@@ -284,7 +271,50 @@ authority path:
 full accepted-history replay for audit, rebuild, suspicious cases, reducer upgrades, or high-risk verification
 ```
 
----
+The current proposed Stage 3.5D PR sequence is:
+
+```text
+PR1 — General Snapshot Trust Contract Boundary
+PR2 — Projection Snapshot Schema Baseline
+PR3 — PostgresProjectionSnapshotStore
+PR4 — Projection Snapshot-Assisted Replay Validator
+PR5 — Aggregate Snapshot Trust Extension
+PR6 — Aggregate Snapshot Schema / Store
+PR7 — Snapshot-Assisted Write-Side Rehydration
+```
+
+Stage 3.5D should keep these implementation details under:
+
+```text
+docs/implementation_notes/
+```
+
+The roadmap should preserve sequencing and dependency logic, while implementation notes should preserve PR-level detail, schema drafts, store behavior, validator behavior, and test matrices.
+
+Stage 3.5D should include:
+
+- snapshot metadata and lineage
+- canonical snapshot payload hashing
+- snapshot write collision policy
+- snapshot generation policy
+- lineage checks using order identity, source event identity, source event sequence, and source global position
+- tail continuity checks after the snapshot boundary
+- snapshot schema version and logic version tracking
+- invalid snapshot fallback to full accepted-history replay
+- projection snapshot-assisted replay
+- later aggregate snapshot-assisted write-side rehydration
+- evidence hooks for future Stage 4 `SemanticOutcome`
+
+Stage 3.5D should not implement:
+
+- Compass Layer 2 full validation
+- structured `SemanticOutcome`
+- runtime decision policy
+- action safety gate
+- dual-dimension governance
+- isolated agent-facing runtime
+- HMAC / digital signatures
+- sealed milestone snapshots
 
 ## Stage 3.5E Reminder
 
