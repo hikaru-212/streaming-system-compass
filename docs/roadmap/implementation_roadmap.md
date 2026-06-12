@@ -1381,47 +1381,15 @@ PR5 does not implement:
 
 ---
 
-# Stage 3.5D: Persistence Optimization & Replay Efficiency
-
-## Subtitle
-
-Snapshot Trust Contract and Replay Efficiency.
+# Stage 3.5D: Snapshot Trust Contract / Replay Efficiency
 
 ## Goal
 
-Establish snapshot and replay-efficiency mechanisms after the durable write-side and read-side baselines are complete.
+Establish snapshot trust and replay-efficiency mechanisms after the durable write-side and durable read-side baselines are complete.
 
-Stage 3.5D treats snapshots as derived state-compression artifacts, not as replacements for accepted event history.
+Stage 3.5D treats snapshots as derived state-compression artifacts.
 
-It also defines when a snapshot is qualified to be used on the fast path.
-
-## Why
-
-Stage 3.5B establishes the durable write-side baseline.
-
-Stage 3.5C establishes the durable read-side baseline.
-
-Together, they answer:
-
-```text
-Can the system form a durable closed loop?
-```
-
-Stage 3.5D answers two different but related questions:
-
-```text
-As accepted history grows, how can replay, rehydrate, and rebuild costs be reduced without weakening source-of-truth semantics?
-```
-
-```text
-When can a snapshot be trusted enough for the normal fast path without performing full replay every time?
-```
-
-Snapshots are therefore not part of the correctness baseline.
-
-They are persistence, recovery, trust-qualification, and replay-efficiency hardening.
-
-The accepted event log remains the source of truth.
+It does not allow snapshots to replace accepted history as the source of truth.
 
 ```text
 accepted history = source of truth
@@ -1430,9 +1398,33 @@ projection state = derived runtime view
 checkpoint = operational progress metadata
 ```
 
+## Why
+
+Stage 3.5B established the durable write-side baseline.
+
+Stage 3.5C established the durable read-side baseline.
+
+Together, they answer:
+
+```text
+Can the system form a durable closed loop?
+```
+
+Stage 3.5D answers the next replay-efficiency question:
+
+```text
+As accepted history grows, how can replay, rehydrate, and rebuild costs be reduced without weakening source-of-truth semantics?
+```
+
+It also answers the snapshot trust question:
+
+```text
+When is a snapshot qualified for fast-path use without performing full accepted-history replay every time?
+```
+
 ## Fast Path vs Authority Path
 
-Stage 3.5D should distinguish two paths:
+Stage 3.5D preserves two separate paths:
 
 ```text
 fast path:
@@ -1441,65 +1433,123 @@ snapshot + tail replay + trust checks
 
 ```text
 authority path:
-full accepted-history replay for audit, rebuild, suspicious cases, reducer upgrades, or high-risk verification
+full accepted-history replay
 ```
 
-The system should not full-replay on every normal request.
+The system should not full-replay on every normal path.
 
-But the system should always preserve the ability to ignore an invalid snapshot and return to accepted history.
+But the system must always preserve the ability to ignore an invalid snapshot and return to accepted history.
 
-## Main Work
+## PR Breakdown
 
-Stage 3.5D may include:
+Detailed Stage 3.5D execution notes should live under:
 
-- aggregate snapshot schema
-- aggregate snapshot store
-- aggregate rehydration from latest valid snapshot plus tail events
-- projection rebuild optimization
-- snapshot metadata and lineage
-- snapshot validity rules
-- replay cost measurement
-- tests proving that snapshot-assisted replay produces the same state as full accepted-history replay
-- snapshot lineage check:
-  - aggregate_id / order_id
-  - snapshot_version
-  - source_event_id
-  - source_event_sequence
-- tail continuity check:
-  - events after snapshot_version must be continuous up to the latest accepted version
-- snapshot schema and reducer version tracking:
-  - snapshot_schema_version
-  - reducer_version
-  - invalidation behavior when a reducer version is no longer trusted
-- payload integrity baseline:
-  - payload_hash or checksum
-  - invalid snapshot must be ignored or rejected
-- snapshot trust-level concept:
-  - invalid / untrusted
-  - fast-path eligible
-  - high-confidence
-  - recently audited
-- fallback behavior:
-  - if snapshot trust checks fail, ignore snapshot and fall back to full replay
-- evidence hooks for future Stage 4 SemanticOutcome:
-  - why snapshot was rejected
-  - which trust check failed
-  - whether full replay was required
+```text
+docs/implementation_notes/
+```
+
+The current proposed PR sequence is:
+
+```text
+PR1 — General Snapshot Trust Contract Boundary
+PR2 — Projection Snapshot Schema Baseline
+PR3 — PostgresProjectionSnapshotStore
+PR4 — Projection Snapshot-Assisted Replay Validator
+PR5 — Aggregate Snapshot Trust Extension
+PR6 — Aggregate Snapshot Schema / Store
+PR7 — Snapshot-Assisted Write-Side Rehydration
+```
+
+PR1 defines the general trust contract.
+
+PR2 through PR4 apply the contract first to projection / read-side snapshot-assisted replay.
+
+PR5 through PR7 extend the same trust model to write-side aggregate snapshot-assisted rehydration, where stricter admission-path constraints are required because reconstructed aggregate state can influence command validation and accepted-history admission.
+
+## Implementation Note Links
+
+The Stage 3.5D implementation details should be maintained in:
+
+- [Stage 3.5D PR Breakdown](../implementation_notes/stage_3_5d_pr_breakdown.md)
+- [Snapshot Payload Hashing](../implementation_notes/snapshot_payload_hashing.md)
+- [Snapshot Generation Policy](../implementation_notes/snapshot_generation_policy.md)
+
+Future implementation notes may cover:
+
+- projection snapshot schema
+- projection snapshot store behavior
+- projection snapshot-assisted replay validation
+- aggregate snapshot schema and store behavior
+- snapshot-assisted write-side rehydration
+
+## Core Design Requirements
+
+Stage 3.5D should preserve these requirements:
+
+- snapshots are derived, discardable, and rebuildable
+- accepted history remains the authority path
+- snapshot trust checks qualify fast-path use but do not prove universal semantic equivalence
+- invalid snapshots fall back to full accepted-history replay
+- snapshot payload hashes must be deterministic and canonical
+- snapshot write collisions must distinguish benign same-hash races from dangerous different-hash collisions
+- snapshot generation policy must stay separate from snapshot trust validation
+- database constraints should enforce physical plausibility, not over-assume future reducer semantics
+
+## Reducer Version vs Sequence Contract Notice
+
+In the current order domain v1, every accepted event is state-changing:
+
+```text
+CREATED
+PAID
+```
+
+Therefore, the current implementation can treat:
+
+```text
+OrderState.version
+= last applied aggregate-local accepted event sequence
+```
+
+This is a valid simplification for the current domain.
+
+It is not a universal event-sourcing law.
+
+Stage 3.5D snapshot schema and trust documentation should therefore avoid making database-level equality assumptions such as:
+
+```text
+state_version = source_event_sequence
+```
+
+The more future-safe physical rule is:
+
+```text
+state_version <= source_event_sequence
+```
+
+If future accepted events do not change business state, the system may need to split:
+
+```text
+business_version
+last_processed_sequence
+source_global_position
+```
+
+That future refactor should happen only when the domain introduces non-state-changing accepted events.
 
 ## Completion Criteria
 
 Stage 3.5D is complete at the baseline level when:
 
-- aggregate rehydration can use a valid snapshot plus tail events
-- full replay and snapshot-assisted replay produce equivalent aggregate state
-- invalid snapshots are rejected or ignored safely
-- snapshot lineage points back to accepted history
-- snapshot trust checks can reject invalid metadata, unsupported schema, broken tail continuity, or payload hash mismatch
-- snapshot-assisted rehydration falls back to full replay when trust checks fail
-- snapshot trust failures are represented in a way that Stage 4 can later convert into `SemanticOutcome`
-- reducer_version and snapshot_schema_version are recorded or explicitly deferred
-- replay-cost metrics can show how many events were skipped or replayed
-- Stage 4 Layer 2 work can rely on a clearer persistence and replay-efficiency substrate
+- snapshot trust boundaries are documented
+- projection snapshot schema and store behavior are implemented
+- projection snapshot-assisted replay can fall back to full accepted-history replay
+- canonical payload hashing is deterministic
+- same-boundary snapshot writes are idempotent when hashes match
+- same-boundary different-hash writes are treated as collisions
+- aggregate snapshot trust extension is documented
+- aggregate snapshot storage and write-side rehydration are implemented if PR5–PR7 are included in the stage
+- Stage 4 can later classify snapshot trust failures as structured semantic outcomes
 
 ## Non-goals
 
@@ -1533,8 +1583,15 @@ Snapshots do not replace accepted history.
 A snapshot may be used for speed only if it remains traceable, checkable, discardable, and rebuildable.
 ```
 
----
+## Roadmap Size Principle
 
+Going forward, the implementation roadmap should preserve stage sequencing and dependency logic.
+
+Detailed PR scope, schema proposals, store behavior, validator behavior, and test matrices should move into `docs/implementation_notes/` when they become too detailed for the roadmap.
+
+This keeps the roadmap useful as a roadmap while preserving implementation detail in a more appropriate location.
+
+---
 
 # Stage 3.5E: Durable History and Permission Hardening
 

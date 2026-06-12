@@ -826,66 +826,101 @@ Revisit when the test matrix expands from read-side schema constraints into Post
 
 ### Current Decision
 
-Do not implement aggregate snapshots, snapshot trust, or projection rebuild optimization during Stage 3.5C.
+Stage 3.5D is now the current focus.
 
-Stage 3.5C should first complete the durable read-side baseline:
+Do not implement projection snapshot tables, projection snapshot stores, aggregate snapshot stores, snapshot-assisted replay validators, or write-side snapshot-assisted rehydration in PR1.
+
+PR1 should first establish the Snapshot Trust Contract as a documentation and boundary baseline:
 
 ```text
-durable projection state
-durable checkpoint state
-PostgresProjectionStore
-PostgresCheckpointStore
-persistence-backed projection worker tests
+accepted history = source of truth
+snapshot = derived state compression
+fast path = snapshot + tail replay + trust checks
+authority path = full accepted-history replay
 ```
 
-Snapshot and replay-efficiency mechanisms should be handled as a later persistence-optimization stage.
+The implementation of concrete snapshot storage and replay / rehydration behavior should proceed through later Stage 3.5D PRs.
 
-### Why Not Now
+### Why This Boundary Exists
 
-Stage 3.5C answers:
+Stage 3.5C answered:
 
 ```text
 Can the read-side become durable while preserving accepted history as the source of truth?
 ```
 
-Snapshot work answers different questions:
+Stage 3.5D answers a different question:
 
 ```text
-As accepted history grows, how can replay, rehydrate, and rebuild costs be reduced?
+As accepted history grows, how can replay, rehydrate, and rebuild costs be reduced without allowing snapshots to become truth?
 ```
+
+Snapshot work should not collapse several different responsibilities into one implementation step.
+
+The following responsibilities must remain separate:
 
 ```text
-When is a snapshot trustworthy enough to use on the normal fast path without full replay every time?
+SnapshotTrustValidator
+= decides whether an existing snapshot may be used
+
+SnapshotBuilder
+= creates snapshot payload from trusted reconstruction output
+
+SnapshotGenerationPolicy
+= decides when a new snapshot should be produced
+
+SnapshotStore
+= persists and loads snapshot evidence
 ```
 
-These concerns should not distract from the durable read-side correctness baseline.
+### Current Stage 3.5D Direction
+
+Stage 3.5D should proceed in this order:
+
+```text
+PR1 — General Snapshot Trust Contract Boundary
+PR2 — Projection Snapshot Schema Baseline
+PR3 — PostgresProjectionSnapshotStore
+PR4 — Projection Snapshot-Assisted Replay Validator
+PR5 — Aggregate Snapshot Trust Extension
+PR6 — Aggregate Snapshot Schema / Store
+PR7 — Snapshot-Assisted Write-Side Rehydration
+```
+
+The first implementation pass should focus on projection / read-side snapshot trust because Stage 3.5C has completed the durable read-side baseline.
+
+A later Stage 3.5D extension may apply the same trust contract to write-side aggregate snapshot-assisted rehydration.
 
 ### Future Work
 
 Consider during Stage 3.5D:
 
+- projection snapshot schema
+- projection snapshot store
+- snapshot-assisted projection replay
+- aggregate snapshot trust extension
 - aggregate snapshot schema
 - aggregate snapshot store
+- write-side aggregate snapshot-assisted rehydration
 - rehydration from latest valid snapshot plus tail events
 - projection rebuild optimization
 - snapshot metadata and lineage
 - snapshot validity rules
 - replay cost measurement
 - lineage checks:
-  - aggregate_id / order_id
-  - snapshot_version
+  - order_id
   - source_event_id
   - source_event_sequence
+  - source_global_position
 - tail continuity checks
 - snapshot_schema_version
 - reducer_version
-- payload_hash / checksum
+- aggregate_logic_version
+- canonical payload_hash
 - invalid snapshot fallback to full replay
-- snapshot trust levels:
-  - invalid / untrusted
-  - fast-path eligible
-  - high-confidence
-  - recently audited
+- snapshot write collision policy:
+  - same boundary + same hash = idempotent success
+  - same boundary + different hash = collision error
 - hooks for future Stage 4 SemanticOutcome when snapshot trust checks fail
 
 ### Current Classification
@@ -899,10 +934,15 @@ Stage 3.5D / snapshot trust contract
 During:
 
 ```text
-Stage 3.5D — Persistence Optimization & Replay Efficiency
+Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
 ```
 
 after Stage 3.5C durable read-side baseline is complete.
+
+PR1 should stay documentation-first and boundary-first.
+
+Concrete snapshot schema, store, replay, and rehydration work should follow in later Stage 3.5D PRs.
+
 
 ---
 

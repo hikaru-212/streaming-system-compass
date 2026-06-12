@@ -392,17 +392,17 @@ This gives Compass Layer 2 a concrete future durable target and progress boundar
 
 ---
 
-# Stage 3.5D Dependency — Persistence Optimization and Replay Efficiency
+# Stage 3.5D Dependency — Snapshot Trust Contract / Replay Efficiency
 
-Before Compass Layer 2 grows into stronger runtime state validation, the persistence substrate may need one additional hardening stage:
+Before Compass Layer 2 grows into stronger runtime state validation, the persistence substrate needs one additional hardening stage:
 
 ```text
-Stage 3.5D — Persistence Optimization & Replay Efficiency
+Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
 ```
 
 This stage does not implement Layer 2 validation itself.
 
-Instead, it improves the replay and recovery substrate that Layer 2 may later depend on.
+Instead, it improves the replay, rehydration, and recovery substrate that Layer 2 may later depend on.
 
 Stage 3.5D treats snapshots as derived state-compression artifacts:
 
@@ -414,17 +414,43 @@ projection state = derived runtime view
 
 The purpose is to reduce replay, rehydrate, and rebuild cost without allowing snapshots to replace accepted history.
 
+The Stage 3.5D trust model is:
+
+```text
+fast path = snapshot + tail replay + trust checks
+authority path = full accepted-history replay
+```
+
+Snapshot trust validation should qualify whether an existing snapshot may be used on the fast path.
+
+Snapshot generation should remain a separate responsibility.
+
+```text
+SnapshotTrustValidator
+= decides whether an existing snapshot may be used
+
+SnapshotBuilder
+= creates snapshot payload from trusted reconstruction output
+
+SnapshotGenerationPolicy
+= decides when a new snapshot should be produced
+```
+
 Compass-relevant outcomes include:
 
-- aggregate snapshot lineage back to accepted history
-- snapshot-assisted replay that remains equivalent to full replay
+- snapshot lineage back to accepted history
+- projection snapshot support for read-side replay efficiency
+- future aggregate snapshot support for write-side rehydration efficiency
+- snapshot-assisted replay that remains equivalent to full replay for trusted fast-path cases
 - snapshot validity rules
-- lineage, tail-continuity, schema-version, reducer-version, and payload-integrity checks
+- lineage, tail-continuity, schema-version, reducer-version / aggregate-logic-version, and payload-integrity checks
+- canonical snapshot payload hashing
+- idempotent snapshot write collision policy
 - fast-path vs authority-path distinction
 - replay cost measurement
 - safer persistence substrate before Layer 2 drift validation
 
-This stage should remain persistence / replay hardening.
+Stage 3.5D should remain persistence / replay hardening.
 
 It qualifies snapshots for fast-path use, but it does not make snapshots the source of truth.
 

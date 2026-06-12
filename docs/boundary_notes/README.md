@@ -98,6 +98,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Persistence Boundary](persistence_boundary.md)
 - [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 - [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+- [Snapshot Trust Contract Boundary](snapshot_trust_contract_boundary.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
 
@@ -120,6 +121,8 @@ The persistence-related notes are also intentionally separate:
 - **Read-Side Persistence Boundary** explains how `projection_states` and `projection_checkpoints` should be treated as derived state and operational metadata rather than accepted-history truth.
 - **Stage 3.5B Write-Side Schema Translation Note** explains how Python-side guarantees such as `frozen=True`, append-only accepted history, and exact money semantics should be translated into database-side physical constraints before durable write-side implementation begins.
 
+The snapshot trust contract note defines how derived snapshot state may qualify for fast-path replay / rehydration without replacing accepted history as the source of truth.
+
 ---
 
 ## How to Use These Notes
@@ -140,10 +143,11 @@ A practical reading order is:
 12. [Checkpoint Module Boundary](checkpoint_module.md)
 13. [Global-Position Projection Worker Boundary](global_position_projection_worker_boundary.md)
 14. [Durable Replay / Rebuild Validation Boundary](durable_replay_rebuild_validation_boundary.md)
-15. [Compass Layer Boundary](compass_layer_boundary.md)
-16. [Persistence Boundary](persistence_boundary.md)
-17. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
-18. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+15. [Snapshot Trust Contract Boundary](snapshot_trust_contract_boundary.md)
+16. [Compass Layer Boundary](compass_layer_boundary.md)
+17. [Persistence Boundary](persistence_boundary.md)
+18. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+19. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -161,6 +165,7 @@ This roughly follows the intended semantic development order of the project:
 - define runtime progress boundaries
 - define durable worker cursor strategy
 - define durable replay / rebuild validation against accepted history
+- define snapshot trust qualification for fast-path replay / rehydration
 - define semantic validation layers
 - define durable-world persistence discipline
 - define read-side persistence semantics
@@ -183,6 +188,8 @@ These notes should be read together with:
 - [Persistent Storage Baseline](../architecture/persistent_storage_baseline.md)
 - [Write-Side Schema Baseline](../architecture/write_side_schema_baseline.md)
 - [Read-Side Schema Baseline](../architecture/read_side_schema_baseline.md)
+- [Snapshot Trust Contract](../architecture/snapshot_trust_contract.md)
+- [Implementation Notes](../implementation_notes/README.md)
 - [Implementation Roadmap](../roadmap/implementation_roadmap.md)
 - [Compass Runtime Roadmap](../roadmap/compass_runtime_roadmap.md)
 - [Deferred Architecture Backlog](../roadmap/deferred_architecture_backlog.md)
@@ -197,6 +204,7 @@ A good rule of thumb is:
 - if you are confused about **what the system is trying to become**, read the roadmap
 - if you are confused about **how the major layers relate**, read the architecture docs
 - if you are confused about **why a decision was made**, read the ADRs
+- if you are confused about **how a stage or PR should be executed**, read the implementation notes
 - if you are confused about **what one module or boundary should or should not do**, read the boundary notes
 
 ---
