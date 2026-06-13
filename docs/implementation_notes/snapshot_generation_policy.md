@@ -204,6 +204,16 @@ same boundary + same payload_hash = idempotent success
 same boundary + different payload_hash = collision error
 ```
 
+For the PR2 projection snapshot schema baseline, the physical boundary is:
+
+```text
+source_event_id
+order_id + source_event_sequence
+source_global_position
+```
+
+A future multi-version snapshot design may widen this boundary with `reducer_version` and `snapshot_schema_version`.
+
 This is required for:
 
 - background builders

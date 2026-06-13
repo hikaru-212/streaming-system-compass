@@ -4,13 +4,28 @@
 
 ## Purpose
 
-This note defines the intended schema boundary for **Stage 3.5D PR2 — Projection Snapshot Schema Baseline**.
+This note records the schema boundary for **Stage 3.5D PR2 — Projection Snapshot Schema Baseline**.
 
 Stage 3.5D PR1 defined the Snapshot Trust Contract as a boundary problem.
 
-PR2 introduces the first durable schema for projection snapshots.
+PR2 introduces the first durable PostgreSQL schema for projection snapshots.
 
-The goal is to create a physical PostgreSQL table that can persist snapshot payload and lineage evidence for future snapshot-assisted replay, without making snapshots the source of truth.
+The goal is to persist projection snapshot payload and lineage evidence for future snapshot-assisted replay, without making snapshots the source of truth.
+
+---
+
+## PR2 Status
+
+PR2 establishes the durable table shape and schema constraint tests for projection snapshots.
+
+At this stage, projection snapshots are still **derived artifacts**.
+
+The table can preserve snapshot evidence, but it does not make any snapshot authoritative.
+
+```text
+accepted history = authority
+projection snapshot = derived fast-path artifact
+```
 
 ---
 
@@ -28,7 +43,7 @@ PR2 introduces:
 * canonical payload hash field
 * metadata JSON field
 * physical constraints for valid row shape
-* uniqueness rules for snapshot boundaries
+* uniqueness rules for snapshot source boundaries
 * schema constraint tests
 
 ---
@@ -58,7 +73,7 @@ A projection snapshot is a derived state-compression artifact.
 
 It records a projected order state at a specific accepted-history boundary.
 
-Suggested columns:
+Columns:
 
 ```text
 snapshot_id
@@ -82,9 +97,11 @@ created_at
 created_by
 ```
 
+---
+
 ## Source Boundary Fields
 
-Projection snapshots should be traceable to accepted history.
+Projection snapshots must be traceable to accepted history.
 
 The source boundary is represented by:
 
@@ -95,6 +112,30 @@ The source boundary is represented by:
 These fields do not make the snapshot authoritative.
 
 They provide lineage evidence that a later trust validator can check against accepted history.
+
+The fields have different scopes:
+
+```text
+source_event_id
+= accepted event identity
+= globally unique event boundary
+
+source_event_sequence
+= order-local stream sequence
+= unique only together with order_id
+
+source_global_position
+= global accepted-history cursor
+= globally unique event-log boundary
+```
+
+This distinction matters.
+
+Different orders may both have `source_event_sequence = 1`.
+
+Different accepted events must not share the same `source_global_position`.
+
+---
 
 ## State Payload Fields
 
@@ -108,6 +149,8 @@ The initial projection snapshot stores the current `OrderState` payload directly
 This follows the current minimal order projection model.
 
 Future projection schema versions may change this shape.
+
+---
 
 ## Version vs Sequence Boundary
 
@@ -138,6 +181,8 @@ state_version <= source_event_sequence
 
 Stricter current-domain compatibility checks, if needed, belong in the Python trust validator rather than as a permanent database constraint.
 
+---
+
 ## Snapshot Status Values
 
 The first projection snapshot schema supports snapshots after accepted events exist.
@@ -151,6 +196,8 @@ Therefore valid snapshot statuses are:
 
 If a future use case requires empty-stream snapshots, the status constraint can be revisited with a schema migration.
 
+---
+
 ## Payload Hash Boundary
 
 `payload_hash` stores a canonical hash of the snapshot payload.
@@ -163,6 +210,8 @@ Hash construction belongs to future Python code following the canonical payload 
 
 `docs/implementation_notes/snapshot_payload_hashing.md`
 
+---
+
 ## Reducer Version Boundary
 
 `reducer_version` identifies the reducer logic version that produced the snapshot.
@@ -170,6 +219,8 @@ Hash construction belongs to future Python code following the canonical payload 
 The table only enforces that it is non-empty.
 
 A future trust validator may reject snapshots produced by unsupported or known-bad reducer versions.
+
+---
 
 ## Metadata Boundary
 
@@ -186,40 +237,167 @@ It should not replace typed lineage fields such as:
 * `reducer_version`
 * `payload_hash`
 
+---
+
 ## Uniqueness Boundary
 
-PR2 defines two uniqueness rules:
+PR2 uses a **single-active-version projection snapshot baseline**.
 
-* `UNIQUE(order_id, source_event_sequence)`
-* `UNIQUE(order_id, source_global_position)`
+For this baseline, the table enforces:
 
-The purpose is to prevent multiple conflicting snapshots from occupying the same order-local or global source boundary.
+```text
+UNIQUE(source_event_id)
+UNIQUE(order_id, source_event_sequence)
+UNIQUE(source_global_position)
+```
+
+These rules mean:
+
+```text
+source_event_id
+→ one accepted event identity may not produce competing snapshot rows
+
+order_id + source_event_sequence
+→ one order-local source boundary may not produce competing snapshot rows
+
+source_global_position
+→ one global event-log boundary may not produce competing snapshot rows
+```
+
+This preserves the intended event-sourcing semantics:
+
+```text
+source_event_sequence is order-local
+source_global_position is global
+source_event_id is global
+```
+
+The previous weaker form:
+
+```text
+UNIQUE(order_id, source_global_position)
+```
+
+is intentionally avoided because it would allow different orders to share the same global cursor value, which would weaken `source_global_position` as accepted-history lineage evidence.
+
+---
+
+## Deferred Decision: Versioned Snapshot Boundary
+
+PR2 intentionally uses single-boundary uniqueness:
+
+```text
+UNIQUE(source_event_id)
+UNIQUE(order_id, source_event_sequence)
+UNIQUE(source_global_position)
+```
+
+This is the correct baseline while projection snapshots are produced under a single active reducer version and a single active snapshot schema version.
+
+The benefit is fail-fast behavior:
+
+```text
+same accepted event boundary
+→ one projection snapshot row
+```
+
+This prevents accidental competing snapshots before the project has implemented version-aware store and validator behavior.
+
+If a future stage supports multiple reducer versions or multiple snapshot schema versions for the same accepted-history boundary, this uniqueness model should be revisited through an explicit migration.
+
+A future versioned boundary may look like:
+
+```text
+UNIQUE(source_event_id, reducer_version, snapshot_schema_version)
+UNIQUE(order_id, source_event_sequence, reducer_version, snapshot_schema_version)
+UNIQUE(source_global_position, reducer_version, snapshot_schema_version)
+```
+
+That future model would allow multiple compatible snapshot rows for the same accepted event boundary, but only when they differ by reducer version or snapshot schema version.
+
+Such a migration must be paired with store and validator changes.
+
+Future snapshot loading must not query only by `order_id` or source boundary.
+
+It must also qualify snapshots by the reducer version and snapshot schema version supported by the current runtime:
+
+```text
+load snapshot
+WHERE order_id = ?
+  AND reducer_version = supported reducer version
+  AND snapshot_schema_version = supported schema version
+ORDER BY source_global_position DESC
+LIMIT 1
+```
+
+PR2 does not implement versioned snapshot coexistence.
+
+It records the deferred migration path while keeping the current baseline strict and simple.
+
+See also:
+
+```text
+docs/postmortems/from_per_order_global_position_to_global_source_boundary.md
+```
+
+---
+
+## Snapshot Write Collision Policy
 
 Future `PostgresProjectionSnapshotStore` behavior should handle benign races as:
 
-* same boundary + same payload_hash = idempotent success
-* same boundary + different payload_hash = `SnapshotWriteCollisionError`
+```text
+same boundary + same payload_hash = idempotent success
+same boundary + different payload_hash = SnapshotWriteCollisionError
+```
 
-PR2 only establishes the physical uniqueness boundary.
+In PR2, the database only establishes the physical uniqueness boundary.
 
 It does not implement store-level collision handling.
 
+PR3 should translate unique-boundary conflicts into explicit store behavior.
+
+---
+
 ## Constraint Summary
 
-The table should enforce:
+The table enforces:
 
+* `order_id` is not empty
 * `source_event_sequence > 0`
 * `source_global_position > 0`
-* `state_version >= 0`
-* `state_version <= source_event_sequence`
+* `state_status IN ('CREATED', 'PAID')`
 * `total_amount >= 0`
 * `paid_amount >= 0`
 * `paid_amount <= total_amount`
+* `state_version >= 0`
+* `state_version <= source_event_sequence`
 * `snapshot_schema_version > 0`
 * `reducer_version` is not empty
 * `payload_hash` is not empty
+* `created_by` is not empty
 * `metadata_json` is a JSON object
-* `state_status IN ('CREATED', 'PAID')`
+* `source_event_id` is globally unique
+* `(order_id, source_event_sequence)` is unique
+* `source_global_position` is globally unique
+
+---
+
+## Schema Constraint Tests
+
+PR2 schema tests should verify:
+
+* a valid projection snapshot can be inserted
+* invalid row shape is rejected by `CHECK` constraints
+* `state_version < source_event_sequence` is allowed
+* duplicate `(order_id, source_event_sequence)` is rejected
+* duplicate `source_global_position` is rejected across orders
+* duplicate `source_event_id` is rejected across rows
+* the same `source_event_sequence` is allowed for different orders
+
+These tests document the physical boundary directly.
+
+---
 
 ## Relationship to PR3
 
@@ -237,6 +415,8 @@ Expected PR3 behavior:
 
 Store-level collision behavior belongs to PR3, not PR2.
 
+---
+
 ## Relationship to PR4
 
 PR4 should implement snapshot-assisted projection replay validation.
@@ -244,6 +424,8 @@ PR4 should implement snapshot-assisted projection replay validation.
 It should use this schema as the durable snapshot source.
 
 PR4 should verify snapshot trust evidence before using the snapshot as a fast-path replay starting point.
+
+---
 
 ## Summary
 

@@ -4,18 +4,20 @@
 
 ## Purpose
 
-This document explains how to start the local PostgreSQL environment and run the PostgreSQL-backed integration tests for **Streaming System + Compass** through the completed **Stage 3.5C Durable Read-Side Baseline**.
+This document explains how to start the local PostgreSQL environment and run the PostgreSQL-backed integration tests for **Streaming System + Compass** through **Stage 3.5D PR2 — Projection Snapshot Schema Baseline**.
 
 The local PostgreSQL environment is used for:
 
 - durable write-side schema migration checks
 - durable read-side schema migration checks
+- projection snapshot schema migration checks
 - `PostgresEventStore` integration tests
 - `PostgresIdempotencyStore` integration tests
 - PostgreSQL-backed transactional write-side tests
 - PostgreSQL-backed concurrency admission tests
 - durable order-event vocabulary / schema-constraint tests
 - durable read-side schema-constraint tests
+- projection snapshot schema-constraint tests
 - `PostgresProjectionStore` integration tests
 - `PostgresCheckpointStore` integration tests
 - PostgreSQL-backed projection worker integration tests
@@ -27,8 +29,9 @@ At the current stage, PostgreSQL is used for:
 - the durable read-side baseline
 - global-position projection worker execution
 - durable replay / rebuild validation
+- the projection snapshot schema baseline
 
-PostgreSQL-backed read-side stores, checkpoint stores, projection worker orchestration, and replay validation are now part of the local setup.
+PostgreSQL-backed read-side stores, checkpoint stores, projection worker orchestration, replay validation, and projection snapshot schema constraints are now part of the local setup.
 
 ---
 
@@ -48,6 +51,7 @@ The distinction is important because integration tests may run destructive clean
 
 ```sql
 TRUNCATE
+    projection_snapshots,
     projection_checkpoints,
     projection_states,
     idempotency_records,
@@ -164,28 +168,40 @@ compass_test
 
 ## Run Migrations
 
-Through the completed Stage 3.5C durable read-side baseline, the local PostgreSQL setup uses three baseline migrations:
+Through Stage 3.5D PR2, the local PostgreSQL setup uses four baseline migrations:
 
 ```text
 db/migrations/001_create_write_side_tables.sql
 db/migrations/002_create_read_side_tables.sql
 db/migrations/003_add_order_events_global_position.sql
+db/migrations/004_create_projection_snapshots.sql
 ```
 
 Apply them to the development database when you want to inspect tables manually:
 
 ```bash
-psql "$DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
-psql "$DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
-psql "$DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_tables.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
 ```
 
 Apply them to the test database before running PostgreSQL integration tests:
 
 ```bash
-psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
-psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
-psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_tables.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
+```
+
+The CI workflow may also apply migrations automatically by iterating through `db/migrations/*.sql` in filename order:
+
+```bash
+for migration in db/migrations/*.sql; do
+  echo "Applying ${migration}..."
+  psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+done
 ```
 
 The write-side migration creates:
@@ -218,26 +234,73 @@ order_events.global_position
 
 This column is used by the PostgreSQL-backed projection worker as the durable accepted-history consumption cursor.
 
-The read-side schema baseline includes:
+The projection snapshot migration creates:
 
 ```text
-projection_states
-= durable derived read-side state
-
-projection_checkpoints
-= durable projection worker progress metadata
+projection_snapshots
 ```
 
-It also includes shape-level constraints for:
+This table stores derived projection snapshot artifacts with accepted-history source-boundary evidence.
 
-- non-empty projection identity
-- valid projection status vocabulary
-- non-negative money values
-- `paid_amount <= total_amount`
-- non-negative version and aggregate-local sequence
-- non-empty worker name
-- checkpoint cursor kind
-- checkpoint cursor kind / value alignment
+---
+
+## Projection Snapshot Source Boundaries
+
+`projection_snapshots` records three source-boundary fields:
+
+```text
+source_event_id
+source_event_sequence
+source_global_position
+```
+
+Their meanings are intentionally different:
+
+```text
+source_event_id
+= accepted event identity
+= globally unique source boundary
+
+source_event_sequence
+= aggregate-local accepted event sequence
+= unique only within one order stream
+
+source_global_position
+= global accepted-history cursor
+= globally unique source boundary
+```
+
+Therefore Stage 3.5D PR2 enforces:
+
+```text
+UNIQUE(source_event_id)
+UNIQUE(order_id, source_event_sequence)
+UNIQUE(source_global_position)
+```
+
+It intentionally does not enforce:
+
+```text
+UNIQUE(order_id, source_global_position)
+```
+
+because `source_global_position` is already global by definition.
+
+It also intentionally avoids enforcing:
+
+```text
+state_version = source_event_sequence
+```
+
+as a permanent database law.
+
+The physical rule is:
+
+```text
+state_version <= source_event_sequence
+```
+
+Current-domain equality, if needed, belongs to future Python trust validation.
 
 ---
 
@@ -271,6 +334,7 @@ order_events
 idempotency_records
 projection_states
 projection_checkpoints
+projection_snapshots
 ```
 
 Expected additional event-log column after migration 003:
@@ -279,38 +343,42 @@ Expected additional event-log column after migration 003:
 order_events.global_position
 ```
 
-To inspect the global event-log position and read-side table constraints:
+To inspect the event-log position and read-side table constraints:
 
 ```bash
 psql "$TEST_DATABASE_URL" -c "\d order_events"
-```
-
-Expected order-events columns include:
-
-```text
-global_position
-```
-
-To inspect the read-side table constraints:
-
-```bash
 psql "$TEST_DATABASE_URL" -c "\d projection_states"
 psql "$TEST_DATABASE_URL" -c "\d projection_checkpoints"
+psql "$TEST_DATABASE_URL" -c "\d projection_snapshots"
 ```
 
-Expected read-side constraints include:
+Expected projection snapshot constraints include:
 
 ```text
-ck_projection_states_order_id_not_empty
-ck_projection_states_status
-ck_projection_states_total_amount_non_negative
-ck_projection_states_paid_amount_non_negative
-ck_projection_states_paid_amount_not_exceed_total_amount
-ck_projection_states_version_non_negative
-ck_projection_states_last_sequence_non_negative
-ck_projection_checkpoints_worker_name_not_empty
-ck_projection_checkpoints_cursor_kind
-ck_projection_checkpoints_value_alignment
+ck_projection_snapshots_order_id_not_empty
+ck_projection_snapshots_source_event_sequence_positive
+ck_projection_snapshots_source_global_position_positive
+ck_projection_snapshots_state_status_valid
+ck_projection_snapshots_total_amount_non_negative
+ck_projection_snapshots_paid_amount_non_negative
+ck_projection_snapshots_paid_amount_not_greater_than_total
+ck_projection_snapshots_state_version_non_negative
+ck_projection_snapshots_state_version_not_ahead_of_source_sequence
+ck_projection_snapshots_schema_version_positive
+ck_projection_snapshots_reducer_version_not_empty
+ck_projection_snapshots_payload_hash_not_empty
+ck_projection_snapshots_created_by_not_empty
+ck_projection_snapshots_metadata_is_object
+uq_projection_snapshots_source_event_id
+uq_projection_snapshots_order_id_source_event_sequence
+uq_projection_snapshots_source_global_position
+```
+
+Expected projection snapshot indexes include:
+
+```text
+idx_projection_snapshots_order_id_source_global_position_desc
+idx_projection_snapshots_order_id_created_at_desc
 ```
 
 ---
@@ -329,6 +397,12 @@ Or run only PostgreSQL storage / pipeline integration tests if needed:
 pytest tests/integration/storage -v
 pytest tests/integration/pipeline -v
 pytest tests/integration/pipeline/projection -v
+```
+
+To run projection snapshot schema constraint tests only:
+
+```bash
+pytest tests/integration/storage/test_projection_snapshot_schema_constraints.py -v
 ```
 
 To run durable replay / rebuild validation tests only:
@@ -438,6 +512,9 @@ Stage 3.5C PR2 — PostgresProjectionStore
 Stage 3.5C PR3 — PostgresCheckpointStore
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline
 Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
+Stage 3.5D PR1 — Snapshot Trust Contract Boundary
+Stage 3.5D PR1.5 — CI Stage Branch Checks
+Stage 3.5D PR2 — Projection Snapshot Schema Baseline
 ```
 
 It supports:
@@ -446,6 +523,7 @@ It supports:
 - durable idempotency memory through `idempotency_records`
 - durable projection state schema through `projection_states`
 - durable checkpoint schema through `projection_checkpoints`
+- durable projection snapshot schema through `projection_snapshots`
 - durable projection state persistence through `PostgresProjectionStore`
 - durable checkpoint progress persistence through `PostgresCheckpointStore`
 - global-position accepted-history consumption through `order_events.global_position`
@@ -455,37 +533,58 @@ It supports:
 - PostgreSQL-backed concurrency admission
 - durable event vocabulary and proof-status schema constraints
 - durable read-side schema constraints
+- projection snapshot schema constraints
 - destructive integration tests isolated through `TEST_DATABASE_URL`
 
 It does not yet include:
 
-- Snapshot Trust Contract
+- `PostgresProjectionSnapshotStore`
+- snapshot trust validator
+- snapshot-assisted replay validator
+- aggregate snapshots
+- write-side snapshot-assisted rehydration
 - Compass Layer 2 validation
 - production-grade DB roles / permissions
 - append-only trigger enforcement
 
 Those belong to later stages.
 
-The next local setup expansion is expected during Stage 3.5D if snapshot tables, snapshot trust metadata, or replay-efficiency migrations are introduced.
+The next local setup expansion is expected during Stage 3.5D PR3 if snapshot store integration tests introduce new setup details.
 
 ---
 
-## Stage 3.5C Completion Note
+## Stage 3.5D PR2 Completion Note
 
-Stage 3.5C now includes the durable read-side baseline:
+Stage 3.5D PR2 now includes the projection snapshot schema baseline:
 
-- durable read-side schema
-- `PostgresProjectionStore`
-- `PostgresCheckpointStore`
-- `order_events.global_position`
-- PostgreSQL-backed projection worker
-- durable replay / rebuild validation
+- `projection_snapshots`
+- snapshot identity
+- order identity
+- accepted-history source boundary fields
+- projected state payload fields
+- snapshot trust metadata fields
+- physical shape constraints
+- globally unique `source_event_id`
+- order-local unique `(order_id, source_event_sequence)`
+- globally unique `source_global_position`
+- projection snapshot schema constraint tests
 
 The core separation remains the same:
 
 ```text
-DATABASE_URL      → compass_dev  → local development / manual inspection
-TEST_DATABASE_URL → compass_test → destructive integration tests
+accepted history
+= source of truth
+
+projection_snapshots
+= derived snapshot artifacts
+
+DATABASE_URL
+= compass_dev
+= local development / manual inspection
+
+TEST_DATABASE_URL
+= compass_test
+= destructive integration tests
 ```
 
 ---
@@ -510,9 +609,13 @@ export DATABASE_URL="postgresql://compass_user:compass_password@localhost:5433/c
 export TEST_DATABASE_URL="postgresql://compass_user:compass_password@localhost:5433/compass_test"
 
 # 4. Apply migrations to the test database
-psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
-psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
-psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_tables.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
+
+# 5. Inspect the projection snapshot schema if needed
+psql "$TEST_DATABASE_URL" -c "\d projection_snapshots"
 
 # 6. Run tests
 pytest tests/integration -v

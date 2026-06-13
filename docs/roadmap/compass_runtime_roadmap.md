@@ -99,6 +99,9 @@ The current system already supports:
 - PostgreSQL-backed projection worker orchestration through Stage 3.5C PR4
 - atomic projection-state and checkpoint-progress persistence through Stage 3.5C PR4
 - durable replay / rebuild validation through Stage 3.5C PR5
+- snapshot trust boundary documentation through Stage 3.5D PR1
+- stage-branch CI checks through Stage 3.5D PR1.5
+- durable projection snapshot schema baseline through Stage 3.5D PR2
 
 This means Compass is already more than a passive checker.
 
@@ -127,7 +130,7 @@ order_events
 → PostgresCheckpointStore
 ```
 
-Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state.
+Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state. Stage 3.5D PR1 defines snapshot trust as a boundary problem, PR1.5 ensures stage-branch PRs run CI checks, and PR2 introduces `projection_snapshots` as the first durable snapshot schema baseline.
 
 This does not make Compass Layer 2 active yet. It provides the durable read-side correctness evidence that Layer 2 can later classify and govern.
 
@@ -153,6 +156,48 @@ Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed
 
 ---
 
+## Stage 3.5D Snapshot Substrate Status
+
+Stage 3.5D has now begun moving from documentation boundary to durable snapshot substrate.
+
+Completed baseline steps:
+
+```text
+PR1   — Snapshot Trust Contract Boundary
+PR1.5 — CI Stage Branch Checks
+PR2   — Projection Snapshot Schema Baseline
+```
+
+PR2 introduces `projection_snapshots` as a derived snapshot artifact table.
+
+The table records source-boundary evidence using:
+
+```text
+source_event_id
+source_event_sequence
+source_global_position
+```
+
+The uniqueness model preserves the difference between global and order-local boundaries:
+
+```text
+UNIQUE(source_event_id)
+UNIQUE(order_id, source_event_sequence)
+UNIQUE(source_global_position)
+```
+
+This does not make snapshots authoritative.
+
+It only gives later snapshot store and validator work a durable evidence shape to qualify fast-path replay.
+
+The next Stage 3.5D step is:
+
+```text
+PR3 — PostgresProjectionSnapshotStore
+```
+
+---
+
 ## Compass Evolution Principle
 
 Compass should evolve from:
@@ -170,7 +215,7 @@ write-side event truth
 → dual-dimension governance
 ```
 
-Stage 3.5D is the next implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state.
+Stage 3.5D is the current implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state. PR2 now provides the physical `projection_snapshots` schema baseline; PR3 should make that schema usable through a storage boundary.
 
 The key principle is:
 

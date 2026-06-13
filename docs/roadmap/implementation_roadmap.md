@@ -54,6 +54,9 @@ The project has completed an executable baseline across:
 - Stage 3.5C PR3 PostgresCheckpointStore baseline
 - Stage 3.5C PR4 Global-Position Projection Worker baseline
 - Stage 3.5C PR5 Durable Replay / Rebuild Validation baseline
+- Stage 3.5D PR1 Snapshot Trust Contract Boundary
+- Stage 3.5D PR1.5 CI Stage Branch Checks
+- Stage 3.5D PR2 Projection Snapshot Schema Baseline
 
 This means:
 
@@ -73,6 +76,9 @@ This means:
 - Stage 3.5C PR4 has introduced `order_events.global_position`, `PostgresProjectionEventSource`, and `PostgresProjectionWorker`, connecting accepted history, the canonical reducer, durable projection state, and durable checkpoint progress through one PostgreSQL-backed read-side transaction boundary
 - Stage 3.5C PR5 has introduced durable replay / rebuild validation, comparing accepted-history replay with persisted projection state
 - Stage 3.5C is complete at the durable read-side baseline level
+- Stage 3.5D PR1 has defined snapshots as derived, discardable, trust-qualified replay fast-path artifacts
+- Stage 3.5D PR1.5 has enabled CI checks for stage branch pull requests
+- Stage 3.5D PR2 has introduced the durable `projection_snapshots` schema baseline and schema constraint tests
 
 The current major focus is:
 
@@ -1451,8 +1457,9 @@ docs/implementation_notes/
 The current proposed PR sequence is:
 
 ```text
-PR1 — General Snapshot Trust Contract Boundary
-PR2 — Projection Snapshot Schema Baseline
+PR1 — General Snapshot Trust Contract Boundary ✅
+PR1.5 — CI Stage Branch Checks ✅
+PR2 — Projection Snapshot Schema Baseline ✅
 PR3 — PostgresProjectionSnapshotStore
 PR4 — Projection Snapshot-Assisted Replay Validator
 PR5 — Aggregate Snapshot Trust Extension
@@ -1473,14 +1480,95 @@ The Stage 3.5D implementation details should be maintained in:
 - [Stage 3.5D PR Breakdown](../implementation_notes/stage_3_5d_pr_breakdown.md)
 - [Snapshot Payload Hashing](../implementation_notes/snapshot_payload_hashing.md)
 - [Snapshot Generation Policy](../implementation_notes/snapshot_generation_policy.md)
+- [Projection Snapshot Schema Baseline](../implementation_notes/projection_snapshot_schema_baseline.md)
 
 Future implementation notes may cover:
 
-- projection snapshot schema
 - projection snapshot store behavior
 - projection snapshot-assisted replay validation
 - aggregate snapshot schema and store behavior
 - snapshot-assisted write-side rehydration
+
+## PR2 Completion — Projection Snapshot Schema Baseline
+
+Stage 3.5D PR2 establishes the durable PostgreSQL schema baseline for projection snapshots.
+
+PR2 adds:
+
+```text
+projection_snapshots
+```
+
+The table stores:
+
+- snapshot identity
+- projection target identity
+- accepted-history source-boundary evidence
+- projected state payload
+- snapshot schema version
+- reducer version
+- canonical payload hash field
+- metadata JSON field
+- creation metadata
+
+The source-boundary uniqueness rules are:
+
+```text
+UNIQUE(source_event_id)
+UNIQUE(order_id, source_event_sequence)
+UNIQUE(source_global_position)
+```
+
+This reflects the intended scope of each boundary:
+
+```text
+source_event_id
+= globally unique accepted-event identity
+
+source_event_sequence
+= aggregate-local / order-local accepted-event sequence
+
+source_global_position
+= globally unique accepted-history cursor
+```
+
+PR2 intentionally avoids the weaker form:
+
+```text
+UNIQUE(order_id, source_global_position)
+```
+
+because `source_global_position` is already global by definition.
+
+PR2 also avoids enforcing:
+
+```text
+state_version = source_event_sequence
+```
+
+as a permanent database law.
+
+The physical rule is:
+
+```text
+state_version <= source_event_sequence
+```
+
+Current-domain equality, if needed, belongs to future Python trust validation.
+
+PR2 verifies the schema through storage integration tests covering:
+
+- valid projection snapshot insertion
+- invalid row-shape rejection through `CHECK` constraints
+- `state_version < source_event_sequence` accepted
+- duplicate `(order_id, source_event_sequence)` rejected
+- duplicate `source_global_position` rejected across orders
+- duplicate `source_event_id` rejected across rows
+- same `source_event_sequence` allowed for different orders
+
+PR2 does not implement `PostgresProjectionSnapshotStore`, snapshot trust validation, or snapshot-assisted replay.
+
+---
 
 ## Core Design Requirements
 
@@ -1542,11 +1630,12 @@ That future refactor should happen only when the domain introduces non-state-cha
 Stage 3.5D is complete at the baseline level when:
 
 - snapshot trust boundaries are documented
-- projection snapshot schema and store behavior are implemented
+- projection snapshot schema baseline is implemented
+- projection snapshot store behavior is implemented
 - projection snapshot-assisted replay can fall back to full accepted-history replay
 - canonical payload hashing is deterministic
-- same-boundary snapshot writes are idempotent when hashes match
-- same-boundary different-hash writes are treated as collisions
+- same-boundary snapshot writes are idempotent when hashes match after PR3 store behavior exists
+- same-boundary different-hash writes are treated as collisions after PR3 store behavior exists
 - aggregate snapshot trust extension is documented
 - aggregate snapshot storage and write-side rehydration are implemented if PR5–PR7 are included in the stage
 - Stage 4 can later classify snapshot trust failures as structured semantic outcomes

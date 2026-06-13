@@ -84,6 +84,10 @@ Define snapshot as a general derived-state trust boundary.
 
 Create the physical shape for projection snapshots.
 
+### Status
+
+Implemented in the PR2 branch.
+
 ### Scope
 
 - add migration for `projection_snapshots`
@@ -93,6 +97,9 @@ Create the physical shape for projection snapshots.
 - define payload hash
 - add schema constraint tests
 - avoid over-strict `state_version = source_event_sequence` constraint
+- enforce `source_event_id` as a globally unique accepted-event boundary
+- enforce `source_global_position` as a globally unique accepted-history cursor
+- preserve `source_event_sequence` as order-local through `UNIQUE(order_id, source_event_sequence)`
 
 ### Non-goals
 
