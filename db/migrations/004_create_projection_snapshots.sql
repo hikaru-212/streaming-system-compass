@@ -61,11 +61,14 @@ CREATE TABLE IF NOT EXISTS projection_snapshots (
     CONSTRAINT ck_projection_snapshots_metadata_is_object
         CHECK (jsonb_typeof(metadata_json) = 'object'),
 
+    CONSTRAINT uq_projection_snapshots_source_event_id
+        UNIQUE (source_event_id),
+
     CONSTRAINT uq_projection_snapshots_order_id_source_event_sequence
         UNIQUE (order_id, source_event_sequence),
 
-    CONSTRAINT uq_projection_snapshots_order_id_source_global_position
-        UNIQUE (order_id, source_global_position)
+    CONSTRAINT uq_projection_snapshots_source_global_position
+        UNIQUE (source_global_position)
 );
 
 CREATE INDEX IF NOT EXISTS idx_projection_snapshots_order_id_source_global_position_desc
