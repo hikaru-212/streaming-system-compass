@@ -33,6 +33,9 @@ Recently completed baselines:
 ```text
 Stage 3.5B — Durable Write-Side Baseline
 Stage 3.5C — Durable Read-Side Baseline
+Stage 3.5D PR1 — Snapshot Trust Contract Boundary
+Stage 3.5D PR1.5 — CI Stage Branch Checks
+Stage 3.5D PR2 — Projection Snapshot Schema Baseline
 ```
 
 Stage 3.5B now includes:
@@ -828,7 +831,11 @@ Revisit when the test matrix expands from read-side schema constraints into Post
 
 Stage 3.5D is now the current focus.
 
-Do not implement projection snapshot tables, projection snapshot stores, aggregate snapshot stores, snapshot-assisted replay validators, or write-side snapshot-assisted rehydration in PR1.
+PR1 established the Snapshot Trust Contract as a documentation and boundary baseline.
+
+PR2 has now implemented the first projection snapshot table baseline.
+
+Do not implement projection snapshot stores, aggregate snapshot stores, snapshot-assisted replay validators, or write-side snapshot-assisted rehydration inside PR2.
 
 PR1 should first establish the Snapshot Trust Contract as a documentation and boundary baseline:
 
@@ -839,7 +846,7 @@ fast path = snapshot + tail replay + trust checks
 authority path = full accepted-history replay
 ```
 
-The implementation of concrete snapshot storage and replay / rehydration behavior should proceed through later Stage 3.5D PRs.
+The implementation of concrete snapshot storage APIs and replay / rehydration behavior should proceed through later Stage 3.5D PRs.
 
 ### Why This Boundary Exists
 
@@ -889,13 +896,23 @@ PR7 — Snapshot-Assisted Write-Side Rehydration
 
 The first implementation pass should focus on projection / read-side snapshot trust because Stage 3.5C has completed the durable read-side baseline.
 
+PR2 has completed the physical projection snapshot schema boundary:
+
+```text
+projection_snapshots
+UNIQUE(source_event_id)
+UNIQUE(order_id, source_event_sequence)
+UNIQUE(source_global_position)
+```
+
+Remaining Stage 3.5D work should now start from `PostgresProjectionSnapshotStore` rather than redefining the schema.
+
 A later Stage 3.5D extension may apply the same trust contract to write-side aggregate snapshot-assisted rehydration.
 
 ### Future Work
 
 Consider during Stage 3.5D:
 
-- projection snapshot schema
 - projection snapshot store
 - snapshot-assisted projection replay
 - aggregate snapshot trust extension

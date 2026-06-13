@@ -144,6 +144,14 @@ hash covers canonical state payload + source boundary + schema version + logic v
 hash excludes database record identity and operational metadata
 ```
 
+For projection snapshots, the source boundary should include:
+
+```text
+source_event_id
+source_event_sequence
+source_global_position
+```
+
 The exact scope should be consistent for both builder and validator.
 
 ---

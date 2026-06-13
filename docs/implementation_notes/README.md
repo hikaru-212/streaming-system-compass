@@ -98,12 +98,12 @@ Stage 3.5D introduces the first implementation notes in this folder:
 | [Stage 3.5D PR Breakdown](stage_3_5d_pr_breakdown.md) | Defines the proposed PR sequence for Snapshot Trust Contract / Replay Efficiency. |
 | [Snapshot Payload Hashing](snapshot_payload_hashing.md) | Defines deterministic canonical payload hashing for snapshot trust checks. |
 | [Snapshot Generation Policy](snapshot_generation_policy.md) | Defines when snapshot production may happen and keeps generation separate from trust validation. |
+| [Projection Snapshot Schema Baseline](projection_snapshot_schema_baseline.md) | Records the PR2 physical schema baseline for projection snapshots, including source-boundary uniqueness rules. |
 
 Future Stage 3.5D implementation notes may include:
 
 | Document | Purpose |
 |---|---|
-| `projection_snapshot_schema_baseline.md` | Defines the physical schema direction for projection snapshots. |
 | `postgres_projection_snapshot_store.md` | Defines the storage boundary and collision behavior for projection snapshots. |
 | `projection_snapshot_assisted_replay.md` | Defines the read-side snapshot-assisted replay validator behavior. |
 | `aggregate_snapshot_schema_and_store.md` | Defines the schema and store boundary for aggregate snapshots. |
