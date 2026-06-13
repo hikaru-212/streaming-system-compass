@@ -29,6 +29,7 @@ Postmortems help preserve:
 - distinctions between runtime behavior, durable evidence, and future governance signals
 - cases where infrastructure hardening risks bypassing semantic governance
 - cases where logical orchestration boundaries require explicit physical connection-state cleanup
+- cases where database uniqueness scope must match the semantic scope of the source boundary
 
 ---
 
@@ -49,6 +50,7 @@ Postmortems help preserve:
 | [pre_transaction_read_cleanup_boundary](pre_transaction_read_cleanup_boundary.md) | Connection Reliability / Infrastructure | Explains why `PRE_TRANSACTION` validation must explicitly clean up implicit read transactions before CPU-side validation, and why cleanup failure handling is deferred to Stage 4 / production hardening. |
 | [from_snapshot_as_fast_state_to_snapshot_trust_contract](from_snapshot_as_fast_state_to_snapshot_trust_contract.md) | Snapshot Trust / Derived State | Records the reasoning shift from treating snapshots as replay optimization to treating them as derived-state artifacts that need a trust contract before being used on the fast path. |
 | [from_replay_rebuild_validation_to_layer2_governance](from_replay_rebuild_validation_to_layer2_governance.md) | Replay / Layer 2 Boundary | Clarifies why Stage 3.5C PR5 replay / rebuild validation is the durable correctness substrate for derived state, while Compass Layer 2 remains the later semantic governance and runtime decision layer. |
+| [from_per_order_global_position_to_global_source_boundary](from_per_order_global_position_to_global_source_boundary.md) | Snapshot Schema / Source Boundary | Records the PR2 correction from per-order global-position uniqueness to true global accepted-history boundary uniqueness. |
 
 ---
 
@@ -92,6 +94,16 @@ The postmortem [Pre-Transaction Read Cleanup Boundary](pre_transaction_read_clea
 - Preliminary PostgreSQL reads may still open implicit transactions.
 - The postmortem explains why a `try/finally` cleanup boundary is required to rollback the implicit read transaction before CPU-side Compass validation begins.
 - This directly supports the [Validation Placement Strategy Boundary](../boundary_notes/validation_placement_strategy_boundary.md), especially the physical connection-state requirement behind `PRE_TRANSACTION` validation.
+
+---
+
+The postmortem [From Per-Order Global Position to Global Source Boundary](from_per_order_global_position_to_global_source_boundary.md) is related to the Stage 3.5D PR2 projection snapshot schema baseline:
+
+- PR2 introduces `projection_snapshots` and accepted-history lineage fields.
+- `source_event_sequence` is order-local, while `source_global_position` is global.
+- The postmortem records why `UNIQUE(order_id, source_global_position)` was the wrong physical boundary.
+- The corrected schema uses `UNIQUE(source_global_position)` and `UNIQUE(source_event_id)` while preserving `UNIQUE(order_id, source_event_sequence)`.
+- This supports later snapshot store and trust-validator work by keeping source-boundary evidence aligned with accepted-history semantics.
 
 ---
 
