@@ -207,9 +207,23 @@ LIMIT 1
 
 This matters because `created_at` is an artifact creation timestamp.
 
-`source_global_position` is the accepted-history cursor boundary.
+`created_at` answers:
 
-The latest usable snapshot is therefore determined by accepted-history progress.
+```text
+When was this derived snapshot row written?
+```
+
+`source_global_position` answers:
+
+```text
+How far into accepted history was this snapshot computed?
+```
+
+The latest usable snapshot is therefore determined by accepted-history progress, not row recency.
+
+This boundary is recorded in:
+
+- [From `created_at` Freshness to Committed-History Boundaries](../postmortems/from_created_at_freshness_to_committed_history_boundaries.md)
 
 ---
 
@@ -233,17 +247,42 @@ UNIQUE(order_id, source_event_sequence)
 UNIQUE(source_global_position)
 ```
 
-PR3 should define store-level collision behavior:
+PR3 should define store-level collision behavior against the **complete source boundary**, not against any single column in isolation.
+
+The complete projection snapshot source boundary is:
 
 ```text
-same source boundary + same payload_hash
+source_event_id
++ order_id
++ source_event_sequence
++ source_global_position
+```
+
+Store-level collision behavior should be:
+
+```text
+same complete source boundary + same payload_hash
 = idempotent success
 
-same source boundary + different payload_hash
+same source boundary evidence + different payload_hash
+= SnapshotWriteCollisionError
+
+partial boundary match
+= SnapshotWriteCollisionError
+
+mixed boundary match across multiple existing rows
 = SnapshotWriteCollisionError
 ```
 
-This allows benign duplicate writers to converge while still detecting non-deterministic snapshot generation or corrupted writer behavior.
+This allows benign duplicate writers to converge while still detecting non-deterministic snapshot generation, corrupted writer behavior, or inconsistent lineage evidence.
+
+The important rule is:
+
+```text
+same payload_hash alone is not enough
+```
+
+A duplicate write is idempotent only when both the lineage evidence and payload evidence match.
 
 ---
 
@@ -253,7 +292,7 @@ Blind conflict ignore behavior is unsafe.
 
 This is unsafe:
 
-```text
+```sql
 INSERT ... ON CONFLICT DO NOTHING
 ```
 
@@ -262,60 +301,78 @@ if the store does not inspect the existing row.
 A conflict may mean:
 
 ```text
-same boundary + same payload_hash
+same complete source boundary + same payload_hash
 ```
 
 or:
 
 ```text
-same boundary + different payload_hash
+same source boundary evidence + different payload_hash
+```
+
+or:
+
+```text
+partial / mixed source-boundary collision
 ```
 
 The first case is a benign duplicate write.
 
-The second case is a correctness problem.
+The other cases are correctness problems.
 
-Therefore PR3 should verify the existing row after a conflict before deciding whether the write is idempotent.
+Therefore PR3 should verify stored lineage evidence after a conflict before deciding whether the write is idempotent.
 
 ---
 
 ## Collision Detection Strategy
 
-A simple implementation strategy:
+PR3 should avoid relying on PostgreSQL exceptions as the normal collision path.
 
-```text
-try INSERT
-
-if insert succeeds:
-    return
-
-if unique conflict occurs:
-    rollback the failed statement / transaction scope as required by psycopg usage
-    query for existing snapshot matching any source boundary:
-        source_event_id
-        OR source_global_position
-        OR (order_id, source_event_sequence)
-
-    if existing payload_hash == new payload_hash:
-        treat as idempotent success
-
-    otherwise:
-        raise SnapshotWriteCollisionError
-```
-
-Because PostgreSQL marks the current transaction as failed after an error, implementation may need to use a savepoint if it wants to recover inside a caller-owned transaction.
-
-A practical pattern is:
+The preferred implementation strategy is:
 
 ```sql
-SAVEPOINT projection_snapshot_insert;
-INSERT ...
--- on unique violation:
-ROLLBACK TO SAVEPOINT projection_snapshot_insert;
--- then inspect existing row
+INSERT ... ON CONFLICT DO NOTHING
 ```
 
-This preserves caller-owned transaction semantics while still allowing collision inspection.
+Then inspect `rowcount`.
+
+```text
+rowcount == 1
+= insert succeeded
+
+rowcount == 0
+= a source-boundary collision may have occurred
+```
+
+After a no-op conflict, the store should query all existing snapshots matching any physical source boundary:
+
+```text
+source_event_id
+OR source_global_position
+OR (order_id, source_event_sequence)
+```
+
+The store should treat the write as idempotent success only when the matching stored evidence represents the same complete source boundary and the same `payload_hash`.
+
+```text
+same complete source boundary + same payload_hash
+= idempotent success
+```
+
+The store should raise `SnapshotWriteCollisionError` when it finds:
+
+```text
+same source boundary + different payload_hash
+partial boundary match
+mixed boundary match across multiple existing rows
+same payload_hash but different source-boundary evidence
+```
+
+This prevents benign duplicate writes from failing while still detecting inconsistent lineage evidence.
+
+This strategy avoids putting the caller-owned transaction into a failed state through expected `UniqueViolation` exceptions.
+
+A savepoint-based implementation is still possible, but PR3 prefers `ON CONFLICT DO NOTHING` followed by explicit source-boundary inspection.
 
 ---
 

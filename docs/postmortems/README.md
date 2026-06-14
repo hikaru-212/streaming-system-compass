@@ -30,6 +30,7 @@ Postmortems help preserve:
 - cases where infrastructure hardening risks bypassing semantic governance
 - cases where logical orchestration boundaries require explicit physical connection-state cleanup
 - cases where database uniqueness scope must match the semantic scope of the source boundary
+- cases where logical cursors must be distinguished from committed-history boundaries
 
 ---
 
@@ -51,6 +52,7 @@ Postmortems help preserve:
 | [from_snapshot_as_fast_state_to_snapshot_trust_contract](from_snapshot_as_fast_state_to_snapshot_trust_contract.md) | Snapshot Trust / Derived State | Records the reasoning shift from treating snapshots as replay optimization to treating them as derived-state artifacts that need a trust contract before being used on the fast path. |
 | [from_replay_rebuild_validation_to_layer2_governance](from_replay_rebuild_validation_to_layer2_governance.md) | Replay / Layer 2 Boundary | Clarifies why Stage 3.5C PR5 replay / rebuild validation is the durable correctness substrate for derived state, while Compass Layer 2 remains the later semantic governance and runtime decision layer. |
 | [from_per_order_global_position_to_global_source_boundary](from_per_order_global_position_to_global_source_boundary.md) | Snapshot Schema / Source Boundary | Records the PR2 correction from per-order global-position uniqueness to true global accepted-history boundary uniqueness. |
+| [from_created_at_freshness_to_committed_history_boundaries](from_created_at_freshness_to_committed_history_boundaries.md) | Snapshot Freshness / Event-Log Cursor Semantics | Explains why projection snapshots should be ordered by accepted-history lineage instead of row creation time, and why `global_position` must be defined against commit, visibility, rollback, and recovery boundaries. |
 
 ---
 
@@ -104,6 +106,17 @@ The postmortem [From Per-Order Global Position to Global Source Boundary](from_p
 - The postmortem records why `UNIQUE(order_id, source_global_position)` was the wrong physical boundary.
 - The corrected schema uses `UNIQUE(source_global_position)` and `UNIQUE(source_event_id)` while preserving `UNIQUE(order_id, source_event_sequence)`.
 - This supports later snapshot store and trust-validator work by keeping source-boundary evidence aligned with accepted-history semantics.
+
+---
+
+
+The postmortem [From `created_at` Freshness to Committed-History Boundaries](from_created_at_freshness_to_committed_history_boundaries.md) is related to Stage 3.5D snapshot trust and later distributed ordering work:
+
+- Stage 3.5D snapshots should not treat row creation time as freshness.
+- `source_global_position` is useful only when its meaning is tied to an accepted-history boundary.
+- The postmortem records the distinction between allocation-order cursors and committed-history cursors.
+- It also separates temporary visibility gaps, permanent allocation gaps, and visible poison events, so later worker / validator design can avoid mixing gap recovery with DLQ handling.
+- This supports future snapshot trust validation, projection worker hardening, and distributed event-log design by making cursor semantics explicit instead of assuming that a monotonic number automatically equals committed history.
 
 ---
 
