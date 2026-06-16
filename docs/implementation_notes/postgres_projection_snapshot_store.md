@@ -261,16 +261,25 @@ source_event_id
 Store-level collision behavior should be:
 
 ```text
-same complete source boundary + same payload_hash
+same complete source boundary
++ same snapshot_schema_version
++ same reducer_version
++ same payload_hash
 = idempotent success
 
-same source boundary evidence + different payload_hash
+same complete source boundary + different payload_hash
+= SnapshotWriteCollisionError
+
+same complete source boundary + different reducer_version
+= SnapshotWriteCollisionError
+
+same complete source boundary + different snapshot_schema_version
 = SnapshotWriteCollisionError
 
 partial boundary match
 = SnapshotWriteCollisionError
 
-mixed boundary match across multiple existing rows
+mixed boundary match across existing source-boundary evidence
 = SnapshotWriteCollisionError
 ```
 
@@ -282,7 +291,20 @@ The important rule is:
 same payload_hash alone is not enough
 ```
 
-A duplicate write is idempotent only when both the lineage evidence and payload evidence match.
+
+For the current PR3 baseline, `snapshot_schema_version` and `reducer_version` are part of idempotent write evidence, not a multi-version coexistence key.
+
+Future reducer/schema multi-version coexistence may relax the physical uniqueness constraints into version-scoped uniqueness constraints, such as:
+
+```text
+UNIQUE(source_event_id, reducer_version, snapshot_schema_version)
+UNIQUE(order_id, source_event_sequence, reducer_version, snapshot_schema_version)
+UNIQUE(source_global_position, reducer_version, snapshot_schema_version)
+```
+
+That future change would also require version-aware snapshot loading and clearing behavior.
+
+A duplicate write is idempotent only when lineage evidence, version evidence, and payload evidence all match.
 
 ---
 
@@ -301,13 +323,22 @@ if the store does not inspect the existing row.
 A conflict may mean:
 
 ```text
-same complete source boundary + same payload_hash
+same complete source boundary
++ same snapshot_schema_version
++ same reducer_version
++ same payload_hash
 ```
 
 or:
 
 ```text
-same source boundary evidence + different payload_hash
+same complete source boundary + different payload_hash
+```
+
+or:
+
+```text
+same complete source boundary + different reducer_version / snapshot_schema_version
 ```
 
 or:
@@ -344,7 +375,7 @@ rowcount == 0
 = a source-boundary collision may have occurred
 ```
 
-After a no-op conflict, the store should query all existing snapshots matching any physical source boundary:
+After a no-op conflict, the store should query existing snapshot evidence matching any physical source boundary:
 
 ```text
 source_event_id
@@ -352,19 +383,24 @@ OR source_global_position
 OR (order_id, source_event_sequence)
 ```
 
-The store should treat the write as idempotent success only when the matching stored evidence represents the same complete source boundary and the same `payload_hash`.
+The store should treat the write as idempotent success only when the matching stored evidence represents the same complete source boundary, the same snapshot schema version, the same reducer version, and the same `payload_hash`.
 
 ```text
-same complete source boundary + same payload_hash
+same complete source boundary
++ same snapshot_schema_version
++ same reducer_version
++ same payload_hash
 = idempotent success
 ```
 
 The store should raise `SnapshotWriteCollisionError` when it finds:
 
 ```text
-same source boundary + different payload_hash
+same complete source boundary + different payload_hash
+same complete source boundary + different reducer_version
+same complete source boundary + different snapshot_schema_version
 partial boundary match
-mixed boundary match across multiple existing rows
+mixed boundary match across existing source-boundary evidence
 same payload_hash but different source-boundary evidence
 ```
 
@@ -444,10 +480,16 @@ PR3 should include integration tests for:
 - latest snapshot is selected by highest `source_global_position`
 - clearing snapshots removes only one order's snapshots
 - snapshots for different orders remain isolated
-- same source boundary + same `payload_hash` is idempotent success
+- same full source boundary + same `payload_hash` is idempotent success
 - same `source_event_id` + different `payload_hash` raises `SnapshotWriteCollisionError`
 - same `source_global_position` + different `payload_hash` raises `SnapshotWriteCollisionError`
 - same `(order_id, source_event_sequence)` + different `payload_hash` raises `SnapshotWriteCollisionError`
+- same `source_event_id` + same `payload_hash` + different lineage raises `SnapshotWriteCollisionError`
+- same `source_global_position` + same `payload_hash` + different `source_event_id` raises `SnapshotWriteCollisionError`
+- same `(order_id, source_event_sequence)` + same `payload_hash` + different `source_global_position` raises `SnapshotWriteCollisionError`
+- same complete source boundary + same `payload_hash` + different `reducer_version` raises `SnapshotWriteCollisionError`
+- same complete source boundary + same `payload_hash` + different `snapshot_schema_version` raises `SnapshotWriteCollisionError`
+- same `source_event_sequence` is allowed for different orders
 - invalid row shape is still rejected by database constraints
 - caller-owned rollback remains usable after failed writes
 
