@@ -57,6 +57,7 @@ The project has completed an executable baseline across:
 - Stage 3.5D PR1 Snapshot Trust Contract Boundary
 - Stage 3.5D PR1.5 CI Stage Branch Checks
 - Stage 3.5D PR2 Projection Snapshot Schema Baseline
+- Stage 3.5D PR3 PostgresProjectionSnapshotStore
 
 This means:
 
@@ -79,6 +80,7 @@ This means:
 - Stage 3.5D PR1 has defined snapshots as derived, discardable, trust-qualified replay fast-path artifacts
 - Stage 3.5D PR1.5 has enabled CI checks for stage branch pull requests
 - Stage 3.5D PR2 has introduced the durable `projection_snapshots` schema baseline and schema constraint tests
+- Stage 3.5D PR3 has implemented `PostgresProjectionSnapshotStore`, making projection snapshots usable through a Python storage boundary while preserving snapshots as derived evidence rather than accepted-history truth
 
 The current major focus is:
 
@@ -1460,7 +1462,7 @@ The current proposed PR sequence is:
 PR1 — General Snapshot Trust Contract Boundary ✅
 PR1.5 — CI Stage Branch Checks ✅
 PR2 — Projection Snapshot Schema Baseline ✅
-PR3 — PostgresProjectionSnapshotStore
+PR3 — PostgresProjectionSnapshotStore ✅
 PR4 — Projection Snapshot-Assisted Replay Validator
 PR5 — Aggregate Snapshot Trust Extension
 PR6 — Aggregate Snapshot Schema / Store
@@ -1481,10 +1483,11 @@ The Stage 3.5D implementation details should be maintained in:
 - [Snapshot Payload Hashing](../implementation_notes/snapshot_payload_hashing.md)
 - [Snapshot Generation Policy](../implementation_notes/snapshot_generation_policy.md)
 - [Projection Snapshot Schema Baseline](../implementation_notes/projection_snapshot_schema_baseline.md)
+- [Postgres Projection Snapshot Store](../implementation_notes/postgres_projection_snapshot_store.md)
 
 Future implementation notes may cover:
 
-- projection snapshot store behavior
+- projection snapshot-assisted replay validation
 - projection snapshot-assisted replay validation
 - aggregate snapshot schema and store behavior
 - snapshot-assisted write-side rehydration
@@ -1567,6 +1570,82 @@ PR2 verifies the schema through storage integration tests covering:
 - same `source_event_sequence` allowed for different orders
 
 PR2 does not implement `PostgresProjectionSnapshotStore`, snapshot trust validation, or snapshot-assisted replay.
+
+
+## PR3 Completion — PostgresProjectionSnapshotStore
+
+Stage 3.5D PR3 makes the PR2 `projection_snapshots` schema usable through a PostgreSQL-backed Python storage boundary.
+
+PR3 adds:
+
+```text
+ProjectionSnapshot
+PostgresProjectionSnapshotStore
+SnapshotWriteCollisionError
+```
+
+The store supports:
+
+```text
+save_snapshot(snapshot)
+load_latest_snapshot(order_id)
+clear_snapshots(order_id)
+```
+
+`load_latest_snapshot(order_id)` selects the latest snapshot by accepted-history progress:
+
+```sql
+ORDER BY source_global_position DESC
+LIMIT 1
+```
+
+It intentionally does not select snapshots by `created_at`, because `created_at` is only the derived row creation time.
+
+PR3 implements duplicate-write handling through:
+
+```sql
+INSERT ... ON CONFLICT DO NOTHING
+```
+
+followed by explicit source-boundary inspection.
+
+The idempotent success case requires matching evidence across:
+
+```text
+complete source boundary
++ snapshot_schema_version
++ reducer_version
++ payload_hash
+```
+
+The complete source boundary is:
+
+```text
+source_event_id
++ order_id
++ source_event_sequence
++ source_global_position
+```
+
+PR3 raises `SnapshotWriteCollisionError` when existing source-boundary evidence conflicts with incoming lineage, reducer version, snapshot schema version, or payload hash.
+
+PR3 verifies the store through integration tests covering:
+
+- missing snapshot load behavior
+- save and load latest behavior
+- latest snapshot selected by highest `source_global_position`
+- Decimal amount round-trip
+- metadata JSON round-trip
+- database-created `created_at`
+- clear behavior scoped to one order
+- idempotent same-complete-boundary same-evidence writes
+- collision errors for inconsistent lineage or payload evidence
+- database shape constraint preservation
+- caller-owned rollback behavior
+- connection usability after idempotent collision handling
+
+PR3 does not implement snapshot trust validation, snapshot-assisted replay validation, canonical hash computation, snapshot generation runtime, aggregate snapshots, or write-side rehydration.
+
 
 ---
 

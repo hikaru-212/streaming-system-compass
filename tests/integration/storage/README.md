@@ -5,9 +5,9 @@
 This directory contains PostgreSQL-backed storage integration tests for **Streaming System + Compass**.
 
 These tests are not general database examples.
-They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1**, **Stage 3.5C PR2**, **Stage 3.5C PR3**, the storage-side part of **Stage 3.5C PR4**, and **Stage 3.5D PR2**.
+They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1**, **Stage 3.5C PR2**, **Stage 3.5C PR3**, the storage-side part of **Stage 3.5C PR4**, **Stage 3.5D PR2**, and **Stage 3.5D PR3**.
 
-At the current baseline, this directory covers the completed durable write-side storage foundation, the first durable read-side schema checkpoint, and the first projection snapshot schema checkpoint:
+At the current baseline, this directory covers the completed durable write-side storage foundation, the first durable read-side schema checkpoint, the first projection snapshot schema checkpoint, and the first projection snapshot store boundary:
 
 ```text
 Stage 3.5B PR2 — PostgresEventStore Baseline
@@ -18,6 +18,7 @@ Stage 3.5C PR2 — PostgresProjectionStore Baseline
 Stage 3.5C PR3 — PostgresCheckpointStore Baseline
 Stage 3.5C PR4 — Global-Position Projection Event Source Baseline
 Stage 3.5D PR2 — Projection Snapshot Schema Baseline
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore Baseline
 ```
 
 It also verifies the local PostgreSQL test-database guardrail used by destructive integration tests.
@@ -37,6 +38,7 @@ The production code under test includes:
 - `src/storage/postgres_checkpoint_store.py`
 - `src/storage/postgres_projection_event_source.py`
 - `src/storage/order_event_hydration.py`
+- `src/storage/postgres_projection_snapshot_store.py`
 
 The related schema objects include:
 
@@ -52,7 +54,7 @@ Together, these tests protect the Stage 3.5B storage claim and the Stage 3.5C PR
 
 > Durable read-side projection state and checkpoint progress have explicit database shape constraints, but they remain derived state and operational metadata rather than accepted-history truth.
 
-> Projection snapshots have explicit source-boundary and shape constraints, but they remain derived snapshot artifacts rather than accepted-history truth.
+> Projection snapshots have explicit source-boundary and shape constraints, and `PostgresProjectionSnapshotStore` makes them usable through a Python storage boundary. They remain derived snapshot artifacts rather than accepted-history truth.
 
 ---
 
@@ -118,8 +120,25 @@ The current storage integration tests cover:
   - `UNIQUE(source_event_id)`
   - `UNIQUE(order_id, source_event_sequence)`
   - `UNIQUE(source_global_position)`
+- `PostgresProjectionSnapshotStore.load_latest_snapshot()` missing-snapshot behavior
+- `PostgresProjectionSnapshotStore.save_snapshot()` insert behavior
+- `PostgresProjectionSnapshotStore.load_latest_snapshot()` selection by highest `source_global_position`
+- projection snapshot Decimal amount round-trip
+- projection snapshot metadata JSON round-trip
+- projection snapshot database-created `created_at` load behavior
+- `PostgresProjectionSnapshotStore.clear_snapshots()` scoped order cleanup behavior
+- same complete source boundary + same snapshot evidence treated as idempotent success
+- inconsistent lineage or payload evidence rejected through `SnapshotWriteCollisionError`
+- same `source_event_id` with different evidence rejected
+- same `source_global_position` with different evidence rejected
+- same `(order_id, source_event_sequence)` with different evidence rejected
+- same `payload_hash` with different lineage rejected
+- same complete source boundary with different reducer version rejected
+- same complete source boundary with different snapshot schema version rejected
+- caller-owned rollback behavior for projection snapshot store writes
+- connection usability after idempotent collision handling
 
-This directory currently focuses on the PostgreSQL-backed storage baseline, storage-side accepted-history loading for projection workers, and the physical schema boundary for projection snapshots.
+This directory currently focuses on the PostgreSQL-backed storage baseline, storage-side accepted-history loading for projection workers, the physical schema boundary for projection snapshots, and the storage boundary for projection snapshot records.
 
 It does not test the full transactional write-side orchestration; that belongs to `tests/integration/pipeline/transactional/`.
 

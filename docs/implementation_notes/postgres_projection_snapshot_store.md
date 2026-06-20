@@ -16,6 +16,21 @@ The goal is to persist and load projection snapshot records without making the s
 
 ---
 
+## PR3 Status
+
+PR3 establishes the first PostgreSQL-backed projection snapshot storage boundary.
+
+At this stage, projection snapshots can be saved, loaded, and cleared through Python storage code.
+
+However, the store still does not make snapshots authoritative.
+
+```text
+accepted history = authority
+projection snapshot store = persistence boundary
+snapshot trust validator = future trust decision
+```
+
+
 ## Scope
 
 PR3 introduces:
@@ -28,6 +43,7 @@ PR3 introduces:
 - `clear_snapshots(order_id)`
 - PostgreSQL integration tests for snapshot store behavior
 - idempotent snapshot write collision handling
+- complete source-boundary evidence inspection
 - caller-owned transaction behavior
 
 ---
@@ -247,7 +263,7 @@ UNIQUE(order_id, source_event_sequence)
 UNIQUE(source_global_position)
 ```
 
-PR3 should define store-level collision behavior against the **complete source boundary**, not against any single column in isolation.
+PR3 defines store-level collision behavior against the **complete source boundary**, not against any single column in isolation.
 
 The complete projection snapshot source boundary is:
 
@@ -468,30 +484,33 @@ payload_hash
 
 ---
 
-## Expected Tests
+## Implemented Tests
 
-PR3 should include integration tests for:
+PR3 includes PostgreSQL integration tests for:
 
 - loading a missing snapshot returns `None`
+- constructing the `ProjectionSnapshot` model
+- verifying `SnapshotWriteCollisionError` exists as the collision type
 - saving and loading a projection snapshot
 - Decimal amount round-trip
 - metadata JSON round-trip
-- `created_at` is populated on loaded snapshots
+- database-created `created_at` is populated on loaded snapshots
 - latest snapshot is selected by highest `source_global_position`
 - clearing snapshots removes only one order's snapshots
 - snapshots for different orders remain isolated
-- same full source boundary + same `payload_hash` is idempotent success
-- same `source_event_id` + different `payload_hash` raises `SnapshotWriteCollisionError`
-- same `source_global_position` + different `payload_hash` raises `SnapshotWriteCollisionError`
-- same `(order_id, source_event_sequence)` + different `payload_hash` raises `SnapshotWriteCollisionError`
-- same `source_event_id` + same `payload_hash` + different lineage raises `SnapshotWriteCollisionError`
-- same `source_global_position` + same `payload_hash` + different `source_event_id` raises `SnapshotWriteCollisionError`
-- same `(order_id, source_event_sequence)` + same `payload_hash` + different `source_global_position` raises `SnapshotWriteCollisionError`
-- same complete source boundary + same `payload_hash` + different `reducer_version` raises `SnapshotWriteCollisionError`
-- same complete source boundary + same `payload_hash` + different `snapshot_schema_version` raises `SnapshotWriteCollisionError`
-- same `source_event_sequence` is allowed for different orders
-- invalid row shape is still rejected by database constraints
-- caller-owned rollback remains usable after failed writes
+- same complete source boundary + same `payload_hash` is idempotent success
+- same `source_event_id` + different lineage or payload evidence raises `SnapshotWriteCollisionError`
+- same `source_global_position` + different lineage or payload evidence raises `SnapshotWriteCollisionError`
+- same `(order_id, source_event_sequence)` + different lineage or payload evidence raises `SnapshotWriteCollisionError`
+- same `source_event_sequence` is allowed across different orders
+- database shape constraints are still enforced through the store
+- caller-owned rollback removes saved snapshot rows
+- connection remains usable after idempotent collision handling
+- same `source_event_id` + same `payload_hash` but different lineage raises `SnapshotWriteCollisionError`
+- same `source_global_position` + same `payload_hash` but different event identity raises `SnapshotWriteCollisionError`
+- same `(order_id, source_event_sequence)` + same `payload_hash` but different `source_global_position` raises `SnapshotWriteCollisionError`
+- same complete source boundary + same `payload_hash` but different reducer version raises `SnapshotWriteCollisionError`
+- same complete source boundary + same `payload_hash` but different snapshot schema version raises `SnapshotWriteCollisionError`
 
 ---
 

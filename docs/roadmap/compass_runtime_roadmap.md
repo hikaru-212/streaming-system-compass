@@ -102,6 +102,7 @@ The current system already supports:
 - snapshot trust boundary documentation through Stage 3.5D PR1
 - stage-branch CI checks through Stage 3.5D PR1.5
 - durable projection snapshot schema baseline through Stage 3.5D PR2
+- PostgreSQL-backed projection snapshot storage through Stage 3.5D PR3
 
 This means Compass is already more than a passive checker.
 
@@ -130,7 +131,7 @@ order_events
 → PostgresCheckpointStore
 ```
 
-Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state. Stage 3.5D PR1 defines snapshot trust as a boundary problem, PR1.5 ensures stage-branch PRs run CI checks, and PR2 introduces `projection_snapshots` as the first durable snapshot schema baseline.
+Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state. Stage 3.5D PR1 defines snapshot trust as a boundary problem, PR1.5 ensures stage-branch PRs run CI checks, PR2 introduces `projection_snapshots` as the first durable snapshot schema baseline, and PR3 makes projection snapshots usable through `PostgresProjectionSnapshotStore`.
 
 This does not make Compass Layer 2 active yet. It provides the durable read-side correctness evidence that Layer 2 can later classify and govern.
 
@@ -166,6 +167,7 @@ Completed baseline steps:
 PR1   — Snapshot Trust Contract Boundary
 PR1.5 — CI Stage Branch Checks
 PR2   — Projection Snapshot Schema Baseline
+PR3   — PostgresProjectionSnapshotStore
 ```
 
 PR2 introduces `projection_snapshots` as a derived snapshot artifact table.
@@ -188,12 +190,19 @@ UNIQUE(source_global_position)
 
 This does not make snapshots authoritative.
 
-It only gives later snapshot store and validator work a durable evidence shape to qualify fast-path replay.
+PR3 adds `PostgresProjectionSnapshotStore`, which persists, loads, and clears projection snapshot records while preserving snapshots as derived evidence rather than truth.
+
+PR3 also keeps the latest-snapshot rule tied to accepted-history progress:
+
+```text
+latest snapshot = highest source_global_position
+not newest created_at row
+```
 
 The next Stage 3.5D step is:
 
 ```text
-PR3 — PostgresProjectionSnapshotStore
+PR4 — Projection Snapshot-Assisted Replay Validator
 ```
 
 ---
@@ -215,7 +224,7 @@ write-side event truth
 → dual-dimension governance
 ```
 
-Stage 3.5D is the current implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state. PR2 now provides the physical `projection_snapshots` schema baseline; PR3 should make that schema usable through a storage boundary.
+Stage 3.5D is the current implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state. PR2 provides the physical `projection_snapshots` schema baseline, PR3 makes that schema usable through a storage boundary, and PR4 should qualify loaded snapshots for replay fast-path use.
 
 The key principle is:
 

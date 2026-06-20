@@ -36,6 +36,7 @@ Stage 3.5C — Durable Read-Side Baseline
 Stage 3.5D PR1 — Snapshot Trust Contract Boundary
 Stage 3.5D PR1.5 — CI Stage Branch Checks
 Stage 3.5D PR2 — Projection Snapshot Schema Baseline
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore
 ```
 
 Stage 3.5B now includes:
@@ -110,6 +111,20 @@ comparison against persisted projection state
 MATCH / MISSING_PROJECTION / DRIFT / NO_ACCEPTED_HISTORY
 no accepted-history mutation
 no checkpoint progress advancement
+```
+
+
+Stage 3.5D PR3 has completed the PostgreSQL-backed projection snapshot store baseline:
+
+```text
+ProjectionSnapshot
+PostgresProjectionSnapshotStore
+SnapshotWriteCollisionError
+save_snapshot / load_latest_snapshot / clear_snapshots
+latest snapshot selected by source_global_position, not created_at
+idempotent same-complete-boundary same-evidence write handling
+collision detection for inconsistent lineage, reducer version, schema version, or payload hash
+caller-owned transaction boundary preserved
 ```
 
 These completed items are no longer tracked as deferred backlog work.
