@@ -99,12 +99,12 @@ Stage 3.5D introduces the first implementation notes in this folder:
 | [Snapshot Payload Hashing](snapshot_payload_hashing.md) | Defines deterministic canonical payload hashing for snapshot trust checks. |
 | [Snapshot Generation Policy](snapshot_generation_policy.md) | Defines when snapshot production may happen and keeps generation separate from trust validation. |
 | [Projection Snapshot Schema Baseline](projection_snapshot_schema_baseline.md) | Records the PR2 physical schema baseline for projection snapshots, including source-boundary uniqueness rules. |
+| [Postgres Projection Snapshot Store](postgres_projection_snapshot_store.md) | Defines the PR3 storage boundary, caller-owned transaction behavior, and collision handling for projection snapshots. |
 
 Future Stage 3.5D implementation notes may include:
 
 | Document | Purpose |
 |---|---|
-| `postgres_projection_snapshot_store.md` | Defines the storage boundary and collision behavior for projection snapshots. |
 | `projection_snapshot_assisted_replay.md` | Defines the read-side snapshot-assisted replay validator behavior. |
 | `aggregate_snapshot_schema_and_store.md` | Defines the schema and store boundary for aggregate snapshots. |
 | `snapshot_assisted_write_side_rehydration.md` | Defines the write-side snapshot-assisted rehydration flow. |

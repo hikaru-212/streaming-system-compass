@@ -17,6 +17,7 @@ The purpose of this module is to provide storage boundaries for:
 - idempotency records
 - projection state
 - projection checkpoints / offsets
+- projection snapshots
 
 This layer exists so that domain logic and runtime orchestration do not need to directly depend on concrete persistence details.
 
@@ -31,6 +32,7 @@ This module is responsible for:
 - idempotency record persistence
 - projection state persistence
 - checkpoint / offset persistence
+- projection snapshot persistence
 - PostgreSQL-backed persistence implementations where the current stage requires durability
 
 Typical submodules or files include:
@@ -45,8 +47,40 @@ Typical submodules or files include:
 - `postgres_projection_store.py`
 - `checkpoint_store.py`
 - `postgres_checkpoint_store.py`
+- `postgres_projection_snapshot_store.py`
 
 ---
+
+
+### `postgres_projection_snapshot_store.py`
+
+Provides the PostgreSQL-backed projection snapshot store.
+
+Typical responsibilities:
+
+- persist `ProjectionSnapshot` records into `projection_snapshots`
+- load the latest snapshot for one order by highest `source_global_position`
+- clear projection snapshots for one order
+- preserve Decimal amount, metadata JSON, snapshot schema version, reducer version, payload hash, and database-created `created_at`
+- treat duplicate writes with the same complete source boundary and same snapshot evidence as idempotent success
+- raise `SnapshotWriteCollisionError` for inconsistent lineage or payload evidence
+
+This store owns projection snapshot persistence only.
+
+It does **not**:
+
+- decide whether a snapshot is trustworthy
+- compute canonical payload hashes
+- build snapshot payloads
+- run snapshot-assisted replay
+- run the projection reducer
+- mutate accepted history
+- commit or rollback transactions
+
+Transaction ownership remains outside the store.
+
+This is important because a later snapshot-assisted replay validator must be able to load snapshot evidence and then decide whether that evidence is qualified for fast-path replay.
+
 
 ## Not Responsible For
 

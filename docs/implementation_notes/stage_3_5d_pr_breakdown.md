@@ -30,6 +30,7 @@ canonical hash must be deterministic
 snapshot write must be idempotent for benign races
 snapshot generation policy must be separate from trust validation
 database constraints should not over-assume reducer version semantics
+store collision handling must distinguish benign duplicate writes from inconsistent evidence
 ```
 
 ---
@@ -55,6 +56,10 @@ A later PR may close out Stage 3.5D after PR7.
 ### Goal
 
 Define snapshot as a general derived-state trust boundary.
+
+### Status
+
+Completed.
 
 ### Scope
 
@@ -86,7 +91,7 @@ Create the physical shape for projection snapshots.
 
 ### Status
 
-Implemented in the PR2 branch.
+Completed.
 
 ### Scope
 
@@ -116,20 +121,70 @@ Implemented in the PR2 branch.
 
 Make `projection_snapshots` usable through a Python storage boundary.
 
+### Status
+
+Completed.
+
 ### Scope
 
 - add `ProjectionSnapshot` model
 - add `PostgresProjectionSnapshotStore`
-- support save / load latest / clear behavior
+- add `SnapshotWriteCollisionError`
+- support `save_snapshot(snapshot)`
+- support `load_latest_snapshot(order_id)`
+- support `clear_snapshots(order_id)`
+- load latest snapshots by highest `source_global_position`, not by `created_at`
+- preserve Decimal amount round-trip
+- preserve metadata JSON round-trip
+- load database-created `created_at`
 - preserve caller-owned transaction boundary
-- implement idempotent snapshot write collision policy
-- add integration tests
+- implement duplicate-write idempotency for same complete source boundary and same snapshot evidence
+- detect inconsistent lineage or payload evidence as `SnapshotWriteCollisionError`
+- use `INSERT ... ON CONFLICT DO NOTHING` followed by explicit source-boundary inspection
+- add PostgreSQL integration tests
+
+### Collision Policy
+
+The complete projection snapshot source boundary is:
+
+```text
+source_event_id
++ order_id
++ source_event_sequence
++ source_global_position
+```
+
+PR3 treats duplicate writes as idempotent only when the existing row matches the incoming snapshot across:
+
+```text
+complete source boundary
++ snapshot_schema_version
++ reducer_version
++ payload_hash
+```
+
+PR3 raises `SnapshotWriteCollisionError` for:
+
+```text
+same complete source boundary + different payload_hash
+same complete source boundary + different reducer_version
+same complete source boundary + different snapshot_schema_version
+partial boundary match
+mixed boundary match across existing source-boundary evidence
+same payload_hash but different lineage evidence
+```
 
 ### Non-goals
 
 - no snapshot trust decision
 - no snapshot-assisted replay
+- no canonical payload hash computation
+- no snapshot builder
+- no snapshot generation policy runtime
 - no aggregate snapshot store
+- no write-side rehydration
+- no Compass Layer 2 validation
+- no `SemanticOutcome`
 
 ---
 
@@ -141,7 +196,7 @@ Validate projection snapshot fast-path reconstruction against authority-path rep
 
 ### Scope
 
-- load projection snapshot
+- load projection snapshot through `PostgresProjectionSnapshotStore`
 - run trust checks
 - verify canonical payload hash
 - load tail events after snapshot boundary
