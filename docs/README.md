@@ -66,7 +66,15 @@ The next major implementation steps are:
 
 ## How to Read These Docs
 
-Recommended reading order:
+Different readers may enter the documentation from different angles.
+
+If you want the shortest entry point into the AI governance framing of Compass, start with [Semantic Admission](semantic_admission/README.md).
+
+If you want exploratory AI governance research notes that are not implementation commitments, see [Research Notes](research/README.md).
+
+If you want to understand the core system architecture and implementation sequence, follow the reading order below.
+
+Recommended reading order for the core system:
 
 1. [High-Level Architecture](architecture/high_level_architecture.md)
 2. [Learning and Design Methodology](philosophy/00_learning_and_design_methodology.md)
@@ -83,11 +91,12 @@ Recommended reading order:
 13. [Projection Pipeline](architecture/projection_pipeline.md)
 14. [Implementation Roadmap](roadmap/implementation_roadmap.md)
 15. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
-16. [Boundary Notes](boundary_notes/README.md)
-17. [Development Setup](development/README.md)
-18. [Postmortems](postmortems/README.md)
+16. [Implementation Notes](implementation_notes/README.md)
+17. [Boundary Notes](boundary_notes/README.md)
+18. [Development Setup](development/README.md)
+19. [Postmortems](postmortems/README.md)
 
-This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, module-boundary notes, local development setup, and finally postmortems.
+This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, stage / PR implementation details, module-boundary notes, local development setup, and finally postmortems.
 
 For the mental models and working methodology behind the architecture, see [Design Philosophy](philosophy/README.md), especially the notes on learning/design methodology, IBO, and Core / Enabler separation.
 
@@ -109,6 +118,7 @@ top-level system structure
 → validation placement strategy
 → completed durable read-side baseline
 → snapshot trust / replay efficiency
+→ implementation notes for stage / PR execution
 → durable history hardening
 → runtime semantic validation and outcome structuring
 → runtime decision policy and action safety
@@ -122,14 +132,17 @@ top-level system structure
 
 ```text
 docs/
-├── philosophy/        # Design philosophy and mental models
-├── architecture/      # Subsystem-level architecture notes
-├── adr/               # Architecture Decision Records
-├── boundary_notes/    # Module ownership and responsibility boundaries
-├── development/       # Local development setup and environment notes
-├── domain/            # Versioned domain specifications and domain decision notes
-├── roadmap/           # Implementation sequencing and evolution plans
-└── postmortems/       # Design lessons, mistakes, and boundary reflections
+├── philosophy/             # Design philosophy and mental models
+├── architecture/           # Subsystem-level architecture notes
+├── adr/                    # Architecture Decision Records
+├── boundary_notes/         # Module ownership and responsibility boundaries
+├── implementation_notes/   # Stage-level and PR-level implementation planning notes
+├── development/            # Local development setup and environment notes
+├── domain/                 # Versioned domain specifications and domain decision notes
+├── roadmap/                # Implementation sequencing and evolution plans
+├── semantic_admission/     # AI governance entry point for candidate actions and accepted facts
+├── research/               # Exploratory research notes and architecture observations
+└── postmortems/            # Design lessons, mistakes, and boundary reflections
 ```
 
 ---
@@ -199,6 +212,25 @@ Use these documents when you want to understand:
 
 ---
 
+### [implementation_notes/](implementation_notes/README.md)
+
+Stage-level and PR-level implementation planning notes.
+
+Use these documents when you want to understand:
+
+- how a stage should be implemented
+- how a PR sequence is intended to unfold
+- which schema, store, validator, or runtime behavior belongs to a specific PR
+- what detailed scope / non-goals / validation plan should guide implementation
+- which implementation hazards have already been identified
+- how roadmap-level sequencing should become concrete work without overloading the roadmap
+
+Implementation notes sit between roadmaps and code.
+
+They are more concrete than roadmaps, but they should not become source-code comments or API references.
+
+---
+
 ### [development/](development/README.md)
 
 Local development setup notes.
@@ -242,6 +274,47 @@ Use these documents when you want to understand:
 - how the system should evolve across stages
 - which features are intentionally deferred
 
+Roadmaps should preserve stage-level direction and dependency logic.
+
+Detailed PR execution notes should gradually move into `implementation_notes/` as stages grow larger.
+
+---
+
+### [semantic_admission/](semantic_admission/README.md)
+
+AI governance entry point for state-changing agents and candidate-action admission.
+
+Use these documents when you want to understand:
+
+- why candidate actions are not accepted facts
+- why successful execution does not imply semantic correctness
+- why agent-generated actions need admission before mutation
+- how action paths can be semantically unsafe even when the final state looks correct
+- why technical concurrency control is not enough for semantic conflicts
+- how bad accepted state can become future context for downstream systems and agents
+
+These documents provide the shortest path into the AI governance framing behind Compass.
+
+They are conceptual entry documents, not implementation notes.
+
+---
+
+### [research/](research/README.md)
+
+Exploratory research notes and architecture observations.
+
+Use these documents when you want to understand:
+
+- external AI governance cases that may contain reusable architecture lessons
+- source-grounded generation and semantic admission ideas
+- future runtime governance possibilities
+- cost, latency, cache, and verification trade-offs
+- ideas that may be useful later but are not current implementation commitments
+
+Research notes preserve reasoning before deciding whether an idea belongs in an ADR, implementation note, roadmap item, postmortem, or no implementation plan at all.
+
+They should not be read as current Compass implementation scope.
+
 ---
 
 ### [postmortems/](postmortems/README.md)
@@ -266,8 +339,11 @@ Use these documents when you want to understand:
 | What does this business state or event mean? | [Domain Specifications](domain/README.md) |
 | Why was this architecture direction chosen? | [ADRs](adr/README.md) |
 | Which module owns this responsibility? | [Boundary Notes](boundary_notes/README.md) |
+| How should this stage or PR be executed? | [Implementation Notes](implementation_notes/README.md) |
 | How do I run local development infrastructure? | [Development Setup](development/README.md) |
 | What has already been built and what comes next? | [Roadmaps](roadmap/README.md) |
+| What is the AI governance framing behind candidate actions and accepted facts? | [Semantic Admission](semantic_admission/README.md) |
+| What exploratory ideas are not implementation commitments yet? | [Research Notes](research/README.md) |
 | What mistake or confusion should not be repeated? | [Postmortems](postmortems/README.md) |
 
 ---
