@@ -397,7 +397,7 @@ Everything else grows around this core:
 - PostgreSQL-backed accepted history and idempotency memory
 - transactional event append + idempotency record persistence
 - two-phase concurrency admission and validation placement strategy
-- Stage 3.5C durable read-side baseline completed completed
+- Stage 3.5C durable read-side schema, stores, worker orchestration, and replay validation completed
 - durable projection state and checkpoint state
 - global-position projection worker orchestration
 - persistence-backed replay / rebuild validation
@@ -478,13 +478,13 @@ Current boundary of completion:
 - read-side projection baseline exists in deterministic in-memory form
 - exact-money semantics are stabilized before deeper durable persistence work
 - durable accepted-history vocabulary has been hardened before read-side persistence depends on stored events
-- durable read-side projection and checkpoint storage are not yet implemented
+- durable read-side projection state, checkpoint progress, global-position worker orchestration, and replay / rebuild validation are established through Stage 3.5C
+- Stage 3.5D snapshot trust, persistence optimization, and replay efficiency is the current implementation focus
 - state-level Compass Layer 2 validation is not yet implemented
 
 Next implementation milestones:
 
-- Stage 3.5C durable read-side baseline completed
-- Stage 3.5D snapshot trust, persistence optimization, and replay efficiency
+- complete Stage 3.5D snapshot trust, persistence optimization, and replay efficiency
 - Stage 3.5E durable history and permission hardening
 - later Stage 4 runtime semantic validation, semantic outcome structuring, runtime decision policy, and action safety
 - Stage 5 dual-dimension governance demo
@@ -522,9 +522,24 @@ The repository remains intentionally conservative:
 
 This repository is shared as a personal design research project and professional portfolio.
 
-No open-source license has been granted yet. All rights are reserved unless a license is added later.
+Unless otherwise noted:
+
+* Source code is not currently licensed for reuse, redistribution, or modification.
+* Documentation, notes, diagrams, and written materials are licensed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).
+
+You may share and adapt the written materials with proper attribution.
+
+Please attribute written materials as:
+
+```text
+Compass Framework / Streaming System Compass documentation by Yen-Hua Chen.
+Licensed under CC BY 4.0.
+Original source: https://github.com/hikaru-212/streaming-system-compass
+```
 
 For usage, redistribution, attribution, and permission details, see [NOTICE.md](NOTICE.md).
+
+For the documentation content license text, see [LICENSE-CONTENT.md](LICENSE-CONTENT.md).
 
 ---
 
