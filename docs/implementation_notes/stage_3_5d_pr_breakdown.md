@@ -42,6 +42,7 @@ PR1 — General Snapshot Trust Contract Boundary
 PR2 — Projection Snapshot Schema Baseline
 PR3 — PostgresProjectionSnapshotStore
 PR4 — Projection Snapshot-Assisted Replay Validator
+PR4.5 — Projection Snapshot-Assisted State Resolver
 PR5 — Aggregate Snapshot Trust Extension
 PR6 — Aggregate Snapshot Schema / Store
 PR7 — Snapshot-Assisted Write-Side Rehydration
@@ -192,24 +193,90 @@ same payload_hash but different lineage evidence
 
 ### Goal
 
-Validate projection snapshot fast-path reconstruction against authority-path replay behavior.
+Validate projection snapshot-assisted reconstruction against authority-path replay behavior.
+
+### Status
+
+Completed after Commit 6 documentation closeout.
 
 ### Scope
 
-- load projection snapshot through `PostgresProjectionSnapshotStore`
-- run trust checks
-- verify canonical payload hash
-- load tail events after snapshot boundary
-- replay tail through canonical reducer
-- compare against full accepted-history replay where required by tests
-- return structured result / reason
+- add `ProjectionSnapshotReplayValidationStatus`
+- add `ProjectionSnapshotReplayValidationResult`
+- add `ProjectionSnapshotReplayValidator`
+- load projection snapshots through `PostgresProjectionSnapshotStore`
+- load accepted history through `PostgresAcceptedHistoryEventSource`
+- load tail records through `PostgresProjectionEventSource`
+- hydrate projection snapshots into `OrderState`
+- replay accepted history through the canonical projection reducer as the authority path
+- replay tail events after `snapshot.source_global_position`
+- load tail events across pages
+- detect non-advancing / out-of-order tail source cursor behavior as `TAIL_EVENT_SOURCE_CONTRACT_VIOLATION`
+- compare snapshot-assisted state against authority state
+- enforce current reducer compatibility with `snapshot.state_version == snapshot.source_event_sequence`
+- reject snapshots whose source sequence is ahead of accepted history
+- return structured result / reason / evidence fields
+- add unit tests for validator behavior
+- add PostgreSQL-backed tests for `PostgresAcceptedHistoryEventSource`
+- add PostgreSQL integration tests for validator assembly
+
+### Validation Statuses
+
+```text
+MATCH
+MISSING_SNAPSHOT
+NO_ACCEPTED_HISTORY_FOR_ORDER
+INVALID_SNAPSHOT_BOUNDARY
+TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
+SNAPSHOT_ASSISTED_DRIFT
+```
 
 ### Non-goals
 
+- no canonical payload hash verification
+- no reducer version compatibility matrix
+- no snapshot schema migration policy
 - no `SemanticOutcome`
 - no runtime decision policy
-- no automatic repair
+- no automatic fallback / repair / quarantine
 - no write-side command path changes
+- no hot-path snapshot-assisted state resolver
+
+PR4 is validation / audit evidence.
+
+It is not the runtime fast path.
+
+---
+
+## PR4.5 — Projection Snapshot-Assisted State Resolver
+
+### Goal
+
+Use trusted projection snapshot evidence to resolve read-side projection state through snapshot + tail replay without full accepted-history replay on every read.
+
+### Scope
+
+- load latest trusted projection snapshot
+- validate minimal local structural compatibility
+- hydrate snapshot state
+- load tail events after `snapshot.source_global_position`
+- replay tail through canonical reducer
+- return resolved projection state
+- avoid full authority replay in the normal resolver path
+- document how PR4 validation evidence can qualify PR4.5 usage
+
+### Non-goals
+
+- no authority full replay comparison in the hot path
+- no `SemanticOutcome`
+- no runtime policy engine
+- no automatic snapshot quarantine
+- no write-side aggregate rehydration
+- no command admission changes
+
+PR4.5 should consume trust evidence.
+
+It should not recreate PR4 validation on every read.
 
 ---
 
