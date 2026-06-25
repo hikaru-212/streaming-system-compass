@@ -14,11 +14,21 @@ It may accelerate reconstruction, but it must not replace accepted history as th
 
 ---
 
-## Stage Scope
+## Stage Scope After PR4
 
 Stage 3.5D defines a general Snapshot Trust Contract.
 
-The first implementation pass applies this contract to projection / read-side snapshot-assisted replay.
+The first implemented pass applies this contract to projection / read-side snapshot-assisted replay:
+
+```text
+PR1   — Snapshot Trust Contract Boundary
+PR1.5 — CI Stage Branch Checks
+PR2   — Projection Snapshot Schema Baseline
+PR3   — PostgresProjectionSnapshotStore
+PR4   — Projection Snapshot-Assisted Replay Validator
+```
+
+PR4 validates whether projection snapshot-assisted replay reconstructs the same state as accepted-history replay.
 
 A later extension may apply the same contract to write-side aggregate snapshot-assisted rehydration.
 
@@ -68,7 +78,7 @@ which logic version produced it
 which integrity evidence protects it
 ```
 
-Snapshot does not mean "truth."
+Snapshot does not mean truth.
 
 Snapshot means:
 
@@ -84,7 +94,7 @@ A snapshot is not:
 
 - accepted history
 - a replacement for the event log
-- proof that replay would produce the same result
+- proof by itself that replay would produce the same result
 - a reason to skip append-time admission
 - a reason to skip Compass Layer 1 validation
 - a future `SemanticOutcome`
@@ -96,14 +106,14 @@ A snapshot is not:
 
 ## Fast Path vs Authority Path
 
-Stage 3.5D introduces the distinction:
+Stage 3.5D preserves the distinction:
 
 ```text
-fast path = snapshot + tail replay + trust checks
+fast path candidate = snapshot + tail replay + trust checks
 authority path = full accepted-history replay
 ```
 
-The fast path exists for normal replay efficiency.
+The fast path exists for replay efficiency.
 
 The authority path exists for:
 
@@ -116,6 +126,10 @@ The authority path exists for:
 - high-risk validation
 - future Layer 2 evidence generation
 
+PR4 is a validation path. It compares snapshot-assisted replay against the authority path.
+
+It is not the final production hot-path resolver.
+
 ---
 
 ## Snapshot Consumption vs Snapshot Production
@@ -123,8 +137,8 @@ The authority path exists for:
 Snapshot consumption and snapshot production are separate responsibilities.
 
 ```text
-SnapshotTrustValidator
-= decides whether an existing snapshot may be used
+SnapshotTrustValidator / ReplayValidator
+= checks whether existing snapshot evidence can reconstruct authority-equivalent state
 
 SnapshotBuilder
 = creates snapshot payload from trusted reconstruction output
@@ -133,11 +147,11 @@ SnapshotGenerationPolicy
 = decides when a new snapshot should be produced
 ```
 
-The store should not decide when to produce snapshots.
+The store does not decide when to produce snapshots.
 
-The validator should not silently create snapshots.
+The validator does not silently create snapshots.
 
-The builder should not decide whether a snapshot is safe to consume.
+The builder does not decide whether a snapshot is safe to consume.
 
 This separation prevents snapshot optimization from becoming implicit runtime mutation.
 
@@ -178,12 +192,36 @@ The exact physical schema may differ between projection and aggregate snapshots,
 
 ---
 
-## Lightweight Trust Checks
+## Implemented PR4 Trust Checks
 
-Before a snapshot is used on a fast path, the runtime should check:
+The PR4 projection replay validator performs a narrow set of checks that are supported by the current evidence model:
 
 ```text
-snapshot belongs to the requested order_id
+accepted history exists for requested order
+snapshot exists
+snapshot.order_id matches requested order_id
+snapshot.source_global_position > 0
+snapshot.source_event_sequence > 0
+snapshot.source_event_sequence <= authority_max_sequence
+snapshot.state_version >= 0
+snapshot.state_version <= snapshot.source_event_sequence
+snapshot.state_version == snapshot.source_event_sequence under the current reducer
+snapshot.state_status is supported by the current projection state model
+tail event source returns strictly advancing global_position values
+snapshot-assisted replay result matches accepted-history replay result
+```
+
+These checks produce validation evidence.
+
+They do not decide runtime repair, quarantine, fallback, or command admission policy.
+
+---
+
+## Deferred Trust Checks
+
+The general boundary still expects future trust checks such as:
+
+```text
 source_event_id exists in accepted history
 source_event belongs to the same order stream
 source_event_sequence matches accepted history
@@ -191,12 +229,11 @@ source_global_position matches accepted history
 snapshot_schema_version is supported
 logic_version is supported
 payload_hash matches canonical snapshot payload
-tail events are continuous after the snapshot boundary
+tail gaps are explained by an aborted-position / hole registry
+snapshot state satisfies projection-domain invariants at the claimed boundary
 ```
 
-These checks qualify the snapshot for fast-path use.
-
-They do not prove full semantic equivalence.
+These are deferred because they require additional durable evidence models or policy registries.
 
 ---
 
@@ -212,7 +249,15 @@ state_version <= source_event_sequence
 
 Stronger domain-specific version rules belong to Python-level trust checks.
 
-For example, the current minimal order domain may require all accepted domain events to advance state version, but future event types may represent audit metadata, warnings, or informational events that do not change business state.
+For the current minimal order projection reducer, PR4 enforces:
+
+```text
+state_version == source_event_sequence
+```
+
+This is a current reducer compatibility check, not a permanent database law.
+
+Future event types may represent audit metadata, warnings, or informational events that do not change business state.
 
 ---
 
@@ -228,9 +273,13 @@ The hash must not depend on:
 - non-deterministic serialization
 - locale-specific formatting
 
-The canonicalization rules should live in a dedicated implementation note and shared helper.
+The canonicalization rules live in a dedicated implementation note and shared helper.
 
 The same logical snapshot payload must always produce the same hash.
+
+PR4 does not yet verify payload hash.
+
+That remains future trust-validation work.
 
 ---
 
@@ -238,13 +287,13 @@ The same logical snapshot payload must always produce the same hash.
 
 Snapshot writes should tolerate benign races.
 
-If the same snapshot boundary already exists with the same payload hash, the write should be treated as idempotent success.
+If the same complete snapshot boundary already exists with the same schema version, logic version, and payload hash, the write should be treated as idempotent success.
 
-If the same snapshot boundary already exists with a different payload hash, the write should fail with an explicit collision error.
+If the same boundary already exists with different evidence, the write should fail with an explicit collision error.
 
 ```text
-same boundary + same payload_hash = idempotent success
-same boundary + different payload_hash = SnapshotWriteCollisionError
+same complete boundary + same version evidence + same payload_hash = idempotent success
+same complete boundary + different evidence = SnapshotWriteCollisionError
 ```
 
 This prevents cache-stampede races from crashing normal execution while still detecting non-deterministic snapshot generation.
@@ -253,17 +302,21 @@ This prevents cache-stampede races from crashing normal execution while still de
 
 ## Tail Continuity
 
-If a snapshot claims to represent state through sequence `N`, and the latest accepted event is sequence `M`, then tail replay must cover:
+For projection-side replay, the snapshot preserves `source_global_position` so the tail event source can load events strictly after the snapshot boundary:
 
 ```text
-N + 1
-through
-M
+event.global_position > snapshot.source_global_position
 ```
 
-without gaps, if the event stream contract requires contiguous sequence for the given reconstruction path.
+PR4 validates the tail source cursor contract:
 
-For projection-side replay, the snapshot should also preserve enough global-position evidence to support accepted-history consumption after the snapshot boundary.
+```text
+next global_position must strictly advance
+```
+
+It does not yet validate every global-position gap.
+
+That requires a future aborted-position / hole registry so the system can distinguish legitimate gaps from unexplained source discontinuity.
 
 ---
 
@@ -310,6 +363,8 @@ The next question is:
 Can a snapshot safely accelerate replay without becoming truth?
 ```
 
+PR4 answers the first projection-side validation slice of that question.
+
 ---
 
 ## Relationship to Write-Side Snapshot Support
@@ -342,27 +397,27 @@ Snapshot trust failures may later become structured `SemanticOutcome` evidence.
 Potential future failure classifications include:
 
 ```text
-SNAPSHOT_METADATA_INVALID
-SNAPSHOT_HASH_MISMATCH
-SNAPSHOT_SCHEMA_UNSUPPORTED
-SNAPSHOT_LOGIC_VERSION_UNTRUSTED
-SNAPSHOT_TAIL_DISCONTINUITY
-SNAPSHOT_REPLAY_MISMATCH
-SNAPSHOT_WRITE_COLLISION
+INVALID_SNAPSHOT_LINEAGE
+SNAPSHOT_PAYLOAD_HASH_MISMATCH
+UNSUPPORTED_REDUCER_VERSION
+UNSUPPORTED_SNAPSHOT_SCHEMA_VERSION
+SNAPSHOT_STATE_DOMAIN_VIOLATION
+UNEXPLAINED_GLOBAL_POSITION_GAP
+TAIL_REPLAY_DOMAIN_FAILURE
+ACCEPTED_HISTORY_CONTRACT_VIOLATION
 ```
 
-Stage 3.5D should not implement the full Stage 4 outcome model.
+Stage 3.5D does not implement the full Stage 4 outcome model.
 
 ---
 
 ## Non-goals
 
-Stage 3.5D PR1 does not implement:
+This boundary note does not implement:
 
 - production code
 - snapshot tables
 - snapshot stores
-- snapshot-assisted replay implementation
 - snapshot-assisted write-side rehydration implementation
 - `SemanticOutcome`
 - `RuntimeDecisionPolicy`

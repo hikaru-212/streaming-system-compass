@@ -14,9 +14,9 @@ Snapshot creates a trust boundary because it allows runtime reconstruction to st
 
 ---
 
-## Current Baseline Before Snapshot
+## Current Baseline After Stage 3.5D PR4
 
-Before Stage 3.5D, the system has:
+Before Stage 3.5D, the system already had:
 
 ```text
 order_events
@@ -32,13 +32,21 @@ DurableReplayValidator
 = accepted-history replay compared with persisted projection state
 ```
 
-This means the system can already rebuild or validate derived state through accepted history.
-
-Stage 3.5D adds a new question:
+Stage 3.5D has now added the first projection snapshot trust substrate:
 
 ```text
-Can reconstruction be accelerated through a snapshot while preserving trust?
+PR1   — Snapshot Trust Contract Boundary
+PR1.5 — CI Stage Branch Checks
+PR2   — Projection Snapshot Schema Baseline
+PR3   — PostgresProjectionSnapshotStore
+PR4   — Projection Snapshot-Assisted Replay Validator
 ```
+
+This means the system can now persist projection snapshots and validate whether snapshot-assisted replay reconstructs the same state as accepted-history replay.
+
+Stage 3.5D still does not make snapshots authoritative.
+
+It only makes them traceable, checkable replay fast-path candidates.
 
 ---
 
@@ -52,6 +60,19 @@ snapshot is acceleration
 The snapshot path must be optional.
 
 If a snapshot is missing, invalid, stale, unsupported, suspicious, or generated non-deterministically, the system must be able to fall back to accepted-history replay.
+
+PR4 validates this relationship for projection snapshots by comparing:
+
+```text
+snapshot state
++ tail replay after snapshot boundary
+```
+
+against:
+
+```text
+accepted-history replay result
+```
 
 ---
 
@@ -67,7 +88,7 @@ accepted history
 
 This path is authoritative.
 
-It should be used for:
+It is used for:
 
 - audit
 - rebuild
@@ -77,24 +98,29 @@ It should be used for:
 - high-risk verification
 - later Layer 2 evidence generation
 
-### Fast Path
+### Fast-Path Candidate
 
 ```text
 snapshot
-→ trust checks
+→ structural / compatibility checks
 → tail replay
 → reconstructed state
+→ compare against authority path when validating trust
 ```
 
-This path is performance-oriented.
+This path is performance-oriented, but it may be used only when trust evidence qualifies the snapshot.
 
-It may be used only if trust checks qualify the snapshot.
+PR4 is a validation path, not the final hot-path resolver.
+
+It proves whether snapshot-assisted replay can match the authority path.
+
+A later resolver may consume trusted snapshot evidence to reconstruct state without full accepted-history replay.
 
 ---
 
 ## Responsibility Separation
 
-Snapshot architecture should separate four responsibilities:
+Snapshot architecture separates four responsibilities:
 
 ```text
 SnapshotBuilder
@@ -103,18 +129,18 @@ SnapshotBuilder
 SnapshotStore
 = persists and loads snapshots
 
-SnapshotTrustValidator
-= decides whether an existing snapshot may be used
+SnapshotTrustValidator / ReplayValidator
+= checks whether existing snapshot evidence can reconstruct authority-equivalent state
 
 SnapshotGenerationPolicy
 = decides when a new snapshot should be produced
 ```
 
-The validator should not implicitly write snapshots.
+The validator does not implicitly write snapshots.
 
-The store should not decide generation timing.
+The store does not decide generation timing.
 
-The generation policy should not decide trust.
+The generation policy does not decide trust.
 
 This keeps snapshot optimization from becoming an implicit mutation side effect.
 
@@ -148,31 +174,42 @@ PROJECTION
 AGGREGATE
 ```
 
-The first implementation target is projection snapshot support.
+The first implemented target is projection snapshot support.
 
-Aggregate snapshot support is a later extension for write-side rehydration.
+Aggregate snapshot support remains a later extension for write-side rehydration.
 
 ---
 
 ## Projection Snapshot Path
 
-Projection snapshot-assisted replay is used to accelerate read-side replay / rebuild / validation.
+Projection snapshot-assisted replay is used to validate and later accelerate read-side replay / rebuild / validation.
 
 ```text
 projection snapshot
-→ verify lineage / hash / schema / reducer version
+→ verify minimal boundary / reducer compatibility
 → load tail events after source_global_position
 → replay tail through canonical reducer
 → reconstructed projection state
+→ compare against accepted-history authority replay
 ```
 
-This extends Stage 3.5C durable replay / rebuild validation.
+PR4 implements this comparison as a read-side validator.
+
+It also distinguishes tail event source cursor contract violations from ordinary snapshot-assisted drift:
+
+```text
+TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
+≠
+SNAPSHOT_ASSISTED_DRIFT
+```
+
+This keeps source-reader contract failure separate from state mismatch evidence.
 
 ---
 
 ## Aggregate Snapshot Path
 
-Aggregate snapshot-assisted rehydration is used to accelerate write-side command handling.
+Aggregate snapshot-assisted rehydration is future work.
 
 ```text
 aggregate snapshot
@@ -212,9 +249,9 @@ through a background snapshot builder
 through an explicit manual/admin rebuild command
 ```
 
-The first implementation should not require automatic generation.
+The first implementation does not require automatic generation.
 
-Safe snapshot consumption should be implemented before production policy becomes automatic.
+Safe snapshot consumption and validation are implemented before production policy becomes automatic.
 
 ---
 
@@ -222,9 +259,9 @@ Safe snapshot consumption should be implemented before production policy becomes
 
 Snapshot write should be idempotent for benign races.
 
-If another worker already wrote the same snapshot boundary with the same payload hash, the write can be treated as success.
+If another worker already wrote the same complete source boundary with the same snapshot schema version, reducer version, and payload hash, the write can be treated as success.
 
-If another worker wrote the same boundary with a different payload hash, the system should raise an explicit collision error.
+If another worker wrote the same boundary with different evidence, the system should raise an explicit collision error.
 
 This detects non-deterministic snapshot generation or corrupted writer behavior.
 
@@ -236,6 +273,7 @@ Snapshot-assisted reconstruction should reject or ignore a snapshot when:
 
 ```text
 snapshot missing
+accepted history missing for requested order
 source event missing
 source event belongs to another stream
 source sequence mismatch
@@ -243,8 +281,10 @@ source global position mismatch
 snapshot schema unsupported
 logic version unsupported
 payload hash mismatch
-tail discontinuity
+tail event source cursor contract violation
+tail discontinuity that cannot be explained by a future hole registry
 snapshot state version incompatible
+snapshot-assisted state differs from authority replay
 same-boundary different-hash collision
 ```
 
@@ -263,11 +303,14 @@ However, snapshot trust failures are natural future evidence for Layer 2 and str
 Examples:
 
 ```text
-SNAPSHOT_HASH_MISMATCH
-SNAPSHOT_TAIL_DISCONTINUITY
-SNAPSHOT_LOGIC_VERSION_UNTRUSTED
-SNAPSHOT_REPLAY_MISMATCH
-SNAPSHOT_WRITE_COLLISION
+INVALID_SNAPSHOT_LINEAGE
+SNAPSHOT_PAYLOAD_HASH_MISMATCH
+UNSUPPORTED_REDUCER_VERSION
+UNSUPPORTED_SNAPSHOT_SCHEMA_VERSION
+SNAPSHOT_STATE_DOMAIN_VIOLATION
+UNEXPLAINED_GLOBAL_POSITION_GAP
+TAIL_REPLAY_DOMAIN_FAILURE
+ACCEPTED_HISTORY_CONTRACT_VIOLATION
 ```
 
 Stage 4 may later classify these failures and map them to runtime decisions.
@@ -279,9 +322,12 @@ Stage 4 may later classify these failures and map them to runtime decisions.
 This note does not define:
 
 - exact SQL table shape
-- Python store implementation
+- Python store implementation details
 - automatic snapshot rebuild scheduling
 - automatic repair policy
 - runtime decision policy
 - action safety behavior
 - sealed snapshot cryptography
+- production hot-path snapshot resolver
+- aggregate snapshot schema / store
+- write-side snapshot-assisted rehydration

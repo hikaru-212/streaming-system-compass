@@ -37,6 +37,7 @@ Stage 3.5D PR1 — Snapshot Trust Contract Boundary
 Stage 3.5D PR1.5 — CI Stage Branch Checks
 Stage 3.5D PR2 — Projection Snapshot Schema Baseline
 Stage 3.5D PR3 — PostgresProjectionSnapshotStore
+Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
 ```
 
 Stage 3.5B now includes:
@@ -126,6 +127,22 @@ idempotent same-complete-boundary same-evidence write handling
 collision detection for inconsistent lineage, reducer version, schema version, or payload hash
 caller-owned transaction boundary preserved
 ```
+
+Stage 3.5D PR4 has completed the projection snapshot-assisted replay validator baseline:
+
+```text
+ProjectionSnapshotReplayValidationStatus
+ProjectionSnapshotReplayValidationResult
+ProjectionSnapshotReplayValidator
+PostgresAcceptedHistoryEventSource
+snapshot-assisted replay compared against accepted-history replay
+tail pagination across pages
+TAIL_EVENT_SOURCE_CONTRACT_VIOLATION for non-advancing / out-of-order tail positions
+SNAPSHOT_ASSISTED_DRIFT for authority mismatch after replay
+PostgreSQL-backed validator integration tests
+```
+
+
 
 These completed items are no longer tracked as deferred backlog work.
 

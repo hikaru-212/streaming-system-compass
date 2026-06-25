@@ -58,6 +58,7 @@ The project has completed an executable baseline across:
 - Stage 3.5D PR1.5 CI Stage Branch Checks
 - Stage 3.5D PR2 Projection Snapshot Schema Baseline
 - Stage 3.5D PR3 PostgresProjectionSnapshotStore
+- Stage 3.5D PR4 Projection Snapshot-Assisted Replay Validator
 
 This means:
 
@@ -81,6 +82,7 @@ This means:
 - Stage 3.5D PR1.5 has enabled CI checks for stage branch pull requests
 - Stage 3.5D PR2 has introduced the durable `projection_snapshots` schema baseline and schema constraint tests
 - Stage 3.5D PR3 has implemented `PostgresProjectionSnapshotStore`, making projection snapshots usable through a Python storage boundary while preserving snapshots as derived evidence rather than accepted-history truth
+- Stage 3.5D PR4 has implemented the projection snapshot-assisted replay validator, accepted-history adapter, and PostgreSQL-backed integration tests proving snapshot + tail replay can be checked against accepted-history replay
 
 The current major focus is:
 
@@ -1463,7 +1465,7 @@ PR1 — General Snapshot Trust Contract Boundary ✅
 PR1.5 — CI Stage Branch Checks ✅
 PR2 — Projection Snapshot Schema Baseline ✅
 PR3 — PostgresProjectionSnapshotStore ✅
-PR4 — Projection Snapshot-Assisted Replay Validator
+PR4 — Projection Snapshot-Assisted Replay Validator ✅
 PR5 — Aggregate Snapshot Trust Extension
 PR6 — Aggregate Snapshot Schema / Store
 PR7 — Snapshot-Assisted Write-Side Rehydration
@@ -1471,7 +1473,7 @@ PR7 — Snapshot-Assisted Write-Side Rehydration
 
 PR1 defines the general trust contract.
 
-PR2 through PR4 apply the contract first to projection / read-side snapshot-assisted replay.
+PR2 through PR4 have applied the contract first to projection / read-side snapshot-assisted replay.
 
 PR5 through PR7 extend the same trust model to write-side aggregate snapshot-assisted rehydration, where stricter admission-path constraints are required because reconstructed aggregate state can influence command validation and accepted-history admission.
 
@@ -1484,11 +1486,11 @@ The Stage 3.5D implementation details should be maintained in:
 - [Snapshot Generation Policy](../implementation_notes/snapshot_generation_policy.md)
 - [Projection Snapshot Schema Baseline](../implementation_notes/projection_snapshot_schema_baseline.md)
 - [Postgres Projection Snapshot Store](../implementation_notes/postgres_projection_snapshot_store.md)
+- [Projection Snapshot-Assisted Replay Validator](../implementation_notes/projection_snapshot_assisted_replay_validator.md)
 
 Future implementation notes may cover:
 
-- projection snapshot-assisted replay validation
-- projection snapshot-assisted replay validation
+- projection snapshot-assisted state resolver
 - aggregate snapshot schema and store behavior
 - snapshot-assisted write-side rehydration
 
@@ -1649,6 +1651,71 @@ PR3 does not implement snapshot trust validation, snapshot-assisted replay valid
 
 ---
 
+## PR4 Completion — Projection Snapshot-Assisted Replay Validator
+
+Stage 3.5D PR4 introduces the first read-side validator for checking projection snapshot-assisted replay against accepted-history replay.
+
+PR4 adds:
+
+```text
+ProjectionSnapshotReplayValidationStatus
+ProjectionSnapshotReplayValidationResult
+ProjectionSnapshotReplayValidator
+PostgresAcceptedHistoryEventSource
+```
+
+The validator compares:
+
+```text
+projection snapshot
++ tail events after snapshot.source_global_position
+```
+
+against:
+
+```text
+accepted-history replay through the canonical projection reducer
+```
+
+PR4 status vocabulary is:
+
+```text
+MATCH
+MISSING_SNAPSHOT
+NO_ACCEPTED_HISTORY_FOR_ORDER
+INVALID_SNAPSHOT_BOUNDARY
+TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
+SNAPSHOT_ASSISTED_DRIFT
+```
+
+PR4 distinguishes:
+
+```text
+tail event source cursor contract failure
+≠
+snapshot-assisted state drift
+```
+
+Non-advancing or out-of-order tail `global_position` values are classified as `TAIL_EVENT_SOURCE_CONTRACT_VIOLATION`.
+
+A structurally valid snapshot whose hydrated state disagrees with accepted-history replay is classified as `SNAPSHOT_ASSISTED_DRIFT`.
+
+PR4 also adds PostgreSQL-backed integration tests proving that the validator can be wired through:
+
+```text
+PostgresProjectionSnapshotStore
++ PostgresAcceptedHistoryEventSource
++ PostgresProjectionEventSource
++ ProjectionSnapshotReplayValidator
+```
+
+PR4 does not implement canonical payload hash verification, version compatibility matrices, automatic fallback, automatic repair, snapshot quarantine, production hot-path resolver behavior, aggregate snapshots, write-side rehydration, `SemanticOutcome`, or RuntimeDecisionPolicy.
+
+A later resolver may consume trusted snapshot evidence for actual replay acceleration without performing full accepted-history replay on the hot path.
+
+
+---
+
 ## Core Design Requirements
 
 Stage 3.5D should preserve these requirements:
@@ -1711,8 +1778,9 @@ Stage 3.5D is complete at the baseline level when:
 - snapshot trust boundaries are documented
 - projection snapshot schema baseline is implemented
 - projection snapshot store behavior is implemented
+- projection snapshot-assisted replay can be validated against full accepted-history replay
 - projection snapshot-assisted replay can fall back to full accepted-history replay
-- canonical payload hashing is deterministic
+- canonical payload hashing is documented as deterministic
 - same-boundary snapshot writes are idempotent when hashes match after PR3 store behavior exists
 - same-boundary different-hash writes are treated as collisions after PR3 store behavior exists
 - aggregate snapshot trust extension is documented

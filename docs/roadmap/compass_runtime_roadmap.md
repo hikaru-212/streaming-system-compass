@@ -103,6 +103,7 @@ The current system already supports:
 - stage-branch CI checks through Stage 3.5D PR1.5
 - durable projection snapshot schema baseline through Stage 3.5D PR2
 - PostgreSQL-backed projection snapshot storage through Stage 3.5D PR3
+- projection snapshot-assisted replay validation through Stage 3.5D PR4
 
 This means Compass is already more than a passive checker.
 
@@ -131,7 +132,7 @@ order_events
 → PostgresCheckpointStore
 ```
 
-Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state. Stage 3.5D PR1 defines snapshot trust as a boundary problem, PR1.5 ensures stage-branch PRs run CI checks, PR2 introduces `projection_snapshots` as the first durable snapshot schema baseline, and PR3 makes projection snapshots usable through `PostgresProjectionSnapshotStore`.
+Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state. Stage 3.5D PR1 defines snapshot trust as a boundary problem, PR1.5 ensures stage-branch PRs run CI checks, PR2 introduces `projection_snapshots` as the first durable snapshot schema baseline, PR3 makes projection snapshots usable through `PostgresProjectionSnapshotStore`, and PR4 validates projection snapshot-assisted replay against accepted-history replay.
 
 This does not make Compass Layer 2 active yet. It provides the durable read-side correctness evidence that Layer 2 can later classify and govern.
 
@@ -153,7 +154,7 @@ That interpretation and decision boundary belongs to later Compass Layer 2, stru
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline. Stage 3.5C PR5 adds durable replay / rebuild validation so persisted projection state can be checked against accepted-history replay.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline. Stage 3.5C PR5 adds durable replay / rebuild validation so persisted projection state can be checked against accepted-history replay. Stage 3.5D PR4 adds projection snapshot-assisted replay validation so snapshot + tail replay can also be checked against accepted-history replay.
 
 ---
 
@@ -168,6 +169,7 @@ PR1   — Snapshot Trust Contract Boundary
 PR1.5 — CI Stage Branch Checks
 PR2   — Projection Snapshot Schema Baseline
 PR3   — PostgresProjectionSnapshotStore
+PR4   — Projection Snapshot-Assisted Replay Validator
 ```
 
 PR2 introduces `projection_snapshots` as a derived snapshot artifact table.
@@ -199,11 +201,7 @@ latest snapshot = highest source_global_position
 not newest created_at row
 ```
 
-The next Stage 3.5D step is:
-
-```text
-PR4 — Projection Snapshot-Assisted Replay Validator
-```
+The next Stage 3.5D step may extend the trust contract toward aggregate snapshots or split out a projection snapshot-assisted state resolver for actual hot-path replay acceleration.
 
 ---
 
@@ -224,7 +222,7 @@ write-side event truth
 → dual-dimension governance
 ```
 
-Stage 3.5D is the current implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state. PR2 provides the physical `projection_snapshots` schema baseline, PR3 makes that schema usable through a storage boundary, and PR4 should qualify loaded snapshots for replay fast-path use.
+Stage 3.5D is the current implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state. PR2 provides the physical `projection_snapshots` schema baseline, PR3 makes that schema usable through a storage boundary, and PR4 qualifies loaded projection snapshots by comparing snapshot-assisted replay against accepted-history replay.
 
 The key principle is:
 
