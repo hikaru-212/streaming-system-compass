@@ -21,8 +21,6 @@ It now also serves as the reference frame for an executable baseline covering:
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - local PostgreSQL development setup for durable write-side work
 - executable failure-path tests for selected invariants and adversarial cases
-- Stage 3.5C durable read-side baseline
-- Stage 3.5D Snapshot Trust Contract and replay-efficiency planning
 
 ---
 
@@ -68,7 +66,15 @@ The next major implementation steps are:
 
 ## How to Read These Docs
 
-Recommended reading order:
+Different readers may enter the documentation from different angles.
+
+If you want the shortest entry point into the AI governance framing of Compass, start with [Semantic Admission](semantic_admission/README.md).
+
+If you want exploratory AI governance research notes that are not implementation commitments, see [Research Notes](research/README.md).
+
+If you want to understand the core system architecture and implementation sequence, follow the reading order below.
+
+Recommended reading order for the core system:
 
 1. [High-Level Architecture](architecture/high_level_architecture.md)
 2. [Learning and Design Methodology](philosophy/00_learning_and_design_methodology.md)
@@ -134,6 +140,8 @@ docs/
 ├── development/            # Local development setup and environment notes
 ├── domain/                 # Versioned domain specifications and domain decision notes
 ├── roadmap/                # Implementation sequencing and evolution plans
+├── semantic_admission/     # AI governance entry point for candidate actions and accepted facts
+├── research/               # Exploratory research notes and architecture observations
 └── postmortems/            # Design lessons, mistakes, and boundary reflections
 ```
 
@@ -272,6 +280,43 @@ Detailed PR execution notes should gradually move into `implementation_notes/` a
 
 ---
 
+### [semantic_admission/](semantic_admission/README.md)
+
+AI governance entry point for state-changing agents and candidate-action admission.
+
+Use these documents when you want to understand:
+
+- why candidate actions are not accepted facts
+- why successful execution does not imply semantic correctness
+- why agent-generated actions need admission before mutation
+- how action paths can be semantically unsafe even when the final state looks correct
+- why technical concurrency control is not enough for semantic conflicts
+- how bad accepted state can become future context for downstream systems and agents
+
+These documents provide the shortest path into the AI governance framing behind Compass.
+
+They are conceptual entry documents, not implementation notes.
+
+---
+
+### [research/](research/README.md)
+
+Exploratory research notes and architecture observations.
+
+Use these documents when you want to understand:
+
+- external AI governance cases that may contain reusable architecture lessons
+- source-grounded generation and semantic admission ideas
+- future runtime governance possibilities
+- cost, latency, cache, and verification trade-offs
+- ideas that may be useful later but are not current implementation commitments
+
+Research notes preserve reasoning before deciding whether an idea belongs in an ADR, implementation note, roadmap item, postmortem, or no implementation plan at all.
+
+They should not be read as current Compass implementation scope.
+
+---
+
 ### [postmortems/](postmortems/README.md)
 
 Reflection documents that preserve design mistakes, confusion points, and lessons learned.
@@ -297,6 +342,8 @@ Use these documents when you want to understand:
 | How should this stage or PR be executed? | [Implementation Notes](implementation_notes/README.md) |
 | How do I run local development infrastructure? | [Development Setup](development/README.md) |
 | What has already been built and what comes next? | [Roadmaps](roadmap/README.md) |
+| What is the AI governance framing behind candidate actions and accepted facts? | [Semantic Admission](semantic_admission/README.md) |
+| What exploratory ideas are not implementation commitments yet? | [Research Notes](research/README.md) |
 | What mistake or confusion should not be repeated? | [Postmortems](postmortems/README.md) |
 
 ---
