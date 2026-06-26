@@ -29,7 +29,7 @@ Implementation notes should preserve:
 - PR breakdowns
 - schema baselines
 - store behavior
-- validator behavior
+- validator / resolver behavior
 - test plans
 - implementation hazards
 - stage-specific execution details
@@ -46,8 +46,8 @@ Use implementation notes for questions such as:
 - What PRs are expected inside this stage?
 - What schema shape is currently proposed?
 - What store behavior should be tested?
-- What validator behavior should be implemented?
-- What collision, fallback, or retry policy should code preserve?
+- What validator or resolver behavior should be implemented?
+- What collision, fallback, retry, or admission policy should code preserve?
 - What implementation hazards should be avoided?
 - What should remain a non-goal for this PR?
 
@@ -95,20 +95,20 @@ Stage 3.5D introduces the first implementation notes in this folder:
 
 | Document | Purpose |
 |---|---|
-| [Stage 3.5D PR Breakdown](stage_3_5d_pr_breakdown.md) | Defines the proposed PR sequence for Snapshot Trust Contract / Replay Efficiency. |
+| [Stage 3.5D PR Breakdown](stage_3_5d_pr_breakdown.md) | Defines the PR sequence for Snapshot Trust Contract / Replay Efficiency, including the current scope convergence around PR4.5 and PR5. |
 | [Snapshot Payload Hashing](snapshot_payload_hashing.md) | Defines deterministic canonical payload hashing for snapshot trust checks. |
 | [Snapshot Generation Policy](snapshot_generation_policy.md) | Defines when snapshot production may happen and keeps generation separate from trust validation. |
 | [Projection Snapshot Schema Baseline](projection_snapshot_schema_baseline.md) | Records the PR2 physical schema baseline for projection snapshots, including source-boundary uniqueness rules. |
 | [Postgres Projection Snapshot Store](postgres_projection_snapshot_store.md) | Defines the PR3 storage boundary, caller-owned transaction behavior, and collision handling for projection snapshots. |
 | [Projection Snapshot-Assisted Replay Validator](projection_snapshot_assisted_replay_validator.md) | Defines the PR4 replay validation boundary for checking snapshot-assisted projection reconstruction against accepted-history replay, including accepted-history adapter and PostgreSQL wiring proof. |
+| [Projection Snapshot-Assisted State Resolver](projection_snapshot_assisted_state_resolver.md) | Defines the PR4.5 read-side resolver that uses explicitly qualified projection snapshot evidence plus tail replay without full authority replay on every normal read path. |
 
 Future Stage 3.5D implementation notes may include:
 
 | Document | Purpose |
 |---|---|
-| `projection_snapshot_assisted_state_resolver.md` | Defines the PR4.5 fast-path resolver that uses trusted projection snapshots plus tail replay without full authority replay on every read. |
-| `aggregate_snapshot_schema_and_store.md` | Defines the schema and store boundary for aggregate snapshots. |
-| `snapshot_assisted_write_side_rehydration.md` | Defines the write-side snapshot-assisted rehydration flow. |
+| `aggregate_snapshot_schema_and_store.md` | Defines the schema and store boundary for aggregate snapshots. Deferred until write-side aggregate replay depth or rehydration cost justifies production implementation. |
+| `snapshot_assisted_write_side_rehydration.md` | Defines the write-side snapshot-assisted rehydration flow. Deferred because write-side aggregate snapshots are stricter and higher risk than read-side projection snapshots. |
 
 ---
 
