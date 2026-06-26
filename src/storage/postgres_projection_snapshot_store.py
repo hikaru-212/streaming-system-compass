@@ -101,6 +101,38 @@ class PostgresProjectionSnapshotStore:
 
         return _projection_snapshot_from_row(row)
 
+    def load_snapshot(self, snapshot_id: UUID) -> ProjectionSnapshot | None:
+        with self._connection.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    snapshot_id,
+                    order_id,
+                    source_event_id,
+                    source_event_sequence,
+                    source_global_position,
+                    state_status,
+                    total_amount,
+                    paid_amount,
+                    state_version,
+                    snapshot_schema_version,
+                    reducer_version,
+                    payload_hash,
+                    metadata_json,
+                    created_by,
+                    created_at
+                FROM projection_snapshots
+                WHERE snapshot_id = %s
+                """,
+                (snapshot_id,),
+            )
+            row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        return _projection_snapshot_from_row(row)
+
     def clear_snapshots(self, order_id: str) -> None:
         with self._connection.cursor() as cursor:
             cursor.execute(
