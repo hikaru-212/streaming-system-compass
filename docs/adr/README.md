@@ -32,6 +32,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0010 | [Separate Transaction Atomicity from Concurrency Admission](0010_transaction_atomicity_vs_concurrency_admission.md) | Proposed | Separates PR4 transaction atomicity from PR5 PostgreSQL concurrency admission. |
 | 0011 | [Separate Validation Mode from Validation Placement Strategy](0011_validation_mode_vs_validation_placement.md) | Proposed | Separates validation strength from where validation runs relative to the database transaction boundary. |
 | 0012 | [Two-Phase Concurrency Admission for PostgreSQL Write-Side](0012_two_phase_concurrency_admission.md) | Proposed | Evolves PR5 admission from append-time-only admission into two-phase stream preparation plus append-time admission. |
+| 0013 | [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) | Proposed | Separates PR4.5 snapshot-assisted state resolution from future runtime eligibility policy and persisted validation receipts. |
 
 ---
 
@@ -60,6 +61,7 @@ Recommended order:
 11. [Separate Validation Mode from Validation Placement Strategy](0011_validation_mode_vs_validation_placement.md) — explains why validation strength and validation placement should be modeled as separate design axes before future validation placement strategies are introduced.
 12. [Two-Phase Concurrency Admission for PostgreSQL Write-Side](0012_two_phase_concurrency_admission.md) — explains why PR5 evolves from append-time-only admission into two-phase stream preparation plus append-time admission.
 13. [Separate Semantic Correctness from Operational Trust](0007_separate_semantic_correctness_from_operational_trust.md) — explains why future trust evaluation should not collapse semantic correctness, projection correctness, operational trust, and action safety into one boolean.
+14. [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) — explains why PR4.5 resolver usage must stay separate from future runtime eligibility policy, fallback decisions, and persisted validation receipts.
 
 ---
 
@@ -90,6 +92,8 @@ ADR 0012 records why PR5 evolves from single-phase append-time admission into tw
 Both ADR 0010 and ADR 0011 are related to the postmortem [From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md), which records the PR4 implementation lesson that durable persistence hardening must preserve Compass semantic gates.
 
 ADR 0007 is related to the future evolution from structured semantic outcomes into layered trust verdicts. It should be read after ADR 0004, ADR 0005, ADR 0006, ADR 0008, ADR 0009, ADR 0010, ADR 0011, and ADR 0012 because it assumes the reader already understands the Compass layering, persistent-storage direction, event identity boundary, concurrency boundary, validation placement boundary, and two-phase admission evolution.
+
+ADR 0013 is related to Stage 3.5D PR4 / PR4.5. It records why projection snapshots are not trusted merely because they exist, why PR4.5 should remain a snapshot-assisted state resolver rather than a full trust-gate or fallback-policy engine, and why persisted validation receipts are deferred to a future hardening step.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -138,6 +142,7 @@ Recommended pattern:
 0010_transaction_atomicity_vs_concurrency_admission.md
 0011_validation_mode_vs_validation_placement.md
 0012_two_phase_concurrency_admission.md
+0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md
 ```
 
 Evolution or supporting notes may be kept as separate files:
