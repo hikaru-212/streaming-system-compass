@@ -4,23 +4,53 @@
 
 ## Purpose
 
-This note defines the implementation boundary for:
+This note records the closeout boundary for:
 
 ```text
 Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
 ```
 
-PR4.5 introduces the read-side resolver primitive that reconstructs projection state from an explicitly qualified projection snapshot plus accepted-history tail events.
+PR4.5 introduces a read-side resolver primitive that reconstructs projection state from an explicitly qualified projection snapshot plus accepted-history tail events.
 
-The goal is:
+The implemented goal is:
 
 ```text
-qualified projection snapshot
-+ tail events after snapshot.source_global_position
+externally qualified projection snapshot
++ accepted-history tail events after snapshot.source_global_position
 → resolved read-side projection state
 ```
 
-without running full accepted-history replay on every normal resolver path.
+The resolver is designed to avoid full accepted-history replay on the normal resolver path.
+
+It is a read-side resolution primitive, not a trust producer, not a fallback orchestrator, and not Compass Layer 2.
+
+---
+
+## Closeout Summary
+
+PR4.5 completes the following Stage 3.5D boundary:
+
+```text
+explicit snapshot identity
++ local compatibility checks
++ snapshot hydration
++ tail replay after snapshot.source_global_position
+→ resolved derived projection state
+```
+
+PR4.5 proves:
+
+- the resolver result contract
+- exact snapshot lookup by `snapshot_id`
+- snapshot hydration into `OrderState`
+- tail replay strictly after the snapshot source boundary
+- tail source cursor contract protection
+- no partial state exposure on unresolved results
+- PostgreSQL wiring with `PostgresProjectionSnapshotStore`
+- PostgreSQL wiring with `PostgresProjectionEventSource`
+- a current expensive trust path where PR4 `MATCH` can supply `trusted_snapshot_id` for PR4.5
+
+PR4.5 intentionally leaves trust persistence, fallback orchestration, diagnostic traces, and runtime policy to later stages.
 
 ---
 
@@ -51,7 +81,7 @@ future Compass Layer 2 evidence substrate
 
 It does not directly protect accepted-history admission.
 
-It provides technical evidence that future Compass Layer 2 runtime policy may consume.
+It produces technical evidence that future Compass Layer 2 runtime policy may consume.
 
 ---
 
@@ -76,7 +106,7 @@ full accepted-history replay
 PR4.5 answers a different question:
 
 ```text
-Given a qualified projection snapshot,
+Given an externally qualified projection snapshot,
 can the system resolve read-side projection state through snapshot + tail replay?
 ```
 
@@ -89,7 +119,73 @@ qualified snapshot
 → resolved projection state
 ```
 
-PR4.5 should not recreate PR4 validation on every read.
+PR4.5 should not recreate PR4 validation on every read as part of the resolver primitive.
+
+---
+
+## Trusted Snapshot ID Boundary
+
+The resolver requires an externally supplied `trusted_snapshot_id`.
+
+The resolver consumes trust; it does not produce trust.
+
+The important rule is:
+
+```text
+latest persisted snapshot != latest trusted snapshot
+```
+
+Therefore PR4.5 must not silently choose `load_latest_snapshot(order_id)` as the trust decision.
+
+The snapshot store may expose:
+
+```python
+load_snapshot(snapshot_id: UUID) -> ProjectionSnapshot | None
+```
+
+This is a storage retrieval helper only.
+
+It does not decide whether the snapshot is trustworthy.
+
+### Current Strongest Trust Source
+
+In the current system, the strongest available source of `trusted_snapshot_id` is a successful PR4 replay validation result:
+
+```text
+PR4 validator returns MATCH
+→ validation_result.snapshot_id
+→ trusted_snapshot_id
+→ PR4.5 resolver
+```
+
+This proves that a `trusted_snapshot_id` can exist in the current system.
+
+However, this trust is currently ephemeral because validation receipts are not yet persisted.
+
+### Cost Boundary
+
+If PR4 validation is executed before every resolver call, the system pays additional authority-validation cost before using the resolver:
+
+```text
+full accepted-history replay
++ snapshot-assisted validation replay
++ comparison
++ resolver snapshot + tail replay
+```
+
+This path is useful as a correctness demonstration, but it is not the final optimized runtime path.
+
+The intended future path is:
+
+```text
+PR4 validator MATCH
+→ persist validation receipt
+→ SnapshotTrustGate / SnapshotFastPathSelector reads receipt
+→ returns trusted_snapshot_id
+→ PR4.5 resolver consumes trusted_snapshot_id
+```
+
+Durable receipt-backed trust selection is deferred to Stage 4.
 
 ---
 
@@ -98,7 +194,7 @@ PR4.5 should not recreate PR4 validation on every read.
 ```text
 accepted history = authority
 projection snapshot = derived evidence
-snapshot-assisted resolver = read-side fast-path reconstruction
+snapshot-assisted resolver = read-side reconstruction primitive
 Compass Layer 2 = future semantic outcome / runtime decision layer
 ```
 
@@ -112,7 +208,7 @@ The resolver may reject a snapshot through local compatibility checks, but those
 
 ## Resolver Input Boundary
 
-The preferred resolver API should require an explicit snapshot identity:
+The PR4.5 resolver API requires an explicit snapshot identity:
 
 ```python
 def resolve_order(
@@ -124,45 +220,30 @@ def resolve_order(
     ...
 ```
 
-or, more strictly:
-
-```python
-def resolve_order_from_snapshot(
-    self,
-    order_id: str,
-    trusted_snapshot_id: UUID,
-) -> ProjectionSnapshotAssistedResolutionResult:
-    ...
-```
-
-The important rule is:
+The `trusted_snapshot_id` name means:
 
 ```text
-latest persisted snapshot != latest trusted snapshot
+an externally qualified snapshot id supplied by the caller
 ```
 
-Therefore PR4.5 should not silently choose `load_latest_snapshot(order_id)` as the trust decision.
+It does not mean:
 
-The store may expose:
-
-```python
-load_snapshot(snapshot_id: UUID) -> ProjectionSnapshot | None
+```text
+the resolver itself proved the snapshot trustworthy
 ```
 
-This is a storage retrieval helper only.
-
-It does not decide whether the snapshot is trustworthy.
+If no `trusted_snapshot_id` is available, the resolver should return a structured unresolved result rather than selecting a snapshot by itself.
 
 ---
 
-## Scope
+## Implemented Scope
 
-PR4.5 introduces:
+PR4.5 introduces or completes:
 
 - `ProjectionSnapshotAssistedResolutionStatus`
 - `ProjectionSnapshotAssistedResolutionResult`
 - `ProjectionSnapshotAssistedStateResolver`
-- exact snapshot-id based loading, if the store does not already support it
+- exact snapshot-id based loading through `load_snapshot(snapshot_id)`
 - local compatibility checks before snapshot hydration
 - snapshot-to-`OrderState` hydration
 - tail event loading after `snapshot.source_global_position`
@@ -171,6 +252,7 @@ PR4.5 introduces:
 - structured unresolved statuses when the snapshot cannot be used
 - unit tests for resolver behavior
 - PostgreSQL integration tests using real snapshot store and tail event source
+- integration proof that PR4 `MATCH` can supply `trusted_snapshot_id` for PR4.5
 
 ---
 
@@ -182,6 +264,10 @@ PR4.5 does not implement:
 - PR4 authority validator replacement
 - persisted validation receipt table
 - validation receipt writer
+- `SnapshotTrustGate`
+- `ValidationReceiptStore`
+- `SnapshotFastPathSelector`
+- `RuntimeStateResolutionService`
 - full runtime trust-gate lifecycle
 - runtime decision policy
 - automatic fallback policy
@@ -192,6 +278,10 @@ PR4.5 does not implement:
 - write-side aggregate rehydration
 - command admission behavior
 - Compass Layer 2 `SemanticOutcome`
+- `DecisionReceipt`
+- `DiagnosticTrace`
+- `RuntimeDecisionPolicy`
+- `StrategySelector`
 - action safety behavior
 
 If the resolver cannot use the provided snapshot, it should return a structured unresolved result.
@@ -202,7 +292,7 @@ Whether the caller falls back to full accepted-history replay belongs to a calle
 
 ## Local Compatibility Checks
 
-The first PR4.5 implementation may perform checks such as:
+PR4.5 performs local eligibility checks such as:
 
 ```text
 trusted_snapshot_id is present
@@ -218,9 +308,7 @@ snapshot_schema_version is supported
 reducer_version is compatible with the current reducer
 ```
 
-These checks are local eligibility checks.
-
-They can reject obviously unsafe or incompatible snapshots.
+These checks can reject obviously unsafe or incompatible snapshots.
 
 They cannot prove that the snapshot payload equals the state implied by accepted history.
 
@@ -230,7 +318,7 @@ That stronger authority-equivalence proof belongs to PR4 and future validation r
 
 ## Tail Replay Boundary
 
-The resolver must replay accepted tail events after the snapshot boundary:
+The resolver replays accepted tail events after the snapshot boundary:
 
 ```text
 event.global_position > snapshot.source_global_position
@@ -238,7 +326,7 @@ event.global_position > snapshot.source_global_position
 
 The source event itself must not be replayed again, because the snapshot already claims to include accepted history through that boundary.
 
-The resolver should load tail records through the projection event source and verify cursor advancement:
+The resolver loads tail records through the projection event source and verifies cursor advancement:
 
 ```text
 current_position = snapshot.source_global_position
@@ -252,13 +340,13 @@ loop:
     current_position = last record.global_position
 ```
 
-If the source returns a non-advancing record, the resolver should return a source-contract failure status rather than treating it as projection drift.
+If the source returns a non-advancing or out-of-order record, the resolver returns a source-contract failure status rather than treating it as projection drift.
 
 ---
 
-## Result Model Sketch
+## Result Model
 
-Suggested status values:
+Implemented status values:
 
 ```python
 class ProjectionSnapshotAssistedResolutionStatus(str, Enum):
@@ -270,7 +358,7 @@ class ProjectionSnapshotAssistedResolutionStatus(str, Enum):
     TAIL_REPLAY_FAILED = "TAIL_REPLAY_FAILED"
 ```
 
-Suggested result fields:
+Primary result fields:
 
 ```text
 order_id
@@ -281,15 +369,52 @@ source_global_position
 reason
 ```
 
-Do not include `authority_state` in the PR4.5 result.
+The result intentionally does not include `authority_state`.
 
 `authority_state` belongs to PR4 because PR4 performs the full accepted-history comparison.
 
 ---
 
+## Partial State Boundary
+
+PR4.5 follows this rule:
+
+```text
+Partial progress belongs to observability.
+Resolved state belongs to runtime correctness.
+```
+
+Therefore:
+
+```text
+RESOLVED_FROM_SNAPSHOT
+→ resolved_state exists
+
+Any unresolved status
+→ resolved_state is None
+```
+
+The resolver must not expose partially hydrated or partially replayed state as the current runtime state.
+
+Future diagnostic traces may record partial progress, such as:
+
+```text
+snapshot_id
+source_global_position
+latest_global_position_attempted
+last_replayed_global_position
+failure_stage
+failure_reason
+fallback_used
+```
+
+Those belong to Stage 4 diagnostic trace / observability work, not to the PR4.5 primary result.
+
+---
+
 ## PostgreSQL Integration Proof
 
-PR4.5 should include integration tests wiring:
+PR4.5 includes integration tests wiring:
 
 ```text
 PostgresProjectionSnapshotStore
@@ -297,16 +422,51 @@ PostgresProjectionSnapshotStore
 + ProjectionSnapshotAssistedStateResolver
 ```
 
-It should not require `PostgresAcceptedHistoryEventSource` in the normal resolver path because PR4.5 does not perform full accepted-history replay comparison.
+The normal resolver path does not require `PostgresAcceptedHistoryEventSource` because PR4.5 does not perform full accepted-history replay comparison.
 
-Integration tests should prove:
+Integration tests prove:
 
 - persisted snapshot + no tail resolves state
-- persisted snapshot + tail event resolves updated state
-- tail replay starts after `snapshot.source_global_position`
-- exact `snapshot_id` loading does not select the latest snapshot by accident
+- persisted snapshot + real PostgreSQL tail event resolves updated state
+- tail replay starts strictly after `snapshot.source_global_position`
+- PR4 `MATCH` can supply `trusted_snapshot_id` for PR4.5
 - resolver does not mutate accepted history
 - resolver does not mutate projection state, checkpoint state, or snapshot rows
+
+The PR4-to-PR4.5 integration proof is intentionally correctness-oriented and may be expensive.
+
+It demonstrates that current trust can be produced, not that every runtime request should recompute trust through PR4.
+
+---
+
+## Future Measurement Boundary
+
+PR4.5 does not attempt to prove that snapshot-assisted resolution is always faster than full replay.
+
+The current integration path can demonstrate:
+
+```text
+PR4 MATCH
+→ trusted_snapshot_id
+→ PR4.5 resolver
+```
+
+However, this path is correctness-oriented and may be expensive because PR4 validation performs authority replay.
+
+Future stages should measure both write-side and read-side costs, including:
+
+- `PRE_transaction + OCC`
+- `IN_transaction + pessimistic locking`
+- full authority replay
+- PR4 validation
+- PR4.5 resolver
+- receipt-backed resolver
+- tail replay length
+- lock wait time
+- validation elapsed time
+- transaction elapsed time
+
+Cost evidence should be recorded in Stage 4 `DecisionReceipt` / runtime evidence records before being used by `RuntimeDecisionPolicy` or `StrategySelector`.
 
 ---
 
@@ -341,18 +501,27 @@ The last one is a future Layer 2 policy question.
 
 ---
 
-## Implementation Sequence
+## Closeout Commit Sequence
 
-Recommended PR4.5 commits:
+PR4.5 was completed through the following implementation sequence:
 
 ```text
 Commit 1 — docs: define projection snapshot-assisted state resolver boundary
-Commit 2 — docs: align snapshot runtime eligibility ADR with Stage 3.5D scope
+Commit 2 — docs: align snapshot runtime eligibility with Stage 3.5D scope
 Commit 3 — storage: load projection snapshot by snapshot id
-Commit 4 — resolution: define projection snapshot-assisted resolver result contract
+Commit 4 — resolution: add projection snapshot-assisted result contract
 Commit 5 — resolution: implement projection snapshot-assisted state resolver
-Commit 6 — tests: cover projection snapshot-assisted resolver with PostgreSQL stores
-Commit 7 — docs: align projection snapshot-assisted state resolver closeout
+Commit 6 — integration: wire projection snapshot-assisted resolver
+Commit 7 — docs: close projection snapshot-assisted resolver boundary
+```
+
+Exact commit numbers may differ from local history, but the closeout boundary is:
+
+```text
+resolver primitive complete
+PostgreSQL wiring complete
+trust source / cost boundary documented
+future receipt / policy / diagnostic work deferred
 ```
 
 ---

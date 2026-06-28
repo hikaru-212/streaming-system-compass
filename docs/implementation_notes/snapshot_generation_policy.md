@@ -17,6 +17,40 @@ and consumed only after trust qualification.
 
 ---
 
+## Current Stage 3.5D Status
+
+Stage 3.5D currently focuses on read-side projection snapshot trust.
+
+Current completed path:
+
+```text
+PR4
+= projection snapshot-assisted replay validator
+= validates snapshot-assisted replay against accepted-history authority replay
+
+PR4.5
+= projection snapshot-assisted state resolver
+= consumes externally qualified projection snapshots for read-side resolution
+```
+
+Projection snapshots are derived-state compression. If they are invalid or unusable, they can be bypassed, rejected, rebuilt, or compared against accepted history.
+
+Write-side aggregate snapshots are intentionally deferred because they may participate in command admission and therefore require a stricter trust model.
+
+Current plan:
+
+```text
+PR5
+= document Aggregate Snapshot Trust Boundary / Deferral Decision
+
+PR6 / PR7
+= deferred
+```
+
+Automatic snapshot production remains out of scope for Stage 3.5D closeout.
+
+---
+
 ## Responsibility Separation
 
 Stage 3.5D should keep these responsibilities separate:
@@ -100,7 +134,9 @@ This is a later optimization.
 
 ## Aggregate Snapshot Production Points
 
-Aggregate snapshots may be produced:
+Aggregate snapshot production is currently deferred.
+
+The following options remain valid future production patterns, but they are not part of the current Stage 3.5D implementation.
 
 ### 1. After Full Aggregate Rehydration
 
@@ -178,18 +214,23 @@ Accepted history is authority.
 
 ## Generation Policy v1 Recommendation
 
-For initial Stage 3.5D implementation:
+For the Stage 3.5D closeout direction:
 
 ```text
-PR1–PR4:
-support explicit snapshot building for tests and replay validation
+PR1–PR4
+= support snapshot trust boundary, schema, storage, and replay validation
 
-PR5–PR7:
-support aggregate snapshot building after explicit full aggregate replay
+PR4.5
+= support read-side projection snapshot-assisted resolution from an externally qualified snapshot id
 
-automatic production:
-defer until safe consumption and collision policy are proven
+PR5
+= document aggregate snapshot trust boundary and deferral decision
+
+PR6 / PR7
+= deferred
 ```
+
+Automatic snapshot production is deferred until safe consumption, collision handling, validation receipts, invalidation policy, and runtime fallback behavior are proven.
 
 This keeps Stage 3.5D focused on trust-safe snapshot usage first.
 
