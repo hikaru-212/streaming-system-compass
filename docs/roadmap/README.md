@@ -70,6 +70,7 @@ The project has already completed:
 - Stage 3.5D PR3 — PostgresProjectionSnapshotStore
 - Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
 - Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
+- Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
 
 Stage 3.5B now forms a durable write-side baseline:
 
@@ -85,10 +86,10 @@ The current major focus is:
 
 ```text
 Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
-current next work: PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
+current next work: Stage 3.5D closeout / merge back to main
 ```
 
-PR4.5 is now treated as completed after closeout documentation. It introduced a read-side resolver primitive that consumes an externally qualified `trusted_snapshot_id`. The strongest current source of that id is a PR4 validator `MATCH` result, but durable receipt-backed trust selection remains deferred to Stage 4.
+PR4.5 is now treated as completed after closeout documentation. It introduced a read-side resolver primitive that consumes an externally qualified `trusted_snapshot_id`. The strongest current source of that id is a PR4 validator `MATCH` result, but durable receipt-backed trust selection remains deferred to Stage 4. PR5 records the aggregate snapshot trust boundary and defers write-side aggregate snapshot implementation.
 
 Stage 3.5C is now complete at the durable read-side baseline level. PR1 established the durable read-side schema boundary, PR2 made projection state durable through `PostgresProjectionStore`, PR3 made checkpoint progress durable through `PostgresCheckpointStore`, PR4 introduced the first PostgreSQL-backed projection worker baseline using `GLOBAL_POSITION` as the accepted-history consumption cursor, and PR5 added durable replay / rebuild validation as the first accepted-history replay check against persisted projection state.
 
@@ -104,7 +105,7 @@ PostgresProjectionStore + PostgresCheckpointStore = atomic read-side persistence
 PR4 keeps the reducer storage-agnostic, stores checkpoint progress as `cursor_kind = GLOBAL_POSITION`, and assumes a single active worker process per `worker_name`. PR5 adds the durable replay / rebuild validation baseline by comparing accepted-history replay with persisted projection state. Worker leasing, checkpoint row locking, DLQ, watermark semantics, distributed multi-worker coordination, and Compass Layer 2 governance remain deferred.
 
 
-Snapshot trust remains the Stage 3.5D focus. PR1 has defined the trust boundary, PR1.5 has enabled stage-branch CI checks, PR2 has introduced the durable `projection_snapshots` schema baseline, PR3 has made projection snapshots usable through `PostgresProjectionSnapshotStore`, and PR4 has added projection snapshot-assisted replay validation against accepted-history replay. PR4.5 has added the read-side snapshot-assisted resolver primitive and PostgreSQL wiring, including a correctness demonstration that PR4 `MATCH` can supply the `trusted_snapshot_id` consumed by PR4.5. Retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.
+Snapshot trust remains the Stage 3.5D focus. PR1 has defined the trust boundary, PR1.5 has enabled stage-branch CI checks, PR2 has introduced the durable `projection_snapshots` schema baseline, PR3 has made projection snapshots usable through `PostgresProjectionSnapshotStore`, and PR4 has added projection snapshot-assisted replay validation against accepted-history replay. PR4.5 has added the read-side snapshot-assisted resolver primitive and PostgreSQL wiring, including a correctness demonstration that PR4 `MATCH` can supply the `trusted_snapshot_id` consumed by PR4.5. Aggregate snapshot schema/store work, snapshot-assisted write-side rehydration, retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.
 
 ---
 

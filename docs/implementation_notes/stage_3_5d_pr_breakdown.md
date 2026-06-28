@@ -58,7 +58,7 @@ Deferred PR6 — Aggregate Snapshot Schema / Store
 Deferred PR7 — Snapshot-Assisted Write-Side Rehydration
 ```
 
-A later Stage 3.5D closeout PR may merge the stage branch into `main` after PR5.
+After PR5, Stage 3.5D is ready to merge the stage branch into `main`.
 
 ---
 
@@ -365,7 +365,7 @@ Close Stage 3.5D by explicitly deferring write-side aggregate snapshot implement
 
 ### Status
 
-Next.
+Completed.
 
 ### Scope
 
@@ -443,7 +443,7 @@ This work is deferred until the system has enough need and enough governance inf
 
 ## Stage 3.5D Closeout Direction
 
-After PR5 merges into the Stage 3.5D branch, Stage 3.5D may be closed by merging:
+After PR5, Stage 3.5D may be closed by merging:
 
 ```text
 base: main

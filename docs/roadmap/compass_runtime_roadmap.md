@@ -104,6 +104,8 @@ The current system already supports:
 - durable projection snapshot schema baseline through Stage 3.5D PR2
 - PostgreSQL-backed projection snapshot storage through Stage 3.5D PR3
 - projection snapshot-assisted replay validation through Stage 3.5D PR4
+- projection snapshot-assisted state resolution through Stage 3.5D PR4.5
+- aggregate snapshot trust deferral through Stage 3.5D PR5
 
 This means Compass is already more than a passive checker.
 
@@ -154,13 +156,13 @@ That interpretation and decision boundary belongs to later Compass Layer 2, stru
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline. Stage 3.5C PR5 adds durable replay / rebuild validation so persisted projection state can be checked against accepted-history replay. Stage 3.5D PR4 adds projection snapshot-assisted replay validation so snapshot + tail replay can also be checked against accepted-history replay. Stage 3.5D PR4.5 adds the resolver primitive that consumes an externally qualified `trusted_snapshot_id`; the strongest current source is PR4 `MATCH`, but durable receipt-backed trust selection is deferred to Stage 4.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline. Stage 3.5C PR5 adds durable replay / rebuild validation so persisted projection state can be checked against accepted-history replay. Stage 3.5D PR4 adds projection snapshot-assisted replay validation so snapshot + tail replay can also be checked against accepted-history replay. Stage 3.5D PR4.5 adds the resolver primitive that consumes an externally qualified `trusted_snapshot_id`; the strongest current source is PR4 `MATCH`, but durable receipt-backed trust selection is deferred to Stage 4. Stage 3.5D PR5 records why aggregate snapshot schema/store work and snapshot-assisted write-side rehydration remain deferred.
 
 ---
 
 ## Stage 3.5D Snapshot Substrate Status
 
-Stage 3.5D has now begun moving from documentation boundary to durable snapshot substrate.
+Stage 3.5D has completed the read-side projection snapshot trust substrate and explicitly deferred write-side aggregate snapshot implementation.
 
 Completed baseline steps:
 
@@ -171,6 +173,7 @@ PR2   — Projection Snapshot Schema Baseline
 PR3   — PostgresProjectionSnapshotStore
 PR4   — Projection Snapshot-Assisted Replay Validator
 PR4.5 — Projection Snapshot-Assisted State Resolver
+PR5   — Aggregate Snapshot Trust Boundary / Deferral Decision
 ```
 
 PR2 introduces `projection_snapshots` as a derived snapshot artifact table.
@@ -202,7 +205,7 @@ latest snapshot = highest source_global_position
 not newest created_at row
 ```
 
-The next Stage 3.5D step is PR5: record the aggregate snapshot trust boundary and deferral decision. Aggregate snapshot schema/store work and snapshot-assisted write-side rehydration remain deferred because write-side aggregate snapshots can influence command admission.
+PR5 records the aggregate snapshot trust boundary and deferral decision. Aggregate snapshot schema/store work and snapshot-assisted write-side rehydration remain deferred because write-side aggregate snapshots can influence command admission.
 
 ---
 

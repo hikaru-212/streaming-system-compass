@@ -38,6 +38,8 @@ Stage 3.5D PR1.5 — CI Stage Branch Checks
 Stage 3.5D PR2 — Projection Snapshot Schema Baseline
 Stage 3.5D PR3 — PostgresProjectionSnapshotStore
 Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
+Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
+Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
 ```
 
 Stage 3.5B now includes:
@@ -144,7 +146,7 @@ PostgreSQL-backed validator integration tests
 
 
 
-These completed items are no longer tracked as deferred backlog work.
+These completed items are no longer tracked as deferred backlog work. PR6 / PR7 aggregate snapshot implementation remains deferred and is tracked below.
 
 This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline and the completed Stage 3.5C durable read-side baseline.
 
@@ -880,7 +882,7 @@ The next Stage 3.5D step is PR5:
 PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
 ```
 
-PR5 should document why aggregate snapshot schema/store work and snapshot-assisted write-side rehydration are deferred.
+PR5 documents why aggregate snapshot schema/store work and snapshot-assisted write-side rehydration are deferred.
 
 ### Why This Boundary Exists
 
@@ -892,7 +894,7 @@ Therefore, write-side aggregate snapshot trust requires a stricter contract than
 
 ### Current Stage 3.5D Direction
 
-Stage 3.5D now proceeds as:
+Stage 3.5D now closes as:
 
 ```text
 PR4.5 closeout
