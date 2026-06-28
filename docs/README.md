@@ -19,7 +19,11 @@ It now also serves as the reference frame for an executable baseline covering:
 - PostgreSQL-backed transactional write-side execution
 - PostgreSQL-backed two-phase concurrency admission
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
-- local PostgreSQL development setup for durable write-side work
+- Stage 3.5C durable read-side baseline
+- Stage 3.5D snapshot trust contract and read-side replay-efficiency baseline
+- projection snapshot schema, store, replay validator, and snapshot-assisted state resolver
+- aggregate snapshot trust deferral decision
+- local PostgreSQL development setup for durable write-side and read-side work
 - executable failure-path tests for selected invariants and adversarial cases
 
 ---
@@ -45,21 +49,23 @@ The repository currently has an implemented baseline for:
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - executable tests across unit, integration, semantic-case, adversarial-baseline, Stage 3 projection-baseline, storage integration, transactional PostgreSQL-backed write-side, and admission-boundary layers
 - Stage 3.5C durable read-side baseline, including durable order-event vocabulary hardening, read-side schema, `PostgresProjectionStore`, `PostgresCheckpointStore`, global-position projection worker orchestration, and durable replay / rebuild validation
+- Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral
 
-The repository has completed **Stage 3.5B — Durable Write-Side Baseline** and **Stage 3.5C — Durable Read-Side Baseline**.
+The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **Stage 3.5C — Durable Read-Side Baseline**, and **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**.
 
-Stage 3.5C is now complete at the durable read-side baseline level.
+Stage 3.5D is now complete at the read-side snapshot trust baseline level.
 
 The current focus is now:
 
-- preparing **Stage 3.5D — Snapshot Trust Contract / replay-efficiency work**
-- keeping Stage 3.5E durable history hardening and Stage 4 Compass Layer 2 governance deferred to their proper stages
-- preserving the completed Stage 3.5C durable read-side baseline as the stable foundation for the next stage
+- closing out Stage 3.5D and preparing the branch to merge back to `main`
+- opening a documentation cleanup branch before Stage 3.5E
+- cleaning up known issues across `implementation_notes/`, `roadmap/`, and `adr/`
+- keeping Stage 3.5E and Stage 4 Compass Layer 2 governance deferred to their proper stages
 
 The next major implementation steps are:
 
-- Stage 3.5D Snapshot Trust Contract / persistence optimization / replay efficiency
-- Stage 3.5E durable history and permission hardening
+- documentation cleanup before Stage 3.5E
+- Stage 3.5E minimal actor / permission boundary
 - Stage 4 runtime semantic validation, semantic outcome structuring, retry reason classification, runtime decision policy, and action safety
 
 ---
@@ -117,9 +123,10 @@ top-level system structure
 → durable write-side baseline
 → validation placement strategy
 → completed durable read-side baseline
-→ snapshot trust / replay efficiency
+→ completed snapshot trust / replay efficiency
 → implementation notes for stage / PR execution
-→ durable history hardening
+→ documentation cleanup before Stage 3.5E
+→ minimal actor / permission boundary
 → runtime semantic validation and outcome structuring
 → runtime decision policy and action safety
 → boundary clarification
