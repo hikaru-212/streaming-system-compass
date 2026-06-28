@@ -20,135 +20,21 @@ An item should remain here only if it has at least one of the following:
 
 Pure naming preference, style cleanup, or already-completed implementation work should not remain in this backlog.
 
-Completed Stage 3.5B work and completed Stage 3.5C durable read-side work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
+Completed Stage 3.5B, Stage 3.5C, and Stage 3.5D work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
 
 Current focus:
 
 ```text
-Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
+Stage 3.5E — Minimal Actor / Permission Boundary
 ```
 
-Recently completed baselines:
+Completed implementation details now live under:
 
-```text
-Stage 3.5B — Durable Write-Side Baseline
-Stage 3.5C — Durable Read-Side Baseline
-Stage 3.5D PR1 — Snapshot Trust Contract Boundary
-Stage 3.5D PR1.5 — CI Stage Branch Checks
-Stage 3.5D PR2 — Projection Snapshot Schema Baseline
-Stage 3.5D PR3 — PostgresProjectionSnapshotStore
-Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
-Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
-Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
-```
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
+- [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 
-Stage 3.5B now includes:
-
-```text
-PR1 Schema + Local PostgreSQL + Migration
-PR2 PostgresEventStore
-PR3 PostgresIdempotencyStore
-PR4 Transactional Semantic Write-Side Boundary
-PR5 PostgreSQL Concurrency Admission Boundary
-PR6 Validation Placement Strategy Boundary / Stage 4 Prelude
-```
-
-Stage 3.5C PR0 has also completed durable order-event vocabulary hardening:
-
-```text
-event_type durable vocabulary normalization
-proof_prev_status database CHECK constraint
-order_events unique constraint rename
-```
-
-Stage 3.5C PR1 has completed the durable read-side schema baseline:
-
-```text
-projection_states schema
-projection_checkpoints schema
-checkpoint cursor-kind / cursor-value alignment
-read-side schema constraint tests
-```
-
-Stage 3.5C PR2 has completed the PostgreSQL-backed projection state store baseline:
-
-```text
-PostgresProjectionStore
-projection_states save / load / upsert / clear behavior
-Decimal / status / version round-trip tests
-last_sequence persisted from OrderState.version
-caller-owned transaction boundary preserved
-```
-
-Stage 3.5C PR3 has completed the PostgreSQL-backed checkpoint store baseline:
-
-```text
-PostgresCheckpointStore
-projection_checkpoints save / load / upsert / clear behavior
-cursor_kind / cursor_value round-trip tests
-worker-specific checkpoint isolation
-caller-owned transaction boundary preserved
-```
-
-Stage 3.5C PR4 has completed the global-position projection worker baseline:
-
-```text
-order_events.global_position
-PostgresProjectionEventSource
-ProjectionEventRecord envelope
-shared order-event hydration helper
-PostgresProjectionWorker
-projection state + checkpoint progress in one read-side transaction
-GLOBAL_POSITION checkpoint persistence
-single-worker baseline with worker concurrency intentionally deferred
-```
-
-Stage 3.5C PR5 has completed the durable replay / rebuild validation baseline:
-
-```text
-DurableReplayValidator
-ReplayValidationStatus
-ReplayValidationResult
-accepted-history replay through canonical reducer
-comparison against persisted projection state
-MATCH / MISSING_PROJECTION / DRIFT / NO_ACCEPTED_HISTORY
-no accepted-history mutation
-no checkpoint progress advancement
-```
-
-
-Stage 3.5D PR3 has completed the PostgreSQL-backed projection snapshot store baseline:
-
-```text
-ProjectionSnapshot
-PostgresProjectionSnapshotStore
-SnapshotWriteCollisionError
-save_snapshot / load_latest_snapshot / clear_snapshots
-latest snapshot selected by source_global_position, not created_at
-idempotent same-complete-boundary same-evidence write handling
-collision detection for inconsistent lineage, reducer version, schema version, or payload hash
-caller-owned transaction boundary preserved
-```
-
-Stage 3.5D PR4 has completed the projection snapshot-assisted replay validator baseline:
-
-```text
-ProjectionSnapshotReplayValidationStatus
-ProjectionSnapshotReplayValidationResult
-ProjectionSnapshotReplayValidator
-PostgresAcceptedHistoryEventSource
-snapshot-assisted replay compared against accepted-history replay
-tail pagination across pages
-TAIL_EVENT_SOURCE_CONTRACT_VIOLATION for non-advancing / out-of-order tail positions
-SNAPSHOT_ASSISTED_DRIFT for authority mismatch after replay
-PostgreSQL-backed validator integration tests
-```
-
-
-
-These completed items are no longer tracked as deferred backlog work. PR6 / PR7 aggregate snapshot implementation remains deferred and is tracked below.
-
-This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline and the completed Stage 3.5C durable read-side baseline.
+This backlog should now be used only for concerns intentionally deferred beyond the completed durable write-side, durable read-side, and read-side snapshot trust baselines.
 
 ---
 
@@ -156,7 +42,7 @@ This backlog should now be used only for concerns intentionally deferred beyond 
 
 ```text
 Stage 4 / evidence design
-→ should wait for SemanticOutcome, runtime evidence, or governance work
+→ should wait for SemanticOutcome, runtime evidence, receipts, or governance work
 
 Stage 4 / retry classification
 → should wait for SemanticOutcome / request-attempt evidence design
@@ -167,14 +53,8 @@ Stage 4 / domain policy contract
 Stage 4 / connection-pool hardening
 → should wait until structured error modeling, connection lifecycle policy, or pooled database connections exist
 
-Stage 3.5D / persistence optimization
-→ should wait until durable write-side and durable read-side baselines exist, and replay / rebuild cost becomes meaningful
-
-Stage 3.5D / snapshot trust contract
-→ should wait until durable read-side baseline exists and snapshot-assisted replay is ready to be qualified for fast-path use
-
-Stage 3.5E / durable history hardening
-→ should wait until durable write-side, durable read-side, and replay-efficiency boundaries are clear enough to define database role authority
+Stage 3.5E / actor-permission hardening
+→ should wait until minimal actor semantics and durable-history role boundaries are being defined
 
 Later evaluation
 → should be revisited only when a concrete runtime, storage, or operational need appears
@@ -188,9 +68,7 @@ Stage 5+ / later governance hardening
 
 ---
 
----
-
-## Projection Worker Lease / Checkpoint Row Locking
+## 1. Projection Worker Lease / Checkpoint Row Locking
 
 ### Current Decision
 
@@ -206,7 +84,7 @@ one active process per worker_name
 
 ### Why Not Now
 
-The current PR4 boundary is:
+The current read-side boundary is:
 
 ```text
 accepted history
@@ -218,7 +96,7 @@ accepted history
 
 with projection state and checkpoint progress persisted atomically.
 
-Adding worker leasing or checkpoint row locking would expand PR4 from a deterministic durable baseline into runtime coordination hardening.
+Adding worker leasing or checkpoint row locking would expand the baseline from deterministic durable read-side semantics into runtime coordination hardening.
 
 That would mix two separate concerns:
 
@@ -243,7 +121,7 @@ A later hardening pass may introduce:
 
 ### Architectural Consequence
 
-This future work should preserve the current PR4 invariant:
+This future work should preserve the current invariant:
 
 ```text
 projection state
@@ -265,18 +143,17 @@ Later production hardening
 
 After durable replay / rebuild validation exists and before any multi-worker or production deployment story depends on concurrent projection workers.
 
+---
 
-## 0. Order Domain Policy Contract v0 and Policy-Guided Recovery
+## 2. Order Domain Policy Contract v0 and Policy-Guided Recovery
 
 ### Current Decision
 
-Do not build a full general-purpose policy framework during Stage 3.5C, Stage 3.5D, Stage 3.5E, or the first Layer 2 validator pass.
+Do not build a full general-purpose policy framework during Stage 3.5E or the first Layer 2 validator pass.
 
 The current project should remain focused on:
 
-- durable read-side baseline
-- replay / snapshot trust substrate
-- durable history hardening
+- minimal actor / permission boundary
 - Layer 2 validation
 - structured semantic outcomes
 - runtime decisions
@@ -321,6 +198,7 @@ The first version may define:
 - idempotency conflict rule
 - stale-write recovery rule
 - projection-drift rebuild / quarantine recovery hint
+- snapshot-trust failure recovery hint
 
 It may also define recovery strategies such as:
 
@@ -381,17 +259,6 @@ structured semantic outcome
 
 It prevents agentic retry from becoming blind trial-and-error against Compass.
 
-Instead, recovery can become:
-
-```text
-replay prior accepted result
-reload accepted history and rebuild once
-rebuild projection state
-quarantine derived state
-block irreversible mutation
-escalate human review
-```
-
 ### Current Classification
 
 ```text
@@ -437,11 +304,11 @@ provide a stable rule and recovery source for Stage 4 SemanticOutcome and Runtim
 
 ---
 
-## 1. UUIDv7 / Time-Ordered UUID Evaluation
+## 3. UUIDv7 / Time-Ordered UUID Evaluation
 
 ### Current Decision
 
-Do not introduce UUIDv7 during Stage 3.5B or Stage 3.5C.
+Do not introduce UUIDv7 during the completed durable write-side / read-side baseline work.
 
 Current approach:
 
@@ -458,7 +325,7 @@ UUIDv7 adoption may require:
 - dependency decision
 - migration strategy
 - test updates
-- decision on whether ordering should be represented by identity, sequence, or append time
+- decision on whether ordering should be represented by identity, sequence, global position, or append time
 
 ### Existing Issue
 
@@ -474,11 +341,11 @@ Later evaluation
 
 ### Suggested Timing
 
-After Stage 3.5C or during later storage / operational hardening, unless storage locality or operational inspection becomes a real bottleneck.
+During later storage / operational hardening, unless storage locality or operational inspection becomes a real bottleneck.
 
 ---
 
-## 2. Formal `EventStoreProtocol`
+## 4. Formal `EventStoreProtocol`
 
 ### Current Decision
 
@@ -521,7 +388,7 @@ Defer until multiple storage implementations or admission strategies require str
 
 ---
 
-## 3. Stored Event Record / JSONB Evidence Hydration
+## 5. Stored Event Record / JSONB Evidence Hydration
 
 ### Current Decision
 
@@ -574,15 +441,15 @@ Stage 4 / evidence design
 
 ### Suggested Timing
 
-During audit, evidence, or SemanticOutcome persistence design.
+During audit, evidence, receipt, or `SemanticOutcome` persistence design.
 
 ---
 
-## 4. Registry-Stage Timing in `metadata_json`
+## 6. Registry-Stage Timing in `metadata_json`
 
 ### Current Decision
 
-Stage 3.5B did not implement durable timing collection.
+The completed durable baselines did not implement durable timing collection.
 
 `metadata_json` remains a reserved container for future runtime metadata.
 
@@ -600,16 +467,20 @@ Possible future timing fields:
 - transaction total duration
 - validation placement mode
 - admission strategy identity
+- snapshot validation duration
+- snapshot-assisted resolution duration
 
 ### Why Not Now
 
-Stage 3.5B focused on correctness boundaries:
+The completed durable baselines focused on correctness boundaries:
 
 - durable accepted history
 - durable idempotency
 - transaction atomicity
 - concurrency admission
-- validation placement
+- durable read-side state
+- replay / rebuild validation
+- snapshot trust substrate
 
 Timing collection is meaningful, but it should not distract from correctness boundaries.
 
@@ -621,11 +492,11 @@ Stage 4 / evidence design
 
 ### Suggested Timing
 
-During Stage 4 evidence / outcome persistence, or during a dedicated observability pass after durable read-side persistence exists.
+During Stage 4 evidence / outcome persistence, or during a dedicated observability pass.
 
 ---
 
-## 5. Event Payload / Proof / Metadata JSON Shape
+## 7. Event Payload / Proof / Metadata JSON Shape
 
 ### Current Decision
 
@@ -641,7 +512,7 @@ proof_json = {
 metadata_json = {}
 ```
 
-Stage 3.5C PR0 hardened selected durable vocabulary at the schema boundary, but it did not define a full JSONB event evidence model.
+Stage 3.5C hardened selected durable vocabulary at the schema boundary, but it did not define a full JSONB event evidence model.
 
 ### Why Not Now
 
@@ -654,7 +525,7 @@ Clarify:
 - whether `payload_json` should duplicate event domain fields
 - whether `proof_json` is only a proof copy or a richer proof-carrying evidence container
 - whether `metadata_json` should be restricted to runtime metadata
-- how these fields relate to SemanticOutcome persistence
+- how these fields relate to `SemanticOutcome` / `DecisionReceipt` persistence
 
 ### Current Classification
 
@@ -664,16 +535,15 @@ Stage 4 / evidence design
 
 ### Suggested Timing
 
-After durable read-side baseline, before or during SemanticOutcome persistence design.
+Before or during `SemanticOutcome` / receipt persistence design.
 
 ---
 
-
-## 6. Projection State Version / Source Sequence Separation
+## 8. Projection State Version / Source Sequence Separation
 
 ### Current Decision
 
-Do not rename or split `OrderState.version` during Stage 3.5C PR2.
+Do not rename or split `OrderState.version` during the completed durable read-side / snapshot trust baselines.
 
 At the current projection model level:
 
@@ -688,64 +558,57 @@ Therefore `PostgresProjectionStore` intentionally persists:
 projection_states.last_sequence = state.version
 ```
 
+Stage 3.5D keeps the physical projection snapshot rule future-safe:
+
+```text
+state_version <= source_event_sequence
+```
+
+while current resolver / validator compatibility may still require stricter runtime checks.
+
 ### Why Not Now
 
-Changing this during PR2 would turn a storage-boundary implementation into a projection model refactor.
+Changing this would turn a storage-boundary implementation into a projection model refactor.
 
 It would require coordinated changes across:
 
 - reducer logic
 - worker sequencing logic
 - projection tests
+- snapshot trust validation
 - future checkpoint / worker integration
 
-The current durable read-side baseline does not yet require separate projection-row versioning.
+The current order domain does not yet include non-state-changing accepted events.
 
 ### Future Work
 
-Revisit this during Stage 3.5D if Snapshot Trust Contract or replay-efficiency work requires separating:
+Revisit only if the domain introduces accepted events that do not change business state, or if future reducer / projection versioning requires separating:
 
 ```text
-source event sequence
-projection version
-reducer version
-snapshot lineage
-projection schema version
-```
-
-Possible future representation:
-
-```text
-last_sequence
-= accepted event sequence reflected by the projection
-
-projection_version
-= projection row update / rebuild version
-
+business_version
+last_processed_sequence
+source_global_position
 reducer_version
-= reducer version used to produce the projection
-
-schema_version
-= durable projection schema version
+projection_schema_version
 ```
 
 ### Current Classification
 
 ```text
-Stage 3.5D / snapshot trust contract
+Later evaluation
 ```
 
 ### Suggested Timing
 
-During Stage 3.5D Snapshot Trust Contract work, before Stage 4 Layer 2 validation depends on persisted projection-state evidence.
+Only when non-state-changing accepted events, reducer migration, or projection schema migration requires it.
 
 ---
 
-## 7. Append-Only Database Hardening
+## 9. Append-Only Database Hardening
 
 ### Current Decision
 
-Stage 3.5B does not implement production-grade append-only hardening.
+The completed durable write-side baseline does not implement production-grade append-only hardening.
 
 Current defenses are:
 
@@ -753,25 +616,17 @@ Current defenses are:
 - `accepted_event_id` primary key
 - `UNIQUE(order_id, sequence)`
 - expected-version check in the store
-- PR4 transaction boundary
-- PR5 admission boundary
-- Stage 3.5C PR0 durable vocabulary and proof-status schema hardening
+- transactional write-side boundary
+- two-phase concurrency admission
+- durable vocabulary and proof-status schema hardening
 
 These defenses protect the accepted-history write path, but they do not yet make `order_events` a database-level append-only log.
 
 PostgreSQL rows remain mutable by default if a database role has `UPDATE` or `DELETE` authority.
 
-### Why Not During Stage 3.5C PR1
+### Why Not Now
 
-Stage 3.5C PR1 should focus on durable read-side schema baseline work.
-
-Database role boundaries should wait until the project knows the final baseline shape of:
-
-- write-side runtime access
-- projection worker access
-- read-side store mutation requirements
-- checkpoint update requirements
-- rebuild / reset requirements
+Database role boundaries should wait until the project defines the minimal actor / permission boundary.
 
 This matters because `order_events` should move toward append-only accepted history, while `projection_states` and `projection_checkpoints` must remain mutable enough to support upsert, resume, reset, and rebuild.
 
@@ -801,51 +656,30 @@ read_only_observer
 ### Current Classification
 
 ```text
-Stage 3.5E / durable history hardening
+Stage 3.5E / actor-permission hardening
 ```
 
 ### Suggested Timing
 
-During:
-
-```text
-Stage 3.5E — Durable History and Permission Hardening
-```
-
-after Stage 3.5C durable read-side baseline and Stage 3.5D replay-efficiency work make runtime storage authority clear enough to harden safely.
+During Stage 3.5E minimal actor / permission boundary work.
 
 ---
 
-## 7. Integration Test Boundary and CI Strategy
+## 10. Integration Test Boundary and CI Strategy
 
 ### Current Decision
 
-Stage 3.5B introduced or aligned:
+The project should keep PostgreSQL-backed tests explicit and isolated from the development database.
 
-- `TEST_DATABASE_URL`
-- `compass_test`
-- test database guardrails
-- destructive DB test isolation
-- CI test database creation
-- migration against test database
-- integration test directory reorganization
-- transactional integration test README
-- in-memory integration test README
-
-Stage 3.5C PR0 also added PostgreSQL schema-constraint coverage for durable order-event vocabulary hardening.
-
-Stage 3.5C PR1 added PostgreSQL schema-constraint coverage for durable read-side table shape and checkpoint cursor alignment.
-
-These are sufficient for the current durable write-side baseline, PR0 schema-hardening pass, and PR1 read-side schema baseline.
+The current baseline already separates destructive integration tests through `TEST_DATABASE_URL`.
 
 ### Remaining Future Work
 
-Possible later follow-ups:
-
-- pytest markers for DB-backed tests
-- integration root README
-- performance / benchmark test separation
-- optional test container lifecycle helpers
+- clearer test markers for unit vs integration vs destructive PostgreSQL tests
+- possible CI matrix split if test runtime grows
+- optional database fixture hardening
+- optional local developer guide cleanup
+- optional smoke-test profile
 
 ### Current Classification
 
@@ -855,298 +689,173 @@ Later production hardening
 
 ### Suggested Timing
 
-Revisit when the test matrix expands from read-side schema constraints into PostgreSQL-backed projection stores, checkpoint stores, worker orchestration, or when CI runtime becomes difficult to manage.
+When test runtime, CI cost, or local development friction becomes a meaningful bottleneck.
 
 ---
 
-## 8. Snapshot Trust Contract and Replay Efficiency
+## 11. Aggregate Snapshot Schema / Store and Write-Side Rehydration
 
 ### Current Decision
 
-Stage 3.5D remains the snapshot trust contract / replay-efficiency stage.
+Do not implement durable aggregate snapshots or snapshot-assisted write-side rehydration during Stage 3.5D.
 
-The projection / read-side portion is now mostly implemented through PR4.5 closeout:
-
-```text
-PR1   — Snapshot Trust Contract Boundary ✅
-PR1.5 — CI Stage Branch Checks ✅
-PR2   — Projection Snapshot Schema Baseline ✅
-PR3   — PostgresProjectionSnapshotStore ✅
-PR4   — Projection Snapshot-Assisted Replay Validator ✅
-PR4.5 — Projection Snapshot-Assisted State Resolver ✅
-```
-
-The next Stage 3.5D step is PR5:
-
-```text
-PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
-```
-
-PR5 documents why aggregate snapshot schema/store work and snapshot-assisted write-side rehydration are deferred.
+Stage 3.5D completed the read-side projection snapshot trust path and explicitly deferred write-side aggregate snapshot implementation.
 
 ### Why This Boundary Exists
 
-Projection snapshots are read-side derived compression. If they are invalid, the system can reject, bypass, or rebuild them from accepted history.
+Read-side projection snapshots are derived runtime compression artifacts.
 
-Aggregate snapshots are different. They would participate in write-side aggregate rehydration and may influence command validation / admission. A stale or corrupted aggregate snapshot could cause future candidate events to be evaluated against the wrong state.
+They can be rejected, bypassed, rebuilt, or compared against accepted history.
 
-Therefore, write-side aggregate snapshot trust requires a stricter contract than read-side projection snapshot trust.
+Write-side aggregate snapshots are stricter because they may influence command validation and accepted-history admission.
 
-### Current Stage 3.5D Direction
-
-Stage 3.5D now closes as:
-
-```text
-PR4.5 closeout
-→ PR5 aggregate snapshot deferral
-→ Stage 3.5D closeout
-```
-
-The following are explicitly deferred:
-
-```text
-Deferred PR6 — Aggregate Snapshot Schema / Store
-Deferred PR7 — Snapshot-Assisted Write-Side Rehydration
-```
+A stale or corrupted aggregate snapshot could cause the system to validate a candidate event against the wrong aggregate state.
 
 ### Deferred Work
 
-Defer:
-
-- aggregate snapshot schema
-- aggregate snapshot store
-- snapshot-assisted write-side rehydration
-- aggregate snapshot trust receipts
-- aggregate snapshot invalidation policy
-- write-side snapshot fallback orchestration
-- aggregate snapshot corruption detection / quarantine
-- production write-side snapshot hot path
+- `aggregate_snapshots` schema
+- `AggregateSnapshot` model
+- `PostgresAggregateSnapshotStore`
+- aggregate snapshot collision policy
+- snapshot-assisted write-side aggregate rehydration
+- fallback to full accepted-history replay when aggregate snapshot trust fails
+- command admission tests for snapshot fast path and fallback path
 
 ### Future Trigger Conditions
 
-Revisit aggregate snapshots when:
+Revisit only when at least one condition is true:
 
-- aggregate replay depth becomes expensive
-- command admission latency becomes significant
-- aggregate history size grows substantially
-- validation receipts / trust gates exist
-- snapshot invalidation and rebuild policy exists
-- write-side snapshot corruption can be detected and safely bypassed
-- Stage 4 StrategySelector needs aggregate snapshot-assisted write-side optimization
+- aggregate replay depth becomes meaningfully expensive
+- command admission latency needs a fast path
+- durable validation receipts exist
+- snapshot trust gate / selector infrastructure exists
+- invalidation and fallback policy are explicit
+- benchmark data shows the optimization is worth the added trust risk
 
 ### Current Classification
 
 ```text
-Stage 3.5D PR5 / aggregate snapshot trust deferral
+Later evaluation
 ```
 
 ### Suggested Timing
 
-During:
+After Stage 4 receipts / runtime governance exist, or when aggregate replay cost becomes a concrete bottleneck.
 
-```text
-Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
-```
+---
 
-Production aggregate snapshot implementation should be revived only after Stage 4 trust receipts, runtime policy, and strategy selection make the write-side trust boundary explicit.
-
-## 9. Pre-Transaction Cleanup Failure Handling
+## 12. Pre-Transaction Cleanup Failure Handling
 
 ### Current Decision
 
-Stage 3.5B PR6 introduced a simple cleanup boundary during the preliminary read phase for `PRE_TRANSACTION` validation:
+The minimal `PRE_TRANSACTION` validation path should clean up implicit PostgreSQL read transactions before CPU-side validation begins.
 
-```python
-try:
-    preliminary_idempotency_decision = read_idempotency_store.check(signature)
-
-    if preliminary_idempotency_decision.verdict == IdempotencyVerdict.REPLAY:
-        return PostgresWriteSideResult(...)
-
-    if preliminary_idempotency_decision.verdict == IdempotencyVerdict.CONFLICT:
-        return PostgresWriteSideResult(...)
-
-    history = read_event_store.load(order_id)
-finally:
-    connection.rollback()
-```
-
-This is required because read-only `SELECT` operations can still open an implicit transaction when the PostgreSQL connection is not in autocommit mode.
-
-The current baseline ensures that CPU-side Compass validation does not accidentally run while the connection still carries an implicit read transaction.
+The completed baseline records the boundary, but does not introduce advanced cleanup-failure governance.
 
 ### Deferred Concern
 
-The current baseline does not yet implement structured handling for rollback failure itself.
+Future code may need to classify cleanup failure separately from:
 
-Future production-like handling may need to distinguish:
+- validation block
+- idempotency conflict
+- concurrency admission rejection
+- infrastructure failure
+- runtime decision failure
 
-```text
-primary read / load failure
-vs
-cleanup rollback failure
-```
-
-This matters because rollback can itself fail if the connection is already closed, aborted, or physically broken.
-
-There are two different failure cases:
-
-```text
-Case 1:
-primary read failure happens
-+
-cleanup rollback failure also happens
-
-Risk:
-cleanup failure may mask the original read failure
-```
-
-```text
-Case 2:
-primary read succeeds
-+
-cleanup rollback fails
-
-Risk:
-the system may continue as if the connection were clean even though cleanup failed
-```
-
-The project should not silently swallow cleanup failures with a broad:
-
-```python
-except Exception:
-    pass
-```
-
-That would avoid masking the primary error, but it could also hide connection-state corruption.
+A cleanup failure can be operationally important because it affects whether the physical connection can safely continue.
 
 ### Future Direction
 
-When Stage 4 error modeling or connection pooling is introduced, consider a hardened cleanup model that can:
-
-- preserve the primary error when cleanup also fails
-- attach cleanup failure as diagnostic context
-- map cleanup failure into a structured infrastructure error
-- mark the connection as unsafe for reuse
-- discard or invalidate broken pooled connections
-- log cleanup failures with trace context
-- expose cleanup failure as operational evidence
-
-A possible future pattern is:
+Introduce structured outcome / error classification for cleanup failure, such as:
 
 ```text
-if primary error exists:
-    preserve primary error
-    attach cleanup failure as diagnostic context
-
-if no primary error exists:
-    surface cleanup failure as infrastructure failure
+PRE_TRANSACTION_CLEANUP_FAILED
+CONNECTION_UNSAFE_AFTER_CLEANUP_FAILURE
 ```
 
-This future work should be integrated with the Stage 4 error model instead of being implemented as ad hoc exception handling inside Stage 3.5B.
+Then decide whether the runtime should:
+
+- retry with a new connection
+- discard the connection
+- block the request
+- raise infrastructure error
+- emit an operational alert
 
 ### Current Classification
 
 ```text
-Stage 4 / connection-pool hardening
+Stage 4 / evidence design
 ```
 
 ### Suggested Timing
 
-Revisit when at least one of the following becomes true:
-
-- Stage 4 error model work begins
-- connection pooling is introduced
-- infrastructure errors are mapped into structured runtime outcomes
-- production-like observability is added
-- cleanup failures need to become operational evidence
+During structured outcome / runtime evidence design.
 
 ### Related Note
-
-See:
 
 - [Pre-Transaction Read Cleanup Boundary](../postmortems/pre_transaction_read_cleanup_boundary.md)
 
 ---
 
-## 10. Retry Reason Classification and Intent Consistency
+## 13. Retry Reason Classification and Intent Consistency
 
 ### Current Decision
 
-Do not add `retry_reason` to `idempotency_records` during Stage 3.5C.
+Do not treat retry as a single generic category.
 
-`idempotency_records` remain successful request-result memory:
-
-```text
-request_id
-→ semantic_fingerprint
-→ accepted_event_id / result
-```
-
-Retry reason is attempt-level evidence and belongs to Stage 4 SemanticOutcome / request-attempt evidence design.
+Retry classification belongs to Stage 4 `SemanticOutcome`, request-attempt evidence, and runtime decision design.
 
 ### Why Not Now
 
-Retry-like situations may come from different boundaries:
+The completed baselines already distinguish:
 
-- idempotency replay
+- idempotent replay
 - idempotency conflict
-- stale-write admission rejection
-- lock timeout
+- stale write
+- validation block
 - infrastructure failure
-- projection / snapshot drift
-- future agent intent drift
+- projection drift
+- snapshot-assisted replay mismatch
+- snapshot trust failure
 
-These should not be collapsed into a single `retry` field.
-
-They also should not pollute `idempotency_records`, because idempotency records only represent successful accepted-event mappings.
+But they do not yet persist unified request-attempt evidence or structured runtime outcomes.
 
 ### Future Work
 
-During Stage 4, define:
+Stage 4 should distinguish:
+
+```text
+same request_id + same semantic_fingerprint
+→ IDEMPOTENT_REPLAY / SAFE_TO_REPLAY / SAME_INTENT
+
+same request_id + different semantic_fingerprint
+→ SEMANTIC_CONFLICT
+
+stale write caused by concurrent accepted-history advancement
+→ REFRESH_HISTORY_AND_RETRY_IF_SAME_INTENT
+
+transient infrastructure error
+→ RETRYABLE_INFRASTRUCTURE_FAILURE
+
+projection drift
+→ REBUILD_DERIVED_STATE_BEFORE_CONTINUING
+
+snapshot mismatch
+→ FALLBACK_TO_AUTHORITY_REPLAY_OR_REQUALIFY_SNAPSHOT
+
+agent retry with changed intended action
+→ INTENT_DRIFT / NOT_SAFE_TO_RETRY
+```
+
+Suggested future fields:
 
 ```text
 retry_class
 retry_safety
 intent_consistency
-```
-
-Candidate values may include:
-
-```text
-retry_class:
-- IDEMPOTENT_REPLAY
-- CONCURRENCY_RETRY
-- INFRASTRUCTURE_RETRY
-- SEMANTIC_CONFLICT
-- SEMANTIC_DRIFT
-- REBUILD_REQUIRED
-- UNKNOWN
-
-retry_safety:
-- SAFE_TO_REPLAY
-- SAFE_TO_RETRY_AFTER_RELOAD
-- RETRY_WITH_BACKOFF
-- REBUILD_REQUIRED
-- NOT_RETRYABLE
-- BLOCK_AND_ESCALATE
-- UNKNOWN
-
-intent_consistency:
-- SAME_INTENT
-- SAME_IDENTITY_DIFFERENT_MEANING
-- NOT_AN_IDEMPOTENCY_REPLAY
-- AGENT_INTENT_DRIFT
-- NOT_APPLICABLE
-- UNKNOWN
-```
-
-If durable evidence is needed, consider a separate table such as:
-
-```text
-request_attempts
-semantic_outcomes
-runtime_outcomes
+attempt_id
+request_id
+semantic_fingerprint
 ```
 
 ### Current Classification
@@ -1157,55 +866,40 @@ Stage 4 / retry classification
 
 ### Suggested Timing
 
-During Stage 4B SemanticOutcome / Error Model v1 and Stage 4C RuntimeDecisionPolicy design.
+During Stage 4 structured outcome / request-attempt evidence design.
 
 ---
 
-## 11. Isolated Derived-State Runtime / Oblivious Agent Runtime
+## 14. Isolated Derived-State Runtime / Oblivious Agent Runtime
 
 ### Current Decision
 
-Do not implement isolated agent runtime or separate read-side DB during Stage 3.5C, Stage 3.5D, or Stage 4.
-
-This is a Stage 5+ / later governance-hardening direction.
+Do not isolate the read-side runtime or build an agent-facing sandbox during Stage 3.5E or the first Stage 4 passes.
 
 ### Concept
 
-Future versions of Compass may isolate untrusted agents from the sovereign event store.
-
-The future model is:
+A later version may separate:
 
 ```text
-Sovereign Event Store
-→ Projection Pipeline
-→ Isolated Derived-State DB / controlled read boundary
-→ Agent observes derived state
-→ Agent proposes candidate action
-→ Compass validates against accepted history
-→ accepted event is appended only by the system kernel
+accepted history authority
+derived runtime state
+agent-visible state
 ```
+
+so that agents cannot directly observe or mutate authority tables.
 
 ### Why It Matters
 
-This separates observation from authority.
-
-Agents may observe derived state, but they should not directly read or write accepted history.
-
-If the derived-state world is corrupted, it can be quarantined, discarded, and rebuilt from accepted history.
-
-Compass remains the admission authority.
+If future agents act on derived state, the system may need stronger isolation so the agent sees an admitted, governed, and possibly delayed view rather than raw authority or unstable runtime internals.
 
 ### Future Work
 
-Evaluate:
-
-- separate read-side projection DB
-- controlled agent read API
-- candidate action protocol
-- Compass admission against sovereign event store
-- rebuildable sandbox state
-- HMAC / sealed snapshots for high-risk derived state
-- hash chains / MMR only if stronger tamper evidence becomes necessary
+- isolated read-side database
+- agent-facing derived-state API
+- governed state publication
+- read-side admission receipts
+- policy-controlled context exposure
+- action safety gate integration
 
 ### Current Classification
 
@@ -1215,34 +909,14 @@ Stage 5+ / later governance hardening
 
 ### Suggested Timing
 
-Revisit after:
-
-- Stage 5 dual-dimension governance demo is stable
-- ActionSafetyGate exists
-- Layer 2 projection validation exists
-- SemanticOutcome / RuntimeDecisionPolicy are implemented
-- agent-facing tool interface becomes concrete
+After Stage 5 dual-dimension governance makes semantic correctness and operational freshness explicit.
 
 ---
 
 ## Summary
 
-The deferred backlog should now be read with the following stage alignment:
+This backlog is not a second roadmap.
 
-| Item | Current Alignment |
-|---|---|
-| UUIDv7 | Later evaluation |
-| EventStoreProtocol | Later evaluation |
-| StoredEventRecord / JSONB hydration | Stage 4 / evidence design |
-| Registry-stage timing | Stage 4 / evidence design |
-| Payload/proof/metadata JSON shape | Stage 4 evidence / outcome persistence |
-| Append-only DB hardening | Stage 3.5E / durable history hardening |
-| Integration test boundary / CI strategy | Later production hardening |
-| Snapshot trust contract and replay efficiency | Stage 3.5D / snapshot trust contract |
-| Pre-transaction cleanup failure handling | Stage 4 / connection-pool hardening |
-| Retry reason classification and intent consistency | Stage 4 / retry classification |
-| Isolated derived-state runtime / oblivious agent runtime | Stage 5+ / later governance hardening |
+It only preserves intentionally deferred architecture concerns whose timing depends on future evidence, governance, production-hardening, or runtime-complexity needs.
 
-The backlog remains a scope-control document.
-
-It should not be used to pull every valid architecture concern into the current PR or stage.
+Completed implementation work belongs in implementation notes, not here.

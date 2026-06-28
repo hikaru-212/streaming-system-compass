@@ -9,23 +9,13 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version updates the roadmap to reflect the current Stage 3.5B direction:
+This version reflects the project position after the completion of Stage 3.5D:
 
-- durable write-side schema now uses `order_events` and `idempotency_records`
-- accepted event identity is represented as PostgreSQL `UUID`
-- previous accepted event identity claims use `proof_prev_event_id UUID NULL`
-- event format evolution is represented through `event_schema_version`
-- runtime metadata is separated into `metadata_json`
-- database append time is represented as `appended_at`
-- Stage 3.5C PR0 hardens durable order-event vocabulary before read-side persistence begins
-- Stage 3.5D is introduced as a persistence optimization / replay-efficiency stage after the durable read-side baseline
-- Stage 3.5D snapshot work is clarified as a **Snapshot Trust Contract**, not only replay optimization
-- Stage 3.5E is introduced as a durable history and permission-hardening stage before broader runtime semantic governance
-- Stage 4 is not only an error taxonomy stage; it becomes a structured semantic outcome and runtime decision boundary
-- Stage 4 explicitly includes retry reason classification and intent consistency as part of SemanticOutcome / runtime evidence design
-- Stage 4 may introduce a minimal Order Domain Policy Contract v0 so SemanticOutcome can reference rule IDs and recovery strategies without turning the project into a full policy-authoring system
-- Stage 5 becomes the dual-dimension governance demo: semantic correctness × operational freshness → action safety
-- Stage 5+ may later evaluate isolated derived-state runtime / oblivious agent runtime as an agent-governance hardening direction
+- Stage 3.5B durable write-side implementation details have been moved to implementation notes.
+- Stage 3.5C durable read-side implementation details have been moved to implementation notes.
+- Stage 3.5D snapshot trust / replay-efficiency implementation details have been moved to implementation notes.
+- Stage 3.5E remains the next implementation stage.
+- Stage 4 and later stages remain forward-looking runtime governance work.
 
 ---
 
@@ -34,67 +24,38 @@ This version updates the roadmap to reflect the current Stage 3.5B direction:
 The project has completed an executable baseline across:
 
 - transactional semantic core
-- accepted-history persistence and replay in the current baseline
-- request-level idempotency with replay / conflict distinction
-- optimistic admission with stale-write rejection
-- event-level Compass validation before persistence
-- Stage 3 projection runtime in a deterministic in-memory form
-- Stage 3.5A Decimal / exact-money hardening before durable persistence
-- ADR 0008 event identity lifecycle decision before durable write-side persistence
-- event identity boundary naming cleanup before durable storage expansion
-- Stage 3.5B PR1 schema / local PostgreSQL / migration setup checkpoint
-- Stage 3.5B PR2 PostgresEventStore baseline
-- Stage 3.5B PR3 PostgresIdempotencyStore baseline
-- Stage 3.5B PR4 transactional semantic write-side boundary
-- Stage 3.5B PR5 PostgreSQL concurrency admission boundary
-- Stage 3.5B PR6 validation placement strategy baseline
-- Stage 3.5C PR0 durable order-event vocabulary hardening
-- Stage 3.5C PR1 durable read-side schema baseline
-- Stage 3.5C PR2 PostgresProjectionStore baseline
-- Stage 3.5C PR3 PostgresCheckpointStore baseline
-- Stage 3.5C PR4 Global-Position Projection Worker baseline
-- Stage 3.5C PR5 Durable Replay / Rebuild Validation baseline
-- Stage 3.5D PR1 Snapshot Trust Contract Boundary
-- Stage 3.5D PR1.5 CI Stage Branch Checks
-- Stage 3.5D PR2 Projection Snapshot Schema Baseline
-- Stage 3.5D PR3 PostgresProjectionSnapshotStore
-- Stage 3.5D PR4 Projection Snapshot-Assisted Replay Validator
-- Stage 3.5D PR4.5 Projection Snapshot-Assisted State Resolver
-- Stage 3.5D PR5 Aggregate Snapshot Trust Boundary / Deferral Decision
+- Compass Layer 1 write-side semantic validation
+- deterministic in-memory projection runtime
+- exact Decimal / money handling
+- durable PostgreSQL-backed write-side persistence
+- durable PostgreSQL-backed read-side persistence
+- durable replay / rebuild validation
+- projection snapshot trust / replay-efficiency baseline
 
 This means:
 
-- Stage 1 is complete at a baseline level
-- Stage 2 is complete at a baseline level
-- Stage 3 exists as a minimal executable read-side runtime baseline
-- Stage 3.5A is complete as the pre-persistence money / exact-value hardening step
-- pre-Stage 3.5B event identity semantics are documented and reflected in boundary naming
-- Stage 3.5B PR1 has established the durable write-side schema and local PostgreSQL setup baseline
-- Stage 3.5B PR4 has established the first PostgreSQL-backed transactional semantic write-side flow
-- Stage 3.5B PR5 has established PostgreSQL-backed two-phase concurrency admission
-- Stage 3.5B PR6 has established validation placement strategy as a Stage 4 prelude
-- Stage 3.5C PR0 has normalized durable `event_type` vocabulary, added `proof_prev_status` database constraint enforcement, and renamed the order stream-position unique constraint before durable read-side work begins
-- Stage 3.5C PR1 has established `projection_states` and `projection_checkpoints` as the durable read-side schema baseline, including physical shape constraints and checkpoint cursor alignment
-- Stage 3.5C PR2 has implemented `PostgresProjectionStore`, making `projection_states` usable through the Python storage boundary while preserving projection state as derived and rebuildable
-- Stage 3.5C PR3 has implemented `PostgresCheckpointStore`, making `projection_checkpoints` usable through the Python storage boundary while preserving checkpoint state as operational progress metadata
-- Stage 3.5C PR4 has introduced `order_events.global_position`, `PostgresProjectionEventSource`, and `PostgresProjectionWorker`, connecting accepted history, the canonical reducer, durable projection state, and durable checkpoint progress through one PostgreSQL-backed read-side transaction boundary
-- Stage 3.5C PR5 has introduced durable replay / rebuild validation, comparing accepted-history replay with persisted projection state
-- Stage 3.5C is complete at the durable read-side baseline level
-- Stage 3.5D PR1 has defined snapshots as derived, discardable, trust-qualified replay fast-path artifacts
-- Stage 3.5D PR1.5 has enabled CI checks for stage branch pull requests
-- Stage 3.5D PR2 has introduced the durable `projection_snapshots` schema baseline and schema constraint tests
-- Stage 3.5D PR3 has implemented `PostgresProjectionSnapshotStore`, making projection snapshots usable through a Python storage boundary while preserving snapshots as derived evidence rather than accepted-history truth
-- Stage 3.5D PR4 has implemented the projection snapshot-assisted replay validator, accepted-history adapter, and PostgreSQL-backed integration tests proving snapshot + tail replay can be checked against accepted-history replay; PR4.5 has implemented the projection snapshot-assisted state resolver, exact snapshot-id lookup usage, and PostgreSQL-backed resolver wiring; PR5 has documented the aggregate snapshot trust boundary and deferred write-side aggregate snapshot implementation
+- Stage 1 is complete at a baseline level.
+- Stage 2 is complete at a baseline level.
+- Stage 3 exists as a minimal executable read-side runtime baseline.
+- Stage 3.5A is complete as the pre-persistence money / exact-value hardening step.
+- Stage 3.5B is complete as the durable write-side baseline.
+- Stage 3.5C is complete as the durable read-side baseline.
+- Stage 3.5D is complete as the projection snapshot trust / replay-efficiency baseline.
+- Write-side aggregate snapshot implementation is explicitly deferred.
+- Stage 3.5E is the next implementation stage.
+
+Detailed completed-stage execution records now live under:
+
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
+- [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 
 The current major focus is:
 
-- **Stage 3.5D closeout — merge Snapshot Trust Contract / Replay Efficiency back to main after PR5**
+- **Stage 3.5E — Durable History and Permission Hardening**
 
-After the completed Stage 3.5C durable read-side baseline, the project can proceed toward:
+After Stage 3.5E, the project can proceed toward:
 
-- Stage 3.5D persistence optimization / replay efficiency
-- Stage 3.5D Snapshot Trust Contract
-- Stage 3.5E durable history and permission hardening
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
 - Stage 5 dual-dimension governance demo
 - Stage 5+ isolated derived-state runtime / oblivious agent runtime evaluation
@@ -219,620 +180,44 @@ Completed.
 
 ## Goal
 
-Move the current write-side baseline from in-memory persistence toward durable PostgreSQL-backed semantics.
+Move the write-side baseline from in-memory persistence toward durable PostgreSQL-backed semantics.
 
 ## Why
 
-After Stage 3.5A, the next meaningful step is durable write-side evolution.
+After Stage 3.5A, the next meaningful step was durable write-side evolution.
 
-Accepted-history durability, idempotency durability, transaction grouping, append-only event-store shape, exact money persistence, and candidate / accepted event identity must be clarified before the rest of the runtime grows larger.
+Accepted-history durability, idempotency durability, transaction grouping, append-only event-store shape, exact money persistence, and candidate / accepted event identity needed to be clarified before the rest of the runtime could grow larger.
 
-## Stage 3.5B PR Breakdown
-
-### PR1 — Physical Schema + Local PostgreSQL + Migration Skeleton
-
-#### Status
+## Status
 
 Completed.
 
-#### Scope
+## Summary
 
-This PR establishes the durable write-side storage contract and local development environment.
+Stage 3.5B established:
 
-It includes:
-
-- write-side schema baseline architecture note
-- Python-to-database schema translation boundary note
-- Docker-based local PostgreSQL setup
-- local development setup documentation
-- initial write-side migration skeleton
-
-#### Durable Tables
-
-The first durable write-side tables are:
-
-- `order_events`
-- `idempotency_records`
-
-#### `order_events` baseline
-
-Core columns:
-
-- `accepted_event_id UUID PRIMARY KEY`
-- `event_schema_version INTEGER NOT NULL DEFAULT 1`
-- `order_id TEXT NOT NULL`
-- `sequence INTEGER NOT NULL`
-- `event_type TEXT NOT NULL`
-- `request_id TEXT NOT NULL`
-- `amount NUMERIC(18, 2) NOT NULL`
-- `occurred_at_ms BIGINT NOT NULL`
-- `proof_prev_event_id UUID NULL`
-- `proof_prev_version INTEGER NOT NULL`
-- `proof_prev_status TEXT NOT NULL`
-- `payload_json JSONB NOT NULL DEFAULT '{}'::jsonb`
-- `proof_json JSONB NOT NULL DEFAULT '{}'::jsonb`
-- `metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb`
-- `appended_at TIMESTAMPTZ NOT NULL DEFAULT now()`
-
-Core constraints:
-
-- `UNIQUE (order_id, sequence)` using `uq_order_events_order_id_sequence`
-- `event_type IN ('CREATED', 'PAID')`
-- `proof_prev_status IN ('INIT', 'CREATED', 'PAID')`
-- `amount >= 0`
-- `sequence > 0`
-- `event_schema_version > 0`
-- `payload_json`, `proof_json`, and `metadata_json` must be JSON objects
-
-#### `idempotency_records` baseline
-
-Core columns:
-
-- `request_id TEXT PRIMARY KEY`
-- `order_id TEXT NOT NULL`
-- `command_type TEXT NOT NULL`
-- `amount NUMERIC(18, 2) NOT NULL`
-- `fingerprint_version INTEGER NOT NULL DEFAULT 1`
-- `semantic_fingerprint TEXT NOT NULL`
-- `accepted_event_id UUID NOT NULL`
-- `result_sequence INTEGER NOT NULL`
-- `status TEXT NOT NULL DEFAULT 'SUCCEEDED'`
-- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
-
-Core constraints:
-
-- `accepted_event_id` references `order_events.accepted_event_id`
-- `command_type IN ('create', 'pay')`
-- `semantic_fingerprint` cannot be empty after trimming
-- `fingerprint_version > 0`
-- `result_sequence > 0`
-- `amount >= 0`
-
-#### Key Boundary Decisions
-
-- `accepted_event_id` is UUID because it represents accepted history identity.
-- `proof_prev_event_id` is also UUID because it represents a previous accepted event identity claim.
-- `proof_prev_event_id` is not yet a foreign key because previous-event truth belongs to Compass / replay logic, not a partial relational constraint.
-- `event_schema_version` protects durable event format evolution.
-- Durable `event_type` values use uppercase enum-style accepted-event vocabulary: `CREATED`, `PAID`.
-- `proof_prev_status` uses uppercase domain-state vocabulary: `INIT`, `CREATED`, `PAID`.
-- `command_type` remains lowercase because it represents request/action identity for idempotency records, not accepted event identity.
-- `metadata_json` is reserved for non-domain runtime metadata, including future validation timing, registry-stage timing, validator identity, validation mode, and runtime trace metadata.
-- `appended_at` is database append time and remains distinct from `occurred_at_ms`.
-
-#### Non-goals
-
-This PR does not implement:
-
+- PostgreSQL-backed `order_events`
+- PostgreSQL-backed `idempotency_records`
 - `PostgresEventStore`
 - `PostgresIdempotencyStore`
-- transactional write-side unit of work
-- registry-stage timing collection
-- UUIDv7 generation
-- append-only trigger enforcement
-- production DB role hardening
-- table partitioning
-- idempotency conflict audit table
-
-#### Related Postmortems
-
-These postmortems explain why Stage 3.5B is not merely a database setup step:
-
-- [From In-Memory Correctness to Durable Consistency](../postmortems/from_in_memory_correctness_to_durable_consistency.md)  
-  Explains why persistence is not a backend swap and why durable systems must handle restart and partial failure explicitly.
-
-- [From Git Local–Remote Drift to Database Immutability Boundaries](../postmortems/from_git_sync_to_db_immutability.md)  
-  Explains why Python-side guarantees such as `frozen=True` and append-only history must be re-declared at the PostgreSQL boundary.
-
-- [From Local PostgreSQL Setup to Defense-in-Depth Boundaries](../postmortems/from_local_postgres_to_defense_in_depth.md)  
-  Explains why Docker Compose, `.env`, least privilege, SQL migrations, Compass validation, and transactions each protect different boundaries.
-
-- [From Runtime Behavior to Durable Evidence](../postmortems/from_runtime_behavior_to_durable_evidence.md)  
-  Explains why Python runtime behavior is not durable evidence unless selected facts are persisted into database records, metadata, logs, metrics, traces, or audit channels.
-
----
-
-### PR2 — Python Store / Repository Layer: PostgresEventStore
-
-#### Status
-
-Completed.
-
-#### Goal
-
-Make accepted event history durable through `order_events`.
-
-#### Main Work
-
-- add PostgreSQL client dependency, likely `psycopg`
-- add PostgreSQL connection helper
-- add centralized event id generator under `src/core/common/`
-- evaluate and align `OrderEvent.event_id` with UUID semantics
-- implement `PostgresEventStore`
-- support append / load / last event behavior
-- preserve Decimal amount and UUID identity across write / read
-- support `metadata_json` write / read
-- keep `event_schema_version` defaulted to v1
-
-#### UUID Direction
-
-The schema already supports PostgreSQL `UUID`.
-
-PR2 should centralize event identity generation:
-
-```python
-import uuid
-
-def generate_event_id() -> uuid.UUID:
-    return uuid.uuid4()
-```
-
-The purpose is not to force UUIDv7 immediately.
-
-The purpose is to avoid scattering ID generation across domain logic.  
-When Python runtime support or dependency policy is ready, this function can later switch to UUIDv7-compatible generation without changing the database schema.
-
-#### Tests
-
-PR2 should verify:
-
-- append first event succeeds
-- append second event succeeds
-- load returns accepted events ordered by sequence
-- last event returns latest accepted event
-- duplicate `(order_id, sequence)` rejects
-- stale expected version rejects
-- loaded event preserves UUID identity
-- loaded event preserves Decimal amount
-- `metadata_json` can be written and read
-- `event_schema_version` defaults to 1
-
-#### Non-goals
-
-PR2 does not implement:
-
-- `PostgresIdempotencyStore`
-- same-transaction event append + idempotency record write
-- registry-stage timing collection
-- UUIDv7 rollout
-- append-only trigger enforcement
-
----
-
-### PR3 — PostgresIdempotencyStore Baseline
-
-#### Status
-
-Completed.
-
-#### Goal
-
-Make request-level idempotency durable through `idempotency_records`.
-
-#### Main Work
-
-- implement `PostgresIdempotencyStore`
-- support durable MISS / REPLAY / CONFLICT classification
-- write successful request-to-accepted-event mappings
-- preserve semantic fingerprint and fingerprint version
-- ensure command type values align with Python enum values such as `create` and `pay`
-- ensure replay returns a previously accepted event result rather than a new candidate
-
-#### Tests
-
-PR3 should verify:
-
-- new request produces MISS
-- same `request_id` + same semantic fingerprint produces REPLAY
-- same `request_id` + different semantic fingerprint produces CONFLICT
-- successful accepted-event result can be recorded
-- idempotency record survives restart / new connection
-- `accepted_event_id` must reference an existing accepted event
-- conflict does not overwrite an existing idempotency record
-
-#### Non-goals
-
-PR3 does not implement:
-
-- full transactional write-side boundary
-- registry-stage timing
-- conflict audit table
-- retry attempt history
-- observability framework
-
----
-
-### PR4 — Transactional Semantic Write-Side Boundary
-
-#### Status
-
-Completed after PR4 merge.
-
-#### Goal
-
-Coordinate durable event append, durable idempotency recording, and Compass Layer 1 validation inside a PostgreSQL-backed transactional write-side flow.
-
-#### Why
-
-The durable write-side baseline is incomplete unless physical transaction safety and semantic gate preservation are both explicit.
-
-PR4 protects against two different failure modes:
-
-- partial durable writes, such as an event being persisted without its idempotency record
-- semantic drift during persistence hardening, where the durable PostgreSQL path accidentally bypasses Compass Layer 1 validation
-
-#### Main Work
-
-- introduce `PostgresWriteSideUnitOfWork`
-- coordinate `PostgresEventStore` and `PostgresIdempotencyStore` through one PostgreSQL transaction
-- introduce `PostgresTransactionalWriteSide`
-- check idempotency before command execution
-- rehydrate aggregate state from durable accepted history
-- build Compass Layer 1 `ValidationContext` from accepted history
-- create candidate events through the aggregate
-- run Compass Layer 1 validation before accepted history mutation
-- append accepted events only after validation allows the candidate
-- record idempotency results in the same transaction as accepted event append
-- rollback on validation block, domain legality failure, or idempotency-record failure
-- isolate destructive PostgreSQL integration tests through `TEST_DATABASE_URL`
-- reorganize integration tests by execution boundary
-- document transactional integration tests as executable architecture claims
-
-#### Minimal Flow
-
-```text
-BEGIN
-
-check idempotency
-
-if REPLAY:
-    rollback / no write
-    return previous accepted result
-
-if CONFLICT:
-    rollback / no write
-    return conflict result
-
-if MISS:
-    load durable accepted history
-    rehydrate aggregate
-    build validation context
-    create candidate event
-    run Compass Layer 1 validation
-
-    if BLOCK:
-        rollback / no write
-        return validation-blocked result
-
-    append event into order_events
-    record idempotency result into idempotency_records
-
-COMMIT
-```
-
-#### Boundary Clarified During PR4
-
-PR4 clarified three important boundaries:
-
-```text
-transaction atomicity
-≠ concurrency admission
-```
-
-```text
-validation mode
-≠ validation placement
-```
-
-```text
-durable persistence hardening
-must preserve Compass semantic gates
-```
-
-These boundaries are documented in:
-
-- [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
-- [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
-- [Postmortem — From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md)
-
-#### Tests
-
-PR4 verifies:
-
-- successful `create_order` writes both `order_events` and `idempotency_records`
-- successful `pay_order` writes the second accepted event and corresponding idempotency record
-- replay same request returns the previous accepted result
-- conflict same `request_id` with different semantic fingerprint creates no new rows
-- validation `BLOCK` creates no `order_events` row
-- validation `BLOCK` creates no `idempotency_records` row
-- domain legality failures leave no partial durable writes
-- if idempotency record persistence fails after event append, the event append is rolled back
-- transactional tests run against `TEST_DATABASE_URL`, not the development database
-
-#### Non-goals
-
-PR4 does not implement:
-
+- transactional write-side coordination
+- Compass Layer 1 preserved before accepted-history mutation
 - PostgreSQL-backed concurrency admission
-- optimistic admission gate
-- pessimistic admission gate
-- durable read-side projection store
-- durable checkpoint store
-- Layer 2 validator
-- structured `SemanticOutcome` / Error Model family
-- validation result persistence table
-- registry-stage timing implementation
-- OpenTelemetry / Datadog / Monte Carlo integration
-- production DB roles
-- append-only trigger enforcement
-
----
-
-### PR5 — PostgreSQL Concurrency Admission Boundary
-
-#### Status
-
-Completed after PR5 merge into the Stage 3.5B baseline.
-
-#### Goal
-
-Introduce explicit PostgreSQL-backed admission control for concurrent writers and integrate it into the durable transactional write-side flow.
-
-#### Why
-
-PR4 guarantees that related durable writes commit or roll back together.
-
-However, transaction atomicity does not answer whether a writer should be admitted to occupy the next stream sequence when multiple workers compete for the same aggregate stream.
-
-PR5 restores the admission-boundary idea from the earlier in-memory `ConcurrencyGate` / `OptimisticVersionGate` design into the durable PostgreSQL write-side.
-
-During implementation, PR5 also clarifies that optimistic and pessimistic admission do not acquire protection at the same physical moment.
-
-This leads to a two-phase admission model:
-
-```text
-prepare_stream(order_id)
-→ append_if_admitted(candidate_event, expected_current_version)
-```
-
-#### Main Work
-
-- introduce storage-level stale-write / concurrency errors
-- map raw PostgreSQL constraint or version conflicts into stable application-level admission results
-- extend admission vocabulary with:
-  - `ADMITTED`
-  - `STALE_WRITE`
-  - `LOCK_TIMEOUT`
-  - `INFRASTRUCTURE_ERROR`
-- add `StreamAdmissionResult` for stream-preparation decisions
-- keep `AdmissionResult` for append-time candidate-event admission
-- implement `PostgresOptimisticAdmissionGate`
-- implement `PostgresPessimisticAdmissionGate`
-- move pessimistic advisory-lock acquisition into `prepare_stream(order_id)`
-- reject `autocommit=True` for transaction-scoped pessimistic admission
-- integrate two-phase admission into `PostgresTransactionalWriteSide`
-- preserve idempotency-before-prepare ordering
-- keep admission rejection distinct from idempotency conflict, validation block, and domain legality failure
-- keep append-time expected-version admission as the final accepted-history continuity check
-
-#### Expected Tests
-
-PR5 should verify:
-
-- one writer can append the next stream event
-- a stale writer is rejected without mutating accepted history
-- optimistic admission maps stale writes into stable results
-- pessimistic admission can acquire a transaction-scoped stream lock during `prepare_stream(order_id)`
-- pessimistic admission returns `LOCK_TIMEOUT` when the stream lock is unavailable
-- pessimistic admission rejects `autocommit=True`
-- replay / conflict paths do not acquire stream locks
-- prepare-time rejection does not run validation or create durable rows
-- append-time admission rejection does not record idempotency
-- admission rejection does not pollute accepted history or idempotency memory
-- the write side stores an admission gate factory, not a reusable gate singleton
-- PR4 event append + idempotency atomicity tests still pass
-
-#### Related Decisions and Notes
-
-- [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
-- [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
-- [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md)
-- [Postmortem — Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)
-
-#### Non-goals
-
-PR5 does not implement:
-
-- Stage 4 `SemanticOutcome`
-- runtime decision policy
 - validation placement strategy
-- full production locking framework
-- connection pooling
-- retry orchestration
-- hot-stream routing policy
-- durable admission audit table
-- durable lock table
-- cross-aggregate locking model
-- operational alerting
 
----
-
-### PR6 / Stage 4 Prelude — Validation Placement Strategy
-
-#### Status
-
-Completed after PR6 merge into the Stage 3.5B baseline.
-
-#### Goal
-
-Introduce a configurable validation placement strategy after PostgreSQL concurrency admission exists.
-
-#### Why
-
-PR4 establishes an in-transaction Compass validation baseline.
-
-PR5 establishes two-phase PostgreSQL concurrency admission.
-
-Only after PR5 can the project safely support a second orchestration mode:
+The important semantic boundaries from this stage are:
 
 ```text
-pre-transaction Compass validation + append-time admission
+transaction atomicity ≠ concurrency admission
+validation mode ≠ validation placement
+candidate event ≠ accepted fact
 ```
 
-This strategy allows the system to compare latency and safety trade-offs between:
+## Implementation Details
 
-- in-transaction Compass validation
-- pre-transaction Compass validation + append-time admission
-- validation-off baseline for measurement
+Detailed PR-level execution records are maintained in:
 
-Without validation placement strategy, Stage 4 timing or evidence tables would only measure one fixed orchestration path. They would not be able to compare in-transaction validation against pre-transaction validation plus append-time concurrency admission.
-
-#### Main Work
-
-- define `ValidationPlacement`
-- keep `ValidationMode` separate from `ValidationPlacement`
-- preserve `IN_TRANSACTION` as the default validation placement
-- support a minimal `PRE_TRANSACTION` validation + append-time admission path
-- introduce `PostgresWriteSideConfig` / `ValidationPlacement` as the configuration boundary
-- ensure stale pre-validated candidates cannot enter accepted history
-- preserve `IN_TRANSACTION` as the default behavior
-- keep `append_if_admitted(...)` as the final accepted-history mutation boundary
-- clean up implicit read transactions before CPU-side `PRE_TRANSACTION` validation
-- enable latency and safety comparison without duplicating storage logic
-
-#### Candidate Future API
-
-```python
-PostgresWriteSideConfig(
-    validation_mode=ValidationMode.STRICT,
-    validation_placement=ValidationPlacement.IN_TRANSACTION,
-    admission_strategy=AdmissionStrategy.OPTIMISTIC,
-)
-```
-
-or:
-
-```python
-PostgresWriteSideConfig(
-    validation_mode=ValidationMode.STRICT,
-    validation_placement=ValidationPlacement.PRE_TRANSACTION,
-    admission_strategy=AdmissionStrategy.OPTIMISTIC,
-)
-```
-
-#### Related Notes
-
-- [Validation Placement Strategy Boundary](../boundary_notes/validation_placement_strategy_boundary.md)
-- [Pre-Transaction Read Cleanup Boundary](../postmortems/pre_transaction_read_cleanup_boundary.md)
-
-The cleanup boundary records why `PRE_TRANSACTION` validation must not accidentally carry an implicit PostgreSQL read transaction into CPU-side validation.
-
-#### Non-goals
-
-PR6 / Stage 4 Prelude does not implement:
-
-- full DAG node model
-- risk scoring
-- async audit pipeline
-- Stage 4 `SemanticOutcome` tables
-- validation attempt persistence tables
-- registry-stage timing persistence tables
-- Stage 5 governance metrics
-
----
-
-## Stage 3.5B Completion Criteria
-
-Stage 3.5B is complete at the durable write-side baseline level when:
-
-- accepted events are persisted in PostgreSQL
-- accepted history can be replayed from durable storage
-- idempotency records survive restart / new connection
-- replay / conflict semantics work against durable storage
-- event append and idempotency record write are transactionally coordinated
-- Compass Layer 1 remains on the durable write-side path before accepted history mutation
-- validation `BLOCK` does not pollute accepted history or idempotency memory
-- PostgreSQL-backed concurrency admission rejects stale writers explicitly
-- validation placement can be configured between `IN_TRANSACTION` and minimal `PRE_TRANSACTION` baseline
-- `PRE_TRANSACTION` validation remains guarded by append-time admission before accepted-history mutation
-- preliminary read transactions are cleaned up before CPU-side pre-transaction validation
-- exact money persistence is preserved
-- UUID event identity is preserved
-- candidate / accepted event identity semantics remain clear
-- destructive PostgreSQL tests run against `TEST_DATABASE_URL`, not the development database
-
-### Current Status
-
-Completed at the durable write-side baseline level after PR6 merge into the Stage 3.5B baseline branch.
-
-Stage 3.5B may still receive optional future hardening items, but Stage 3.5C PR0 has completed the immediate durable order-event vocabulary hardening pass before durable read-side persistence begins.
-
----
-
-# Stage 3.5C PR0: Durable Order Event Vocabulary Hardening
-
-## Goal
-
-Finalize the durable `order_events` vocabulary and selected schema constraints before Stage 3.5C durable read-side persistence starts depending on stored event records.
-
-## Why
-
-Stage 3.5B established the durable write-side baseline. Before read-side projection and checkpoint persistence consume durable accepted events, the stored event vocabulary should be explicit and stable.
-
-This PR0 is a schema-hardening pass, not the durable read-side baseline itself.
-
-## Completed Scope
-
-- normalize durable `event_type` values from lowercase to uppercase:
-  - `created` → `CREATED`
-  - `paid` → `PAID`
-- align Python `OrderEventType` enum values with the database vocabulary
-- update the `order_events.event_type` CHECK constraint
-- add `proof_prev_status` CHECK constraint for `INIT`, `CREATED`, and `PAID`
-- rename the order stream-position unique constraint to `uq_order_events_order_id_sequence`
-- add PostgreSQL schema-constraint tests for rejected lowercase event types and invalid proof statuses
-
-## Boundary Decision
-
-Durable accepted-event vocabulary now uses uppercase enum-style values:
-
-```text
-CREATED
-PAID
-```
-
-`CommandType` remains lowercase because it represents request/action identity for idempotency records, not accepted event identity.
-
-## Non-goals
-
-This PR0 does not implement:
-
-- durable projection state
-- durable checkpoint state
-- `PostgresProjectionStore`
-- `PostgresCheckpointStore`
-- snapshot or replay optimization
-- Compass Layer 2 validation
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
 
 ---
 
@@ -840,556 +225,54 @@ This PR0 does not implement:
 
 ## Goal
 
-Move the current Stage 3 read-side baseline from in-memory stores toward durable persistence-backed semantics.
+Move the read-side runtime from in-memory stores toward durable PostgreSQL-backed projection state, checkpoint progress, global-position consumption, and replay / rebuild validation.
 
 ## Why
 
-After the write-side durable baseline is clear, the read-side can safely evolve toward durable projection-state storage and durable checkpoint storage.
+After the durable write-side baseline was clear, the read-side could safely evolve toward durable projection-state storage and durable checkpoint storage.
 
 Read-side state is not the source of truth.
 
 ```text
-event log = accepted history truth
+accepted history = authority
 projection state = derived runtime state
 checkpoint = operational progress metadata
 ```
 
-## Main Work
+## Status
 
-- durable projection-state schema
-- durable checkpoint schema
+Completed.
+
+## Summary
+
+Stage 3.5C established:
+
+- durable order-event vocabulary hardening
+- `projection_states`
+- `projection_checkpoints`
 - `PostgresProjectionStore`
 - `PostgresCheckpointStore`
-- persistence-backed projection worker tests
-- replay / rebuild validation against durable read-side state
-
-
-## Stage 3.5C PR Breakdown
-
-### PR1 — Durable Read-Side Schema Baseline
-
-#### Status
-
-Completed.
-
-#### Goal
-
-Define the PostgreSQL schema boundary for durable read-side state before implementing PostgreSQL-backed read-side stores.
-
-#### Why
-
-Stage 3.5C should first clarify what durable derived state and checkpoint progress look like at the database boundary.
-
-This PR should answer:
-
-```text
-Where does derived projection state live?
-Where does worker progress live?
-Which database constraints protect the minimum valid shape of read-side state?
-```
-
-It should not yet answer:
-
-```text
-How does the Python projection store persist state?
-How does the PostgreSQL-backed worker scan accepted history?
-How does Compass Layer 2 validate projection drift?
-```
-
-#### Completed Scope
-
-- add `projection_states` table
-- add `projection_checkpoints` table
-- define schema constraints for projection status, money values, version, sequence, and identity fields
-- define checkpoint `cursor_kind` / `cursor_value` alignment constraints
-- add schema-constraint integration tests
-- update CI to apply the durable read-side migration
-- document the durable read-side schema boundary
-- keep accepted history as the source of truth
-- preserve the distinction between physical shape constraints and future Compass Layer 2 semantic-drift validation
-
-#### Candidate Tables
-
-`projection_states` may include:
-
-```text
-order_id
-status
-total_amount
-paid_amount
-version
-last_sequence
-updated_at
-```
-
-`projection_checkpoints` includes:
-
-```text
-worker_name
-cursor_kind
-cursor_value
-updated_at
-```
-
-PR1 deliberately avoids `last_processed_sequence` because `order_events.sequence` is aggregate-local, not a global worker offset.
-
-The final checkpoint scanning strategy is deferred until the PostgreSQL-backed projection worker is introduced. The schema supports `UNSPECIFIED`, `APPENDED_AT`, `EVENT_ID`, and `GLOBAL_POSITION` cursor kinds without committing PR1 to one worker strategy.
-
-#### Boundary Decision
-
-PR1 lets PostgreSQL protect physical shape and checkpoint cursor consistency.
-
-It intentionally does not add cross-field domain constraints such as:
-
-```text
-CREATED implies paid_amount = 0
-PAID implies paid_amount = total_amount
-```
-
-Those are semantic projection-drift concerns for the canonical reducer and future Compass Layer 2 validation, not PR1 database CHECK constraints.
-
-#### Non-goals
-
-PR1 does not implement:
-
-- `PostgresProjectionStore`
-- `PostgresCheckpointStore`
-- PostgreSQL-backed projection worker
-- durable replay / rebuild flow
-- Compass Layer 2 validation
-- Snapshot Trust Contract
-- retry reason classification
-- Stage 3.5E database role hardening
-
----
-
-### PR2 — PostgresProjectionStore
-
-#### Status
-
-Completed.
-
-#### Goal
-
-Implement PostgreSQL-backed persistence for derived projection state.
-
-#### Why
-
-The current Stage 3 projection state exists only in the in-memory baseline.
-
-PR2 moves projection state toward durable persistence while preserving the rule that projection state is derived and rebuildable, not the source of truth.
-
-#### Completed Scope
-
-- implement `PostgresProjectionStore`
-- support loading projection state by `order_id`
-- support inserting or updating projection state through `projection_states`
-- preserve Decimal money values across write / read
-- preserve status and version semantics
-- persist `projection_states.last_sequence` from `OrderState.version`
-- support `clear()` for tests and future rebuild paths
-- add integration tests for save / load / upsert / clear behavior
-- verify multiple orders remain independent
-- verify stored projection state survives the PostgreSQL round trip
-- verify caller-owned rollback restores connection usability after constraint failure
-
-#### Boundary Decision
-
-`PostgresProjectionStore` persists derived projection state only.
-
-It does not:
-
-- run the projection reducer
-- decide event sequencing policy
-- manage checkpoint progress
-- validate semantic drift
-- decide replay / rebuild orchestration
-- commit or rollback transactions
-
-Transaction ownership remains outside the store so that a later PostgreSQL-backed projection worker can commit projection-state updates and checkpoint progress atomically.
-
-At the current projection model level:
-
-```text
-OrderState.version
-= last aggregate-local accepted event sequence reflected by this projection state
-```
-
-Therefore PR2 persists:
-
-```text
-projection_states.last_sequence = state.version
-```
-
-This mapping should be revisited during Stage 3.5D if snapshot trust, reducer-version tracking, projection schema versioning, or projection-row versioning require separating source event sequence from projection version metadata.
-
-#### Non-goals
-
-PR2 does not implement:
-
-- checkpoint persistence
-- PostgreSQL-backed projection worker
-- replay / rebuild orchestration
-- Layer 2 validation
-- snapshot optimization
-- production database roles
-
----
-
-### PR3 — PostgresCheckpointStore
-
-#### Status
-
-Completed.
-
-#### Goal
-
-Implement PostgreSQL-backed persistence for projection worker progress.
-
-#### Why
-
-A durable projection worker needs a durable checkpoint boundary so it can resume processing after restart.
-
-Checkpoint state is operational progress metadata.
-
-It is not business truth.
-
-#### Main Work
-
-- implement `PostgresCheckpointStore`
-- support loading checkpoint by worker name
-- support inserting or updating checkpoint progress
-- support missing-checkpoint behavior
-- add integration tests for checkpoint persistence
-- verify checkpoint state survives a new database connection
-
-#### Non-goals
-
-PR3 does not implement:
-
-- projection-state persistence
-- full PostgreSQL-backed worker orchestration
-- global ordering redesign
-- Layer 2 validation
-- snapshot optimization
-- production database roles
-
----
-
-### PR4 — Global-Position Projection Worker Baseline
-
-#### Status
-
-Completed.
-
-#### Goal
-
-Connect accepted history, the canonical reducer, durable projection state, and durable checkpoint progress into the first PostgreSQL-backed read-side worker path.
-
-#### Why
-
-Stage 3 already established the reducer / worker model in memory.
-
-PR4 proves that the same conceptual read-side runtime can operate against durable storage without turning PostgreSQL into a second reconstruction algorithm.
-
-This PR also makes the worker cursor strategy explicit before durable replay / rebuild validation and future Compass Layer 2 projection-drift validation are introduced.
-
-#### Completed Scope
-
-- add `order_events.global_position`
-- add a migration for the global event-log position
-- update CI migration setup
-- document the global-position worker cursor boundary
-- add `PostgresProjectionEventSource`
-- add `ProjectionEventRecord` as the envelope between storage metadata and domain event meaning
-- add shared order-event hydration through `order_event_hydration.py`
-- load accepted events after a global position
-- order accepted-history consumption by `global_position`
-- add `PostgresProjectionWorker`
-- apply the canonical projection reducer
-- persist projection state through `PostgresProjectionStore`
-- persist checkpoint progress through `PostgresCheckpointStore`
-- store checkpoint progress as `cursor_kind = GLOBAL_POSITION`
-- persist projection state and checkpoint progress in one PostgreSQL transaction
-- add integration tests for global-position event loading
-- add integration tests for worker processing
-- add rollback tests for projection-state / checkpoint atomicity
-- document the single-worker baseline and defer worker leasing / checkpoint locking
-
-#### Cursor Boundary
-
-PR4 preserves this distinction:
-
-```text
-aggregate-local sequence
-≠
-global event-log position
-≠
-worker checkpoint cursor
-```
-
-`order_events.sequence` remains aggregate-local and protects per-order continuity.
-
-`order_events.global_position` provides a durable total order for accepted-history consumption.
-
-`projection_checkpoints.cursor_value` records where a worker should resume.
-
-#### Transaction Boundary
-
-The PostgreSQL-backed projection worker owns the read-side transaction boundary.
-
-It commits:
-
-```text
-projection state
-+
-checkpoint progress
-```
-
-together.
-
-If either write fails, both writes roll back.
-
-This is the read-side equivalent of the Stage 3.5B write-side atomicity boundary:
-
-```text
-accepted event append
-+
-idempotency record write
-```
-
-#### Design Boundary
-
-`reducer.py` remains storage-agnostic.
-
-`PostgresProjectionWorker` orchestrates storage access and reducer execution.
-
-It does not duplicate reduction rules.
-
-#### Non-goals
-
-PR4 does not implement:
-
+- `order_events.global_position`
+- `PostgresProjectionEventSource`
+- `ProjectionEventRecord`
+- `PostgresProjectionWorker`
+- projection state + checkpoint progress atomic persistence
+- `GLOBAL_POSITION` checkpoint cursor
 - durable replay / rebuild validation
-- Compass Layer 2 validation
-- Snapshot Trust Contract
-- structured `SemanticOutcome`
-- runtime decision policy
-- out-of-order buffering
-- DLQ
-- watermark semantics
-- distributed multi-worker coordination
-- worker leasing / checkpoint row locking
-- multi-region / sharded / multi-primary event-log cursor models
-- production database role hardening
-- append-only trigger enforcement
 
----
-
-### PR5 — Durable Replay / Rebuild Validation
-
-#### Goal
-
-Prove that durable read-side state can be discarded and rebuilt deterministically from accepted history.
-
-#### Why
-
-Projection state is derived state.
-
-If it becomes corrupted, stale, or inconsistent, the recovery path should be:
+The important semantic boundaries from this stage are:
 
 ```text
-accepted history
-→ canonical reducer
-→ rebuilt projection state
+projection state = derived read model
+checkpoint = operational progress metadata
+accepted-history replay = authority path
 ```
 
-This PR proves that durable read-side persistence does not redefine the source of truth.
+## Implementation Details
 
-#### Main Work
+Detailed PR-level execution records are maintained in:
 
-- add durable replay / rebuild tests
-- reset or rebuild projection state from `order_events`
-- verify rebuilt state equals expected reducer output
-- verify checkpoint behavior during rebuild
-- verify projection state remains derived and replaceable
-- document replay / rebuild assumptions
-
-#### Non-goals
-
-PR5 does not implement:
-
-- Layer 2 drift validator
-- `SemanticOutcome`
-- runtime decision policy
-- snapshot optimization
-- production database role hardening
-
----
-
-### PR6 — Stage 3.5C Documentation and Completion Alignment
-
-#### Goal
-
-Mark the durable read-side baseline as complete and align documentation, test guides, and roadmap state.
-
-#### Why
-
-Stage 3.5C changes the project from:
-
-```text
-durable write-side only
-```
-
-to:
-
-```text
-durable write-side + durable read-side baseline
-```
-
-The documentation should reflect that the project now has a minimal durable closed loop:
-
-```text
-accepted history
-→ projection worker
-→ durable projection state
-→ durable checkpoint
-→ replay / rebuild from accepted history
-```
-
-#### Main Work
-
-- update project README
-- update docs README
-- update implementation roadmap
-- update Compass runtime roadmap
-- update test documentation
-- update development setup if new migrations are required
-- mark Stage 3.5C completion criteria as satisfied
-- prepare transition notes for Stage 3.5D Snapshot Trust Contract / replay efficiency
-
-#### Non-goals
-
-PR6 does not implement:
-
-- new runtime behavior
-- snapshot schema
-- Layer 2 validation
-- `SemanticOutcome`
-- Stage 3.5E database role hardening
-
-## Candidate Tables
-
-### `projection_states`
-
-Possible fields:
-
-- `order_id`
-- `status`
-- `total_amount`
-- `paid_amount`
-- `version`
-- `last_sequence`
-- `updated_at`
-
-### `projection_checkpoints`
-
-Current fields:
-
-- `worker_name`
-- `cursor_kind`
-- `cursor_value`
-- `updated_at`
-
-For the Stage 3.5C PR4 worker baseline, checkpoint progress is stored as:
-
-```text
-cursor_kind = GLOBAL_POSITION
-cursor_value = latest processed order_events.global_position
-```
-
-This keeps worker progress as operational metadata rather than business truth.
-
-## Completion Criteria
-
-- projection state survives restart
-- checkpoint survives restart
-- worker can consume accepted history through `GLOBAL_POSITION`
-- worker can persist projection state and checkpoint progress atomically
-- worker can resume from checkpoint
-- projection can rebuild from accepted history
-- read-side persistence does not redefine source of truth
-- replay from durable `order_events` can rebuild the projection deterministically
-
-## Boundary Statement
-
-Stage 3.5C does not implement snapshot trust, aggregate snapshots, Layer 2 validation, retry reason classification, or agent-facing isolation.
-
-Stage 3.5C only establishes the durable read-side target:
-
-```text
-event log
-→ projection worker
-→ durable projection state
-→ durable checkpoint
-```
-
-This durable read-side target is required before later stages can validate, rebuild, optimize, or isolate derived state.
-
-
----
-
-
-### PR5 — Durable Replay / Rebuild Validation Baseline
-
-#### Status
-
-Completed at the baseline level.
-
-#### Goal
-
-Validate persisted projection state against accepted-history replay.
-
-#### Main Work
-
-- add durable replay / rebuild validation boundary note
-- introduce minimal replay validation statuses
-- introduce replay validation result object
-- implement durable replay validator for one `order_id`
-- load accepted history through the existing accepted-history store path
-- replay accepted events through the canonical reducer
-- compare replay-derived `OrderState` with persisted projection state
-- detect `MATCH`
-- detect `MISSING_PROJECTION`
-- detect `DRIFT`
-- detect `NO_ACCEPTED_HISTORY`
-- prove replay validation does not mutate accepted history
-- prove replay validation does not advance checkpoint progress
-
-#### Boundary
-
-PR5 does not implement Compass Layer 2.
-
-It provides the durable comparison substrate that future Layer 2 validation can consume:
-
-```text
-accepted-history replay
-vs
-persisted projection state
-```
-
-#### Non-goals
-
-PR5 does not implement:
-
-- structured `SemanticOutcome`
-- runtime decision policy
-- automatic repair policy
-- Snapshot Trust Contract
-- snapshot-assisted replay
-- worker leasing
-- checkpoint row locking
-- distributed multi-worker coordination
+- [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
 
 ---
 
@@ -1403,13 +286,6 @@ Stage 3.5D treats snapshots as derived state-compression artifacts.
 
 It does not allow snapshots to replace accepted history as the source of truth.
 
-```text
-accepted history = source of truth
-snapshot = derived state compression
-projection state = derived runtime view
-checkpoint = operational progress metadata
-```
-
 ## Why
 
 Stage 3.5B established the durable write-side baseline.
@@ -1422,458 +298,51 @@ Together, they answer:
 Can the system form a durable closed loop?
 ```
 
-Stage 3.5D answers the next replay-efficiency question:
+Stage 3.5D answered the next replay-efficiency question:
 
 ```text
 As accepted history grows, how can replay, rehydrate, and rebuild costs be reduced without weakening source-of-truth semantics?
 ```
 
-It also answers the snapshot trust question:
+It also answered the snapshot trust question:
 
 ```text
-When is a snapshot qualified for fast-path use without performing full accepted-history replay every time?
+When is a snapshot qualified for fast-path use without treating it as authority?
 ```
 
-## Fast Path vs Authority Path
+## Status
 
-Stage 3.5D preserves two separate paths:
+Completed.
+
+## Summary
+
+Stage 3.5D established:
+
+- general snapshot trust contract boundary
+- projection snapshot schema baseline
+- `PostgresProjectionSnapshotStore`
+- projection snapshot-assisted replay validation
+- projection snapshot-assisted state resolution
+- explicit aggregate snapshot trust deferral
+
+The important semantic boundaries from this stage are:
 
 ```text
-fast path:
-snapshot + tail replay + trust checks
+accepted history = authority
+snapshot = derived state compression
+fast path = qualified snapshot + tail replay + trust checks
+authority path = full accepted-history replay
 ```
 
-```text
-authority path:
-full accepted-history replay
-```
+Stage 3.5D completes the read-side projection snapshot trust / replay-efficiency substrate.
 
-The system should not full-replay on every normal path.
+Write-side aggregate snapshots are explicitly deferred because they may influence command validation and accepted-history admission.
 
-But the system must always preserve the ability to ignore an invalid snapshot and return to accepted history.
+## Implementation Details
 
-## PR Breakdown
+Detailed PR-level execution records and snapshot-specific implementation notes are maintained in:
 
-Detailed Stage 3.5D execution notes should live under:
-
-```text
-docs/implementation_notes/
-```
-
-The current PR sequence is:
-
-```text
-PR1   — General Snapshot Trust Contract Boundary ✅
-PR1.5 — CI Stage Branch Checks ✅
-PR2   — Projection Snapshot Schema Baseline ✅
-PR3   — PostgresProjectionSnapshotStore ✅
-PR4   — Projection Snapshot-Assisted Replay Validator ✅
-PR4.5 — Projection Snapshot-Assisted State Resolver ✅
-PR5   — Aggregate Snapshot Trust Boundary / Deferral Decision — next
-
-Deferred PR6 — Aggregate Snapshot Schema / Store
-Deferred PR7 — Snapshot-Assisted Write-Side Rehydration
-```
-
-PR1 defines the general trust contract.
-
-PR2 through PR4.5 apply the contract first to projection / read-side snapshot-assisted replay and resolution.
-
-PR5 records why write-side aggregate snapshot work is deferred. Aggregate snapshots participate in the write-side admission / rehydration path and therefore require a stricter trust model than read-side projection snapshots. PR6 and PR7 should remain deferred until aggregate replay depth, admission latency, and trust-receipt infrastructure justify the added risk and complexity.
-
-## Implementation Note Links
-
-The Stage 3.5D implementation details should be maintained in:
-
-- [Stage 3.5D PR Breakdown](../implementation_notes/stage_3_5d_pr_breakdown.md)
-- [Snapshot Payload Hashing](../implementation_notes/snapshot_payload_hashing.md)
-- [Snapshot Generation Policy](../implementation_notes/snapshot_generation_policy.md)
-- [Projection Snapshot Schema Baseline](../implementation_notes/projection_snapshot_schema_baseline.md)
-- [Postgres Projection Snapshot Store](../implementation_notes/postgres_projection_snapshot_store.md)
-- [Projection Snapshot-Assisted Replay Validator](../implementation_notes/projection_snapshot_assisted_replay_validator.md)
-- [Projection Snapshot-Assisted State Resolver](../implementation_notes/projection_snapshot_assisted_state_resolver.md)
-- [Aggregate Snapshot Trust Boundary / Deferral Decision](../implementation_notes/aggregate_snapshot_trust_deferral.md)
-
-Future implementation notes may cover:
-
-- aggregate snapshot schema and store behavior if revived later
-- snapshot-assisted write-side rehydration if revived later
-
-## PR2 Completion — Projection Snapshot Schema Baseline
-
-Stage 3.5D PR2 establishes the durable PostgreSQL schema baseline for projection snapshots.
-
-PR2 adds:
-
-```text
-projection_snapshots
-```
-
-The table stores:
-
-- snapshot identity
-- projection target identity
-- accepted-history source-boundary evidence
-- projected state payload
-- snapshot schema version
-- reducer version
-- canonical payload hash field
-- metadata JSON field
-- creation metadata
-
-The source-boundary uniqueness rules are:
-
-```text
-UNIQUE(source_event_id)
-UNIQUE(order_id, source_event_sequence)
-UNIQUE(source_global_position)
-```
-
-This reflects the intended scope of each boundary:
-
-```text
-source_event_id
-= globally unique accepted-event identity
-
-source_event_sequence
-= aggregate-local / order-local accepted-event sequence
-
-source_global_position
-= globally unique accepted-history cursor
-```
-
-PR2 intentionally avoids the weaker form:
-
-```text
-UNIQUE(order_id, source_global_position)
-```
-
-because `source_global_position` is already global by definition.
-
-PR2 also avoids enforcing:
-
-```text
-state_version = source_event_sequence
-```
-
-as a permanent database law.
-
-The physical rule is:
-
-```text
-state_version <= source_event_sequence
-```
-
-Current-domain equality, if needed, belongs to future Python trust validation.
-
-PR2 verifies the schema through storage integration tests covering:
-
-- valid projection snapshot insertion
-- invalid row-shape rejection through `CHECK` constraints
-- `state_version < source_event_sequence` accepted
-- duplicate `(order_id, source_event_sequence)` rejected
-- duplicate `source_global_position` rejected across orders
-- duplicate `source_event_id` rejected across rows
-- same `source_event_sequence` allowed for different orders
-
-PR2 does not implement `PostgresProjectionSnapshotStore`, snapshot trust validation, or snapshot-assisted replay.
-
-
-## PR3 Completion — PostgresProjectionSnapshotStore
-
-Stage 3.5D PR3 makes the PR2 `projection_snapshots` schema usable through a PostgreSQL-backed Python storage boundary.
-
-PR3 adds:
-
-```text
-ProjectionSnapshot
-PostgresProjectionSnapshotStore
-SnapshotWriteCollisionError
-```
-
-The store supports:
-
-```text
-save_snapshot(snapshot)
-load_latest_snapshot(order_id)
-clear_snapshots(order_id)
-```
-
-`load_latest_snapshot(order_id)` selects the latest snapshot by accepted-history progress:
-
-```sql
-ORDER BY source_global_position DESC
-LIMIT 1
-```
-
-It intentionally does not select snapshots by `created_at`, because `created_at` is only the derived row creation time.
-
-PR3 implements duplicate-write handling through:
-
-```sql
-INSERT ... ON CONFLICT DO NOTHING
-```
-
-followed by explicit source-boundary inspection.
-
-The idempotent success case requires matching evidence across:
-
-```text
-complete source boundary
-+ snapshot_schema_version
-+ reducer_version
-+ payload_hash
-```
-
-The complete source boundary is:
-
-```text
-source_event_id
-+ order_id
-+ source_event_sequence
-+ source_global_position
-```
-
-PR3 raises `SnapshotWriteCollisionError` when existing source-boundary evidence conflicts with incoming lineage, reducer version, snapshot schema version, or payload hash.
-
-PR3 verifies the store through integration tests covering:
-
-- missing snapshot load behavior
-- save and load latest behavior
-- latest snapshot selected by highest `source_global_position`
-- Decimal amount round-trip
-- metadata JSON round-trip
-- database-created `created_at`
-- clear behavior scoped to one order
-- idempotent same-complete-boundary same-evidence writes
-- collision errors for inconsistent lineage or payload evidence
-- database shape constraint preservation
-- caller-owned rollback behavior
-- connection usability after idempotent collision handling
-
-PR3 does not implement snapshot trust validation, snapshot-assisted replay validation, canonical hash computation, snapshot generation runtime, aggregate snapshots, or write-side rehydration.
-
-
----
-
-## PR4 Completion — Projection Snapshot-Assisted Replay Validator
-
-Stage 3.5D PR4 introduces the first read-side validator for checking projection snapshot-assisted replay against accepted-history replay.
-
-PR4 adds:
-
-```text
-ProjectionSnapshotReplayValidationStatus
-ProjectionSnapshotReplayValidationResult
-ProjectionSnapshotReplayValidator
-PostgresAcceptedHistoryEventSource
-```
-
-The validator compares:
-
-```text
-projection snapshot
-+ tail events after snapshot.source_global_position
-```
-
-against:
-
-```text
-accepted-history replay through the canonical projection reducer
-```
-
-PR4 status vocabulary is:
-
-```text
-MATCH
-MISSING_SNAPSHOT
-NO_ACCEPTED_HISTORY_FOR_ORDER
-INVALID_SNAPSHOT_BOUNDARY
-TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
-SNAPSHOT_ASSISTED_DRIFT
-```
-
-PR4 distinguishes:
-
-```text
-tail event source cursor contract failure
-≠
-snapshot-assisted state drift
-```
-
-Non-advancing or out-of-order tail `global_position` values are classified as `TAIL_EVENT_SOURCE_CONTRACT_VIOLATION`.
-
-A structurally valid snapshot whose hydrated state disagrees with accepted-history replay is classified as `SNAPSHOT_ASSISTED_DRIFT`.
-
-PR4 also adds PostgreSQL-backed integration tests proving that the validator can be wired through:
-
-```text
-PostgresProjectionSnapshotStore
-+ PostgresAcceptedHistoryEventSource
-+ PostgresProjectionEventSource
-+ ProjectionSnapshotReplayValidator
-```
-
-PR4 does not implement canonical payload hash verification, version compatibility matrices, automatic fallback, automatic repair, snapshot quarantine, production hot-path resolver behavior, aggregate snapshots, write-side rehydration, `SemanticOutcome`, or RuntimeDecisionPolicy.
-
-A later resolver may consume trusted snapshot evidence for actual replay acceleration without performing full accepted-history replay on the hot path.
-
-
----
-
-## PR4.5 Completion — Projection Snapshot-Assisted State Resolver
-
-Stage 3.5D PR4.5 introduces the read-side resolver primitive for using an externally qualified snapshot id.
-
-PR4.5 adds:
-
-```text
-ProjectionSnapshotAssistedResolutionStatus
-ProjectionSnapshotAssistedResolutionResult
-ProjectionSnapshotAssistedStateResolver
-load_snapshot(snapshot_id) support through the projection snapshot store boundary
-```
-
-The resolver consumes:
-
-```text
-trusted_snapshot_id
-+ exact projection snapshot lookup
-+ projection tail events after source_global_position
-```
-
-and produces a derived resolved projection state only when resolution succeeds.
-
-The primary result contract is strict:
-
-```text
-RESOLVED_FROM_SNAPSHOT
-→ resolved_state exists
-
-Any unresolved status
-→ resolved_state is None
-```
-
-PR4.5 deliberately does not expose partial state as current runtime state. Partial progress belongs to future observability / diagnostic trace tables, not to the resolver result contract.
-
-The strongest current source of `trusted_snapshot_id` is a PR4 validator `MATCH` result. This trust is currently ephemeral. If PR4 validation is run before every resolver call, the system pays additional authority replay cost. Durable receipt-backed trust selection is deferred to Stage 4.
-
-PR4.5 does not implement `SnapshotTrustGate`, `ValidationReceiptStore`, `SnapshotFastPathSelector`, `RuntimeStateResolutionService`, fallback orchestration, `DecisionReceipt`, diagnostic trace tables, `SemanticOutcome`, RuntimeDecisionPolicy, StrategySelector, aggregate snapshots, or write-side rehydration.
-
-
----
-
-## Core Design Requirements
-
-Stage 3.5D should preserve these requirements:
-
-- snapshots are derived, discardable, and rebuildable
-- accepted history remains the authority path
-- snapshot trust checks qualify fast-path use but do not prove universal semantic equivalence
-- invalid snapshots fall back to full accepted-history replay
-- snapshot payload hashes must be deterministic and canonical
-- snapshot write collisions must distinguish benign same-hash races from dangerous different-hash collisions
-- snapshot generation policy must stay separate from snapshot trust validation
-- database constraints should enforce physical plausibility, not over-assume future reducer semantics
-
-## Reducer Version vs Sequence Contract Notice
-
-In the current order domain v1, every accepted event is state-changing:
-
-```text
-CREATED
-PAID
-```
-
-Therefore, the current implementation can treat:
-
-```text
-OrderState.version
-= last applied aggregate-local accepted event sequence
-```
-
-This is a valid simplification for the current domain.
-
-It is not a universal event-sourcing law.
-
-Stage 3.5D snapshot schema and trust documentation should therefore avoid making database-level equality assumptions such as:
-
-```text
-state_version = source_event_sequence
-```
-
-The more future-safe physical rule is:
-
-```text
-state_version <= source_event_sequence
-```
-
-If future accepted events do not change business state, the system may need to split:
-
-```text
-business_version
-last_processed_sequence
-source_global_position
-```
-
-That future refactor should happen only when the domain introduces non-state-changing accepted events.
-
-## Completion Criteria
-
-Stage 3.5D is complete at the baseline level when:
-
-- snapshot trust boundaries are documented
-- projection snapshot schema baseline is implemented
-- projection snapshot store behavior is implemented
-- projection snapshot-assisted replay can be validated against full accepted-history replay
-- projection snapshot-assisted replay can be validated against full accepted-history replay
-- projection snapshot-assisted state can be resolved from an externally qualified snapshot id plus tail replay
-- canonical payload hashing is documented as deterministic
-- same-boundary snapshot writes are idempotent when hashes match after PR3 store behavior exists
-- same-boundary different-hash writes are treated as collisions after PR3 store behavior exists
-- aggregate snapshot trust deferral is documented in PR5
-- aggregate snapshot storage and write-side rehydration are explicitly deferred unless revived by future trigger conditions
-- Stage 4 can later classify snapshot trust failures as structured semantic outcomes
-
-## Non-goals
-
-Stage 3.5D does not implement:
-
-- Compass Layer 2 full validation
-- structured `SemanticOutcome`
-- runtime decision policy
-- action safety gate
-- dual-dimension governance
-- complex policy engine
-- agent blocking semantics
-- HMAC / digital signatures
-- cryptographic hash chains
-- isolated read-side DB
-- agent sandbox
-- sealed milestone snapshots
-- Stage 4 SemanticOutcome persistence
-
-Those belong to Stage 4, Stage 5, or later governance hardening.
-
-## Boundary Statement
-
-Stage 3.5D improves replay and persistence efficiency.
-
-It qualifies projection snapshots for read-side validation and resolution fast paths, but it does not change the source of truth. Write-side aggregate snapshots are deferred because they would participate in command rehydration and admission.
-
-```text
-Snapshots compress accepted history.
-Snapshots do not replace accepted history.
-A snapshot may be used for speed only if it remains traceable, checkable, discardable, and rebuildable.
-```
-
-## Roadmap Size Principle
-
-Going forward, the implementation roadmap should preserve stage sequencing and dependency logic.
-
-Detailed PR scope, schema proposals, store behavior, validator behavior, and test matrices should move into `docs/implementation_notes/` when they become too detailed for the roadmap.
-
-This keeps the roadmap useful as a roadmap while preserving implementation detail in a more appropriate location.
+- [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 
 ---
 

@@ -6,11 +6,17 @@
 
 This roadmap describes the **Compass runtime evolution path**.
 
-It intentionally does not repeat the full implementation roadmap.
+It intentionally does not repeat the full implementation roadmap or preserve PR-level execution history.
 
-For the project-wide implementation sequence, including detailed Stage 3.5B PostgreSQL tables, migrations, store implementation order, and PR breakdowns, see:
+For project-wide implementation sequencing, see:
 
 - [Implementation Roadmap](implementation_roadmap.md)
+
+For completed stage execution notes, see:
+
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
+- [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 
 This document focuses on a narrower question:
 
@@ -30,13 +36,13 @@ This Compass runtime roadmap answers:
 
 > How does Compass become more capable as a runtime semantic control layer?
 
-The two roadmaps overlap around Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E because Compass depends on durable write-side, durable read-side, replay-efficiency, and accepted-history hardening boundaries before stronger runtime validation grows.
+The two roadmaps overlap around Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E because Compass depends on durable write-side, durable read-side, snapshot trust, and actor / permission boundaries before stronger runtime validation grows.
 
-However, this document avoids repeating detailed schema columns, migration details, and store test matrices.
+However, this document avoids repeating detailed schema columns, migrations, store test matrices, and PR-level implementation history.
 
-Those belong in the implementation roadmap.
+Those belong in the implementation roadmap and implementation notes.
 
-This document instead tracks how those implementation stages support the next Compass capabilities.
+This document instead tracks how those stages support the next Compass capabilities.
 
 ---
 
@@ -55,7 +61,8 @@ Project Stage = repository-wide implementation milestone
 
 For example:
 
-- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, the Stage 3.5D replay-efficiency substrate, and the Stage 3.5E durable history hardening boundary.
+- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, and the Stage 3.5D replay-efficiency substrate.
+- Stage 3.5E provides a minimal actor / permission boundary before broader runtime governance.
 - Compass Phase 4 roughly maps to the beginning of Stage 4 Layer 2 validation work.
 - Compass Phases 5–7 roughly map to Stage 4 structured semantic outcomes, runtime decision policy, and action safety.
 - Compass Phase 8 maps to the Stage 5 dual-dimension governance demo.
@@ -77,35 +84,13 @@ candidate event
 → only allowed event can reach accepted history
 ```
 
-The current system already supports:
+The project has now completed the main durability and replay-efficiency substrate needed before Stage 3.5E and Stage 4:
 
-- write-side candidate-event generation
-- proof-carrying event structure
-- Layer 1 transition validation
-- validation dispatch
-- basic `ALLOW` / `BLOCK` enforcement
-- candidate vs accepted event identity boundary clarification
-- rejection before invalid events enter accepted history
-- PostgreSQL-backed accepted history through `PostgresEventStore`
-- PostgreSQL-backed idempotency memory through `PostgresIdempotencyStore`
-- Compass-guarded transactional write-side flow in Stage 3.5B PR4
-- PostgreSQL-backed two-phase concurrency admission through Stage 3.5B PR5
-- validation placement strategy through Stage 3.5B PR6
-- durable order-event vocabulary hardening through Stage 3.5C PR0
-- durable read-side schema baseline in Stage 3.5C PR1
-- PostgreSQL-backed projection state persistence through Stage 3.5C PR2
-- PostgreSQL-backed checkpoint progress persistence through Stage 3.5C PR3
-- global-position accepted-history consumption through Stage 3.5C PR4
-- PostgreSQL-backed projection worker orchestration through Stage 3.5C PR4
-- atomic projection-state and checkpoint-progress persistence through Stage 3.5C PR4
-- durable replay / rebuild validation through Stage 3.5C PR5
-- snapshot trust boundary documentation through Stage 3.5D PR1
-- stage-branch CI checks through Stage 3.5D PR1.5
-- durable projection snapshot schema baseline through Stage 3.5D PR2
-- PostgreSQL-backed projection snapshot storage through Stage 3.5D PR3
-- projection snapshot-assisted replay validation through Stage 3.5D PR4
-- projection snapshot-assisted state resolution through Stage 3.5D PR4.5
-- aggregate snapshot trust deferral through Stage 3.5D PR5
+```text
+Stage 3.5B = durable write-side baseline
+Stage 3.5C = durable read-side baseline
+Stage 3.5D = read-side snapshot trust / replay-efficiency baseline
+```
 
 This means Compass is already more than a passive checker.
 
@@ -116,7 +101,7 @@ invalid candidate event
 → blocked before accepted history
 ```
 
-Stage 3.5B PR4 extended this authority into the durable PostgreSQL-backed write-side path:
+Stage 3.5B extended that authority into the durable PostgreSQL-backed write-side path:
 
 ```text
 candidate event
@@ -124,19 +109,28 @@ candidate event
 → append accepted event + record idempotency in one transaction
 ```
 
-Stage 3.5C PR4 extends the durable read-side dependency by introducing the first PostgreSQL-backed projection worker baseline:
+Stage 3.5C established the durable read-side target:
 
 ```text
-order_events
+accepted history
 → global-position projection event source
 → canonical reducer
-→ PostgresProjectionStore
-→ PostgresCheckpointStore
+→ durable projection state
+→ durable checkpoint progress
 ```
 
-Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state. Stage 3.5D PR1 defines snapshot trust as a boundary problem, PR1.5 ensures stage-branch PRs run CI checks, PR2 introduces `projection_snapshots` as the first durable snapshot schema baseline, PR3 makes projection snapshots usable through `PostgresProjectionSnapshotStore`, PR4 validates projection snapshot-assisted replay against accepted-history replay, and PR4.5 implements the projection snapshot-assisted state resolver as a read-side fast-path primitive.
+Stage 3.5D added the snapshot trust / replay-efficiency substrate:
 
-This does not make Compass Layer 2 active yet. It provides the durable read-side correctness evidence that Layer 2 can later classify and govern.
+```text
+projection snapshot
++ tail replay
+→ validation against accepted-history replay
+→ externally qualified snapshot-assisted state resolution
+```
+
+This does not make Compass Layer 2 active yet.
+
+It provides durable correctness evidence and replay-efficiency primitives that Layer 2 can later classify and govern.
 
 ---
 
@@ -144,27 +138,25 @@ This does not make Compass Layer 2 active yet. It provides the durable read-side
 
 Compass does not yet make runtime governance decisions for derived state.
 
-Stage 3.5C now provides durable read-side correctness evidence by allowing persisted projection state to be compared against accepted-history replay.
+The system can now preserve durable accepted history, persist derived read-side state, compare persisted projection state against accepted-history replay, validate snapshot-assisted replay, and resolve read-side state from an externally qualified snapshot id.
 
 However, Compass has not yet become a full state-level governance layer.
 
-That means the next question is no longer only whether drift can be detected. The next question is:
+That means the next question is no longer only whether drift or snapshot mismatch can be detected. The next question is:
 
-> If derived-state drift is detected, what does it mean, and what should the runtime do?
+> If derived-state drift, snapshot mismatch, or runtime trust failure is detected, what does it mean, and what should the runtime do?
 
 That interpretation and decision boundary belongs to later Compass Layer 2, structured `SemanticOutcome`, runtime decision policy, and action safety work.
 
-The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
-
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline. Stage 3.5C PR5 adds durable replay / rebuild validation so persisted projection state can be checked against accepted-history replay. Stage 3.5D PR4 adds projection snapshot-assisted replay validation so snapshot + tail replay can also be checked against accepted-history replay. Stage 3.5D PR4.5 adds the resolver primitive that consumes an externally qualified `trusted_snapshot_id`; the strongest current source is PR4 `MATCH`, but durable receipt-backed trust selection is deferred to Stage 4. Stage 3.5D PR5 records why aggregate snapshot schema/store work and snapshot-assisted write-side rehydration remain deferred.
+Before that, Stage 3.5E should establish the minimal actor / permission boundary needed for future receipts and privileged runtime actions.
 
 ---
 
-## Stage 3.5D Snapshot Substrate Status
+## Snapshot Substrate Status
 
 Stage 3.5D has completed the read-side projection snapshot trust substrate and explicitly deferred write-side aggregate snapshot implementation.
 
-Completed baseline steps:
+Completed baseline:
 
 ```text
 PR1   — Snapshot Trust Contract Boundary
@@ -176,36 +168,23 @@ PR4.5 — Projection Snapshot-Assisted State Resolver
 PR5   — Aggregate Snapshot Trust Boundary / Deferral Decision
 ```
 
-PR2 introduces `projection_snapshots` as a derived snapshot artifact table.
-
-The table records source-boundary evidence using:
+The important boundary is:
 
 ```text
-source_event_id
-source_event_sequence
-source_global_position
+read-side projection snapshot
+= derived state compression / replay-efficiency support
+
+write-side aggregate snapshot
+= command admission path optimization / stricter trust problem
 ```
 
-The uniqueness model preserves the difference between global and order-local boundaries:
+Projection snapshots can support read-side resolution when externally qualified.
 
-```text
-UNIQUE(source_event_id)
-UNIQUE(order_id, source_event_sequence)
-UNIQUE(source_global_position)
-```
+Aggregate snapshot schema / store work and snapshot-assisted write-side rehydration remain deferred because stale or corrupted aggregate snapshots could influence future accepted-history admission.
 
-This does not make snapshots authoritative.
+Detailed Stage 3.5D execution notes live in:
 
-PR3 adds `PostgresProjectionSnapshotStore`, which persists, loads, and clears projection snapshot records while preserving snapshots as derived evidence rather than truth.
-
-PR3 also keeps the latest-snapshot rule tied to accepted-history progress:
-
-```text
-latest snapshot = highest source_global_position
-not newest created_at row
-```
-
-PR5 records the aggregate snapshot trust boundary and deferral decision. Aggregate snapshot schema/store work and snapshot-assisted write-side rehydration remain deferred because write-side aggregate snapshots can influence command admission.
+- [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 
 ---
 
@@ -218,6 +197,7 @@ write-side event truth
 → durable accepted history
 → durable derived state
 → snapshot trust / replay-efficiency substrate
+→ minimal actor / permission boundary
 → Layer 2 state validation
 → minimal domain policy contract / policy-linked recovery basis
 → structured semantic outcomes
@@ -225,8 +205,6 @@ write-side event truth
 → action safety
 → dual-dimension governance
 ```
-
-Stage 3.5D is the current implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state. PR2 provides the physical `projection_snapshots` schema baseline, PR3 makes that schema usable through a storage boundary, PR4 qualifies loaded projection snapshots by comparing snapshot-assisted replay against accepted-history replay, and PR4.5 consumes externally qualified snapshot ids for read-side resolution.
 
 The key principle is:
 
@@ -279,7 +257,7 @@ invalid semantic transition
 
 Implemented at baseline level.
 
-Stage 3.5B PR4 preserves Layer 1 inside the PostgreSQL-backed transactional write-side flow.
+Stage 3.5B preserves Layer 1 inside the PostgreSQL-backed transactional write-side flow.
 
 ---
 
@@ -291,25 +269,9 @@ Layer 1 protects accepted history, but accepted history must become durable befo
 
 Stage 3.5B provides this dependency.
 
-The implementation roadmap owns the detailed PR sequence:
+Detailed PR-level execution history lives in:
 
-```text
-PR1 Physical Schema + Local PostgreSQL + Migration ✅
-PR2 PostgresEventStore ✅
-PR3 PostgresIdempotencyStore ✅
-PR4 Transactional Semantic Write-side Boundary ✅
-PR5 PostgreSQL Concurrency Admission Boundary ✅
-```
-
-PR6 / Stage 4 prelude adds validation placement strategy:
-
-```text
-IN_TRANSACTION validation
-PRE_TRANSACTION validation + append-time admission
-ASYNC_AUDIT future
-```
-
-From the Compass perspective, Stage 3.5B matters because it turns accepted history into a durable validation source.
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
 
 ## Compass-Relevant Outcomes
 
@@ -322,52 +284,13 @@ Stage 3.5B gives Compass:
 - transactionally coordinated event append and idempotency record write
 - Compass Layer 1 preserved before durable accepted-history mutation
 - clear candidate / accepted identity boundary
-- PostgreSQL-backed two-phase concurrency admission through PR5
-- validation placement strategy through PR6
+- PostgreSQL-backed two-phase concurrency admission
+- validation placement strategy
 - minimal `PRE_TRANSACTION` validation path guarded by append-time admission
-
-## Related Postmortems
-
-- [From In-Memory Correctness to Durable Consistency](../postmortems/from_in_memory_correctness_to_durable_consistency.md)
-- [From Git Local–Remote Drift to Database Immutability Boundaries](../postmortems/from_git_sync_to_db_immutability.md)
-- [From Local PostgreSQL Setup to Defense-in-Depth Boundaries](../postmortems/from_local_postgres_to_defense_in_depth.md)
-- [From Runtime Behavior to Durable Evidence](../postmortems/from_runtime_behavior_to_durable_evidence.md)
-- [From Durable Persistence to Semantic Gate Preservation](../postmortems/from_durable_persistence_to_semantic_gate_preservation.md)
-- [Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)
-- [Pre-Transaction Read Cleanup Boundary](../postmortems/pre_transaction_read_cleanup_boundary.md)
-
-These explain why persistence is not just a backend swap.
-
-For Compass, the important lesson is:
-
-```text
-Python-side semantic behavior is not durable evidence
-unless the selected facts are persisted into an explicit evidence channel.
-```
-
-PR4 adds a second durable-persistence lesson:
-
-```text
-durable persistence hardening must preserve Compass semantic gates
-```
-
-## Related ADRs
-
-- [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
-- [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
-- [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md)
-
-These clarify why PR4 transaction atomicity, PR5 concurrency admission, two-phase admission, and future validation placement strategy are separate concerns.
 
 ## Current Status
 
-Stage 3.5B PR1 / PR2 / PR3 are complete.
-
-Stage 3.5B PR4 establishes the transactional semantic write-side boundary.
-
-Stage 3.5B PR5 is complete for PostgreSQL-backed two-phase concurrency admission.
-
-Stage 3.5B PR6 is complete at the baseline level for validation placement strategy. It preserves `IN_TRANSACTION` as the default and adds a minimal `PRE_TRANSACTION` path guarded by append-time admission.
+Completed at the durable write-side baseline level.
 
 ---
 
@@ -389,17 +312,22 @@ If the projection state exists only in memory, the validation is useful but not 
 
 Stage 3.5C provides this dependency.
 
+Detailed PR-level execution history lives in:
+
+- [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
+
 ## Compass-Relevant Outcomes
 
-Stage 3.5C should provide:
+Stage 3.5C gives Compass:
 
 - durable projection state schema
 - durable checkpoint state schema
-- future durable projection state store
-- future durable checkpoint store
-- persistence-backed replay / rebuild
-- state that survives restart
-- a durable target for Layer 2 validation
+- PostgreSQL-backed projection state store
+- PostgreSQL-backed checkpoint store
+- global-position accepted-history consumption
+- PostgreSQL-backed projection worker orchestration
+- projection-state and checkpoint-progress atomic persistence
+- durable replay / rebuild validation
 
 ## Runtime Meaning
 
@@ -417,46 +345,15 @@ Layer 2 = truthfulness check for derived state
 
 ## Current Status
 
-Current major implementation focus after the Stage 3.5B durable write-side baseline.
-
-Stage 3.5C PR0 has already hardened durable order-event vocabulary before the read-side baseline begins.
-
-Stage 3.5C PR1 has established the durable read-side schema baseline:
-
-```text
-projection_states = derived runtime view
-projection_checkpoints = worker progress metadata
-order_events = accepted-history truth
-```
-
-Stage 3.5C PR2 has implemented `PostgresProjectionStore`, which makes `projection_states` usable from the Python storage boundary.
-
-Stage 3.5C PR3 has implemented `PostgresCheckpointStore`, which makes `projection_checkpoints` usable from the Python storage boundary.
-
-Stage 3.5C PR4 has implemented the first PostgreSQL-backed projection worker baseline. It introduces `order_events.global_position` as the durable accepted-history consumption cursor, adds a PostgreSQL projection event source, and coordinates:
-
-```text
-accepted history
-→ canonical reducer
-→ durable projection state
-→ durable checkpoint progress
-```
-
-inside one read-side transaction boundary.
-
-This gives Compass Layer 2 a concrete future durable target and progress boundary for drift comparison, but it does not yet implement Layer 2 validation or durable replay / rebuild validation.
+Completed at the durable read-side baseline level.
 
 ---
 
 # Stage 3.5D Dependency — Snapshot Trust Contract / Replay Efficiency
 
-Before Compass Layer 2 grows into stronger runtime state validation, the persistence substrate needs one additional hardening stage:
+Stage 3.5D is complete at the read-side snapshot trust / replay-efficiency baseline level.
 
-```text
-Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
-```
-
-This stage does not implement Layer 2 validation itself.
+It does not implement Layer 2 validation itself.
 
 Instead, it improves the replay, rehydration, and recovery substrate that Layer 2 may later depend on.
 
@@ -473,47 +370,29 @@ The purpose is to reduce replay, rehydrate, and rebuild cost without allowing sn
 The Stage 3.5D trust model is:
 
 ```text
-fast path = snapshot + tail replay + trust checks
+fast path = externally qualified snapshot + tail replay
 authority path = full accepted-history replay
-```
-
-Snapshot trust validation should qualify whether an existing snapshot may be used on the fast path.
-
-Snapshot generation should remain a separate responsibility.
-
-```text
-SnapshotTrustValidator
-= decides whether an existing snapshot may be used
-
-SnapshotBuilder
-= creates snapshot payload from trusted reconstruction output
-
-SnapshotGenerationPolicy
-= decides when a new snapshot should be produced
 ```
 
 Compass-relevant outcomes include:
 
-- snapshot lineage back to accepted history
+- projection snapshot lineage back to accepted history
 - projection snapshot support for read-side replay efficiency
+- snapshot-assisted replay validation against accepted-history replay
+- snapshot-assisted state resolution from an externally qualified snapshot id
 - explicit aggregate snapshot deferral until write-side trust prerequisites are stronger
-- snapshot-assisted replay that remains equivalent to full replay for trusted fast-path cases
-- snapshot validity rules
-- lineage, tail-continuity, schema-version, reducer-version / aggregate-logic-version, and payload-integrity checks
-- canonical snapshot payload hashing
-- idempotent snapshot write collision policy
 - fast-path vs authority-path distinction
-- future replay cost measurement through DecisionReceipt / runtime evidence records
-- safer persistence substrate before Layer 2 drift validation
+- future replay cost measurement through receipts / runtime evidence records
+
+Detailed execution notes live in:
+
+- [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 
 Stage 3.5D should remain persistence / replay hardening.
-
-It qualifies snapshots for fast-path use, but it does not make snapshots the source of truth.
 
 It should not absorb structured semantic outcomes, runtime decision policy, action safety, or dual-dimension governance.
 
 ---
-
 
 # Stage 3.5E Dependency — Minimal Actor / Permission Boundary
 
@@ -1420,3 +1299,4 @@ validate event truth
 ```
 
 This is the core path from Compass Layer 1 toward dual-dimension governance.
+
