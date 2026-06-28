@@ -60,6 +60,7 @@ The project has completed an executable baseline across:
 - Stage 3.5D PR3 PostgresProjectionSnapshotStore
 - Stage 3.5D PR4 Projection Snapshot-Assisted Replay Validator
 - Stage 3.5D PR4.5 Projection Snapshot-Assisted State Resolver
+- Stage 3.5D PR5 Aggregate Snapshot Trust Boundary / Deferral Decision
 
 This means:
 
@@ -83,11 +84,11 @@ This means:
 - Stage 3.5D PR1.5 has enabled CI checks for stage branch pull requests
 - Stage 3.5D PR2 has introduced the durable `projection_snapshots` schema baseline and schema constraint tests
 - Stage 3.5D PR3 has implemented `PostgresProjectionSnapshotStore`, making projection snapshots usable through a Python storage boundary while preserving snapshots as derived evidence rather than accepted-history truth
-- Stage 3.5D PR4 has implemented the projection snapshot-assisted replay validator, accepted-history adapter, and PostgreSQL-backed integration tests proving snapshot + tail replay can be checked against accepted-history replay; PR4.5 has implemented the projection snapshot-assisted state resolver, exact snapshot-id lookup usage, and PostgreSQL-backed resolver wiring
+- Stage 3.5D PR4 has implemented the projection snapshot-assisted replay validator, accepted-history adapter, and PostgreSQL-backed integration tests proving snapshot + tail replay can be checked against accepted-history replay; PR4.5 has implemented the projection snapshot-assisted state resolver, exact snapshot-id lookup usage, and PostgreSQL-backed resolver wiring; PR5 has documented the aggregate snapshot trust boundary and deferred write-side aggregate snapshot implementation
 
 The current major focus is:
 
-- **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**
+- **Stage 3.5D closeout — merge Snapshot Trust Contract / Replay Efficiency back to main after PR5**
 
 After the completed Stage 3.5C durable read-side baseline, the project can proceed toward:
 
@@ -1491,10 +1492,10 @@ The Stage 3.5D implementation details should be maintained in:
 - [Postgres Projection Snapshot Store](../implementation_notes/postgres_projection_snapshot_store.md)
 - [Projection Snapshot-Assisted Replay Validator](../implementation_notes/projection_snapshot_assisted_replay_validator.md)
 - [Projection Snapshot-Assisted State Resolver](../implementation_notes/projection_snapshot_assisted_state_resolver.md)
+- [Aggregate Snapshot Trust Boundary / Deferral Decision](../implementation_notes/aggregate_snapshot_trust_deferral.md)
 
 Future implementation notes may cover:
 
-- aggregate snapshot trust deferral
 - aggregate snapshot schema and store behavior if revived later
 - snapshot-assisted write-side rehydration if revived later
 
