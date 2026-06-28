@@ -33,6 +33,13 @@ Recently completed baselines:
 ```text
 Stage 3.5B — Durable Write-Side Baseline
 Stage 3.5C — Durable Read-Side Baseline
+Stage 3.5D PR1 — Snapshot Trust Contract Boundary
+Stage 3.5D PR1.5 — CI Stage Branch Checks
+Stage 3.5D PR2 — Projection Snapshot Schema Baseline
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore
+Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
+Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
+Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
 ```
 
 Stage 3.5B now includes:
@@ -109,7 +116,37 @@ no accepted-history mutation
 no checkpoint progress advancement
 ```
 
-These completed items are no longer tracked as deferred backlog work.
+
+Stage 3.5D PR3 has completed the PostgreSQL-backed projection snapshot store baseline:
+
+```text
+ProjectionSnapshot
+PostgresProjectionSnapshotStore
+SnapshotWriteCollisionError
+save_snapshot / load_latest_snapshot / clear_snapshots
+latest snapshot selected by source_global_position, not created_at
+idempotent same-complete-boundary same-evidence write handling
+collision detection for inconsistent lineage, reducer version, schema version, or payload hash
+caller-owned transaction boundary preserved
+```
+
+Stage 3.5D PR4 has completed the projection snapshot-assisted replay validator baseline:
+
+```text
+ProjectionSnapshotReplayValidationStatus
+ProjectionSnapshotReplayValidationResult
+ProjectionSnapshotReplayValidator
+PostgresAcceptedHistoryEventSource
+snapshot-assisted replay compared against accepted-history replay
+tail pagination across pages
+TAIL_EVENT_SOURCE_CONTRACT_VIOLATION for non-advancing / out-of-order tail positions
+SNAPSHOT_ASSISTED_DRIFT for authority mismatch after replay
+PostgreSQL-backed validator integration tests
+```
+
+
+
+These completed items are no longer tracked as deferred backlog work. PR6 / PR7 aggregate snapshot implementation remains deferred and is tracked below.
 
 This backlog should now be used only for concerns intentionally deferred beyond the durable write-side baseline and the completed Stage 3.5C durable read-side baseline.
 
@@ -826,72 +863,81 @@ Revisit when the test matrix expands from read-side schema constraints into Post
 
 ### Current Decision
 
-Do not implement aggregate snapshots, snapshot trust, or projection rebuild optimization during Stage 3.5C.
+Stage 3.5D remains the snapshot trust contract / replay-efficiency stage.
 
-Stage 3.5C should first complete the durable read-side baseline:
-
-```text
-durable projection state
-durable checkpoint state
-PostgresProjectionStore
-PostgresCheckpointStore
-persistence-backed projection worker tests
-```
-
-Snapshot and replay-efficiency mechanisms should be handled as a later persistence-optimization stage.
-
-### Why Not Now
-
-Stage 3.5C answers:
+The projection / read-side portion is now mostly implemented through PR4.5 closeout:
 
 ```text
-Can the read-side become durable while preserving accepted history as the source of truth?
+PR1   — Snapshot Trust Contract Boundary ✅
+PR1.5 — CI Stage Branch Checks ✅
+PR2   — Projection Snapshot Schema Baseline ✅
+PR3   — PostgresProjectionSnapshotStore ✅
+PR4   — Projection Snapshot-Assisted Replay Validator ✅
+PR4.5 — Projection Snapshot-Assisted State Resolver ✅
 ```
 
-Snapshot work answers different questions:
+The next Stage 3.5D step is PR5:
 
 ```text
-As accepted history grows, how can replay, rehydrate, and rebuild costs be reduced?
+PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
 ```
+
+PR5 documents why aggregate snapshot schema/store work and snapshot-assisted write-side rehydration are deferred.
+
+### Why This Boundary Exists
+
+Projection snapshots are read-side derived compression. If they are invalid, the system can reject, bypass, or rebuild them from accepted history.
+
+Aggregate snapshots are different. They would participate in write-side aggregate rehydration and may influence command validation / admission. A stale or corrupted aggregate snapshot could cause future candidate events to be evaluated against the wrong state.
+
+Therefore, write-side aggregate snapshot trust requires a stricter contract than read-side projection snapshot trust.
+
+### Current Stage 3.5D Direction
+
+Stage 3.5D now closes as:
 
 ```text
-When is a snapshot trustworthy enough to use on the normal fast path without full replay every time?
+PR4.5 closeout
+→ PR5 aggregate snapshot deferral
+→ Stage 3.5D closeout
 ```
 
-These concerns should not distract from the durable read-side correctness baseline.
+The following are explicitly deferred:
 
-### Future Work
+```text
+Deferred PR6 — Aggregate Snapshot Schema / Store
+Deferred PR7 — Snapshot-Assisted Write-Side Rehydration
+```
 
-Consider during Stage 3.5D:
+### Deferred Work
+
+Defer:
 
 - aggregate snapshot schema
 - aggregate snapshot store
-- rehydration from latest valid snapshot plus tail events
-- projection rebuild optimization
-- snapshot metadata and lineage
-- snapshot validity rules
-- replay cost measurement
-- lineage checks:
-  - aggregate_id / order_id
-  - snapshot_version
-  - source_event_id
-  - source_event_sequence
-- tail continuity checks
-- snapshot_schema_version
-- reducer_version
-- payload_hash / checksum
-- invalid snapshot fallback to full replay
-- snapshot trust levels:
-  - invalid / untrusted
-  - fast-path eligible
-  - high-confidence
-  - recently audited
-- hooks for future Stage 4 SemanticOutcome when snapshot trust checks fail
+- snapshot-assisted write-side rehydration
+- aggregate snapshot trust receipts
+- aggregate snapshot invalidation policy
+- write-side snapshot fallback orchestration
+- aggregate snapshot corruption detection / quarantine
+- production write-side snapshot hot path
+
+### Future Trigger Conditions
+
+Revisit aggregate snapshots when:
+
+- aggregate replay depth becomes expensive
+- command admission latency becomes significant
+- aggregate history size grows substantially
+- validation receipts / trust gates exist
+- snapshot invalidation and rebuild policy exists
+- write-side snapshot corruption can be detected and safely bypassed
+- Stage 4 StrategySelector needs aggregate snapshot-assisted write-side optimization
 
 ### Current Classification
 
 ```text
-Stage 3.5D / snapshot trust contract
+Stage 3.5D PR5 / aggregate snapshot trust deferral
 ```
 
 ### Suggested Timing
@@ -899,12 +945,10 @@ Stage 3.5D / snapshot trust contract
 During:
 
 ```text
-Stage 3.5D — Persistence Optimization & Replay Efficiency
+Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
 ```
 
-after Stage 3.5C durable read-side baseline is complete.
-
----
+Production aggregate snapshot implementation should be revived only after Stage 4 trust receipts, runtime policy, and strategy selection make the write-side trust boundary explicit.
 
 ## 9. Pre-Transaction Cleanup Failure Handling
 

@@ -99,6 +99,13 @@ The current system already supports:
 - PostgreSQL-backed projection worker orchestration through Stage 3.5C PR4
 - atomic projection-state and checkpoint-progress persistence through Stage 3.5C PR4
 - durable replay / rebuild validation through Stage 3.5C PR5
+- snapshot trust boundary documentation through Stage 3.5D PR1
+- stage-branch CI checks through Stage 3.5D PR1.5
+- durable projection snapshot schema baseline through Stage 3.5D PR2
+- PostgreSQL-backed projection snapshot storage through Stage 3.5D PR3
+- projection snapshot-assisted replay validation through Stage 3.5D PR4
+- projection snapshot-assisted state resolution through Stage 3.5D PR4.5
+- aggregate snapshot trust deferral through Stage 3.5D PR5
 
 This means Compass is already more than a passive checker.
 
@@ -127,7 +134,7 @@ order_events
 → PostgresCheckpointStore
 ```
 
-Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state.
+Stage 3.5C PR5 adds the durable replay / rebuild validation substrate by comparing accepted-history replay with persisted projection state. Stage 3.5D PR1 defines snapshot trust as a boundary problem, PR1.5 ensures stage-branch PRs run CI checks, PR2 introduces `projection_snapshots` as the first durable snapshot schema baseline, PR3 makes projection snapshots usable through `PostgresProjectionSnapshotStore`, PR4 validates projection snapshot-assisted replay against accepted-history replay, and PR4.5 implements the projection snapshot-assisted state resolver as a read-side fast-path primitive.
 
 This does not make Compass Layer 2 active yet. It provides the durable read-side correctness evidence that Layer 2 can later classify and govern.
 
@@ -149,7 +156,56 @@ That interpretation and decision boundary belongs to later Compass Layer 2, stru
 
 The durable write-side is now concurrency-admission-aware at the Stage 3.5B baseline level.
 
-Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline. Stage 3.5C PR5 adds durable replay / rebuild validation so persisted projection state can be checked against accepted-history replay.
+Stage 3.5B PR5 restored the concurrency/admission boundary for PostgreSQL-backed execution, Stage 3.5B PR6 introduced validation placement strategy as a Stage 4 prelude, Stage 3.5C PR0 hardened durable order-event vocabulary before read-side persistence begins, Stage 3.5C PR1 established the durable read-side schema boundary for projection state and checkpoint progress, Stage 3.5C PR2 made projection state durable through `PostgresProjectionStore`, Stage 3.5C PR3 made checkpoint progress durable through `PostgresCheckpointStore`, and Stage 3.5C PR4 connected durable accepted history, the canonical reducer, projection state persistence, and checkpoint persistence through a PostgreSQL-backed projection worker baseline. Stage 3.5C PR5 adds durable replay / rebuild validation so persisted projection state can be checked against accepted-history replay. Stage 3.5D PR4 adds projection snapshot-assisted replay validation so snapshot + tail replay can also be checked against accepted-history replay. Stage 3.5D PR4.5 adds the resolver primitive that consumes an externally qualified `trusted_snapshot_id`; the strongest current source is PR4 `MATCH`, but durable receipt-backed trust selection is deferred to Stage 4. Stage 3.5D PR5 records why aggregate snapshot schema/store work and snapshot-assisted write-side rehydration remain deferred.
+
+---
+
+## Stage 3.5D Snapshot Substrate Status
+
+Stage 3.5D has completed the read-side projection snapshot trust substrate and explicitly deferred write-side aggregate snapshot implementation.
+
+Completed baseline steps:
+
+```text
+PR1   — Snapshot Trust Contract Boundary
+PR1.5 — CI Stage Branch Checks
+PR2   — Projection Snapshot Schema Baseline
+PR3   — PostgresProjectionSnapshotStore
+PR4   — Projection Snapshot-Assisted Replay Validator
+PR4.5 — Projection Snapshot-Assisted State Resolver
+PR5   — Aggregate Snapshot Trust Boundary / Deferral Decision
+```
+
+PR2 introduces `projection_snapshots` as a derived snapshot artifact table.
+
+The table records source-boundary evidence using:
+
+```text
+source_event_id
+source_event_sequence
+source_global_position
+```
+
+The uniqueness model preserves the difference between global and order-local boundaries:
+
+```text
+UNIQUE(source_event_id)
+UNIQUE(order_id, source_event_sequence)
+UNIQUE(source_global_position)
+```
+
+This does not make snapshots authoritative.
+
+PR3 adds `PostgresProjectionSnapshotStore`, which persists, loads, and clears projection snapshot records while preserving snapshots as derived evidence rather than truth.
+
+PR3 also keeps the latest-snapshot rule tied to accepted-history progress:
+
+```text
+latest snapshot = highest source_global_position
+not newest created_at row
+```
+
+PR5 records the aggregate snapshot trust boundary and deferral decision. Aggregate snapshot schema/store work and snapshot-assisted write-side rehydration remain deferred because write-side aggregate snapshots can influence command admission.
 
 ---
 
@@ -170,7 +226,7 @@ write-side event truth
 → dual-dimension governance
 ```
 
-Stage 3.5D is the next implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state.
+Stage 3.5D is the current implementation dependency because full replay validation now exists, and the next question is how snapshots can safely support replay efficiency without becoming untrusted derived state. PR2 provides the physical `projection_snapshots` schema baseline, PR3 makes that schema usable through a storage boundary, PR4 qualifies loaded projection snapshots by comparing snapshot-assisted replay against accepted-history replay, and PR4.5 consumes externally qualified snapshot ids for read-side resolution.
 
 The key principle is:
 
@@ -392,17 +448,17 @@ This gives Compass Layer 2 a concrete future durable target and progress boundar
 
 ---
 
-# Stage 3.5D Dependency — Persistence Optimization and Replay Efficiency
+# Stage 3.5D Dependency — Snapshot Trust Contract / Replay Efficiency
 
-Before Compass Layer 2 grows into stronger runtime state validation, the persistence substrate may need one additional hardening stage:
+Before Compass Layer 2 grows into stronger runtime state validation, the persistence substrate needs one additional hardening stage:
 
 ```text
-Stage 3.5D — Persistence Optimization & Replay Efficiency
+Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
 ```
 
 This stage does not implement Layer 2 validation itself.
 
-Instead, it improves the replay and recovery substrate that Layer 2 may later depend on.
+Instead, it improves the replay, rehydration, and recovery substrate that Layer 2 may later depend on.
 
 Stage 3.5D treats snapshots as derived state-compression artifacts:
 
@@ -414,17 +470,43 @@ projection state = derived runtime view
 
 The purpose is to reduce replay, rehydrate, and rebuild cost without allowing snapshots to replace accepted history.
 
+The Stage 3.5D trust model is:
+
+```text
+fast path = snapshot + tail replay + trust checks
+authority path = full accepted-history replay
+```
+
+Snapshot trust validation should qualify whether an existing snapshot may be used on the fast path.
+
+Snapshot generation should remain a separate responsibility.
+
+```text
+SnapshotTrustValidator
+= decides whether an existing snapshot may be used
+
+SnapshotBuilder
+= creates snapshot payload from trusted reconstruction output
+
+SnapshotGenerationPolicy
+= decides when a new snapshot should be produced
+```
+
 Compass-relevant outcomes include:
 
-- aggregate snapshot lineage back to accepted history
-- snapshot-assisted replay that remains equivalent to full replay
+- snapshot lineage back to accepted history
+- projection snapshot support for read-side replay efficiency
+- explicit aggregate snapshot deferral until write-side trust prerequisites are stronger
+- snapshot-assisted replay that remains equivalent to full replay for trusted fast-path cases
 - snapshot validity rules
-- lineage, tail-continuity, schema-version, reducer-version, and payload-integrity checks
+- lineage, tail-continuity, schema-version, reducer-version / aggregate-logic-version, and payload-integrity checks
+- canonical snapshot payload hashing
+- idempotent snapshot write collision policy
 - fast-path vs authority-path distinction
-- replay cost measurement
+- future replay cost measurement through DecisionReceipt / runtime evidence records
 - safer persistence substrate before Layer 2 drift validation
 
-This stage should remain persistence / replay hardening.
+Stage 3.5D should remain persistence / replay hardening.
 
 It qualifies snapshots for fast-path use, but it does not make snapshots the source of truth.
 
@@ -433,17 +515,17 @@ It should not absorb structured semantic outcomes, runtime decision policy, acti
 ---
 
 
-# Stage 3.5E Dependency — Durable History and Permission Hardening
+# Stage 3.5E Dependency — Minimal Actor / Permission Boundary
 
-Before Compass grows into stronger runtime governance, the accepted-history substrate should be hardened against accidental or improper database mutation.
+Before Compass grows into stronger runtime governance, the system should establish a minimal actor / permission boundary.
 
 ```text
-Stage 3.5E — Durable History and Permission Hardening
+Stage 3.5E — Minimal Actor / Permission Boundary
 ```
 
-This stage does not implement Layer 2 validation, structured semantic outcomes, or runtime decision policy.
+This stage does not implement Layer 2 validation, structured semantic outcomes, runtime decision policy, full RBAC, login/session handling, or benchmarking.
 
-Instead, it clarifies database authority around accepted history and derived state.
+Instead, it clarifies who or what is allowed to produce validation, snapshots, receipts, decisions, rebuilds, and privileged operations.
 
 Compass depends on this distinction because later runtime governance will treat accepted history as durable evidence:
 
@@ -453,18 +535,19 @@ projection state = derived runtime view
 checkpoint = operational progress metadata
 ```
 
-Stage 3.5E should therefore harden `order_events` without accidentally making mutable read-side tables immutable.
+Stage 3.5E should therefore define minimal actor semantics before Stage 4 receipts need fields such as `created_by`, `validated_by`, `decision_by`, `receipt_by`, or `triggered_by`.
 
 Compass-relevant outcomes include:
 
-- clearer database role boundaries
-- write-side runtime authority limited to accepted-history append behavior
-- projection worker authority separated from write-side admission authority
-- accepted-history tables protected from casual `UPDATE` / `DELETE`
+- system / admin / operator / test actor semantics
+- privileged operation boundary documentation
+- created_by / future validated_by / decision_by metadata alignment
+- optional database role boundary documentation
+- accepted-history tables protected from casual `UPDATE` / `DELETE` where appropriate
 - read-side tables left mutable for upsert, resume, reset, and rebuild
-- stronger confidence that later Layer 2 comparisons are grounded in a hardened accepted-history source
+- stronger confidence that later Layer 2 receipts can identify who or what produced evidence
 
-This stage should remain durable storage / authority hardening.
+This stage should remain minimal actor / permission boundary hardening.
 
 It should not absorb Layer 2 validation, `SemanticOutcome`, runtime decision policy, action safety, or dual-dimension governance.
 

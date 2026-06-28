@@ -4,11 +4,11 @@ on:
   pull_request:
     branches:
       - main
-      - feat/stage3.5c-durable-read-side-baseline
+      - "feat/stage**"
   push:
     branches:
       - main
-      - feat/stage3.5c-durable-read-side-baseline
+      - "feat/stage**"
 
 jobs:
   test:
@@ -58,14 +58,17 @@ jobs:
 
       - name: Create test database
         run: |
-          psql "$DATABASE_URL" -tAc "SELECT 1 FROM pg_database WHERE datname = 'compass_test'" | grep -q 1 || \
-          psql "$DATABASE_URL" -c "CREATE DATABASE compass_test;"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -tAc "SELECT 1 FROM pg_database WHERE datname = 'compass_test'" | grep -q 1 || \
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE compass_test;"
 
       - name: Apply test database migrations
         run: |
-          psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
-          psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
-          psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql         
+          set -euo pipefail
+          for migration in db/migrations/*.sql; do
+            echo "Applying ${migration}..."
+            psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+
       - name: Lint with Flake8
         run: |
           pip install flake8

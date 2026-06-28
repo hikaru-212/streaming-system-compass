@@ -51,6 +51,7 @@ Start with:
 6. [semantic_concurrency.md](./semantic_concurrency.md)
 7. [bad_state_as_future_context.md](./bad_state_as_future_context.md)
 8. [agent_action_as_hypothesis.md](./agent_action_as_hypothesis.md)
+9. [retry_is_not_intent_preservation.md](./retry_is_not_intent_preservation.md)
 
 ## Relationship to the Main Project
 
@@ -64,6 +65,7 @@ In the full Compass system:
 * projections are checked against accepted history
 * snapshots are derived, discardable, traceable, and subordinate
 * replay validation is used to detect read-side semantic drift
+* retry-like situations are classified by semantic meaning, not collapsed into one generic retry category
 
 This folder does not replace the implementation notes or ADRs.
 

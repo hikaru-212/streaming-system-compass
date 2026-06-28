@@ -29,6 +29,10 @@ Postmortems help preserve:
 - distinctions between runtime behavior, durable evidence, and future governance signals
 - cases where infrastructure hardening risks bypassing semantic governance
 - cases where logical orchestration boundaries require explicit physical connection-state cleanup
+- cases where database uniqueness scope must match the semantic scope of the source boundary
+- cases where logical cursors must be distinguished from committed-history boundaries
+- cases where protocol-level correctness must be distinguished from production wiring proof
+- cases where generic validation intuition must be corrected by authority-based semantic reasoning
 
 ---
 
@@ -49,6 +53,11 @@ Postmortems help preserve:
 | [pre_transaction_read_cleanup_boundary](pre_transaction_read_cleanup_boundary.md) | Connection Reliability / Infrastructure | Explains why `PRE_TRANSACTION` validation must explicitly clean up implicit read transactions before CPU-side validation, and why cleanup failure handling is deferred to Stage 4 / production hardening. |
 | [from_snapshot_as_fast_state_to_snapshot_trust_contract](from_snapshot_as_fast_state_to_snapshot_trust_contract.md) | Snapshot Trust / Derived State | Records the reasoning shift from treating snapshots as replay optimization to treating them as derived-state artifacts that need a trust contract before being used on the fast path. |
 | [from_replay_rebuild_validation_to_layer2_governance](from_replay_rebuild_validation_to_layer2_governance.md) | Replay / Layer 2 Boundary | Clarifies why Stage 3.5C PR5 replay / rebuild validation is the durable correctness substrate for derived state, while Compass Layer 2 remains the later semantic governance and runtime decision layer. |
+| [from_per_order_global_position_to_global_source_boundary](from_per_order_global_position_to_global_source_boundary.md) | Snapshot Schema / Source Boundary | Records the PR2 correction from per-order global-position uniqueness to true global accepted-history boundary uniqueness. |
+| [from_created_at_freshness_to_committed_history_boundaries](from_created_at_freshness_to_committed_history_boundaries.md) | Snapshot Freshness / Event-Log Cursor Semantics | Explains why projection snapshots should be ordered by accepted-history lineage instead of row creation time, and why `global_position` must be defined against commit, visibility, rollback, and recovery boundaries. |
+| [from_protocol_satisfaction_to_production_wiring_proof](from_protocol_satisfaction_to_production_wiring_proof.md) | Production Wiring / AI-Assisted Implementation | Explains why protocol-satisfying unit tests do not prove that a production adapter exists or that the real PostgreSQL assembly path works. |
+| [from_generic_validation_to_authority_based_reasoning](from_generic_validation_to_authority_based_reasoning.md) | Snapshot Trust / Authority-Based Validation | Records the PR4 correction from generic input-validation ordering to authority-first reasoning: accepted history must exist before snapshot trust can be evaluated. |
+| [stage_3_5d_local_correctness_global_premise_drift](stage_3_5d_local_correctness_global_premise_drift.md) | Stage Scope / AI-Assisted Engineering | Records the Stage 3.5D correction where locally coherent snapshot PRs remained technically valid, but the stage-level premise had to be re-audited after distinguishing write-side aggregate admission risk from read-side derived-state evidence. |
 
 ---
 
@@ -92,6 +101,46 @@ The postmortem [Pre-Transaction Read Cleanup Boundary](pre_transaction_read_clea
 - Preliminary PostgreSQL reads may still open implicit transactions.
 - The postmortem explains why a `try/finally` cleanup boundary is required to rollback the implicit read transaction before CPU-side Compass validation begins.
 - This directly supports the [Validation Placement Strategy Boundary](../boundary_notes/validation_placement_strategy_boundary.md), especially the physical connection-state requirement behind `PRE_TRANSACTION` validation.
+
+---
+
+The postmortem [From Per-Order Global Position to Global Source Boundary](from_per_order_global_position_to_global_source_boundary.md) is related to the Stage 3.5D PR2 projection snapshot schema baseline:
+
+- PR2 introduces `projection_snapshots` and accepted-history lineage fields.
+- `source_event_sequence` is order-local, while `source_global_position` is global.
+- The postmortem records why `UNIQUE(order_id, source_global_position)` was the wrong physical boundary.
+- The corrected schema uses `UNIQUE(source_global_position)` and `UNIQUE(source_event_id)` while preserving `UNIQUE(order_id, source_event_sequence)`.
+- This supports later snapshot store and trust-validator work by keeping source-boundary evidence aligned with accepted-history semantics.
+
+---
+
+
+The postmortem [From `created_at` Freshness to Committed-History Boundaries](from_created_at_freshness_to_committed_history_boundaries.md) is related to Stage 3.5D snapshot trust and later distributed ordering work:
+
+- Stage 3.5D snapshots should not treat row creation time as freshness.
+- `source_global_position` is useful only when its meaning is tied to an accepted-history boundary.
+- The postmortem records the distinction between allocation-order cursors and committed-history cursors.
+- It also separates temporary visibility gaps, permanent allocation gaps, and visible poison events, so later worker / validator design can avoid mixing gap recovery with DLQ handling.
+- This supports future snapshot trust validation, projection worker hardening, and distributed event-log design by making cursor semantics explicit instead of assuming that a monotonic number automatically equals committed history.
+
+---
+
+
+The postmortem [From Protocol Satisfaction to Production Wiring Proof](from_protocol_satisfaction_to_production_wiring_proof.md) is related to Stage 3.5D PR4 projection snapshot replay validation:
+
+- PR4 introduces protocol-shaped dependencies so the validator can be tested independently from PostgreSQL.
+- Fake-based unit tests prove validator logic, but they do not prove that every protocol has a production adapter.
+- The postmortem records why `PostgresAcceptedHistoryEventSource` and PostgreSQL-backed validator integration tests are required before PR4 can be considered production-wired.
+- This supports future PR4.5 resolver work by preserving the rule that protocol satisfaction, adapter existence, and production wiring proof are separate claims.
+
+---
+
+The postmortem [From Generic Validation to Authority-Based Reasoning](from_generic_validation_to_authority_based_reasoning.md) is related to Stage 3.5D PR4 and the Snapshot Trust Contract:
+
+- PR4 is not a generic snapshot input validator. It is an authority-based replay validator.
+- The postmortem records why `NO_ACCEPTED_HISTORY_FOR_ORDER` should be returned when accepted history is missing, even if a snapshot row exists.
+- Snapshot boundary invalidity can be evaluated only after the accepted-history authority foundation exists.
+- This reinforces the Stage 3.5D invariant that snapshots are derived, discardable, and subordinate to accepted history.
 
 ---
 

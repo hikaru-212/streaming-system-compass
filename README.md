@@ -18,6 +18,7 @@ It is a production-inspired streaming-system project focused on:
 - **orthogonal idempotency / concurrency boundaries**
 - **replay-safe projection runtime design**
 - **exact-money hardening before durable persistence**
+- **snapshot trust as derived-state replay efficiency, not source-of-truth replacement**
 
 The project currently has:
 
@@ -28,15 +29,16 @@ The project currently has:
 - a completed Stage 3.5B durable write-side baseline, including PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and validation placement strategy
 - Stage 3.5C PR0 durable order-event vocabulary hardening, including uppercase `event_type` vocabulary, `proof_prev_status` database constraint, and stream-position unique-constraint rename
 - a completed Stage 3.5C durable read-side baseline, including PostgreSQL-backed projection state, checkpoint progress, global-position projection worker orchestration, and durable replay / rebuild validation
-- executable tests defending both write-side and read-side baseline semantics
+- a completed Stage 3.5D snapshot trust / replay-efficiency baseline, including projection snapshot schema, store, replay validator, snapshot-assisted state resolver, and aggregate snapshot trust deferral
+- executable tests defending write-side, read-side, durable replay, and snapshot trust baseline semantics
 
 The next major step is:
 
-- **Stage 3.5D — Snapshot Trust Contract, persistence optimization, and replay efficiency**
+- **documentation cleanup before Stage 3.5E**, especially known issues across `implementation_notes/`, `roadmap/`, and `adr/`
 
 After that, the roadmap continues toward:
 
-- **Stage 3.5E — durable history and permission hardening**
+- **Stage 3.5E — minimal actor / permission boundary**
 - **Stage 4 — runtime semantic validation, structured semantic outcomes, runtime decision policy, and action safety**
 
 ---
@@ -88,8 +90,11 @@ If you want to understand how the repository thinks rather than only what it imp
 - **Durable read-side baseline**  
   Stage 3.5C establishes PostgreSQL-backed projection state, checkpoint progress, global-position worker orchestration, and durable replay / rebuild validation against accepted history.
 
-- **Planned durable-history hardening**  
-  Stage 3.5E is reserved for database authority and permission hardening after durable write-side, durable read-side, and replay-efficiency boundaries become clear.
+- **Snapshot trust / replay-efficiency baseline**  
+  Stage 3.5D establishes projection snapshot schema, snapshot storage, snapshot-assisted replay validation, snapshot-assisted state resolution, and aggregate snapshot trust deferral.
+
+- **Planned minimal actor / permission boundary**  
+  Stage 3.5E is reserved for minimal actor / permission semantics after durable write-side, durable read-side, and replay-efficiency boundaries become clear.
 
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
@@ -221,7 +226,8 @@ They test whether the correctness mechanisms inside `src/` survive adversarial r
 - Two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
 - Configurable validation placement through `IN_TRANSACTION` and `PRE_TRANSACTION`
 - Durable order-event vocabulary hardening through uppercase `event_type` values, `proof_prev_status` CHECK constraints, and explicit stream-position constraint naming
-- Clear separation between domain legality, transition truth, admission continuity, retry safety, validation placement, and read-side derivation
+- Projection snapshot trust as derived compression, validated and resolved without making snapshots authoritative
+- Clear separation between domain legality, transition truth, admission continuity, retry safety, validation placement, read-side derivation, and snapshot trust
 
 ---
 
@@ -401,8 +407,9 @@ Everything else grows around this core:
 - durable projection state and checkpoint state
 - global-position projection worker orchestration
 - persistence-backed replay / rebuild validation
-- Stage 3.5D snapshot trust, replay-efficiency, and persistence optimization
-- Stage 3.5E durable history and permission hardening
+- Stage 3.5D snapshot trust, replay-efficiency, and persistence optimization completed
+- documentation cleanup before Stage 3.5E
+- Stage 3.5E minimal actor / permission boundary
 - exact money durability
 - append-only durable history and idempotency evolution
 
@@ -470,6 +477,14 @@ Current baseline completed:
   - PostgreSQL-backed projection worker orchestration
   - durable replay / rebuild validation against accepted history
   - PostgreSQL schema, storage, worker, and replay-validation tests
+- Stage 3.5D snapshot trust / replay-efficiency baseline:
+  - snapshot trust contract boundary
+  - durable projection snapshot schema
+  - PostgreSQL-backed `PostgresProjectionSnapshotStore`
+  - projection snapshot-assisted replay validator
+  - projection snapshot-assisted state resolver
+  - aggregate snapshot trust boundary / deferral decision
+  - write-side aggregate snapshot schema/store and snapshot-assisted write-side rehydration explicitly deferred
 
 Current boundary of completion:
 
@@ -479,13 +494,14 @@ Current boundary of completion:
 - exact-money semantics are stabilized before deeper durable persistence work
 - durable accepted-history vocabulary has been hardened before read-side persistence depends on stored events
 - durable read-side projection state, checkpoint progress, global-position worker orchestration, and replay / rebuild validation are established through Stage 3.5C
-- Stage 3.5D snapshot trust, persistence optimization, and replay efficiency is the current implementation focus
+- Stage 3.5D snapshot trust, persistence optimization, and replay efficiency is complete at the read-side projection snapshot baseline level
+- write-side aggregate snapshot schema/store and snapshot-assisted write-side rehydration are intentionally deferred
 - state-level Compass Layer 2 validation is not yet implemented
 
 Next implementation milestones:
 
-- complete Stage 3.5D snapshot trust, persistence optimization, and replay efficiency
-- Stage 3.5E durable history and permission hardening
+- documentation cleanup before Stage 3.5E, especially known issues across `implementation_notes/`, `roadmap/`, and `adr/`
+- Stage 3.5E minimal actor / permission boundary
 - later Stage 4 runtime semantic validation, semantic outcome structuring, runtime decision policy, and action safety
 - Stage 5 dual-dimension governance demo
 

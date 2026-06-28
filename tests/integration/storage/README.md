@@ -5,9 +5,9 @@
 This directory contains PostgreSQL-backed storage integration tests for **Streaming System + Compass**.
 
 These tests are not general database examples.
-They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1**, **Stage 3.5C PR2**, **Stage 3.5C PR3**, and the storage-side part of **Stage 3.5C PR4**.
+They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1**, **Stage 3.5C PR2**, **Stage 3.5C PR3**, the storage-side part of **Stage 3.5C PR4**, **Stage 3.5D PR2**, and **Stage 3.5D PR3**.
 
-At the current baseline, this directory covers the completed durable write-side storage foundation and the first durable read-side schema checkpoint:
+At the current baseline, this directory covers the completed durable write-side storage foundation, the first durable read-side schema checkpoint, the first projection snapshot schema checkpoint, and the first projection snapshot store boundary:
 
 ```text
 Stage 3.5B PR2 — PostgresEventStore Baseline
@@ -17,6 +17,8 @@ Stage 3.5C PR1 — Durable Read-Side Schema Baseline
 Stage 3.5C PR2 — PostgresProjectionStore Baseline
 Stage 3.5C PR3 — PostgresCheckpointStore Baseline
 Stage 3.5C PR4 — Global-Position Projection Event Source Baseline
+Stage 3.5D PR2 — Projection Snapshot Schema Baseline
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore Baseline
 ```
 
 It also verifies the local PostgreSQL test-database guardrail used by destructive integration tests.
@@ -36,6 +38,7 @@ The production code under test includes:
 - `src/storage/postgres_checkpoint_store.py`
 - `src/storage/postgres_projection_event_source.py`
 - `src/storage/order_event_hydration.py`
+- `src/storage/postgres_projection_snapshot_store.py`
 
 The related schema objects include:
 
@@ -43,12 +46,15 @@ The related schema objects include:
 - `idempotency_records`
 - `projection_states`
 - `projection_checkpoints`
+- `projection_snapshots`
 
 Together, these tests protect the Stage 3.5B storage claim and the Stage 3.5C PR1 read-side schema claim:
 
 > Accepted history and idempotency memory are not merely in-memory behavior anymore. They are durable PostgreSQL-backed facts with explicit identity, sequence, exact-money, schema, and replay semantics.
 
 > Durable read-side projection state and checkpoint progress have explicit database shape constraints, but they remain derived state and operational metadata rather than accepted-history truth.
+
+> Projection snapshots have explicit source-boundary and shape constraints, and `PostgresProjectionSnapshotStore` makes them usable through a Python storage boundary. They remain derived snapshot artifacts rather than accepted-history truth.
 
 ---
 
@@ -79,7 +85,8 @@ The current storage integration tests cover:
 - durable event vocabulary constraints
 - durable proof-status constraints
 - `projection_states` schema constraints
-- `projection_checkpoints` schema constraints
+- `projection_checkpoints`
+- `projection_snapshots` schema constraints
 - checkpoint `cursor_kind` / `cursor_value` alignment
 - physically valid but semantically suspicious projection-state rows reserved for future Layer 2 drift detection
 - `PostgresProjectionStore.load_state()` missing-state behavior
@@ -101,8 +108,37 @@ The current storage integration tests cover:
 - global positions remain unique
 - `PostgresProjectionEventSource.load_after()` returns accepted events ordered by `global_position`
 - projection event records preserve event identity while keeping `global_position` outside `OrderEvent`
+- `projection_snapshots` schema constraints
+- projection snapshot valid-row insertion
+- projection snapshot invalid shape rejection through `CHECK` constraints
+- `state_version <= source_event_sequence` physical rule
+- globally unique `source_event_id`
+- order-local unique `(order_id, source_event_sequence)`
+- globally unique `source_global_position`
+- same `source_event_sequence` allowed across different orders
+- projection snapshot uniqueness rules:
+  - `UNIQUE(source_event_id)`
+  - `UNIQUE(order_id, source_event_sequence)`
+  - `UNIQUE(source_global_position)`
+- `PostgresProjectionSnapshotStore.load_latest_snapshot()` missing-snapshot behavior
+- `PostgresProjectionSnapshotStore.save_snapshot()` insert behavior
+- `PostgresProjectionSnapshotStore.load_latest_snapshot()` selection by highest `source_global_position`
+- projection snapshot Decimal amount round-trip
+- projection snapshot metadata JSON round-trip
+- projection snapshot database-created `created_at` load behavior
+- `PostgresProjectionSnapshotStore.clear_snapshots()` scoped order cleanup behavior
+- same complete source boundary + same snapshot evidence treated as idempotent success
+- inconsistent lineage or payload evidence rejected through `SnapshotWriteCollisionError`
+- same `source_event_id` with different evidence rejected
+- same `source_global_position` with different evidence rejected
+- same `(order_id, source_event_sequence)` with different evidence rejected
+- same `payload_hash` with different lineage rejected
+- same complete source boundary with different reducer version rejected
+- same complete source boundary with different snapshot schema version rejected
+- caller-owned rollback behavior for projection snapshot store writes
+- connection usability after idempotent collision handling
 
-This directory currently focuses on the PostgreSQL-backed storage baseline and storage-side accepted-history loading for projection workers.
+This directory currently focuses on the PostgreSQL-backed storage baseline, storage-side accepted-history loading for projection workers, the physical schema boundary for projection snapshots, and the storage boundary for projection snapshot records.
 
 It does not test the full transactional write-side orchestration; that belongs to `tests/integration/pipeline/transactional/`.
 
@@ -117,6 +153,7 @@ These tests are destructive integration tests.
 They may truncate write-side and read-side persistence tables such as:
 
 - `projection_checkpoints`
+- `projection_snapshots`
 - `projection_states`
 - `idempotency_records`
 - `order_events`
@@ -155,6 +192,7 @@ They prove:
 - tests connect to `compass_test`
 - required write-side tables exist after migration
 - required read-side schema tables exist after migration
+- required projection snapshot schema table exists after migration
 - destructive cleanup leaves the test database empty before each test
 
 This boundary answers:
@@ -325,6 +363,43 @@ This boundary answers:
 > Can PostgreSQL persist and restore worker checkpoint progress without giving the store ownership of event scanning, projection state, worker orchestration, transaction commit / rollback, or Compass Layer 2 validation?
 
 
+### 8. Projection Snapshot Schema Constraint Boundary
+
+These tests verify the Stage 3.5D PR2 projection snapshot schema baseline.
+
+They prove:
+
+- a valid projection snapshot row can be inserted
+- empty `order_id` values are rejected
+- non-positive `source_event_sequence` values are rejected
+- non-positive `source_global_position` values are rejected
+- invalid snapshot statuses such as `INIT` or `UNKNOWN` are rejected
+- negative money values are rejected
+- `paid_amount > total_amount` is rejected
+- negative `state_version` is rejected
+- `state_version > source_event_sequence` is rejected
+- `state_version < source_event_sequence` is allowed
+- non-positive `snapshot_schema_version` values are rejected
+- empty `reducer_version`, `payload_hash`, and `created_by` values are rejected
+- non-object `metadata_json` is rejected
+- duplicate `(order_id, source_event_sequence)` is rejected
+- duplicate `source_global_position` is rejected across orders
+- duplicate `source_event_id` is rejected across rows
+- the same `source_event_sequence` is allowed for different orders
+
+This boundary protects the Stage 3.5D PR2 schema claim:
+
+```text
+projection_snapshots
+= derived projection snapshot artifacts with accepted-history source-boundary evidence
+```
+
+This boundary answers:
+
+> Does the database preserve projection snapshot source-boundary evidence and physical shape without making snapshots the source of truth?
+
+---
+
 ## What These Tests Prove
 
 These tests prove that the PostgreSQL-backed storage layer preserves the following claims:
@@ -349,14 +424,21 @@ These tests prove that the PostgreSQL-backed storage layer preserves the followi
 18. `projection_checkpoints` preserves explicit `cursor_kind` / `cursor_value` progress evidence.
 19. Store methods preserve caller-owned transaction boundaries.
 20. Destructive PostgreSQL tests are isolated from the development database.
+21. `projection_snapshots` can store derived snapshot artifacts with source-boundary evidence.
+22. `source_event_id` is globally unique.
+23. `(order_id, source_event_sequence)` preserves order-local snapshot boundaries.
+24. `source_global_position` is globally unique.
+25. `state_version <= source_event_sequence` is enforced without requiring equality.
 
-Together, these tests make the Stage 3.5B and Stage 3.5C PR1 storage claims executable:
+Together, these tests make the Stage 3.5B, Stage 3.5C, and Stage 3.5D PR2 storage claims executable:
 
 > The durable storage layer can preserve accepted history and idempotency memory strongly enough for the transactional write-side and future read-side projection work to rely on it.
 
 > The durable read-side schema can preserve derived projection state and checkpoint progress strongly enough for stores, workers, rebuild logic, and Layer 2 drift validation to rely on its physical shape.
 
 > `PostgresProjectionStore` makes `projection_states` usable through a Python storage boundary while preserving projection state as derived and rebuildable.
+
+> `projection_snapshots` preserves derived snapshot payload and source-boundary evidence without making snapshots authoritative.
 
 ---
 
@@ -372,6 +454,7 @@ They do not prove:
 - domain legality failures roll back durable writes
 - optimistic or pessimistic PostgreSQL admission behavior
 - validation placement strategy
+- PostgreSQL-backed projection snapshot store behavior
 - PostgreSQL-backed durable read-side store behavior
 - PostgreSQL-backed projection worker behavior
 - Compass Layer 2 state-level validation
@@ -396,7 +479,8 @@ This directory does not currently test:
 - `PostgresProjectionStore`
 - `PostgresCheckpointStore`
 - PostgreSQL-backed projection worker
-- Stage 3.5D Snapshot Trust Contract
+- Stage 3.5D snapshot trust validator
+- Stage 3.5D snapshot-assisted replay validator
 - Stage 3.5E database role hardening
 - Stage 4 `SemanticOutcome`
 - retry reason classification persistence
@@ -417,7 +501,8 @@ Future storage integration tests may add:
 Current PR1 coverage:
 
 - `projection_states` schema constraints
-- `projection_checkpoints` schema constraints
+- `projection_checkpoints`
+- `projection_snapshots` schema constraints
 - checkpoint `cursor_kind` / `cursor_value` alignment
 - shape constraints vs future Layer 2 semantic-drift boundary
 
@@ -430,9 +515,14 @@ Remaining expected coverage:
 
 ### Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
 
-Expected coverage:
+Current PR2 coverage:
 
 - snapshot schema constraints
+- projection snapshot source-boundary uniqueness constraints
+- physical shape constraints for projection snapshot rows
+
+Remaining expected coverage:
+
 - snapshot lineage checks
 - tail continuity checks
 - reducer version checks
@@ -470,6 +560,7 @@ Start with:
 3. `test_postgres_idempotency_store.py`
 4. `test_write_side_schema_constraints.py`
 5. `test_read_side_schema_constraints.py`
+6. `test_projection_snapshot_schema_constraints.py`
 
 Read them as storage-boundary tests, not as CRUD tests.
 
