@@ -1,6 +1,6 @@
 # Snapshot Payload Hashing
 
-[← Back to Implementation Notes](README.md)
+[← Back to Stage 3.5D Notes](README.md)
 
 ## Purpose
 
