@@ -69,6 +69,7 @@ The project has already completed:
 - Stage 3.5D PR2 — Projection Snapshot Schema Baseline
 - Stage 3.5D PR3 — PostgresProjectionSnapshotStore
 - Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
+- Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
 
 Stage 3.5B now forms a durable write-side baseline:
 
@@ -84,8 +85,10 @@ The current major focus is:
 
 ```text
 Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
-current next work: PR5 — Aggregate Snapshot Trust Extension, or optional PR4.5 — Projection Snapshot-Assisted State Resolver if replay acceleration is split out
+current next work: PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
 ```
+
+PR4.5 is now treated as completed after closeout documentation. It introduced a read-side resolver primitive that consumes an externally qualified `trusted_snapshot_id`. The strongest current source of that id is a PR4 validator `MATCH` result, but durable receipt-backed trust selection remains deferred to Stage 4.
 
 Stage 3.5C is now complete at the durable read-side baseline level. PR1 established the durable read-side schema boundary, PR2 made projection state durable through `PostgresProjectionStore`, PR3 made checkpoint progress durable through `PostgresCheckpointStore`, PR4 introduced the first PostgreSQL-backed projection worker baseline using `GLOBAL_POSITION` as the accepted-history consumption cursor, and PR5 added durable replay / rebuild validation as the first accepted-history replay check against persisted projection state.
 
@@ -101,7 +104,7 @@ PostgresProjectionStore + PostgresCheckpointStore = atomic read-side persistence
 PR4 keeps the reducer storage-agnostic, stores checkpoint progress as `cursor_kind = GLOBAL_POSITION`, and assumes a single active worker process per `worker_name`. PR5 adds the durable replay / rebuild validation baseline by comparing accepted-history replay with persisted projection state. Worker leasing, checkpoint row locking, DLQ, watermark semantics, distributed multi-worker coordination, and Compass Layer 2 governance remain deferred.
 
 
-Snapshot trust remains the Stage 3.5D focus. PR1 has defined the trust boundary, PR1.5 has enabled stage-branch CI checks, PR2 has introduced the durable `projection_snapshots` schema baseline, PR3 has made projection snapshots usable through `PostgresProjectionSnapshotStore`, and PR4 has added projection snapshot-assisted replay validation against accepted-history replay. Retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.
+Snapshot trust remains the Stage 3.5D focus. PR1 has defined the trust boundary, PR1.5 has enabled stage-branch CI checks, PR2 has introduced the durable `projection_snapshots` schema baseline, PR3 has made projection snapshots usable through `PostgresProjectionSnapshotStore`, and PR4 has added projection snapshot-assisted replay validation against accepted-history replay. PR4.5 has added the read-side snapshot-assisted resolver primitive and PostgreSQL wiring, including a correctness demonstration that PR4 `MATCH` can supply the `trusted_snapshot_id` consumed by PR4.5. Retry classification, Layer 2 validation, and isolated agent-facing runtime work should remain deferred to their proper stages.
 
 ---
 
@@ -277,17 +280,19 @@ authority path:
 full accepted-history replay for audit, rebuild, suspicious cases, reducer upgrades, or high-risk verification
 ```
 
-The current proposed Stage 3.5D PR sequence is:
+The current Stage 3.5D PR sequence is:
 
 ```text
-PR1 — General Snapshot Trust Contract Boundary ✅
+PR1   — General Snapshot Trust Contract Boundary ✅
 PR1.5 — CI Stage Branch Checks ✅
-PR2 — Projection Snapshot Schema Baseline ✅
-PR3 — PostgresProjectionSnapshotStore
-PR4 — Projection Snapshot-Assisted Replay Validator
-PR5 — Aggregate Snapshot Trust Extension
-PR6 — Aggregate Snapshot Schema / Store
-PR7 — Snapshot-Assisted Write-Side Rehydration
+PR2   — Projection Snapshot Schema Baseline ✅
+PR3   — PostgresProjectionSnapshotStore ✅
+PR4   — Projection Snapshot-Assisted Replay Validator ✅
+PR4.5 — Projection Snapshot-Assisted State Resolver ✅
+PR5   — Aggregate Snapshot Trust Boundary / Deferral Decision — next
+
+Deferred PR6 — Aggregate Snapshot Schema / Store
+Deferred PR7 — Snapshot-Assisted Write-Side Rehydration
 ```
 
 Stage 3.5D should keep these implementation details under:
@@ -309,7 +314,8 @@ Stage 3.5D should include:
 - snapshot schema version and logic version tracking
 - invalid snapshot fallback to full accepted-history replay
 - projection snapshot-assisted replay
-- later aggregate snapshot-assisted write-side rehydration
+- aggregate snapshot trust boundary and deferral decision
+- deferred aggregate snapshot-assisted write-side rehydration
 - evidence hooks for future Stage 4 `SemanticOutcome`
 
 Stage 3.5D should not implement:
@@ -325,7 +331,7 @@ Stage 3.5D should not implement:
 
 ## Stage 3.5E Reminder
 
-Stage 3.5E is reserved for durable history and permission hardening after durable write-side, durable read-side, and replay-efficiency boundaries are clear.
+Stage 3.5E is reserved for minimal actor / permission boundary hardening after durable write-side, durable read-side, and replay-efficiency boundaries are clear.
 
 The first hardening target is accepted history:
 
@@ -333,8 +339,11 @@ The first hardening target is accepted history:
 order_events = accepted history / source of truth
 ```
 
-Stage 3.5E should evaluate:
+Stage 3.5E should stay minimal. It should evaluate:
 
+- system / admin / operator / test actor semantics
+- privileged operation boundary documentation
+- `created_by` / future `validated_by` / `decision_by` metadata alignment
 - database role boundary documentation
 - migration owner vs runtime role separation
 - write-side runtime permission baseline
@@ -343,7 +352,7 @@ Stage 3.5E should evaluate:
 - revoking runtime `UPDATE` / `DELETE` authority from `order_events`
 - optional trigger-based rejection of `UPDATE` / `DELETE` on `order_events`
 
-If Stage 3.5D introduces snapshot tables, Stage 3.5E may also evaluate snapshot table permissions or append-only derived-artifact discipline.
+Since Stage 3.5D introduces projection snapshot tables, Stage 3.5E may also evaluate snapshot table permissions or append-only derived-artifact discipline. Full RBAC, login, JWT/session, multi-tenant authorization, and benchmark instrumentation remain out of scope for Stage 3.5E.
 
 However, projection state and checkpoint tables must remain mutable enough to support:
 

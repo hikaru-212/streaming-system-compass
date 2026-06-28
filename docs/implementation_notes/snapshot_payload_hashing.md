@@ -20,6 +20,36 @@ same logical snapshot payload
 
 ---
 
+## Current Stage 3.5D Status
+
+This note defines the canonical payload hashing boundary for snapshot trust hardening.
+
+PR4 and PR4.5 do not yet rely on full payload hash recomputation as their primary trust mechanism.
+
+Current behavior:
+
+```text
+PR4
+= validates snapshot-assisted replay against accepted-history authority replay
+
+PR4.5
+= consumes an externally qualified snapshot id
+= performs local compatibility checks
+= resolves read-side projection state through snapshot + tail replay
+```
+
+Therefore, this note is currently a trust-hardening design boundary, not a fully implemented validator contract.
+
+Future hardening may add explicit canonical payload hash recomputation and mismatch classification, such as:
+
+```text
+SNAPSHOT_PAYLOAD_HASH_MISMATCH
+```
+
+Until that exists, `payload_hash` should be treated as part of the snapshot integrity contract and schema baseline, but not as the sole trust mechanism for PR4 / PR4.5.
+
+---
+
 ## Core Rule
 
 `payload_hash` must be computed over a canonical snapshot payload, not over arbitrary Python object serialization.

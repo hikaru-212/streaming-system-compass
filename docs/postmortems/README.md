@@ -57,6 +57,7 @@ Postmortems help preserve:
 | [from_created_at_freshness_to_committed_history_boundaries](from_created_at_freshness_to_committed_history_boundaries.md) | Snapshot Freshness / Event-Log Cursor Semantics | Explains why projection snapshots should be ordered by accepted-history lineage instead of row creation time, and why `global_position` must be defined against commit, visibility, rollback, and recovery boundaries. |
 | [from_protocol_satisfaction_to_production_wiring_proof](from_protocol_satisfaction_to_production_wiring_proof.md) | Production Wiring / AI-Assisted Implementation | Explains why protocol-satisfying unit tests do not prove that a production adapter exists or that the real PostgreSQL assembly path works. |
 | [from_generic_validation_to_authority_based_reasoning](from_generic_validation_to_authority_based_reasoning.md) | Snapshot Trust / Authority-Based Validation | Records the PR4 correction from generic input-validation ordering to authority-first reasoning: accepted history must exist before snapshot trust can be evaluated. |
+| [stage_3_5d_local_correctness_global_premise_drift](stage_3_5d_local_correctness_global_premise_drift.md) | Stage Scope / AI-Assisted Engineering | Records the Stage 3.5D correction where locally coherent snapshot PRs remained technically valid, but the stage-level premise had to be re-audited after distinguishing write-side aggregate admission risk from read-side derived-state evidence. |
 
 ---
 

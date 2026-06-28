@@ -59,6 +59,7 @@ The project has completed an executable baseline across:
 - Stage 3.5D PR2 Projection Snapshot Schema Baseline
 - Stage 3.5D PR3 PostgresProjectionSnapshotStore
 - Stage 3.5D PR4 Projection Snapshot-Assisted Replay Validator
+- Stage 3.5D PR4.5 Projection Snapshot-Assisted State Resolver
 
 This means:
 
@@ -82,7 +83,7 @@ This means:
 - Stage 3.5D PR1.5 has enabled CI checks for stage branch pull requests
 - Stage 3.5D PR2 has introduced the durable `projection_snapshots` schema baseline and schema constraint tests
 - Stage 3.5D PR3 has implemented `PostgresProjectionSnapshotStore`, making projection snapshots usable through a Python storage boundary while preserving snapshots as derived evidence rather than accepted-history truth
-- Stage 3.5D PR4 has implemented the projection snapshot-assisted replay validator, accepted-history adapter, and PostgreSQL-backed integration tests proving snapshot + tail replay can be checked against accepted-history replay
+- Stage 3.5D PR4 has implemented the projection snapshot-assisted replay validator, accepted-history adapter, and PostgreSQL-backed integration tests proving snapshot + tail replay can be checked against accepted-history replay; PR4.5 has implemented the projection snapshot-assisted state resolver, exact snapshot-id lookup usage, and PostgreSQL-backed resolver wiring
 
 The current major focus is:
 
@@ -1458,24 +1459,26 @@ Detailed Stage 3.5D execution notes should live under:
 docs/implementation_notes/
 ```
 
-The current proposed PR sequence is:
+The current PR sequence is:
 
 ```text
-PR1 — General Snapshot Trust Contract Boundary ✅
+PR1   — General Snapshot Trust Contract Boundary ✅
 PR1.5 — CI Stage Branch Checks ✅
-PR2 — Projection Snapshot Schema Baseline ✅
-PR3 — PostgresProjectionSnapshotStore ✅
-PR4 — Projection Snapshot-Assisted Replay Validator ✅
-PR5 — Aggregate Snapshot Trust Extension
-PR6 — Aggregate Snapshot Schema / Store
-PR7 — Snapshot-Assisted Write-Side Rehydration
+PR2   — Projection Snapshot Schema Baseline ✅
+PR3   — PostgresProjectionSnapshotStore ✅
+PR4   — Projection Snapshot-Assisted Replay Validator ✅
+PR4.5 — Projection Snapshot-Assisted State Resolver ✅
+PR5   — Aggregate Snapshot Trust Boundary / Deferral Decision — next
+
+Deferred PR6 — Aggregate Snapshot Schema / Store
+Deferred PR7 — Snapshot-Assisted Write-Side Rehydration
 ```
 
 PR1 defines the general trust contract.
 
-PR2 through PR4 have applied the contract first to projection / read-side snapshot-assisted replay.
+PR2 through PR4.5 apply the contract first to projection / read-side snapshot-assisted replay and resolution.
 
-PR5 through PR7 extend the same trust model to write-side aggregate snapshot-assisted rehydration, where stricter admission-path constraints are required because reconstructed aggregate state can influence command validation and accepted-history admission.
+PR5 records why write-side aggregate snapshot work is deferred. Aggregate snapshots participate in the write-side admission / rehydration path and therefore require a stricter trust model than read-side projection snapshots. PR6 and PR7 should remain deferred until aggregate replay depth, admission latency, and trust-receipt infrastructure justify the added risk and complexity.
 
 ## Implementation Note Links
 
@@ -1487,12 +1490,13 @@ The Stage 3.5D implementation details should be maintained in:
 - [Projection Snapshot Schema Baseline](../implementation_notes/projection_snapshot_schema_baseline.md)
 - [Postgres Projection Snapshot Store](../implementation_notes/postgres_projection_snapshot_store.md)
 - [Projection Snapshot-Assisted Replay Validator](../implementation_notes/projection_snapshot_assisted_replay_validator.md)
+- [Projection Snapshot-Assisted State Resolver](../implementation_notes/projection_snapshot_assisted_state_resolver.md)
 
 Future implementation notes may cover:
 
-- projection snapshot-assisted state resolver
-- aggregate snapshot schema and store behavior
-- snapshot-assisted write-side rehydration
+- aggregate snapshot trust deferral
+- aggregate snapshot schema and store behavior if revived later
+- snapshot-assisted write-side rehydration if revived later
 
 ## PR2 Completion — Projection Snapshot Schema Baseline
 
@@ -1716,6 +1720,48 @@ A later resolver may consume trusted snapshot evidence for actual replay acceler
 
 ---
 
+## PR4.5 Completion — Projection Snapshot-Assisted State Resolver
+
+Stage 3.5D PR4.5 introduces the read-side resolver primitive for using an externally qualified snapshot id.
+
+PR4.5 adds:
+
+```text
+ProjectionSnapshotAssistedResolutionStatus
+ProjectionSnapshotAssistedResolutionResult
+ProjectionSnapshotAssistedStateResolver
+load_snapshot(snapshot_id) support through the projection snapshot store boundary
+```
+
+The resolver consumes:
+
+```text
+trusted_snapshot_id
++ exact projection snapshot lookup
++ projection tail events after source_global_position
+```
+
+and produces a derived resolved projection state only when resolution succeeds.
+
+The primary result contract is strict:
+
+```text
+RESOLVED_FROM_SNAPSHOT
+→ resolved_state exists
+
+Any unresolved status
+→ resolved_state is None
+```
+
+PR4.5 deliberately does not expose partial state as current runtime state. Partial progress belongs to future observability / diagnostic trace tables, not to the resolver result contract.
+
+The strongest current source of `trusted_snapshot_id` is a PR4 validator `MATCH` result. This trust is currently ephemeral. If PR4 validation is run before every resolver call, the system pays additional authority replay cost. Durable receipt-backed trust selection is deferred to Stage 4.
+
+PR4.5 does not implement `SnapshotTrustGate`, `ValidationReceiptStore`, `SnapshotFastPathSelector`, `RuntimeStateResolutionService`, fallback orchestration, `DecisionReceipt`, diagnostic trace tables, `SemanticOutcome`, RuntimeDecisionPolicy, StrategySelector, aggregate snapshots, or write-side rehydration.
+
+
+---
+
 ## Core Design Requirements
 
 Stage 3.5D should preserve these requirements:
@@ -1779,12 +1825,13 @@ Stage 3.5D is complete at the baseline level when:
 - projection snapshot schema baseline is implemented
 - projection snapshot store behavior is implemented
 - projection snapshot-assisted replay can be validated against full accepted-history replay
-- projection snapshot-assisted replay can fall back to full accepted-history replay
+- projection snapshot-assisted replay can be validated against full accepted-history replay
+- projection snapshot-assisted state can be resolved from an externally qualified snapshot id plus tail replay
 - canonical payload hashing is documented as deterministic
 - same-boundary snapshot writes are idempotent when hashes match after PR3 store behavior exists
 - same-boundary different-hash writes are treated as collisions after PR3 store behavior exists
-- aggregate snapshot trust extension is documented
-- aggregate snapshot storage and write-side rehydration are implemented if PR5–PR7 are included in the stage
+- aggregate snapshot trust deferral is documented in PR5
+- aggregate snapshot storage and write-side rehydration are explicitly deferred unless revived by future trigger conditions
 - Stage 4 can later classify snapshot trust failures as structured semantic outcomes
 
 ## Non-goals
@@ -1811,7 +1858,7 @@ Those belong to Stage 4, Stage 5, or later governance hardening.
 
 Stage 3.5D improves replay and persistence efficiency.
 
-It qualifies snapshots for the fast path, but it does not change the source of truth.
+It qualifies projection snapshots for read-side validation and resolution fast paths, but it does not change the source of truth. Write-side aggregate snapshots are deferred because they would participate in command rehydration and admission.
 
 ```text
 Snapshots compress accepted history.
