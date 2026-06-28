@@ -4,7 +4,49 @@
 
 ## Status
 
-Proposed
+Accepted
+
+---
+
+## Implementation Status
+
+Accepted and implemented at baseline level.
+
+This ADR is implemented by the Stage 3.5B durable write-side baseline. The project uses explicit PostgreSQL access for accepted-history persistence and centralizes event identity generation behind a small helper boundary.
+
+Implemented by:
+
+- Stage 3.5B PR1 — Physical Schema + Local PostgreSQL + Migration Skeleton
+- Stage 3.5B PR2 — PostgresEventStore
+- Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary
+
+Related implementation notes:
+
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5B PR Breakdown](../implementation_notes/stage_3_5b/pr_breakdown.md)
+
+Related source files:
+
+- `src/core/common/ids.py`
+- `src/storage/postgres_event_store.py`
+- `src/storage/postgres_connection.py`
+- `db/migrations/001_create_write_side_tables.sql`
+
+Related tests:
+
+- `tests/integration/storage/test_postgres_event_store.py`
+- `tests/integration/pipeline/test_postgres_transactional_write_side.py`
+
+Implemented baseline behavior:
+
+- accepted event identity is stored as PostgreSQL `UUID`
+- event identity generation is centralized instead of scattered across the codebase
+- `PostgresEventStore` persists accepted history through explicit PostgreSQL operations
+- Decimal / NUMERIC round-trip behavior is preserved at the durable write-side boundary
+- JSONB evidence fields remain explicit durable containers
+- UUIDv7 remains deferred until a concrete runtime or storage need justifies the migration
+
+This ADR remains accepted because the write-side event-store boundary is now implemented as an explicit durable accepted-history boundary rather than a generic CRUD repository.
 
 ---
 

@@ -5,7 +5,42 @@
 
 ## Status
 
-Proposed
+Accepted
+
+---
+
+## Implementation Status
+
+Accepted and implemented at baseline level across the Stage 3.5B durable write-side path.
+
+Implemented by:
+
+- Stage 3.5B PR3 — `PostgresIdempotencyStore`
+- Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary
+- Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
+- Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude
+
+Related implementation notes:
+
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5B PR Breakdown](../implementation_notes/stage_3_5b/pr_breakdown.md)
+
+Related source files:
+
+- `src/storage/postgres_event_store.py`
+- `src/storage/postgres_idempotency_store.py`
+- `src/storage/postgres_optimistic_admission_gate.py`
+- `src/storage/postgres_pessimistic_admission_gate.py`
+- `src/pipeline/postgres_transactional_write_side.py`
+
+Related tests:
+
+- `tests/integration/storage/test_postgres_event_store.py`
+- `tests/integration/storage/test_postgres_idempotency_store.py`
+- `tests/integration/storage/test_postgres_admission_gate.py`
+- `tests/integration/pipeline/test_postgres_transactional_write_side.py`
+
+The current implementation does not yet implement the future outbox boundary discussed in this ADR. The accepted baseline covers request identity, durable idempotency, stale-write rejection, explicit concurrency admission, and transactionally coordinated accepted-event / idempotency persistence.
 
 ---
 

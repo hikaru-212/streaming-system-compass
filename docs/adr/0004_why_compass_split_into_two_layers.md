@@ -8,6 +8,48 @@ Accepted
 
 ---
 
+## Implementation Status
+
+Accepted and partially implemented at baseline level.
+
+Layer 1 is implemented as the current write-side candidate-event validation boundary.
+
+Related implementation files:
+
+- `src/compass/transition/runtime.py`
+- `src/compass/transition/types.py`
+- `src/compass/transition/validators.py`
+
+Layer 1 implementation evidence:
+
+- `ValidationRuntime` orchestrates validator selection and policy mapping.
+- `ValidationDispatcher` selects the active validation path.
+- `ValidationPolicy` maps semantic validation results into runtime enforcement actions.
+- `ValidationResult` records the candidate-event validation outcome.
+- `ValidationDecision` separates semantic validation result from runtime action.
+- `FullProofValidator` validates candidate-event truth against accepted-history context.
+
+Related tests:
+
+- `tests/unit/compass/transition/test_predecessor_mismatch_cases.py`
+- `tests/unit/compass/transition/test_prev_status_mismatch_cases.py`
+- `tests/unit/compass/transition/test_prev_version_mismatch_cases.py`
+- `tests/unit/compass/transition/test_stale_candidate_cases.py`
+
+Layer 2 is accepted as an architectural direction but has not yet been implemented as a full runtime governance layer.
+
+Stage 3.5C and Stage 3.5D provide substrates for future Layer 2 work:
+
+- durable read-side projection state
+- durable checkpoint progress
+- durable replay / rebuild validation
+- projection snapshot-assisted replay validation
+- projection snapshot-assisted state resolution
+
+Future Layer 2 work should build on those substrates through structured validation outcomes, runtime decision policy, and action safety.
+
+---
+
 ## Context
 
 Compass did not begin as a two-layer architecture.

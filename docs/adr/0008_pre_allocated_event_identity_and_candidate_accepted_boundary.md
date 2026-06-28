@@ -4,7 +4,54 @@
 
 ## Status
 
-Proposed
+Accepted
+
+---
+
+## Implementation Status
+
+Accepted and implemented at baseline level.
+
+This decision is reflected in the current event model, Compass Layer 1 validation result shape, and durable write-side schema naming.
+
+Implemented by:
+
+- Stage 3.5B event identity boundary cleanup
+- Stage 3.5B PR1 — Physical Schema + Local PostgreSQL + Migration Skeleton
+- Stage 3.5B PR2 — PostgresEventStore
+- Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary
+- Compass Layer 1 validation result naming cleanup
+
+Related implementation notes:
+
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5B PR Breakdown](../implementation_notes/stage_3_5b/pr_breakdown.md)
+
+Related source files:
+
+- `src/core/order/events.py`
+- `src/compass/transition/types.py`
+- `src/compass/transition/validators.py`
+- `db/migrations/001_create_write_side_tables.sql`
+
+Related tests:
+
+- `tests/unit/compass/transition/test_predecessor_mismatch_cases.py`
+- `tests/unit/compass/transition/test_prev_status_mismatch_cases.py`
+- `tests/unit/compass/transition/test_prev_version_mismatch_cases.py`
+- `tests/unit/compass/transition/test_stale_candidate_cases.py`
+- `tests/integration/storage/test_postgres_event_store.py`
+- `tests/integration/pipeline/test_postgres_transactional_write_side.py`
+
+Implemented baseline behavior:
+
+- candidate events receive an `event_id` before append
+- `ValidationResult` refers to this value as `candidate_event_id`
+- durable accepted history stores the accepted identity as `accepted_event_id`
+- rejected candidates may have candidate identity, but do not become accepted history unless appended to the event log
+- event-log membership, not UUID existence, grants accepted-event status
+
+Future work may still introduce separate `CandidateEvent` and `AcceptedEvent` types if the project grows into a reusable protocol-grade framework. That is not required for the current baseline.
 
 ---
 

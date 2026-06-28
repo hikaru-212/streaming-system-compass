@@ -4,7 +4,39 @@
 
 ## Status
 
-Proposed
+Accepted
+
+---
+
+## Implementation Status
+
+Accepted and implemented at baseline level in Stage 3.5B.
+
+Implemented by:
+
+- Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary
+- Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
+- Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude
+
+Related implementation notes:
+
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5B PR Breakdown](../implementation_notes/stage_3_5b/pr_breakdown.md)
+
+Related source files:
+
+- `src/storage/postgres_event_store.py`
+- `src/storage/postgres_idempotency_store.py`
+- `src/storage/postgres_optimistic_admission_gate.py`
+- `src/storage/postgres_pessimistic_admission_gate.py`
+- `src/pipeline/postgres_transactional_write_side.py`
+
+Related tests:
+
+- `tests/integration/storage/test_postgres_admission_gate.py`
+- `tests/integration/pipeline/test_postgres_transactional_write_side.py`
+
+This ADR is accepted because transaction atomicity and concurrency admission have been implemented as separate durable write-side boundaries. PR4 owns coordinated commit / rollback of accepted-event append and idempotency result persistence. PR5 owns explicit concurrent writer admission, stale-write classification, and optimistic / pessimistic admission strategies.
 
 ---
 
@@ -44,8 +76,8 @@ The implementation sequence will be adjusted as follows:
 Stage 3.5B PR1 — PostgreSQL schema / local setup / migration ✅
 Stage 3.5B PR2 — PostgresEventStore baseline ✅
 Stage 3.5B PR3 — PostgresIdempotencyStore baseline ✅
-Stage 3.5B PR4 — transactional write-side boundary
-Stage 3.5B PR5 — PostgreSQL concurrency admission boundary
+Stage 3.5B PR4 — transactional write-side boundary ✅
+Stage 3.5B PR5 — PostgreSQL concurrency admission boundary ✅
 ```
 
 PR4 remains focused on transaction atomicity:
@@ -55,7 +87,7 @@ PR4 remains focused on transaction atomicity:
 - both writes roll back together
 - replay / conflict paths do not create new durable rows
 
-PR5 will focus on PostgreSQL-backed concurrent writer admission:
+PR5 focused on PostgreSQL-backed concurrent writer admission:
 
 - explicit storage-level stale-write / concurrency errors
 - optimistic PostgreSQL admission strategy
@@ -129,7 +161,7 @@ This mirrors the earlier in-memory design where admission was represented by a s
 
 ### Storage-level concurrency errors
 
-A future PR5 should introduce explicit storage-level errors, for example:
+PR5 introduces explicit storage-level errors, for example:
 
 ```python
 class StorageConflictError(Exception):
@@ -224,7 +256,7 @@ different stream writers
 
 ### Write-side flow mapping
 
-After storage-level stale-write behavior exists, `PostgresTransactionalWriteSide` can translate admission rejection into a stable write-side result.
+After storage-level stale-write behavior exists, `PostgresTransactionalWriteSide` translates admission rejection into a stable write-side result.
 
 Potential future outcome:
 
@@ -350,7 +382,7 @@ Remaining production concerns include:
 
 PR4 prevents partial durable writes.
 
-PR5 will prevent uncontrolled concurrent admission.
+PR5 prevents uncontrolled concurrent admission.
 
 Together, they complete the durable write-side correctness baseline for Stage 3.5B.
 

@@ -5,7 +5,45 @@
 
 ## Status
 
-Proposed
+Accepted
+
+---
+
+## Implementation Status
+
+Accepted and implemented at baseline level.
+
+The current implementation keeps the first version intentionally small: the runtime supports strict validation and validation-off behavior, separates validator selection from enforcement policy, and returns structured validation results with timing fields.
+
+Implemented by:
+
+- Stage 2 — Compass Layer 1 Write-side Validation
+- Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary
+- Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude
+
+Related source files:
+
+- `src/compass/transition/types.py`
+- `src/compass/transition/validators.py`
+- `src/compass/transition/runtime.py`
+
+Related tests:
+
+- `tests/unit/compass/transition/test_predecessor_mismatch_cases.py`
+- `tests/unit/compass/transition/test_prev_status_mismatch_cases.py`
+- `tests/unit/compass/transition/test_prev_version_mismatch_cases.py`
+- `tests/unit/compass/transition/test_stale_candidate_cases.py`
+
+Implemented baseline behavior:
+
+- `TransitionValidator` is expressed as a structural protocol
+- `ValidationResult` carries semantic verdict, candidate event identity, validator identity, validation mode, timing, and metadata
+- `ValidationDecision` separates semantic validation result from runtime enforcement action
+- `ValidationDispatcher` selects between strict and off validation paths
+- `ValidationPolicy` maps failed validation to `BLOCK` and passed / skipped validation to `ALLOW`
+- `FullProofValidator` verifies sequence continuity, predecessor identity, predecessor version, predecessor status, and transition legality
+
+Future extensions such as warn-only mode, shadow-only mode, richer risk-based dispatch, and external telemetry export remain deferred. The accepted baseline is the separation of validator, dispatcher, policy, result, and runtime decision boundaries.
 
 ---
 
