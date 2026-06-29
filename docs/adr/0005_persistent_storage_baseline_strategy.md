@@ -4,7 +4,47 @@
 
 ## Status
 
-Proposed
+Accepted
+
+---
+
+## Implementation Status
+
+Accepted and implemented at baseline level across Stage 3.5B and Stage 3.5C.
+
+Implemented by:
+
+- Stage 3.5B — Durable Write-Side Baseline
+- Stage 3.5C — Durable Read-Side Baseline
+
+Related implementation notes:
+
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
+
+Baseline implementation evidence:
+
+- durable accepted history through PostgreSQL-backed write-side storage
+- durable idempotency memory through PostgreSQL-backed idempotency records
+- transactional coordination between accepted event append and idempotency result recording
+- PostgreSQL-backed concurrency admission
+- durable projection state
+- durable checkpoint progress
+- global-position accepted-history consumption
+- PostgreSQL-backed projection worker baseline
+- durable replay / rebuild validation against accepted history
+
+This ADR is accepted because the project followed the chosen causal order:
+
+```text
+durable accepted history
+→ durable idempotency memory
+→ durable projection state
+→ durable checkpoint progress
+→ durable replay / rebuild validation
+```
+
+Advanced runtime concerns remain deferred until the durable baseline is semantically stable.
 
 ---
 
@@ -152,13 +192,21 @@ Expected follow-up work includes:
 - PostgreSQL-backed checkpoint store
 - durable replay / rebuild verification tests
 
+Completed baseline work includes:
+
+- Stage 3.5B durable write-side baseline
+- Stage 3.5C durable read-side baseline
+- implementation notes preserving PR-level execution history for both stages
+
+Remaining future work should focus on hardening and governance stages rather than re-opening the baseline persistence strategy.
+
 ---
 
 ## Summary
 
-The project will move next into a PostgreSQL-backed persistent storage baseline.
+The project moved into a PostgreSQL-backed persistent storage baseline.
 
-That baseline will be introduced in causal order:
+That baseline was introduced in causal order:
 
 - durable accepted history
 - durable idempotency

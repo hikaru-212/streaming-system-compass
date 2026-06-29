@@ -6,8 +6,7 @@ This directory contains the main implementation modules for **Streaming System +
 
 If the project README explains the system at a portfolio / repository level, `src/` is where that design becomes executable.
 
-The purpose of this layer is not to repeat the full top-level README.
-Instead, it explains how the implementation is organized inside the source tree and how the main runtime layers relate to one another.
+The purpose of this layer is not to repeat the full top-level README. Instead, it explains how the implementation is organized inside the source tree and how the main runtime layers relate to one another.
 
 ---
 
@@ -54,11 +53,13 @@ Use this directory when you want to understand:
 
 Current shared semantic primitives include exact money handling and centralized event identity generation under `core/common/`.
 
+The core should remain independent of PostgreSQL, worker orchestration, projection snapshots, runtime decisions, and future governance policy. It defines the meaning that the rest of the system must preserve.
+
 ---
 
 ### [storage/](storage/README.md)
 
-Persistence boundaries for accepted history and runtime progress.
+Persistence boundaries for accepted history, idempotency memory, projection state, checkpoint progress, and projection snapshots.
 
 Use this directory when you want to understand:
 
@@ -66,8 +67,9 @@ Use this directory when you want to understand:
 - how idempotency records are stored
 - how projection state is stored
 - how checkpoint progress is tracked
-- how PostgreSQL-backed durable storage is being introduced
-- how accepted history is loaded for durable projection workers
+- how projection snapshots are persisted
+- how PostgreSQL-backed durable storage is introduced without making storage own business meaning
+- how accepted history is loaded for durable projection workers and snapshot-assisted replay paths
 
 At the current baseline, storage includes:
 
@@ -76,7 +78,10 @@ At the current baseline, storage includes:
 - PostgreSQL-backed projection state through `PostgresProjectionStore`
 - PostgreSQL-backed checkpoint progress through `PostgresCheckpointStore`
 - global-position accepted-history loading through `PostgresProjectionEventSource`
+- projection snapshot persistence through `PostgresProjectionSnapshotStore`
 - shared database-row-to-domain-event hydration through `order_event_hydration.py`
+
+Storage preserves durable facts and durable runtime progress. It does not decide whether those facts are semantically valid.
 
 ---
 
@@ -91,6 +96,8 @@ Use this directory when you want to understand:
 - projection runtime execution
 - PostgreSQL-backed write-side orchestration
 - PostgreSQL-backed read-side projection worker orchestration
+- durable replay / rebuild validation
+- snapshot-assisted replay validation and state resolution
 - later analytical pipeline evolution
 
 At the current baseline, pipeline includes:
@@ -99,6 +106,11 @@ At the current baseline, pipeline includes:
 - the deterministic in-memory projection baseline from Stage 3
 - the PostgreSQL-backed projection worker baseline completed in Stage 3.5C PR4
 - the durable replay / rebuild validation baseline completed in Stage 3.5C PR5
+- the projection snapshot-assisted replay validator completed in Stage 3.5D PR4
+- the projection snapshot-assisted state resolver completed in Stage 3.5D PR4.5
+- the aggregate snapshot trust deferral boundary completed in Stage 3.5D PR5
+
+Pipeline defines movement. It should coordinate storage, core, and Compass, but it should not collapse their responsibilities.
 
 ---
 
@@ -111,8 +123,19 @@ Use this directory when you want to understand:
 - write-side transition-truth validation
 - later state-level validation
 - how semantic trust is checked separately from persistence and flow
+- how future structured outcomes and runtime decisions may be produced
 
 At the current baseline, Compass Layer 1 protects accepted-history admission on the write side.
+
+Stage 3.5D does not implement full Compass Layer 2. However, the snapshot-assisted replay validator and resolver provide important read-side evidence substrates for future Layer 2 validation:
+
+```text
+accepted history
+→ projection reducer
+→ projection snapshot / projection state
+→ validator / resolver evidence
+→ future Layer 2 outcome
+```
 
 Future Compass layers will validate derived read-side state, structured semantic outcomes, runtime decisions, action safety, and dual-dimension governance.
 
@@ -127,6 +150,8 @@ Use this directory when you want to understand:
 - how concrete implementations are instantiated
 - how runtime objects are connected
 - why wiring is kept separate from business meaning
+
+Bootstrap should assemble concrete storage, pipeline, and Compass objects. It should not define domain legality, persistence semantics, projection correctness, or governance policy.
 
 ---
 
@@ -162,7 +187,7 @@ Another useful way to think about it is:
 
 ## Current Baseline
 
-At the current stage, after Stage 3.5C durable read-side completion, `src/` contains an executable baseline across:
+At the current stage, after Stage 3.5D completion, `src/` contains an executable baseline across:
 
 - transactional write-side semantics
 - accepted-history persistence and replay
@@ -178,7 +203,10 @@ At the current stage, after Stage 3.5C durable read-side completion, `src/` cont
 - PostgreSQL-backed checkpoint progress persistence
 - PostgreSQL-backed global-position projection worker baseline
 - durable replay / rebuild validation against accepted history
-- Stage 3.5C durable read-side baseline is complete
+- Stage 3.5D projection snapshot schema and store baseline
+- Stage 3.5D projection snapshot-assisted replay validation
+- Stage 3.5D projection snapshot-assisted state resolution
+- explicit aggregate snapshot trust deferral
 
 This means `src/` is no longer only a semantic skeleton.
 
@@ -187,6 +215,7 @@ It now contains durable executable loops for both:
 - write-side accepted-history mutation
 - read-side projection-state derivation
 - accepted-history replay validation against persisted projection state
+- projection snapshot-assisted replay / resolution without treating snapshots as authority
 
 ---
 
@@ -203,7 +232,7 @@ Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary ✅
 Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude ✅
 ```
 
-The durable read-side path is now complete through the Stage 3.5C baseline:
+The durable read-side path is complete through the Stage 3.5C baseline:
 
 ```text
 Stage 3.5C PR1 — Durable Read-Side Schema Baseline ✅
@@ -211,6 +240,17 @@ Stage 3.5C PR2 — PostgresProjectionStore ✅
 Stage 3.5C PR3 — PostgresCheckpointStore ✅
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
 Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
+```
+
+The snapshot trust / replay-efficiency path is complete through the Stage 3.5D baseline:
+
+```text
+Stage 3.5D PR1 — General Snapshot Trust Contract Boundary ✅
+Stage 3.5D PR2 — Projection Snapshot Schema Baseline ✅
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore ✅
+Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator ✅
+Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver ✅
+Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision ✅
 ```
 
 The current read-side durable worker path is:
@@ -228,6 +268,20 @@ accepted history
 → persisted projection state comparison
 ```
 
+The current snapshot-assisted read-side path is:
+
+```text
+accepted history
+→ projection snapshot
+→ snapshot-assisted replay validator
+→ authority comparison evidence
+
+qualified projection snapshot
+→ snapshot-assisted state resolver
+→ tail replay
+→ resolved projection state
+```
+
 The worker persists:
 
 ```text
@@ -237,6 +291,14 @@ checkpoint progress
 ```
 
 inside one PostgreSQL transaction boundary.
+
+Snapshots remain derived artifacts:
+
+```text
+accepted history = authority
+projection state = derived runtime state
+projection snapshot = derived state compression
+```
 
 ---
 
@@ -255,6 +317,8 @@ That means:
 - keep durable persistence separate from domain meaning
 - keep projection state as derived state, not accepted-history truth
 - keep checkpoint state as operational progress metadata, not business truth
+- keep snapshots as derived compression, not authority
+- keep aggregate snapshot trust separate from projection snapshot trust because aggregate snapshots may later affect command validation
 
 This separation is especially important because the project is concerned with correctness under failure, not just successful execution.
 
@@ -262,21 +326,22 @@ This separation is especially important because the project is concerned with co
 
 ## What `src/` Does Not Yet Fully Solve
 
-After the completed Stage 3.5C durable read-side baseline, the source tree does **not yet** fully solve:
+After the completed Stage 3.5D snapshot trust / replay-efficiency baseline, the source tree does **not yet** fully solve:
 
-- Stage 3.5D Snapshot Trust Contract / replay-efficiency work
-- state-level Compass Layer 2 validation
-- Snapshot Trust Contract
+- Stage 3.5E durable history / permission hardening
+- database role separation for accepted-history protection
+- production-grade append-only enforcement at the database permission / trigger layer
+- state-level Compass Layer 2 validation as a general runtime subsystem
 - structured `SemanticOutcome`
 - runtime decision policy
 - action safety
 - advanced runtime concerns such as DLQ, buffering, watermarking, worker leasing, checkpoint row locking, or multi-worker coordination
 - full analytical pipeline implementation
-- production database role hardening
-- append-only trigger enforcement
 - governance behavior beyond the current validation / enforcement boundary
 
 Those remain later stages of the repository.
+
+Stage 3.5D specifically closed the projection snapshot trust baseline. It did not turn snapshots into authority, did not implement write-side aggregate snapshot rehydration, and did not introduce full runtime governance.
 
 ---
 
@@ -289,10 +354,10 @@ core/
 = domain meaning and transition legality
 
 storage/
-= durable accepted history, idempotency memory, projection state, checkpoint progress, and accepted-history loading
+= durable accepted history, idempotency memory, projection state, checkpoint progress, snapshot rows, and accepted-history loading
 
 pipeline/
-= runtime orchestration for write-side commands and read-side projection workers
+= runtime orchestration for write-side commands, read-side projection workers, replay validation, and snapshot-assisted read-side resolution
 
 compass/
 = semantic validation and future governance
@@ -312,7 +377,12 @@ projection_states
 
 projection_checkpoints
 = operational worker progress
+
+projection_snapshots
+= derived state compression / replay-efficiency artifact
 ```
+
+If there is disagreement between accepted history and any derived artifact, accepted history wins.
 
 ---
 
@@ -329,3 +399,5 @@ If the top-level README explains what the project is about, `src/` shows how tha
 - wiring
 
 That partition is the main reason the project can evolve without collapsing its own boundaries.
+
+After Stage 3.5D, the source tree has durable write-side, durable read-side, and snapshot-assisted read-side replay / resolution baselines. The next implementation stage is Stage 3.5E, which should harden durable accepted-history authority through minimal actor / permission boundaries without turning the project into a full access-control platform.

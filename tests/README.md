@@ -30,6 +30,11 @@ They also exist to defend the semantic boundaries of the system, including:
 - read-side projection-state / checkpoint atomicity
 - durable replay validation against accepted history
 - `MATCH`, `MISSING_PROJECTION`, `DRIFT`, and `NO_ACCEPTED_HISTORY` replay validation coverage
+- projection snapshot schema and persistence constraints
+- projection snapshot store idempotency and collision behavior
+- projection snapshot-assisted replay validation
+- snapshot-assisted state resolution from qualified snapshot + tail replay
+- aggregate snapshot trust deferral boundaries
 - destructive PostgreSQL test database isolation
 
 In this project, tests are part of the architecture argument.
@@ -53,6 +58,10 @@ At the current baseline, the strongest test coverage spans:
 - the Stage 3.5C PR3 PostgreSQL-backed checkpoint store baseline
 - the Stage 3.5C PR4 global-position projection worker baseline
 - the Stage 3.5C PR5 durable replay / rebuild validation baseline
+- the Stage 3.5D projection snapshot schema / store baseline
+- the Stage 3.5D projection snapshot-assisted replay validator baseline
+- the Stage 3.5D snapshot-assisted state resolver baseline
+- the Stage 3.5D aggregate snapshot trust deferral decision
 
 This currently includes:
 
@@ -86,6 +95,10 @@ This currently includes:
 - PostgreSQL-backed projection worker processing of accepted events
 - projection-state and checkpoint-progress atomicity
 - destructive PostgreSQL integration test isolation through `TEST_DATABASE_URL`
+- projection snapshot persistence through `PostgresProjectionSnapshotStore`
+- snapshot duplicate-write idempotency versus collision behavior
+- snapshot-assisted replay validator result semantics
+- snapshot-assisted resolver unresolved / resolved result semantics
 
 The test suite is therefore no longer only write-side focused.
 It now also defends durable storage, projection runtime, transactional PostgreSQL-backed write-side behavior, PostgreSQL admission, validation placement, durable read-side worker boundaries, and durable replay validation against accepted history.
@@ -213,6 +226,9 @@ Typical goals:
 - verify `order_events.global_position`
 - verify `PostgresProjectionEventSource`
 - verify PostgreSQL integration tests run against `TEST_DATABASE_URL`
+- verify `projection_snapshots` schema constraints
+- verify `PostgresProjectionSnapshotStore` save / load / clear behavior
+- verify benign duplicate snapshot writes and inconsistent snapshot collisions
 
 These tests answer:
 
@@ -383,6 +399,7 @@ export TEST_DATABASE_URL=postgresql://compass_user:compass_password@localhost:54
 psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/004_create_projection_snapshots.sql
 
 pytest tests/integration/storage -q
 pytest tests/integration/pipeline -q
@@ -436,6 +453,9 @@ Tests in this repository therefore aim to defend questions such as:
 - did durable read-side state and checkpoint progress persist correctly?
 - did the PostgreSQL-backed projection worker preserve read-side atomicity?
 - did destructive integration tests run only against the test database?
+- did snapshot rows preserve derived-state compression evidence without becoming authority?
+- did snapshot-assisted replay compare against accepted-history authority?
+- did the resolver reconstruct state from qualified snapshot + tail replay without deciding fallback policy?
 
 ---
 
@@ -453,7 +473,7 @@ That means a smaller number of semantically meaningful tests is often more valua
 
 ## Current Boundary
 
-At the current baseline, after Stage 3.5C durable read-side completion, the test suite is strongest on:
+At the current baseline, after Stage 3.5D snapshot trust / replay-efficiency completion, the test suite is strongest on:
 
 - write-side semantic correctness
 - replay safety
@@ -471,11 +491,15 @@ At the current baseline, after Stage 3.5C durable read-side completion, the test
 - Stage 3.5C PR3 PostgreSQL-backed checkpoint persistence
 - Stage 3.5C PR4 global-position projection worker baseline
 - Stage 3.5C PR5 durable replay / rebuild validation baseline
+- Stage 3.5D PR2 projection snapshot schema baseline
+- Stage 3.5D PR3 projection snapshot store baseline
+- Stage 3.5D PR4 projection snapshot-assisted replay validator baseline
+- Stage 3.5D PR4.5 snapshot-assisted state resolver baseline
 
 However, the current suite does **not yet** fully cover:
 
-- state-level Compass Layer 2 validation
-- Stage 3.5D Snapshot Trust Contract
+- full state-level Compass Layer 2 runtime governance
+- persisted snapshot validation receipts
 - Stage 3.5E durable history / permission hardening
 - Stage 4 structured `SemanticOutcome`
 - retry reason classification persistence
@@ -520,7 +544,7 @@ fixtures
 → semantic test-data construction
 ```
 
-As the project moves from the completed Stage 3.5C durable read-side baseline into Stage 3.5D snapshot trust / replay-efficiency work, the test suite should continue to grow in the same spirit:
+As the project moves from the completed Stage 3.5D snapshot trust / replay-efficiency baseline into Stage 3.5E durable history / permission hardening, the test suite should continue to grow in the same spirit:
 
 - not only testing whether the system runs
 - but testing whether the system remains semantically trustworthy

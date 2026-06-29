@@ -4,7 +4,43 @@
 
 ## Status
 
-Proposed
+Accepted
+
+---
+
+## Implementation Status
+
+Accepted and implemented at baseline level in Stage 3.5B PR5.
+
+This ADR is implemented as the PostgreSQL write-side concurrency admission boundary.
+The baseline implementation separates stream preparation from append-time admission so that optimistic and pessimistic strategies can share the same write-side orchestration flow.
+
+Implemented by:
+
+- Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
+- Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude
+
+Related implementation notes:
+
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5B PR Breakdown](../implementation_notes/stage_3_5b/pr_breakdown.md)
+
+Related source files:
+
+- `src/pipeline/transactional/postgres_admission.py`
+- `src/pipeline/transactional/postgres_transactional_write_side.py`
+- `src/storage/postgres_event_store.py`
+- `src/storage/errors.py`
+
+Related tests:
+
+- `tests/integration/pipeline/test_postgres_transactional_write_side.py`
+- `tests/integration/storage/test_postgres_admission_gate.py`
+
+Future hardening may add admission attempt persistence, hot-stream detection, retry policy, automatic strategy switching, or Stage 4 `SemanticOutcome` mapping.
+Those concerns remain outside the Stage 3.5B baseline.
+
+---
 
 ## Context
 

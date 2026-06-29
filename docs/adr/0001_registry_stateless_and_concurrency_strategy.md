@@ -9,6 +9,42 @@ Accepted
 
 ---
 
+## Implementation Status
+
+Accepted and implemented at baseline level.
+
+The stateless / rehydration-oriented decision is reflected in the project’s write-side execution path: commands are handled by rebuilding the relevant aggregate state from accepted history, producing a candidate event, validating it, and then admitting it through the persistence boundary.
+
+Implemented by:
+
+- Stage 1 — Transactional Semantic Core
+- Stage 2 — Compass Layer 1 Write-side Validation
+- Stage 3.5B PR2 — PostgresEventStore
+- Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary
+- Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary
+- Stage 3.5D — Snapshot Trust Contract / Replay Efficiency, which preserves snapshotting as replay optimization rather than registry-owned truth
+
+Related implementation notes:
+
+- [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
+- [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+
+Representative source files:
+
+- `src/core/order/aggregate.py`
+- `src/core/order/events.py`
+- `src/storage/postgres_event_store.py`
+- `src/pipeline/postgres_transactional_write_side.py`
+
+Representative tests:
+
+- `tests/integration/storage/test_postgres_event_store.py`
+- `tests/integration/pipeline/test_postgres_transactional_write_side.py`
+
+This ADR remains accepted because the baseline architecture continues to treat accepted history as the reconstruction source and treats snapshots as later replay acceleration, not as a long-lived registry cache.
+
+---
+
 ## Context
 
 The transactional path of the project requires a registry/orchestration layer that coordinates:

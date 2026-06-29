@@ -4,7 +4,45 @@
 
 ## Status
 
-Proposed
+Accepted
+
+---
+
+## Implementation Status
+
+Accepted and partially implemented at baseline level in Stage 3.5D.
+
+Implemented by:
+
+- Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
+- Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
+- Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision
+
+Related implementation notes:
+
+- [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+- [Stage 3.5D PR Breakdown](../implementation_notes/stage_3_5d/pr_breakdown.md)
+- [Projection Snapshot-Assisted Replay Validator](../implementation_notes/stage_3_5d/projection_snapshot_assisted_replay_validator.md)
+- [Projection Snapshot-Assisted State Resolver](../implementation_notes/stage_3_5d/projection_snapshot_assisted_state_resolver.md)
+- [Aggregate Snapshot Trust Boundary / Deferral Decision](../implementation_notes/stage_3_5d/aggregate_snapshot_trust_deferral.md)
+
+Related source files:
+
+- `src/pipeline/projection/projection_snapshot_replay_validator.py`
+- `src/pipeline/projection/projection_snapshot_assisted_state_resolver.py`
+- `src/storage/postgres_projection_snapshot_store.py`
+- `src/storage/postgres_accepted_history_event_source.py`
+- `src/storage/postgres_projection_event_source.py`
+
+Related tests:
+
+- `tests/unit/pipeline/projection/test_projection_snapshot_replay_validation_result.py`
+- `tests/unit/pipeline/projection/test_projection_snapshot_replay_validator.py`
+- `tests/unit/pipeline/projection/test_projection_snapshot_assisted_state_resolver.py`
+- `tests/integration/pipeline/projection/test_postgres_projection_snapshot_replay_validator.py`
+- `tests/integration/pipeline/projection/test_postgres_projection_snapshot_assisted_state_resolver.py`
+
+The current implementation covers projection snapshot validation, snapshot-assisted state resolution from an explicitly qualified snapshot id, and aggregate snapshot deferral. Persisted validation receipts remain a future hardening direction and are not implemented in the Stage 3.5D baseline.
 
 ---
 

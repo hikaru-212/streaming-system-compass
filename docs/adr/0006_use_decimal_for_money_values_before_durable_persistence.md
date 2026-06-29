@@ -4,7 +4,32 @@
 
 ## Status
 
-Proposed
+Accepted
+
+---
+
+## Implementation Status
+
+Implemented at baseline level.
+
+This decision is reflected in the current domain event model and the durable write-side PostgreSQL schema.
+
+Related implementation files:
+- `src/core/order/events.py`
+- `src/core/common/money.py`
+- `db/migrations/001_create_write_side_tables.sql`
+
+Implementation evidence:
+
+- `OrderEvent.amount` is represented as `Decimal`
+- event creation normalizes money values through `normalize_money(...)`
+- durable write-side money fields use `NUMERIC(18, 2)` rather than floating-point database types
+- both `order_events.amount` and `idempotency_records.amount` are stored as exact numeric values
+- database constraints reject negative money values at the durable write-side boundary
+
+This ADR is accepted because the baseline decision has already been implemented in the Stage 3.5A / Stage 3.5B transition.
+
+Future hardening may still refine canonical decimal formatting, semantic fingerprint inputs, or domain-specific money rules, but the core decision to reject `float` as the durable baseline is complete.
 
 ---
 
@@ -158,12 +183,22 @@ Expected follow-up work includes:
 - update tests
 - later consider whether some money values should be promoted into hard SQL `NUMERIC(...)` columns
 
+Completed baseline work includes:
+
+- domain event amount representation through `Decimal`
+- money normalization through `src/core/common/money.py`
+- durable write-side SQL `NUMERIC(18, 2)` columns in `order_events` and `idempotency_records`
+
+Remaining future work should focus on canonical fingerprint formatting and domain-specific money policy only if the domain grows beyond the current order/payment baseline.
+
 ---
 
 ## Summary
 
 The project will stop using `float` for money-like values before the durable write-side baseline grows larger.
 
-This decision is being made now because Stage 3.5 shifts the project from short-lived in-memory correctness toward durable persistence, replay trust, and future schema hardening.
+This decision was made because Stage 3.5 shifts the project from short-lived in-memory correctness toward durable persistence, replay trust, and future schema hardening.
 
 In that setting, approximate float-based money representation is no longer an acceptable baseline.
+
+The decision has been accepted and implemented at the baseline level through `Decimal` in the domain event model and `NUMERIC(18, 2)` in the durable write-side PostgreSQL schema.

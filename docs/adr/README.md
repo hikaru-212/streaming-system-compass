@@ -21,18 +21,19 @@ They are not general notes or tutorials. Each ADR should answer:
 | ADR | Title | Status | Purpose |
 |---|---|---|---|
 | 0001 | [Stateless Registry and Concurrency Strategy Boundary](0001_registry_stateless_and_concurrency_strategy.md) | Accepted | Defines the stateless registry baseline and concurrency strategy boundary. |
-| 0002 | [Intent-Aware Validation Dispatch for Compass Runtime](0002_intent_aware_validation_dispatch.md) | Proposed | Defines the future Compass validation dispatch model. |
-| 0003 | [Concurrency Control, Idempotency, and Retry Safety](0003_concurrency_idempotency_and_retry_safety.md) | Proposed | Defines write-side safety under concurrency, retries, and ambiguous commits. |
+| 0002 | [Intent-Aware Validation Dispatch for Compass Runtime](0002_intent_aware_validation_dispatch.md) | Accepted | Defines the future Compass validation dispatch model. |
+| 0003 | [Concurrency Control, Idempotency, and Retry Safety](0003_concurrency_idempotency_and_retry_safety.md) | Accepted | Defines write-side safety under concurrency, retries, and ambiguous commits. |
 | 0004 | [Why Compass Split into Two Layers](0004_why_compass_split_into_two_layers.md) | Accepted | Records why the project evolved from a single runtime-verification idea into layered Compass validation. |
-| 0005 | [Persistent Storage Baseline Strategy](0005_persistent_storage_baseline_strategy.md) | Proposed | Defines why the next stage after the in-memory Stage 3 baseline should be a PostgreSQL-backed persistent storage baseline. |
-| 0006 | [Use Decimal for Money Values Before Durable Persistence](0006_use_decimal_for_money_values_before_durable_persistence.md) | Proposed | Defines why money-like values should move from `float` to `Decimal` before the durable write-side baseline grows larger. |
+| 0005 | [Persistent Storage Baseline Strategy](0005_persistent_storage_baseline_strategy.md) | Accepted | Defines why the next stage after the in-memory Stage 3 baseline should be a PostgreSQL-backed persistent storage baseline. |
+| 0006 | [Use Decimal for Money Values Before Durable Persistence](0006_use_decimal_for_money_values_before_durable_persistence.md) | Accepted | Defines why money-like values should move from `float` to `Decimal` before the durable write-side baseline grows larger. |
 | 0007 | [Separate Semantic Correctness from Operational Trust](0007_separate_semantic_correctness_from_operational_trust.md) | Proposed | Defines why future trust evaluation should separate semantic correctness, projection correctness, operational trust, and action safety. |
-| 0008 | [Pre-Allocated Event Identity and Candidate/Accepted Event Naming Boundary](0008_pre_allocated_event_identity_and_candidate_accepted_boundary.md) | Proposed | Defines the lifecycle naming boundary for pre-allocated event IDs before durable write-side persistence. |
-| 0009 | [Write-Side Persistence Driver and Identity Generation Boundary](0009_write_side_persistence_driver_and_identity_boundary.md) | Proposed | Defines why the Stage 3.5B write-side persistence baseline uses explicit PostgreSQL driver access and centralized event ID generation instead of ORM-driven persistence or immediate UUIDv7 migration. |
-| 0010 | [Separate Transaction Atomicity from Concurrency Admission](0010_transaction_atomicity_vs_concurrency_admission.md) | Proposed | Separates PR4 transaction atomicity from PR5 PostgreSQL concurrency admission. |
-| 0011 | [Separate Validation Mode from Validation Placement Strategy](0011_validation_mode_vs_validation_placement.md) | Proposed | Separates validation strength from where validation runs relative to the database transaction boundary. |
-| 0012 | [Two-Phase Concurrency Admission for PostgreSQL Write-Side](0012_two_phase_concurrency_admission.md) | Proposed | Evolves PR5 admission from append-time-only admission into two-phase stream preparation plus append-time admission. |
-| 0013 | [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) | Proposed | Separates PR4.5 snapshot-assisted state resolution from future runtime eligibility policy and persisted validation receipts. |
+| 0008 | [Pre-Allocated Event Identity and Candidate/Accepted Event Naming Boundary](0008_pre_allocated_event_identity_and_candidate_accepted_boundary.md) | Accepted | Defines the lifecycle naming boundary for pre-allocated event IDs before durable write-side persistence. |
+| 0009 | [Write-Side Persistence Driver and Identity Generation Boundary](0009_write_side_persistence_driver_and_identity_boundary.md) | Accepted | Defines why the Stage 3.5B write-side persistence baseline uses explicit PostgreSQL driver access and centralized event ID generation instead of ORM-driven persistence or immediate UUIDv7 migration. |
+| 0010 | [Separate Transaction Atomicity from Concurrency Admission](0010_transaction_atomicity_vs_concurrency_admission.md) | Accepted | Separates PR4 transaction atomicity from PR5 PostgreSQL concurrency admission. |
+| 0011 | [Separate Validation Mode from Validation Placement Strategy](0011_validation_mode_vs_validation_placement.md) | Accepted | Separates validation strength from validation placement and records the two supported baseline compositions: `PRE_TRANSACTION + OPTIMISTIC` and `IN_TRANSACTION + PESSIMISTIC`. |
+| 0012 | [Two-Phase Concurrency Admission for PostgreSQL Write-Side](0012_two_phase_concurrency_admission.md) | Accepted | Evolves PR5 admission from append-time-only admission into two-phase stream preparation plus append-time admission. |
+| 0013 | [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) | Accepted | Separates PR4.5 snapshot-assisted state resolution from future runtime eligibility policy and persisted validation receipts. |
+| 0014 | [Defer Separate Projection Event Model](0014_defer_projection_events_as_delivery_layer.md) | Accepted | Records why the project defers a separate projection-event / projection-delivery-log model until delivery, fanout, retry, DLQ, or operational-freshness needs become concrete. |
 
 ---
 
@@ -95,6 +96,8 @@ ADR 0007 is related to the future evolution from structured semantic outcomes in
 
 ADR 0013 is related to Stage 3.5D PR4 / PR4.5. It records why projection snapshots are not trusted merely because they exist, why PR4.5 should remain a snapshot-assisted state resolver rather than a full trust-gate or fallback-policy engine, and why persisted validation receipts are deferred to a future hardening step.
 
+ADR 0014 is related to Stage 3.5C / Stage 3.5D read-side boundaries. It records why accepted history remains the authoritative projection input and why a separate projection-event or projection-delivery-log model is deferred until delivery, fanout, retry, DLQ, or operational-freshness requirements become concrete.
+
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
 ---
@@ -103,15 +106,33 @@ The ADR 0002 evolution note is not a standalone decision. It is a supporting tra
 
 ### Proposed
 
-The decision is directionally accepted as a design candidate, but implementation may still be incomplete.
+The decision is a design candidate or future direction, but it has not yet been adopted as the current architecture decision.
 
 ### Accepted
 
 The decision has been adopted as the current project direction.
 
+Accepted does not always mean fully implemented. Implementation progress should be recorded separately in each ADR under `Implementation Status`.
+
 ### Superseded
 
 The decision has been replaced by a newer ADR.
+
+### Implementation Status
+
+Each formal ADR should place `Implementation Status` immediately after `Status`.
+
+Recommended values include:
+
+```text
+Not implemented yet.
+Accepted as a deferral decision.
+Implemented at baseline level.
+Partially implemented at baseline level.
+Superseded by ADR XXXX.
+```
+
+This keeps decision status separate from implementation progress.
 
 ---
 
@@ -143,6 +164,7 @@ Recommended pattern:
 0011_validation_mode_vs_validation_placement.md
 0012_two_phase_concurrency_admission.md
 0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md
+0014_defer_projection_event.md
 ```
 
 Evolution or supporting notes may be kept as separate files:
