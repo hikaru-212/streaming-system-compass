@@ -57,15 +57,15 @@ Stage 3.5D is now complete at the read-side snapshot trust baseline level.
 
 The current focus is now:
 
-- closing out Stage 3.5D and preparing the branch to merge back to `main`
-- opening a documentation cleanup branch before Stage 3.5E
-- cleaning up known issues across `implementation_notes/`, `roadmap/`, and `adr/`
-- keeping Stage 3.5E and Stage 4 Compass Layer 2 governance deferred to their proper stages
+- Stage 3.5E minimal actor / permission boundary
+- durable history and permission hardening around accepted-history authority
+- keeping Stage 4 Compass Layer 2 governance deferred to its proper stage
+
+The pre-Stage 3.5E documentation alignment pass is complete at the roadmap / ADR / implementation-note level.
 
 The next major implementation steps are:
 
-- documentation cleanup before Stage 3.5E
-- Stage 3.5E minimal actor / permission boundary
+- Stage 3.5E durable history and permission hardening
 - Stage 4 runtime semantic validation, semantic outcome structuring, retry reason classification, runtime decision policy, and action safety
 
 ---
@@ -124,8 +124,8 @@ top-level system structure
 → validation placement strategy
 → completed durable read-side baseline
 → completed snapshot trust / replay efficiency
-→ implementation notes for stage / PR execution
-→ documentation cleanup before Stage 3.5E
+→ implementation notes for completed stage / PR execution
+→ pre-Stage 3.5E documentation alignment
 → minimal actor / permission boundary
 → runtime semantic validation and outcome structuring
 → runtime decision policy and action safety

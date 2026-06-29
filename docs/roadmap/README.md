@@ -12,7 +12,7 @@ Use roadmap documents to understand:
 * what depends on what
 * which features are intentionally deferred
 * how the project moves from durable truth toward runtime governance
-* how the project moves from Stage 3.5E into Stage 4 and beyond
+* how the project has completed the pre-Stage 3.5E documentation alignment and is entering Stage 3.5E
 
 ---
 
@@ -35,6 +35,8 @@ Completed implementation details from Stage 3.5B onward are preserved in [Implem
 * [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
 * [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
 * [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+
+The pre-Stage 3.5E documentation alignment pass has also been completed at the roadmap / ADR / implementation-note level.
 
 ---
 
@@ -64,11 +66,13 @@ The deferred architecture backlog should be read after the main roadmaps. It doe
 
 ## Current Roadmap Position
 
-Current next implementation focus:
+Current implementation focus:
 
 ```text
 Stage 3.5E — Minimal Actor / Permission Boundary
 ```
+
+The pre-Stage 3.5E cleanup pass has completed at the roadmap / ADR / implementation-note level.
 
 Stage 3.5E should stay minimal.
 
