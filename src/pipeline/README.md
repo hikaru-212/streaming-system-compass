@@ -16,7 +16,9 @@ The purpose of this module is to coordinate how domain events are:
 - persisted
 - replayed
 - projected
-- analytically processed
+- validated against replayed authority
+- resolved through snapshot-assisted read-side paths
+- analytically processed later
 
 This is the layer where the system begins to behave like a runtime rather than only a domain model.
 
@@ -30,7 +32,10 @@ This module is responsible for:
 - event admission path
 - replay / rehydration flow
 - projection execution flow
-- analytical event-processing flow
+- durable replay / rebuild validation flow
+- projection snapshot-assisted replay validation
+- projection snapshot-assisted state resolution
+- analytical event-processing flow later
 
 Current and planned submodules include:
 
@@ -49,6 +54,9 @@ This module is **not** responsible for:
 - acting as the persistence layer itself
 - being the final owner of semantic policy
 - injecting adversarial failure
+- deciding database permissions
+- treating snapshots as authority
+- replacing accepted-history replay with unqualified snapshot trust
 
 Those responsibilities belong to:
 
@@ -56,6 +64,7 @@ Those responsibilities belong to:
 - [storage/](../storage/README.md)
 - [compass/](../compass/README.md)
 - `chaos_engine/`
+- future Stage 3.5E durable history / permission hardening
 
 ---
 
@@ -71,6 +80,8 @@ It answers questions such as:
 - When is state applied?
 - When is projection updated?
 - How does replay happen after restart?
+- When is snapshot-assisted replay allowed to participate?
+- When must authority replay remain the comparison path?
 
 In short:
 
@@ -78,6 +89,8 @@ In short:
 - pipeline defines movement
 - storage preserves movement and progress
 - Compass checks whether movement remains semantically correct
+
+The pipeline should coordinate boundaries without owning all of them.
 
 ---
 
@@ -93,15 +106,21 @@ Typical responsibilities:
 - coordinate idempotency checks
 - call aggregate logic
 - run event admission checks
-- persist events
+- run Compass Layer 1 validation
+- persist accepted events
+- record idempotency results
 - apply accepted events to in-memory aggregate state
-- rebuild aggregate state through replay
+- rebuild aggregate state through accepted-history replay
+- preserve validation placement and append-time admission boundaries
 
 This is the first pipeline segment that was implemented.
 
 For the higher-level write-side design, see:
 
 - [Transactional Core](../../docs/architecture/transactional_core.md)
+- [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../../docs/adr/0010_transaction_atomicity_vs_concurrency_admission.md)
+- [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../../docs/adr/0011_validation_mode_vs_validation_placement.md)
+- [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../../docs/adr/0012_two_phase_concurrency_admission.md)
 
 ---
 
@@ -117,13 +136,17 @@ Typical responsibilities:
 - track checkpoints / offsets
 - recover through replay / rebuild
 - validate durable projection state against accepted-history replay
+- validate snapshot-assisted replay against authority replay
+- resolve read-side state from qualified snapshot + tail replay
 - enforce baseline sequencing assumptions
 
-The projection runtime now has three baseline forms:
+The projection runtime now has several baseline forms:
 
 1. a deterministic in-memory Stage 3 baseline
 2. a PostgreSQL-backed Stage 3.5C PR4 worker baseline
 3. a Stage 3.5C PR5 durable replay / rebuild validation baseline
+4. a Stage 3.5D PR4 projection snapshot-assisted replay validation baseline
+5. a Stage 3.5D PR4.5 projection snapshot-assisted state resolver baseline
 
 The current PostgreSQL-backed projection worker connects:
 
@@ -162,13 +185,32 @@ vs
 persisted projection state
 ```
 
-This prepares the project for future Compass Layer 2 projection-drift validation without implementing Layer 2 runtime governance yet.
+Snapshot-assisted replay validation compares:
+
+```text
+snapshot-assisted replay
+vs
+full accepted-history replay
+```
+
+Snapshot-assisted state resolution reconstructs read-side state through:
+
+```text
+qualified projection snapshot
+→ hydrate snapshot state
+→ load tail events after snapshot.source_global_position
+→ replay tail through canonical reducer
+→ resolved projection state
+```
+
+This prepares the project for future Compass Layer 2 projection-drift validation without implementing full Layer 2 runtime governance yet.
 
 For the higher-level projection design, see:
 
 - [Projection Pipeline](../../docs/architecture/projection_pipeline.md)
 - [Projection Boundary](../../docs/boundary_notes/projection_boundary.md)
 - [Global-Position Projection Worker Boundary](../../docs/boundary_notes/global_position_projection_worker_boundary.md)
+- [ADR 0013 — Snapshot Runtime Eligibility and Validation Receipt Boundary](../../docs/adr/0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md)
 - [Projection README](projection/README.md)
 
 ---
@@ -185,13 +227,13 @@ Typical responsibilities may later include:
 - lateness handling
 - analytical metrics or statistical views
 
-This layer is intentionally deferred until the transactional and projection baselines are stronger.
+This layer is intentionally deferred until the transactional, projection, durable read-side, and semantic validation baselines are stronger.
 
 ---
 
 ## Current Implementation Scope
 
-At the current stage, the implemented focus now includes:
+At the current stage, the implemented focus includes:
 
 1. [transactional/](transactional/)
 2. [projection/](projection/)
@@ -206,6 +248,8 @@ The reason is still the same:
 
 - transactional flow establishes correctness of event admission and persistence
 - projection flow establishes correctness of state derivation
+- replay validation establishes whether persisted derived state matches accepted history
+- snapshot-assisted replay establishes efficiency without replacing authority
 - analytical flow is valuable, but should be built on top of a stable semantic foundation
 
 ---
@@ -220,11 +264,32 @@ The first important pipeline path is:
 4. replay historical events if needed
 5. produce candidate event
 6. validate event admission / transition truth
-7. persist accepted event
-8. apply event to aggregate state
-9. return result
+7. run concurrency admission
+8. persist accepted event
+9. record idempotency result
+10. apply event to aggregate state or return durable result
 
 This write-side path exists as the current durable PostgreSQL-backed baseline after Stage 3.5B.
+
+The durable write-side baseline includes:
+
+- `PostgresWriteSideUnitOfWork`
+- `PostgresTransactionalWriteSide`
+- `PostgresOptimisticAdmissionGate`
+- `PostgresPessimisticAdmissionGate`
+- `prepare_stream(order_id)`
+- `append_if_admitted(candidate_event, expected_current_version)`
+- `IN_TRANSACTION` validation placement
+- minimal `PRE_TRANSACTION` validation placement guarded by append-time admission
+
+The key boundary is:
+
+```text
+Compass validation
+≠ concurrency admission
+≠ transaction atomicity
+≠ idempotency replay / conflict classification
+```
 
 ---
 
@@ -247,7 +312,7 @@ The Stage 3 in-memory projection baseline supports:
 
 Stage 3.5C PR4 extends the projection path into a PostgreSQL-backed durable runtime baseline.
 
-It now supports:
+It supports:
 
 - durable accepted-history scanning through `order_events.global_position`
 - storage-side event loading through `PostgresProjectionEventSource`
@@ -257,19 +322,78 @@ It now supports:
 - atomic projection-state and checkpoint-progress persistence through `PostgresProjectionWorker`
 - fail-fast handling for projection-state / checkpoint mismatch
 
+Stage 3.5C PR5 adds durable replay / rebuild validation.
+
+It supports:
+
+- full accepted-history replay for one order
+- comparison against persisted projection state
+- `MATCH`
+- `MISSING_PROJECTION`
+- `DRIFT`
+- `NO_ACCEPTED_HISTORY`
+- replay validation that does not mutate projection state
+- replay validation that does not advance checkpoint progress
+
+Stage 3.5D adds snapshot-assisted replay / resolution.
+
+It supports:
+
+- projection snapshot schema and store
+- projection snapshot-assisted replay validator
+- projection snapshot-assisted state resolver
+- explicit result states for match, missing snapshot, invalid boundary, tail contract violation, drift, unresolved resolver paths, and compatibility failures
+- aggregate snapshot trust deferral because write-side aggregate snapshots can affect command validation and accepted-history admission
+
 It still does **not yet** include:
 
-- durable replay / rebuild validation
-- Compass Layer 2 validation
-- advanced recovery logic
+- full Compass Layer 2 runtime governance
+- structured `SemanticOutcome`
+- runtime decision policy
+- action safety gate
 - out-of-order buffering
 - DLQ handling
 - watermark semantics
 - worker leasing
 - checkpoint row locking
 - multi-worker coordination
+- production database role hardening
 
-Those concerns are intentionally deferred until after the durable projection worker baseline.
+Those concerns are intentionally deferred until after the durable read-side and snapshot trust baselines.
+
+---
+
+## Snapshot-Assisted Read-Side Flow
+
+Stage 3.5D introduces snapshot-assisted read-side flow without changing source-of-truth authority.
+
+The core model is:
+
+```text
+accepted history = authority
+snapshot = derived state compression
+fast path = qualified snapshot + tail replay
+validator = expensive authority comparison
+resolver = safe read-side resolution primitive
+```
+
+The validator path answers:
+
+```text
+Does snapshot-assisted reconstruction match full accepted-history replay?
+```
+
+The resolver path answers:
+
+```text
+Can a caller reconstruct read-side state from an explicitly qualified snapshot and tail events?
+```
+
+The resolver does not decide whether the caller should fall back to full replay.
+
+The resolver does not prove semantic equivalence by itself.
+
+The broader runtime must continue to treat accepted history as the authority path.
 
 ---
 
@@ -283,11 +407,15 @@ For event production and aggregate rehydration.
 
 ### `src/storage/`
 
-For event persistence, idempotency storage, projection state, event-source loading, and checkpointing.
+For event persistence, idempotency storage, projection state, event-source loading, checkpointing, and projection snapshot persistence.
 
 ### `src/compass/transition/`
 
-For validating whether candidate events are admissible.
+For validating whether candidate events are admissible before accepted-history mutation.
+
+### `src/pipeline/projection/`
+
+For durable projection worker orchestration, replay validation, snapshot-assisted replay validation, and snapshot-assisted state resolution.
 
 ---
 
@@ -301,7 +429,18 @@ To strengthen write-side and read-side restart semantics beyond the current dura
 
 ### `src/compass/state/`
 
-To validate projection correctness and checkpoint semantics.
+To validate projection correctness and checkpoint semantics as a formal Compass Layer 2 runtime subsystem.
+
+### Stage 4 runtime governance
+
+To convert validation results into:
+
+```text
+SemanticOutcome
+→ RuntimeDecisionPolicy
+→ RuntimeDecision
+→ ActionSafetyGate
+```
 
 ### `chaos_engine/`
 
@@ -313,6 +452,8 @@ To test how pipeline behavior survives:
 - partial commits
 - network delays
 - recovery interruptions
+- snapshot corruption
+- stale checkpoint / projection mismatch
 
 ---
 
@@ -322,10 +463,15 @@ At the current stage, the main pipeline-related invariants include:
 
 - transactional event admission must preserve domain legality
 - replay must rebuild aggregate state deterministically
+- Compass Layer 1 validation must block invalid candidate events before accepted-history mutation
+- admission must reject stale or unprepared writers
 - projection must produce state consistent with processed accepted history
 - projection progress must align with the actual accepted-history cursor
 - PostgreSQL-backed projection must persist projection state and checkpoint progress atomically
 - replay / rebuild must follow the same baseline projection semantics as incremental processing
+- snapshot-assisted replay must not treat snapshot rows as authority
+- snapshot-assisted state resolution must replay tail events through the canonical reducer
+- aggregate snapshot trust remains deferred until write-side command-validation risk justifies it
 
 Later analytical invariants may include:
 
@@ -342,6 +488,17 @@ If reading this module from scratch, the recommended order is:
 2. `projection/`
 3. `analytical/` later
 
+Within `projection/`, the useful conceptual order is:
+
+```text
+reducer
+→ worker
+→ durable worker
+→ replay validator
+→ snapshot-assisted replay validator
+→ snapshot-assisted state resolver
+```
+
 This reflects the current implementation order of the system.
 
 ---
@@ -351,3 +508,5 @@ This reflects the current implementation order of the system.
 This module is where semantic rules turn into runtime flow.
 
 If the core defines what the system means, the pipeline defines how that meaning moves through time.
+
+After Stage 3.5D, the pipeline layer includes durable write-side orchestration, durable read-side projection orchestration, replay validation, and snapshot-assisted read-side resolution. It remains intentionally short of full Compass Layer 2 governance, structured outcomes, runtime decision policy, and Stage 3.5E permission hardening.

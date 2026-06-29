@@ -4,10 +4,9 @@
 
 This directory contains integration tests for **Streaming System + Compass**.
 
-Integration tests verify behavior across module boundaries, especially where runtime orchestration meets persistence, transaction control, replay, projection, checkpointing, and destructive PostgreSQL test setup.
+Integration tests verify behavior across module boundaries, especially where runtime orchestration meets persistence, transaction control, replay, projection, checkpointing, snapshot persistence, snapshot-assisted replay, and destructive PostgreSQL test setup.
 
-These tests are not general pytest examples.
-They are executable architecture claims.
+These tests are not general pytest examples. They are executable architecture claims.
 
 ---
 
@@ -22,6 +21,10 @@ The integration test layer focuses on questions such as:
 - Do destructive database tests run only against the test database?
 - Do write-side and read-side transaction boundaries prevent partial durable state?
 - Do in-memory baselines and PostgreSQL-backed baselines preserve the same conceptual semantics?
+- Does durable projection state remain derived from accepted history?
+- Does snapshot persistence preserve derived evidence without becoming authority?
+- Does snapshot-assisted replay compare against accepted-history authority?
+- Does snapshot-assisted state resolution replay tail events through the canonical reducer?
 
 ---
 
@@ -54,6 +57,16 @@ projection state
 checkpoint progress
 ```
 
+Stage 3.5D also adds snapshot-assisted projection boundaries:
+
+```text
+projection snapshot
++
+tail replay
++
+authority comparison / resolver evidence
+```
+
 See:
 
 - [Pipeline Integration Tests](pipeline/README.md)
@@ -70,6 +83,7 @@ The storage tests verify durable persistence boundaries for:
 - idempotency records
 - projection state
 - projection checkpoints
+- projection snapshots
 - global-position event loading
 - schema constraints
 - test database isolation
@@ -144,6 +158,7 @@ compass_test
 Integration tests may truncate durable tables such as:
 
 ```text
+projection_snapshots
 projection_checkpoints
 projection_states
 idempotency_records
@@ -154,6 +169,7 @@ The cleanup fixture resets these tables before each database integration test:
 
 ```text
 TRUNCATE
+    projection_snapshots,
     projection_checkpoints,
     projection_states,
     idempotency_records,
@@ -185,12 +201,23 @@ Stage 3.5C PR2 — PostgresProjectionStore
 Stage 3.5C PR3 — PostgresCheckpointStore
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline
 Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
+Stage 3.5D PR2 — Projection Snapshot Schema Baseline
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore
+Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
+Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
 ```
 
-The current Stage 3.5C integration direction now includes durable replay / rebuild validation:
+The Stage 3.5C integration direction includes durable replay / rebuild validation:
 
 ```text
 Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
+```
+
+The Stage 3.5D integration direction adds projection snapshot trust / replay-efficiency boundaries:
+
+```text
+Stage 3.5D PR4 — snapshot-assisted replay validator
+Stage 3.5D PR4.5 — snapshot-assisted state resolver
 ```
 
 ---
@@ -210,7 +237,12 @@ Together, the integration tests prove that:
 9. Projection state and checkpoint progress are persisted atomically by the PostgreSQL-backed projection worker.
 10. Durable replay validation can compare accepted-history replay with persisted projection state.
 11. Durable replay validation can detect `MATCH`, `MISSING_PROJECTION`, `DRIFT`, and `NO_ACCEPTED_HISTORY`.
-10. In-memory baselines still explain the conceptual runtime model that the durable paths extend.
+12. Durable replay validation does not mutate accepted history, projection state, or checkpoint progress.
+13. Projection snapshots can be persisted and loaded as derived state-compression artifacts.
+14. Projection snapshot duplicate writes can be classified as benign idempotent writes or inconsistent evidence collisions.
+15. Snapshot-assisted replay validation can compare snapshot + tail replay against full accepted-history replay.
+16. Snapshot-assisted state resolution can reconstruct state from a qualified snapshot and tail events without deciding broader fallback policy.
+17. In-memory baselines still explain the conceptual runtime model that the durable paths extend.
 
 ---
 
@@ -218,21 +250,24 @@ Together, the integration tests prove that:
 
 These tests do not yet prove:
 
-- Compass Layer 2 projection-drift validation
-- Snapshot Trust Contract
+- full Compass Layer 2 runtime governance
 - structured `SemanticOutcome`
 - runtime decision policy
 - action safety
+- persisted snapshot validation receipts
+- automatic snapshot quarantine or repair
+- production database role hardening
+- append-only trigger enforcement
 - out-of-order buffering
 - DLQ
 - watermark semantics
 - worker leasing
 - checkpoint row locking
 - distributed multi-worker coordination
-- production database role hardening
-- append-only trigger enforcement
 
 Those belong to later stages or future test directories.
+
+Stage 3.5D proves snapshot trust and replay-efficiency baselines, not full runtime governance.
 
 ---
 
@@ -282,6 +317,21 @@ pytest -v --durations=10 --cov=src --cov-report=term-missing --cov-fail-under=80
 
 ---
 
+## Required Migration Baseline
+
+PostgreSQL-backed integration tests currently assume the write-side, read-side, global-position, and snapshot migrations have been applied to the test database:
+
+```bash
+psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/004_create_projection_snapshots.sql
+```
+
+This requirement matters because Stage 3.5D tests depend on `projection_snapshots` and snapshot source-boundary fields.
+
+---
+
 ## Recommended Reading Order
 
 For the full integration-test story, read:
@@ -292,7 +342,7 @@ For the full integration-test story, read:
 4. [Transactional Pipeline Integration Tests](pipeline/transactional/README.md)
 5. [Projection Pipeline Integration Tests](pipeline/projection/README.md)
 
-This order shows how the system evolves from simple executable semantics into durable PostgreSQL-backed runtime boundaries.
+This order shows how the system evolves from simple executable semantics into durable PostgreSQL-backed runtime boundaries, and then into snapshot-assisted read-side replay / resolution.
 
 ---
 
@@ -309,6 +359,7 @@ semantic meaning
 + admission
 + projection
 + checkpointing
++ snapshot trust
 ```
 
 without collapsing those responsibilities into one layer.

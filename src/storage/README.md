@@ -339,7 +339,7 @@ inside one read-side transaction boundary.
 
 ## Current Implementation Scope
 
-At the current stage, this module supports both write-side and read-side persistence boundaries.
+At the current stage, after Stage 3.5D completion, this module supports write-side persistence, read-side persistence, and projection snapshot persistence boundaries.
 
 Write-side storage currently includes:
 
@@ -357,6 +357,11 @@ Read-side storage currently includes:
 - `postgres_checkpoint_store.py` — PostgreSQL-backed checkpoint store
 - `postgres_projection_event_source.py` — PostgreSQL-backed accepted-history event source for projection workers
 - `order_event_hydration.py` — shared database-row-to-domain-event hydration helper
+- `postgres_projection_snapshot_store.py` — PostgreSQL-backed projection snapshot store
+
+Snapshot-related storage currently includes:
+
+- `postgres_projection_snapshot_store.py` — projection snapshot persistence for derived read-side state compression
 
 The current durable write-side progress is:
 
@@ -379,6 +384,17 @@ Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
 Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
 ```
 
+The current snapshot trust / replay-efficiency progress is:
+
+```text
+Stage 3.5D PR1 — General Snapshot Trust Contract Boundary ✅
+Stage 3.5D PR2 — Projection Snapshot Schema Baseline ✅
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore ✅
+Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator ✅
+Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver ✅
+Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision ✅
+```
+
 Stage 3.5C PR4 adds storage-side accepted-history consumption for the durable projection worker:
 
 ```text
@@ -388,6 +404,16 @@ order_events.global_position
 ```
 
 The event source keeps global worker cursor metadata outside `OrderEvent`.
+
+Stage 3.5D adds projection snapshot persistence as a derived-state compression boundary:
+
+```text
+projection_snapshots
+→ PostgresProjectionSnapshotStore
+→ snapshot-assisted replay validator / resolver
+```
+
+The snapshot store persists snapshot evidence, but it does not decide whether that evidence is trusted. Trust qualification remains in validator / resolver logic outside the store.
 
 ---
 
@@ -448,11 +474,15 @@ For durable accepted-history and idempotency semantics across restart.
 
 ### persistence-backed projection flow
 
-For durable projection-state and checkpoint semantics across restart.
+For durable projection-state and checkpoint semantics across restart. This is now established at the Stage 3.5C baseline level.
+
+### projection snapshot persistence
+
+For derived read-side state compression, replay-efficiency evidence, and snapshot-assisted resolver inputs. This is established at the Stage 3.5D baseline level.
 
 ### `src/compass/state/`
 
-For comparing runtime projected state against replayed or checkpointed state.
+For comparing runtime projected state against replayed or checkpointed state as a future full Compass Layer 2 subsystem. Stage 3.5D provides snapshot and replay evidence substrates, but does not yet implement full Layer 2 governance.
 
 ### `chaos_engine/`
 
@@ -476,14 +506,19 @@ At the current stage, the main storage-related invariants include:
 - projection state must remain derived and rebuildable
 - PostgreSQL-backed projection state must round-trip status, Decimal money values, and version evidence correctly
 - `projection_states.last_sequence` currently reflects `OrderState.version`
-- checkpoint position must reflect actual projection progress once the durable checkpoint store is added
-
-Later invariants will include:
-
+- checkpoint position must reflect actual projection progress
 - projection state and checkpoint progress should be committed atomically by the PostgreSQL-backed projection worker
 - persistence-backed replay and incremental state must remain equivalent
 - durable checkpoint position must survive restart correctly
+- projection snapshots must remain derived state compression, not accepted-history authority
+- projection snapshot duplicate writes must distinguish benign idempotent writes from inconsistent evidence collisions
 - write-side and read-side persistence semantics must remain mutually consistent
+
+Later invariants will include:
+
+- database role boundaries should prevent runtime code from casually updating or deleting accepted history
+- append-only hardening should protect `order_events` without freezing mutable derived read-side tables
+- future validation receipts may harden snapshot runtime trust without turning snapshot rows into authority
 
 ---
 
@@ -498,6 +533,9 @@ If reading this module from scratch, the recommended order is:
 5. `projection_store.py`
 6. `postgres_projection_store.py`
 7. `checkpoint_store.py`
+8. `postgres_checkpoint_store.py`
+9. `postgres_projection_event_source.py`
+10. `postgres_projection_snapshot_store.py`
 
 This reflects the current project evolution:
 
@@ -505,6 +543,8 @@ This reflects the current project evolution:
 - durable read-side projection state second
 - durable checkpoint progress next
 - worker orchestration after both durable stores exist
+- replay validation after durable worker semantics exist
+- snapshot persistence and snapshot-assisted replay after accepted-history authority is clear
 
 ---
 
@@ -514,3 +554,5 @@ This module does not define semantic truth.
 It defines where semantic truth and runtime progress are persisted, recovered, and tracked.
 
 If the core is the system's semantic source, storage is the memory boundary that preserves that source across time.
+
+After Stage 3.5D, storage also preserves projection snapshot artifacts for replay efficiency. Those artifacts are useful only because accepted history remains the authority path that can validate or reject them.
