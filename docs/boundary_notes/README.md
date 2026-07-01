@@ -6,7 +6,7 @@
 
 This folder contains boundary notes for the core modules and cross-cutting boundaries of the project.
 
-These notes are not meant to replace implementation or architecture documents.  
+These notes are not meant to replace implementation or architecture documents.
 Their purpose is narrower and more practical:
 
 - clarify what each module or boundary is responsible for
@@ -51,8 +51,9 @@ Boundary notes are especially useful when asking questions such as:
 - Why does transactional consistency not mean boundary merge?
 - Why does a projection worker need a global cursor instead of aggregate-local sequence?
 - Why does replay validation compare against projection state without making projection state the source of truth?
+- Why should accepted history be harder to mutate than derived runtime state?
 
-These are not merely coding-style questions.  
+These are not merely coding-style questions.
 They are boundary questions.
 
 ---
@@ -99,6 +100,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 - [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
 - [Snapshot Trust Contract Boundary](snapshot_trust_contract_boundary.md)
+- [Durable History Permission Boundary](durable_history_permission_boundary.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
 
@@ -123,6 +125,8 @@ The persistence-related notes are also intentionally separate:
 
 The snapshot trust contract note defines how derived snapshot state may qualify for fast-path replay / rehydration without replacing accepted history as the source of truth.
 
+The durable history permission boundary note extends the same authority model into database mutation posture. It clarifies why `order_events` should be treated as accepted-history authority, while projection state, checkpoints, and snapshots remain derived or operational artifacts with different mutation needs.
+
 ---
 
 ## How to Use These Notes
@@ -144,10 +148,11 @@ A practical reading order is:
 13. [Global-Position Projection Worker Boundary](global_position_projection_worker_boundary.md)
 14. [Durable Replay / Rebuild Validation Boundary](durable_replay_rebuild_validation_boundary.md)
 15. [Snapshot Trust Contract Boundary](snapshot_trust_contract_boundary.md)
-16. [Compass Layer Boundary](compass_layer_boundary.md)
-17. [Persistence Boundary](persistence_boundary.md)
-18. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
-19. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+16. [Durable History Permission Boundary](durable_history_permission_boundary.md)
+17. [Compass Layer Boundary](compass_layer_boundary.md)
+18. [Persistence Boundary](persistence_boundary.md)
+19. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+20. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -166,6 +171,7 @@ This roughly follows the intended semantic development order of the project:
 - define durable worker cursor strategy
 - define durable replay / rebuild validation against accepted history
 - define snapshot trust qualification for fast-path replay / rehydration
+- define accepted-history mutation posture at the database permission boundary
 - define semantic validation layers
 - define durable-world persistence discipline
 - define read-side persistence semantics
