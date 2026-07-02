@@ -229,7 +229,7 @@ PR2 translates the durable-history permission boundary into a database-native ro
 
 ## Status
 
-In progress.
+Completed after the role / privilege migration baseline is added.
 
 ## Scope
 
@@ -331,6 +331,30 @@ projection_snapshots
 ```
 
 This direction may be refined during implementation.
+
+
+## Implemented Migration Boundary
+
+PR2 adds:
+
+```text
+db/migrations/005_create_durable_state_permission_roles.sql
+```
+
+The migration creates runtime responsibility roles and grants table-specific privileges without changing the existing `compass_user` test owner path.
+
+The migration intentionally does not revoke privileges from `compass_user`, does not transfer table ownership, and does not force existing integration tests to use low-privilege runtime roles.
+
+Sequence privilege is intentionally narrow:
+
+```text
+order_events_global_position_seq
+= USAGE / SELECT for compass_app_writer
+= SELECT for compass_readonly
+= no USAGE for projection_worker or snapshot_worker
+```
+
+Only `compass_app_writer` should be able to consume the accepted-history global-position sequence because it is the only runtime role in PR2 allowed to insert into `order_events`.
 
 ## Non-goals
 

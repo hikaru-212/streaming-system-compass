@@ -431,6 +431,57 @@ No normal runtime role should receive `UPDATE` or `DELETE` on `projection_snapsh
 
 ---
 
+
+## Implemented SQL Migration
+
+PR2 implements the baseline through:
+
+```text
+db/migrations/005_create_durable_state_permission_roles.sql
+```
+
+The migration creates the following PostgreSQL roles if they do not already exist:
+
+```text
+compass_migration_owner
+compass_app_writer
+compass_projection_worker
+compass_snapshot_worker
+compass_readonly
+```
+
+It grants `USAGE` on schema `public` to runtime roles so table privileges are usable.
+
+It then applies explicit table-level `REVOKE` / `GRANT` rules for:
+
+```text
+order_events
+idempotency_records
+projection_states
+projection_checkpoints
+projection_snapshots
+```
+
+The migration intentionally does not revoke privileges from the existing `compass_user` test owner connection.
+
+Existing mechanism integration tests may continue to use `compass_user` for setup, cleanup, fixture insertion, and deterministic reset.
+
+Runtime-role permission tests are added separately in later Stage 3.5E PRs.
+
+### Sequence Boundary
+
+`order_events.global_position` uses:
+
+```text
+order_events_global_position_seq
+```
+
+Only `compass_app_writer` receives `USAGE` on this sequence because it is the only runtime role allowed to insert into `order_events` in the PR2 baseline.
+
+Projection and snapshot workers may read accepted history, but they should not be able to consume accepted-history cursor values by calling `nextval(...)`.
+
+Therefore, PR2 avoids broad sequence grants.
+
 ## Permission Tests Boundary
 
 PR2 may introduce roles and grants.

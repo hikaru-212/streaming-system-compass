@@ -225,6 +225,31 @@ However, the stage should avoid expanding into full RBAC or production authentic
 
 ---
 
+## PR2 Implementation State
+
+Stage 3.5E PR2 adds the first PostgreSQL role / privilege baseline:
+
+```text
+compass_migration_owner
+compass_app_writer
+compass_projection_worker
+compass_snapshot_worker
+compass_readonly
+```
+
+The PR2 migration is:
+
+```text
+db/migrations/005_create_durable_state_permission_roles.sql
+```
+
+This migration defines runtime responsibility roles and table-level grants.
+
+It does not replace the existing high-privilege `compass_user` test owner connection. Existing storage, replay, projection, snapshot, and mechanism integration tests may continue to use `compass_user` for setup, cleanup, and deterministic reset.
+
+Runtime-role permission behavior is verified separately in the Stage 3.5E permission-test PRs.
+
+
 ## Stage Completion Criteria
 
 Stage 3.5E is complete when the project can clearly demonstrate:
