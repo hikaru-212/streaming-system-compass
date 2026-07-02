@@ -249,6 +249,60 @@ It does not replace the existing high-privilege `compass_user` test owner connec
 
 Runtime-role permission behavior is verified separately in the Stage 3.5E permission-test PRs.
 
+---
+
+## PR3 Implementation State
+
+Stage 3.5E PR3 adds isolated permission-boundary integration tests for accepted history and authority-adjacent write-side records.
+
+PR3 verifies the PR2 role / privilege baseline for:
+
+```text
+order_events
+idempotency_records
+order_events_global_position_seq
+```
+
+The PR3 tests are located under:
+
+```text
+tests/integration/security/
+```
+
+PR3 also adds a layered testing boundary note:
+
+```text
+docs/boundary_notes/layered_testing_strategy_for_permission_and_governance.md
+```
+
+The tests intentionally use a layered testing model:
+
+```text
+compass_user
+= test-owner setup / cleanup / fixture authority
+
+compass_* runtime roles
+= permission-boundary probes through SET ROLE
+```
+
+PR3 confirms that `compass_app_writer` can use the intended accepted-history append and successful idempotency receipt insert paths, but cannot rewrite accepted events or idempotency receipts.
+
+PR3 also confirms that projection, snapshot, and read-only roles cannot mutate accepted history, cannot rewrite successful idempotency receipts, and cannot consume the accepted-history global-position sequence.
+
+At the current schema level, `idempotency_records` stores only successful request-effect receipts:
+
+```text
+request_id → accepted_event_id
+status = SUCCEEDED
+```
+
+It does not store failed attempts, rejected candidates, retry lifecycle state, failure reasons, or runtime decision traces.
+
+Therefore, `compass_readonly` may SELECT `idempotency_records` in Stage 3.5E. If future governance tables introduce failure reasons, retry attempts, or decision traces, those tables may require a separate audit-oriented read role.
+
+PR3 does not test derived-state mutation permissions. Those remain scoped to PR4.
+
+---
 
 ## Stage Completion Criteria
 
