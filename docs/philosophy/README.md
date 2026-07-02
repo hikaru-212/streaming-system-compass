@@ -21,6 +21,7 @@ It grew from practical debugging, self-directed system design, and repeated atte
 | [Core/Enabler as Semantic Fusion of SoC and DIP](03_core_enabler_soc_dip_fusion.md) | Connects the Core/Enabler model to traditional software architecture principles such as Separation of Concerns and Dependency Inversion. |
 | [Data Infrastructure vs Semantic Infrastructure](04_data_infra_vs_semantic_infra.md) | Records the future-oriented philosophy that physical infrastructure preserves facts, while Semantic Infrastructure evaluates whether those facts still preserve meaning. |
 | [Policy Evolution to Runtime Truth](05_policy_evolution_to_runtime_truth.md) | Records the future direction where machine-readable policy contracts, Compass runtime admission, and structured semantic outcomes connect into a governance loop. |
+| [AI Suggestions Are Candidate Actions](06_ai_suggestions_are_candidate_actions.md) | Records a methodology case study showing why AI-generated explanations and designs are treated as candidate actions that must pass repository-specific admission before becoming accepted documentation or implementation. |
 
 ---
 
@@ -32,6 +33,7 @@ It grew from practical debugging, self-directed system design, and repeated atte
 4. [Core/Enabler as Semantic Fusion of SoC and DIP](03_core_enabler_soc_dip_fusion.md)
 5. [Data Infrastructure vs Semantic Infrastructure](04_data_infra_vs_semantic_infra.md)
 6. [Policy Evolution to Runtime Truth](05_policy_evolution_to_runtime_truth.md)
+7. [AI Suggestions Are Candidate Actions](06_ai_suggestions_are_candidate_actions.md)
 
 This order matters because the philosophy in this repository has two layers:
 
@@ -49,7 +51,7 @@ does not automatically imply
 semantic correctness
 ```
 
-The Policy Evolution to Runtime Truth note comes last because it extends Semantic Infrastructure into a broader governance loop:
+The Policy Evolution to Runtime Truth note comes after that because it extends Semantic Infrastructure into a broader governance loop:
 
 ```text
 intended correctness
@@ -59,6 +61,14 @@ intended correctness
 → policy evolution
 ```
 
+The AI Suggestions Are Candidate Actions note is a concrete methodology case study. It shows how the same candidate-vs-accepted discipline used by Compass also applies to AI-assisted design work:
+
+```text
+AI-generated suggestion
+→ repository-specific review
+→ accepted documentation / implementation
+```
+
 ---
 
 ## How These Notes Relate to the Project
@@ -66,6 +76,7 @@ intended correctness
 | Philosophy Concept | Project Expression |
 |---|---|
 | Definition alignment before implementation | Boundary notes, ADRs, and staged implementation before code expansion |
+| AI suggestions as candidate actions | AI-generated explanations are reviewed against actual schema, dependency direction, and repository boundaries before becoming accepted docs or code |
 | Input → Bridge → Output | Command → Transactional Pipeline → Accepted Event / Derived State |
 | Core | Domain rules, aggregate legality, event semantics, pure state transition logic |
 | Enablers | Idempotency, validation, concurrency gate, projection worker, checkpointing, recovery mechanisms |
@@ -92,6 +103,7 @@ They explain why the project emphasizes:
 * failure-aware design
 * documentation before implementation
 * defensive review before coding
+* AI-assisted design review without surrendering architectural ownership
 * future separation between physical infrastructure and semantic governance
 * future connection between policy evolution, runtime admission, structured outcomes, and recovery evidence
 

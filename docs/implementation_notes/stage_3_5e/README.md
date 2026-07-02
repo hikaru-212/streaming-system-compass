@@ -24,7 +24,7 @@ The project now has durable baselines for:
 
 ```text
 accepted history
-idempotency memory
+successful idempotency receipts
 projection state
 projection checkpoints
 projection snapshots
@@ -69,6 +69,11 @@ order_events
 = source of truth
 = append-only / restricted mutation direction
 
+idempotency_records
+= successful request-effect receipts
+= request_id to accepted_event_id mapping
+= insert-once / restricted rewrite under the current schema
+
 projection_states
 = derived read-side state
 = rebuildable
@@ -96,6 +101,7 @@ The stage may include:
 ```text
 database-level mutation hardening
 append-only accepted-history direction
+successful idempotency receipt rewrite prevention
 role / privilege separation for durable tables
 minimal actor metadata
 permission boundary documentation
@@ -124,6 +130,8 @@ secret manager integration
 user account management
 UI permissions
 production access-control infrastructure
+retry lifecycle table
+failed attempt table
 Compass Layer 2
 SemanticOutcome
 runtime decision policy
@@ -145,7 +153,9 @@ Stage 3.5B established durable write-side storage and transactional semantic wri
 
 It made accepted history durable through PostgreSQL-backed `order_events`, while preserving Compass Layer 1 before accepted-history mutation.
 
-Stage 3.5E builds on this by making accepted-history mutation harder to perform outside intended append paths.
+It also introduced `idempotency_records` as successful request-to-accepted-event receipts, not as a retry lifecycle table.
+
+Stage 3.5E builds on this by making accepted-history mutation harder to perform outside intended append paths and by preventing successful idempotency receipts from being casually rewritten.
 
 ---
 
@@ -182,6 +192,7 @@ who produced validation evidence
 who or what triggered rebuild
 who or what attempted repair
 who is allowed to mutate accepted history
+who is allowed to mutate successful request-effect receipts
 who is allowed to mutate derived runtime state
 ```
 
@@ -204,11 +215,40 @@ PR5 — Minimal Actor Metadata Boundary
 PR6 — Stage 3.5E Closeout
 ```
 
+Detailed notes:
+
+- [PR2 — Database Role / Privilege Baseline](database_role_privilege_baseline.md)
+
 This sequence may be adjusted as implementation reveals constraints.
 
 However, the stage should avoid expanding into full RBAC or production authentication.
 
 ---
+
+## PR2 Implementation State
+
+Stage 3.5E PR2 adds the first PostgreSQL role / privilege baseline:
+
+```text
+compass_migration_owner
+compass_app_writer
+compass_projection_worker
+compass_snapshot_worker
+compass_readonly
+```
+
+The PR2 migration is:
+
+```text
+db/migrations/005_create_durable_state_permission_roles.sql
+```
+
+This migration defines runtime responsibility roles and table-level grants.
+
+It does not replace the existing high-privilege `compass_user` test owner connection. Existing storage, replay, projection, snapshot, and mechanism integration tests may continue to use `compass_user` for setup, cleanup, and deterministic reset.
+
+Runtime-role permission behavior is verified separately in the Stage 3.5E permission-test PRs.
+
 
 ## Stage Completion Criteria
 
@@ -216,6 +256,8 @@ Stage 3.5E is complete when the project can clearly demonstrate:
 
 ```text
 accepted history cannot be casually mutated through the same assumptions as derived state
+
+successful idempotency receipts cannot be casually rewritten by normal runtime roles
 
 derived runtime artifacts remain operationally rebuildable / updatable
 
