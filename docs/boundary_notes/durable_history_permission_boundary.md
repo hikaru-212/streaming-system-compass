@@ -14,7 +14,9 @@ The boundary exists because not all durable tables have the same semantic author
 
 Accepted history is the source of truth.
 
-Derived runtime artifacts are not.
+Successful idempotency receipts preserve request-to-accepted-event evidence.
+
+Derived runtime artifacts are not authority.
 
 Therefore, the system should not treat all durable mutation paths as equivalent.
 
@@ -30,6 +32,7 @@ This rule follows from the project’s existing authority model:
 
 ```text
 accepted history = authority
+successful idempotency receipt = request-to-accepted-event evidence
 projection state = derived runtime view
 checkpoint = operational progress metadata
 snapshot = derived state compression
@@ -57,6 +60,8 @@ This is not only a security concern.
 It is a semantic correctness concern.
 
 If accepted history can be updated, deleted, or rewritten through the same assumptions used for derived state, then the system weakens its own authority model.
+
+If successful idempotency receipts can be rewritten, then request-to-accepted-event evidence becomes unstable even if accepted history itself remains intact.
 
 ---
 
@@ -100,25 +105,48 @@ Mutation paths outside the intended append flow should be restricted.
 ### `idempotency_records`
 
 ```text
-authority level: request-effect memory
-mutation posture: controlled write-side support
+authority level: successful request-effect receipt
+mutation posture: insert-once / restricted rewrite
 ```
 
 `idempotency_records` does not define business truth by itself.
 
-However, it protects request-level effect semantics.
+However, it preserves successful request-to-accepted-event evidence.
 
-It helps distinguish:
+Under the current schema, this table records only successful request effects:
 
 ```text
-safe replay
-vs
-conflicting duplicate request
+request_id
+→ semantic_fingerprint
+→ accepted_event_id
+→ result_sequence
+→ SUCCEEDED
 ```
 
-Its mutation rights should remain tied to the write-side transactional boundary.
+It does not record:
+
+```text
+pending request lifecycle
+failed attempts
+retry attempts
+rejected candidates
+runtime decision receipts
+```
+
+Those concerns may be introduced later as separate Stage 4 attempt / governance records.
+
+`idempotency_records` participates in the same write-side transaction as `order_events`, but transaction coupling does not imply semantic equivalence.
 
 It should not be treated like projection state.
+
+It should also not be treated as a freely rewriteable lifecycle table.
+
+The correct boundary is:
+
+```text
+idempotency records preserve successful request-to-accepted-event receipts
+and should not be casually updated or deleted by normal runtime roles
+```
 
 ---
 
@@ -149,6 +177,10 @@ The correct boundary is:
 projection state is mutable through controlled projection runtime paths
 but does not have accepted-history authority
 ```
+
+Write-side command admission must not depend on projection state.
+
+The write side should rely on accepted history / event-log rehydration, not read-side projection state.
 
 ---
 
@@ -315,6 +347,8 @@ secret manager integration
 user account management
 UI permissions
 audit dashboard
+retry lifecycle table
+failed attempt table
 Compass Layer 2
 SemanticOutcome
 DecisionReceipt
@@ -337,6 +371,8 @@ Stage 3.5E should move the project toward these invariants:
 accepted history cannot be casually updated or deleted
 
 accepted-history append paths remain explicit and controlled
+
+successful idempotency receipts cannot be casually rewritten by normal runtime roles
 
 projection state remains rebuildable
 
@@ -366,5 +402,7 @@ the table that defines truth
 must not have the same mutation posture
 as tables that merely derive, compress, or track runtime state
 ```
+
+It also recognizes that successful idempotency receipts are request-to-accepted-event evidence and should not be treated as mutable retry lifecycle state under the current schema.
 
 That is the Stage 3.5E boundary.
