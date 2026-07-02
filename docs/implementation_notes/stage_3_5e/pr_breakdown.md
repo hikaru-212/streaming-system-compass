@@ -389,43 +389,85 @@ Detailed permission tests belong to later PRs.
 
 Prove that accepted history is harder to mutate than derived runtime state.
 
-PR3 verifies the database mutation boundary around `order_events` and successful idempotency receipts.
+PR3 verifies the database mutation boundary around `order_events`, successful idempotency receipts, and the accepted-history global-position sequence.
 
 ## Status
 
-Planned.
+Completed.
 
 ## Scope
 
-PR3 should add tests demonstrating that unauthorized or unintended mutation patterns against authority-adjacent write-side tables are rejected.
+PR3 adds isolated permission-boundary integration tests demonstrating that unauthorized or unintended mutation patterns against authority-adjacent write-side tables are rejected.
 
-The tests should focus on mutation semantics, not business-domain validation.
+The tests focus on mutation semantics and database privilege boundaries, not business-domain validation.
 
-Possible test categories:
-
-```text
-unauthorized update of accepted event is rejected
-unauthorized delete of accepted event is rejected
-unauthorized update of idempotency receipt is rejected
-unauthorized delete of idempotency receipt is rejected
-append path remains available to intended writer role
-successful idempotency receipt insert remains available to intended writer role
-read-only role can inspect accepted history but cannot mutate it
-projection worker cannot mutate accepted history
-snapshot worker cannot mutate accepted history
-```
-
-A likely location is:
+Implemented test location:
 
 ```text
 tests/integration/security/
 ```
 
-or another clearly separated permission-test location.
+Implemented support note:
+
+```text
+docs/boundary_notes/layered_testing_strategy_for_permission_and_governance.md
+```
+
+PR3 covers:
+
+```text
+order_events
+idempotency_records
+order_events_global_position_seq
+```
+
+Implemented test coverage:
+
+```text
+compass_app_writer
+= can SELECT / INSERT order_events
+= cannot UPDATE / DELETE order_events
+= can SELECT / INSERT idempotency_records
+= cannot UPDATE / DELETE idempotency_records
+= can consume order_events_global_position_seq
+
+compass_projection_worker
+= can SELECT order_events
+= cannot INSERT / UPDATE / DELETE order_events
+= cannot SELECT / INSERT / UPDATE / DELETE idempotency_records
+= cannot consume order_events_global_position_seq
+
+compass_snapshot_worker
+= can SELECT order_events
+= cannot INSERT / UPDATE / DELETE order_events
+= cannot SELECT / INSERT / UPDATE / DELETE idempotency_records
+= cannot consume order_events_global_position_seq
+
+compass_readonly
+= can SELECT order_events
+= can SELECT idempotency_records
+= cannot INSERT / UPDATE / DELETE order_events
+= cannot INSERT / UPDATE / DELETE idempotency_records
+= cannot consume order_events_global_position_seq
+```
+
+The sequence tests intentionally verify the accepted-history cursor boundary directly instead of relying only on `INSERT order_events` as an indirect proof.
+
+The permission tests use a layered testing model:
+
+```text
+compass_user
+= test-owner setup / cleanup / fixture authority
+
+compass_* runtime roles
+= isolated permission probes through SET ROLE
+```
+
+`SET ROLE` is used only as a test mechanism. It is not a production role-switching abstraction, and it is not intended for Layer 3 causal / multi-role runtime-flow tests.
 
 ## Important Boundary
 
-These tests should not replace Compass Layer 1.
+These tests do not replace Compass Layer 1.
 
 Compass Layer 1 decides whether a candidate event is semantically admissible.
 
@@ -433,9 +475,20 @@ Stage 3.5E permission hardening decides whether a runtime actor is allowed to mu
 
 These are different boundaries.
 
+At the current schema level, `idempotency_records` stores only successful request-effect receipts:
+
+```text
+request_id → accepted_event_id
+status = SUCCEEDED
+```
+
+It does not store failed attempts, rejected candidates, retry lifecycle state, failure reasons, or runtime decision traces.
+
+Therefore, `compass_readonly` may SELECT `idempotency_records` in Stage 3.5E. If future governance tables introduce failure reasons, retry attempts, or decision traces, those tables may require a separate audit-oriented read role.
+
 ## Non-goals
 
-PR3 should not add:
+PR3 does not add:
 
 ```text
 new business-domain validation rules
@@ -446,8 +499,11 @@ SemanticOutcome
 DecisionReceipt
 RuntimeDecisionPolicy
 full RBAC tests
+production role-switching infrastructure
+Layer 3 multi-role causal-flow tests
 ```
 
+Derived-state mutation boundaries remain scoped to PR4.
 ---
 
 # PR4 — Derived-State Mutation Permission Tests
