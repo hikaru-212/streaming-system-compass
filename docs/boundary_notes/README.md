@@ -52,6 +52,7 @@ Boundary notes are especially useful when asking questions such as:
 - Why does a projection worker need a global cursor instead of aggregate-local sequence?
 - Why does replay validation compare against projection state without making projection state the source of truth?
 - Why should accepted history be harder to mutate than derived runtime state?
+- Why do runtime database roles require a separate permission-test layer instead of replacing ordinary integration tests?
 
 These are not merely coding-style questions.
 They are boundary questions.
@@ -101,6 +102,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
 - [Snapshot Trust Contract Boundary](snapshot_trust_contract_boundary.md)
 - [Durable History Permission Boundary](durable_history_permission_boundary.md)
+- [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
 
@@ -127,6 +129,8 @@ The snapshot trust contract note defines how derived snapshot state may qualify 
 
 The durable history permission boundary note extends the same authority model into database mutation posture. It clarifies why `order_events` should be treated as accepted-history authority, while projection state, checkpoints, and snapshots remain derived or operational artifacts with different mutation needs.
 
+The layered testing strategy note extends the permission boundary into the test suite. It clarifies why ordinary storage / mechanism tests may continue to use the test-owner connection, while permission-boundary tests should intentionally use runtime roles through `SET ROLE`, and future Stage 4 governance-flow tests may compose multiple runtime roles.
+
 ---
 
 ## How to Use These Notes
@@ -149,10 +153,11 @@ A practical reading order is:
 14. [Durable Replay / Rebuild Validation Boundary](durable_replay_rebuild_validation_boundary.md)
 15. [Snapshot Trust Contract Boundary](snapshot_trust_contract_boundary.md)
 16. [Durable History Permission Boundary](durable_history_permission_boundary.md)
-17. [Compass Layer Boundary](compass_layer_boundary.md)
-18. [Persistence Boundary](persistence_boundary.md)
-19. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
-20. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+17. [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
+18. [Compass Layer Boundary](compass_layer_boundary.md)
+19. [Persistence Boundary](persistence_boundary.md)
+20. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+21. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -172,6 +177,7 @@ This roughly follows the intended semantic development order of the project:
 - define durable replay / rebuild validation against accepted history
 - define snapshot trust qualification for fast-path replay / rehydration
 - define accepted-history mutation posture at the database permission boundary
+- define testing layers for mechanism tests, permission-boundary tests, and future governance-flow tests
 - define semantic validation layers
 - define durable-world persistence discipline
 - define read-side persistence semantics
