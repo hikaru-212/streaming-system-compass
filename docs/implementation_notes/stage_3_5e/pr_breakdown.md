@@ -516,13 +516,31 @@ PR4 verifies that Stage 3.5E does not accidentally treat all durable tables as a
 
 ## Status
 
-Planned.
+Completed.
 
 ## Scope
 
-PR4 should add tests showing that projection-related tables can still support normal runtime operations.
+PR4 adds isolated permission-boundary integration tests showing that projection-related tables support their intended runtime operations while still rejecting unintended mutation paths.
 
-The system must still allow controlled mutation of:
+Implemented test location:
+
+```text
+tests/integration/security/
+```
+
+Shared security-test setup:
+
+```text
+tests/integration/security/conftest.py
+```
+
+Implemented closeout note:
+
+```text
+docs/implementation_notes/stage_3_5e/derived_state_mutation_permission_tests.md
+```
+
+PR4 covers:
 
 ```text
 projection_states
@@ -530,20 +548,36 @@ projection_checkpoints
 projection_snapshots
 ```
 
-because these tables represent derived state, operational progress metadata, and derived replay-efficiency evidence.
-
-Possible test categories:
+Implemented test coverage:
 
 ```text
-projection worker role can upsert projection state
-projection worker role can update checkpoint progress
-projection worker role can clear projection state during controlled rebuild / reset
-snapshot worker role can insert projection snapshot
-read-only role cannot mutate derived runtime tables
-app_writer does not have projection-state access by default
-projection worker cannot mutate snapshots unless explicitly granted
-snapshot worker cannot mutate projection checkpoints unless explicitly granted
+compass_projection_worker
+= can SELECT / INSERT / UPDATE / DELETE projection_states
+= can SELECT / INSERT / UPDATE / DELETE projection_checkpoints
+= can SELECT projection_snapshots
+= cannot INSERT / UPDATE / DELETE projection_snapshots
+
+compass_snapshot_worker
+= can SELECT projection_states
+= cannot INSERT / UPDATE / DELETE projection_states
+= can SELECT projection_checkpoints
+= cannot INSERT / UPDATE / DELETE projection_checkpoints
+= can SELECT / INSERT projection_snapshots
+= cannot UPDATE / DELETE projection_snapshots
+
+compass_readonly
+= can SELECT projection_states
+= can SELECT projection_checkpoints
+= can SELECT projection_snapshots
+= cannot INSERT / UPDATE / DELETE derived runtime tables
+
+compass_app_writer
+= cannot SELECT / INSERT / UPDATE / DELETE projection_states
+= cannot SELECT / INSERT / UPDATE / DELETE projection_checkpoints
+= cannot SELECT / INSERT / UPDATE / DELETE projection_snapshots
 ```
+
+PR4 also verifies that security permission tests can share setup / cleanup infrastructure without converting existing storage or mechanism integration tests into low-privilege role tests.
 
 ## Important Boundary
 
@@ -555,9 +589,76 @@ Successful idempotency receipts are insert-once request-effect evidence under th
 
 Derived runtime artifacts must remain rebuildable and operational.
 
+The tested distinction is:
+
+```text
+projection_states
+= derived read-side state
+= controlled mutable artifact
+
+projection_checkpoints
+= operational progress metadata
+= controlled mutable artifact
+
+projection_snapshots
+= derived evidence / replay-efficiency artifact
+= insertable by snapshot worker
+= not rewritable or deletable by normal runtime roles
+```
+
+## Assertion Fidelity Lesson
+
+PR4 reinforced a test-design rule:
+
+```text
+If a permission probe uses RETURNING, assert the returned evidence directly.
+```
+
+This matters because row-count-only assertions can hide driver-level type mismatches.
+
+During snapshot permission tests, exact row assertions exposed the PostgreSQL UUID → Python UUID boundary. A weaker assertion such as `len(rows) == 1` would have hidden that mismatch.
+
+The reusable lesson is recorded in:
+
+```text
+docs/postmortems/from_row_count_assertions_to_evidence_assertions.md
+```
+
+## SET ROLE Boundary
+
+PR4 uses `SET ROLE` as a test-time permission probing mechanism.
+
+This proves effective PostgreSQL privileges for runtime responsibility roles.
+
+It does not prove production login identity wiring, role-specific database URLs, secret management, or connection-pool role isolation.
+
+That testing-scope decision is recorded in:
+
+```text
+docs/adr/0015_permission_probing_with_set_role.md
+```
+
+## Deferred Chaos / Production-Hardening Tests
+
+PR4 does not prove production-like behavior under:
+
+```text
+concurrent workers
+independent runtime connections
+connection-pool reuse
+rollback failure
+worker crash windows
+snapshot write races
+checkpoint advancement races
+derived-state corruption recovery
+permission bypass attempts during active workflows
+```
+
+Those belong to later production-hardening / chaos-test work after runtime governance, structured outcomes, retry classification, and decision receipts are more complete.
+
 ## Non-goals
 
-PR4 should not add:
+PR4 does not add:
 
 ```text
 accepted-history mutation tests already covered by PR3
@@ -565,9 +666,14 @@ new projection reducer behavior
 new snapshot trust decision logic
 new replay validator behavior
 new runtime state resolver policy
+new actor metadata schema
+production login users
+connection-pool policy
+chaos tests
 SemanticOutcome
 DecisionReceipt
 RuntimeDecisionPolicy
+Compass Layer 2
 ```
 
 ---
