@@ -4,7 +4,15 @@
 
 ## Purpose
 
-This document explains how to start the local PostgreSQL environment and run the PostgreSQL-backed integration tests for **Streaming System + Compass** through **Stage 3.5D PR2 — Projection Snapshot Schema Baseline**.
+This document explains how to start the local PostgreSQL environment and run the PostgreSQL-backed integration tests for **Streaming System + Compass** through **Stage 3.5D PR2 — Projection Snapshot Schema Baseline
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore Baseline
+Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
+Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
+Stage 3.5E PR2 — Database Role / Privilege Baseline
+Stage 3.5E PR3 — Accepted-History Mutation Hardening Tests
+Stage 3.5E PR4 — Derived-State Mutation Permission Tests
+Stage 3.5E PR5 — Minimal Actor Metadata Boundary
+Stage 3.5E PR6 — Stage Closeout**.
 
 The local PostgreSQL environment is used for:
 
@@ -168,13 +176,14 @@ compass_test
 
 ## Run Migrations
 
-Through Stage 3.5D PR2, the local PostgreSQL setup uses four baseline migrations:
+Through Stage 3.5E, the local PostgreSQL setup uses five baseline migrations:
 
 ```text
 db/migrations/001_create_write_side_tables.sql
 db/migrations/002_create_read_side_tables.sql
 db/migrations/003_add_order_events_global_position.sql
 db/migrations/004_create_projection_snapshots.sql
+db/migrations/005_create_durable_state_permission_roles.sql
 ```
 
 Apply them to the development database when you want to inspect tables manually:
@@ -184,6 +193,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_t
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
+db/migrations/005_create_durable_state_permission_roles.sql
 ```
 
 Apply them to the test database before running PostgreSQL integration tests:
@@ -193,6 +203,7 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_s
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
+db/migrations/005_create_durable_state_permission_roles.sql
 ```
 
 The CI workflow may also apply migrations automatically by iterating through `db/migrations/*.sql` in filename order:
@@ -241,6 +252,18 @@ projection_snapshots
 ```
 
 This table stores derived projection snapshot artifacts with accepted-history source-boundary evidence.
+
+The durable-state permission role migration creates the Stage 3.5E runtime responsibility roles and table-level grants:
+
+```text
+compass_migration_owner
+compass_app_writer
+compass_projection_worker
+compass_snapshot_worker
+compass_readonly
+```
+
+This migration is required before running `tests/integration/security`.
 
 ---
 
@@ -515,6 +538,14 @@ Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
 Stage 3.5D PR1 — Snapshot Trust Contract Boundary
 Stage 3.5D PR1.5 — CI Stage Branch Checks
 Stage 3.5D PR2 — Projection Snapshot Schema Baseline
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore Baseline
+Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
+Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
+Stage 3.5E PR2 — Database Role / Privilege Baseline
+Stage 3.5E PR3 — Accepted-History Mutation Hardening Tests
+Stage 3.5E PR4 — Derived-State Mutation Permission Tests
+Stage 3.5E PR5 — Minimal Actor Metadata Boundary
+Stage 3.5E PR6 — Stage Closeout
 ```
 
 It supports:
@@ -526,30 +557,31 @@ It supports:
 - durable projection snapshot schema through `projection_snapshots`
 - durable projection state persistence through `PostgresProjectionStore`
 - durable checkpoint progress persistence through `PostgresCheckpointStore`
+- projection snapshot persistence through `PostgresProjectionSnapshotStore`
 - global-position accepted-history consumption through `order_events.global_position`
 - PostgreSQL-backed projection worker orchestration
 - durable replay / rebuild validation against accepted history
+- projection snapshot-assisted replay validation
+- snapshot-assisted state resolution
 - PostgreSQL-backed transactional write-side execution
 - PostgreSQL-backed concurrency admission
 - durable event vocabulary and proof-status schema constraints
 - durable read-side schema constraints
 - projection snapshot schema constraints
+- runtime-role permission boundary tests through `tests/integration/security`
 - destructive integration tests isolated through `TEST_DATABASE_URL`
 
-It does not yet include:
+It does not include:
 
-- `PostgresProjectionSnapshotStore`
-- snapshot trust validator
-- snapshot-assisted replay validator
-- aggregate snapshots
-- write-side snapshot-assisted rehydration
-- Compass Layer 2 validation
-- production-grade DB roles / permissions
-- append-only trigger enforcement
+- Compass Layer 2 governance objects
+- `SemanticOutcome`
+- `DecisionReceipt`
+- `RuntimeDecisionPolicy`
+- production-grade login / session auth
+- production connection-pool role isolation
+- full RBAC or cloud IAM
 
-Those belong to later stages.
-
-The next local setup expansion is expected during Stage 3.5D PR3 if snapshot store integration tests introduce new setup details.
+Those belong to Stage 4 or later production-hardening work.
 
 ---
 
@@ -614,9 +646,11 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_si
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
 
-# 5. Inspect the projection snapshot schema if needed
+# 5. Inspect the projection snapshot schema / permission roles if needed
 psql "$TEST_DATABASE_URL" -c "\d projection_snapshots"
+psql "$TEST_DATABASE_URL" -c "\du compass_*"
 
 # 6. Run tests
 pytest tests/integration -v
+pytest tests/integration/security -v
 ```

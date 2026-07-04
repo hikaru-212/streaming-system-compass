@@ -23,7 +23,8 @@ It now also serves as the reference frame for an executable baseline covering:
 - Stage 3.5D snapshot trust contract and read-side replay-efficiency baseline
 - projection snapshot schema, store, replay validator, and snapshot-assisted state resolver
 - aggregate snapshot trust deferral decision
-- local PostgreSQL development setup for durable write-side and read-side work
+- Stage 3.5E durable history / permission hardening and minimal actor metadata boundary
+- local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
 ---
@@ -51,22 +52,18 @@ The repository currently has an implemented baseline for:
 - Stage 3.5C durable read-side baseline, including durable order-event vocabulary hardening, read-side schema, `PostgresProjectionStore`, `PostgresCheckpointStore`, global-position projection worker orchestration, and durable replay / rebuild validation
 - Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral
 
-The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **Stage 3.5C — Durable Read-Side Baseline**, and **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**.
+The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **Stage 3.5C — Durable Read-Side Baseline**, **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**, and **Stage 3.5E — Durable History and Permission Hardening**.
 
-Stage 3.5D is now complete at the read-side snapshot trust baseline level.
+Stage 3.5E is now complete at the minimal actor / permission boundary level.
 
 The current focus is now:
 
-- Stage 3.5E minimal actor / permission boundary
-- durable history and permission hardening around accepted-history authority
-- keeping Stage 4 Compass Layer 2 governance deferred to its proper stage
+- Stage 4 runtime semantic governance
+- structured `SemanticOutcome` mapping
+- durable `DecisionReceipt` / runtime evidence records
+- runtime decision policy, strategy selection, and retry governance
 
-The pre-Stage 3.5E documentation alignment pass is complete at the roadmap / ADR / implementation-note level.
-
-The next major implementation steps are:
-
-- Stage 3.5E durable history and permission hardening
-- Stage 4 runtime semantic validation, semantic outcome structuring, retry reason classification, runtime decision policy, and action safety
+Stage 3.5E intentionally stops before Compass Layer 2 governance objects. It provides the durable permission and actor-boundary foundation that Stage 4 can build on.
 
 ---
 
@@ -126,7 +123,7 @@ top-level system structure
 → completed snapshot trust / replay efficiency
 → implementation notes for completed stage / PR execution
 → pre-Stage 3.5E documentation alignment
-→ minimal actor / permission boundary
+→ completed minimal actor / permission boundary
 → runtime semantic validation and outcome structuring
 → runtime decision policy and action safety
 → boundary clarification

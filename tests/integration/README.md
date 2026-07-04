@@ -4,7 +4,7 @@
 
 This directory contains integration tests for **Streaming System + Compass**.
 
-Integration tests verify behavior across module boundaries, especially where runtime orchestration meets persistence, transaction control, replay, projection, checkpointing, snapshot persistence, snapshot-assisted replay, and destructive PostgreSQL test setup.
+Integration tests verify behavior across module boundaries, especially where runtime orchestration meets persistence, transaction control, replay, projection, checkpointing, snapshot persistence, snapshot-assisted replay, database role / privilege boundaries, and destructive PostgreSQL test setup.
 
 These tests are not general pytest examples. They are executable architecture claims.
 
@@ -25,6 +25,7 @@ The integration test layer focuses on questions such as:
 - Does snapshot persistence preserve derived evidence without becoming authority?
 - Does snapshot-assisted replay compare against accepted-history authority?
 - Does snapshot-assisted state resolution replay tail events through the canonical reducer?
+- Do runtime database roles have only the durable-table privileges intended by Stage 3.5E?
 
 ---
 
@@ -95,6 +96,28 @@ They do not own pipeline orchestration.
 See:
 
 - [Storage Integration Tests](storage/README.md)
+
+---
+
+### [security/](security/)
+
+Contains PostgreSQL-backed permission-boundary integration tests.
+
+The security tests verify the Stage 3.5E durable-history and permission-hardening boundary for:
+
+- accepted history mutation restrictions
+- successful idempotency receipt rewrite restrictions
+- accepted-history global-position sequence access
+- derived-state controlled mutation through intended roles
+- projection snapshot insert-oriented evidence protection
+
+These tests focus on effective PostgreSQL role privileges.
+
+They do not own storage mechanics, production login identity wiring, connection-pool isolation, full RBAC, or Stage 4 runtime governance.
+
+See:
+
+- [Security Integration Tests](security/README.md)
 
 ---
 
@@ -205,6 +228,10 @@ Stage 3.5D PR2 — Projection Snapshot Schema Baseline
 Stage 3.5D PR3 — PostgresProjectionSnapshotStore
 Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
 Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
+Stage 3.5E PR3 — Accepted-History Mutation Hardening Tests
+Stage 3.5E PR4 — Derived-State Mutation Permission Tests
+Stage 3.5E PR5 — Minimal Actor Metadata Boundary
+Stage 3.5E PR6 — Stage 3.5E Closeout
 ```
 
 The Stage 3.5C integration direction includes durable replay / rebuild validation:
@@ -242,7 +269,9 @@ Together, the integration tests prove that:
 14. Projection snapshot duplicate writes can be classified as benign idempotent writes or inconsistent evidence collisions.
 15. Snapshot-assisted replay validation can compare snapshot + tail replay against full accepted-history replay.
 16. Snapshot-assisted state resolution can reconstruct state from a qualified snapshot and tail events without deciding broader fallback policy.
-17. In-memory baselines still explain the conceptual runtime model that the durable paths extend.
+17. Stage 3.5E permission tests verify that accepted history and successful idempotency receipts are protected differently from derived runtime artifacts.
+18. Runtime roles can be probed through `SET ROLE` without converting ordinary storage / mechanism integration tests into low-privilege tests.
+19. In-memory baselines still explain the conceptual runtime model that the durable paths extend.
 
 ---
 
@@ -256,7 +285,9 @@ These tests do not yet prove:
 - action safety
 - persisted snapshot validation receipts
 - automatic snapshot quarantine or repair
-- production database role hardening
+- production login identity wiring
+- production connection-pool role isolation
+- full RBAC / authentication infrastructure
 - append-only trigger enforcement
 - out-of-order buffering
 - DLQ
@@ -303,6 +334,12 @@ Run storage integration tests:
 pytest tests/integration/storage -v
 ```
 
+Run security permission-boundary integration tests:
+
+```bash
+pytest tests/integration/security -v
+```
+
 Run in-memory integration tests:
 
 ```bash
@@ -326,9 +363,10 @@ psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/004_create_projection_snapshots.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/005_create_durable_state_permission_roles.sql
 ```
 
-This requirement matters because Stage 3.5D tests depend on `projection_snapshots` and snapshot source-boundary fields.
+This requirement matters because Stage 3.5D tests depend on `projection_snapshots` and snapshot source-boundary fields, while Stage 3.5E security tests depend on runtime responsibility roles and table-level grants.
 
 ---
 
@@ -341,6 +379,7 @@ For the full integration-test story, read:
 3. [Pipeline Integration Tests](pipeline/README.md)
 4. [Transactional Pipeline Integration Tests](pipeline/transactional/README.md)
 5. [Projection Pipeline Integration Tests](pipeline/projection/README.md)
+6. [Security Integration Tests](security/README.md)
 
 This order shows how the system evolves from simple executable semantics into durable PostgreSQL-backed runtime boundaries, and then into snapshot-assisted read-side replay / resolution.
 
@@ -360,6 +399,7 @@ semantic meaning
 + projection
 + checkpointing
 + snapshot trust
++ permission boundary
 ```
 
 without collapsing those responsibilities into one layer.

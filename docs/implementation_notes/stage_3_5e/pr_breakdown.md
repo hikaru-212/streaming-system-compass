@@ -1,0 +1,1088 @@
+# Stage 3.5E PR Breakdown
+
+[← Back to Stage 3.5E](README.md)
+
+## Purpose
+
+This note proposes the implementation sequence for:
+
+```text
+Stage 3.5E — Durable History and Permission Hardening
+```
+
+The goal of Stage 3.5E is to introduce a minimal durable-history mutation boundary before the project enters broader runtime semantic governance.
+
+Stage 3.5E should not become a full authentication or authorization system.
+
+It should define the minimum permission semantics needed to make accepted history harder to mutate than derived runtime state.
+
+---
+
+## Stage Principle
+
+```text
+accepted history = authority
+successful request-effect receipt = insert-once evidence
+derived state = rebuildable runtime artifact
+permission boundary must respect authority level
+```
+
+This means:
+
+```text
+order_events
+should be append-oriented and mutation-restricted
+
+idempotency_records
+should remain successful request-to-accepted-event receipts under the current schema
+
+projection_states
+should remain controlled-but-mutable because projections are derived
+
+projection_checkpoints
+should remain controlled-but-mutable because checkpoints are operational progress metadata
+
+projection_snapshots
+should remain derived evidence and replay-efficiency artifacts, not authority
+```
+
+Additional implementation principles:
+
+```text
+permission hardening must not replace semantic validation
+database roles should represent runtime responsibility boundaries, not product users
+accepted-history mutation should be stricter than derived-state mutation
+successful idempotency receipts should not be rewritten by normal runtime roles
+write-side command admission must not depend on read-side projection state
+existing integration tests may still use high-privilege setup / cleanup paths
+permission tests should be isolated from normal storage behavior tests
+Stage 3.5E should prepare for Stage 4 receipts without implementing Stage 4
+```
+
+---
+
+## Stage Branch / PR Branch Workflow
+
+Stage 3.5E follows the staged delivery workflow used in earlier implementation phases.
+
+The project should not treat one PR as necessarily equal to one commit.
+
+Instead, the intended workflow is:
+
+```text
+one stage branch
+= one integration branch for the whole stage
+
+one PRx branch
+= one coherent semantic delivery unit inside the stage
+
+one PRx branch may contain multiple commits
+= each commit preserves a smaller documentation, schema, code, or test boundary
+```
+
+For Stage 3.5E, the integration branch is:
+
+```text
+feat/stage3.5e-durable-history-permission-hardening
+```
+
+Individual PR branches should be created from the current Stage 3.5E integration branch, for example:
+
+```text
+feat/stage3.5e-pr2-database-role-privilege-baseline
+feat/stage3.5e-pr3-accepted-history-mutation-hardening-tests
+feat/stage3.5e-pr4-derived-state-mutation-permission-tests
+```
+
+Each PR branch should be merged back into the Stage 3.5E integration branch.
+
+The Stage 3.5E integration branch should be merged back to `main` only after the stage is complete or intentionally closed.
+
+---
+
+## Commit Discipline
+
+A PR may contain more than one commit.
+
+The important rule is not:
+
+```text
+one PR = one commit
+```
+
+The important rule is:
+
+```text
+one PR = one coherent semantic delivery unit
+one commit = one smaller boundary-preserving change
+```
+
+For example, a PR may contain:
+
+```text
+docs: define database role privilege baseline
+db: add durable-state permission role migration
+docs: align database role privilege baseline
+```
+
+These commits may all belong to the same PR if they serve the same PR-level semantic goal.
+
+The commit boundary should remain small enough to explain what changed and why.
+
+The PR boundary should remain large enough to deliver one meaningful stage sub-goal.
+
+---
+
+## Documentation-First Implementation Pattern
+
+When a PR introduces a new semantic or infrastructure boundary, the preferred order is:
+
+```text
+1. define the boundary in documentation
+2. implement the minimum mechanism
+3. add or defer tests according to the PR scope
+4. align README / roadmap / breakdown notes if needed
+```
+
+This does not mean that documentation and implementation must always be split into separate PRs.
+
+It means the PR should make the semantic contract clear before or alongside the implementation.
+
+Detailed commit planning should happen when entering each PRx.
+
+This breakdown records the PR-level sequence, not the exact commit-level sequence.
+
+---
+
+## Proposed PR Sequence
+
+```text
+PR1 — Durable History Permission Boundary
+PR2 — Database Role / Privilege Baseline
+PR3 — Accepted-History Mutation Hardening Tests
+PR4 — Derived-State Mutation Permission Tests
+PR5 — Minimal Actor Metadata Boundary
+PR6 — Stage 3.5E Closeout
+```
+
+After PR6, Stage 3.5E should be ready to merge the stage branch into `main`.
+
+---
+
+# PR1 — Durable History Permission Boundary
+
+## Goal
+
+Define the Stage 3.5E boundary before implementation begins.
+
+PR1 establishes why durable-history permission hardening exists and how it relates to the project authority model.
+
+## Status
+
+Completed.
+
+## Scope
+
+PR1 should add:
+
+```text
+docs/implementation_notes/stage_3_5e/README.md
+docs/implementation_notes/stage_3_5e/pr_breakdown.md
+docs/boundary_notes/durable_history_permission_boundary.md
+```
+
+PR1 should clarify:
+
+```text
+why Stage 3.5E exists
+why accepted history requires stricter mutation boundaries
+why derived state must remain rebuildable
+why this stage is not full RBAC
+how this stage prepares for Stage 4 receipts / governance
+```
+
+## Non-goals
+
+PR1 does not add:
+
+```text
+SQL migrations
+PostgreSQL roles
+permission tests
+actor metadata tables
+runtime policy code
+Compass Layer 2
+SemanticOutcome
+DecisionReceipt
+RuntimeDecisionPolicy
+```
+
+---
+
+# PR2 — Database Role / Privilege Baseline
+
+## Goal
+
+Introduce the minimal PostgreSQL permission structure needed to distinguish accepted-history mutation from derived-state mutation.
+
+PR2 translates the durable-history permission boundary into a database-native role / privilege baseline.
+
+## Status
+
+Completed after the role / privilege migration baseline is added.
+
+## Scope
+
+PR2 may include:
+
+```text
+database role / privilege boundary documentation
+minimal PostgreSQL runtime roles
+table-level GRANT / REVOKE rules
+migration for role / privilege baseline
+README / PR breakdown alignment if needed
+```
+
+PR2 may introduce database role concepts such as:
+
+```text
+migration_owner
+app_writer
+projection_worker
+snapshot_worker
+read_only_observer
+```
+
+The exact names may change during implementation.
+
+The important point is not the naming.
+
+The important point is that different runtime responsibilities should not have identical mutation authority over all durable tables.
+
+## Expected Direction
+
+A possible baseline:
+
+```text
+migration_owner
+= owns schema / migration authority
+= not a normal runtime role
+
+app_writer
+= can append accepted events through intended write-side path
+= can insert successful idempotency receipts
+= should not freely update / delete accepted history
+= should not rewrite idempotency receipts
+= should not depend on projection state for command admission
+
+projection_worker
+= can read accepted history
+= can update projection_states
+= can update projection_checkpoints
+= should not mutate accepted history
+= should not mutate idempotency receipts
+
+snapshot_worker
+= can inspect accepted history / derived state as needed
+= can insert projection_snapshots under controlled paths
+= should not mutate accepted history
+= should not mutate projection state or checkpoints
+
+read_only_observer
+= can read relevant runtime tables
+= cannot mutate durable state
+```
+
+## Permission Direction
+
+A possible table-level direction:
+
+```text
+order_events
+= app_writer SELECT / INSERT
+= projection_worker SELECT
+= snapshot_worker SELECT
+= read_only_observer SELECT
+= no normal runtime UPDATE / DELETE
+
+idempotency_records
+= app_writer SELECT / INSERT
+= read_only_observer SELECT
+= no normal runtime UPDATE / DELETE under the current successful-receipt design
+
+projection_states
+= projection_worker SELECT / INSERT / UPDATE / DELETE
+= snapshot_worker SELECT
+= read_only_observer SELECT
+= app_writer has no access by default
+
+projection_checkpoints
+= projection_worker SELECT / INSERT / UPDATE / DELETE
+= snapshot_worker SELECT
+= read_only_observer SELECT
+= app_writer has no access by default
+
+projection_snapshots
+= snapshot_worker SELECT / INSERT
+= projection_worker SELECT
+= read_only_observer SELECT
+= app_writer has no access by default
+= no normal runtime UPDATE / DELETE by default
+```
+
+This direction may be refined during implementation.
+
+
+## Implemented Migration Boundary
+
+PR2 adds:
+
+```text
+db/migrations/005_create_durable_state_permission_roles.sql
+```
+
+The migration creates runtime responsibility roles and grants table-specific privileges without changing the existing `compass_user` test owner path.
+
+The migration intentionally does not revoke privileges from `compass_user`, does not transfer table ownership, and does not force existing integration tests to use low-privilege runtime roles.
+
+Sequence privilege is intentionally narrow:
+
+```text
+order_events_global_position_seq
+= USAGE / SELECT for compass_app_writer
+= SELECT for compass_readonly
+= no USAGE for projection_worker or snapshot_worker
+```
+
+Only `compass_app_writer` should be able to consume the accepted-history global-position sequence because it is the only runtime role in PR2 allowed to insert into `order_events`.
+
+## Non-goals
+
+PR2 should not implement:
+
+```text
+full permission test matrix
+accepted-history mutation hardening tests
+derived-state mutation permission tests
+retry lifecycle table
+failed attempt table
+full RBAC
+user accounts
+login
+JWT
+session lifecycle
+multi-tenant roles
+cloud IAM mapping
+actor registry
+DecisionReceipt
+RuntimeDecisionPolicy
+Compass Layer 2
+```
+
+Detailed permission tests belong to later PRs.
+
+---
+
+# PR3 — Accepted-History Mutation Hardening Tests
+
+## Goal
+
+Prove that accepted history is harder to mutate than derived runtime state.
+
+PR3 verifies the database mutation boundary around `order_events`, successful idempotency receipts, and the accepted-history global-position sequence.
+
+## Status
+
+Completed.
+
+## Scope
+
+PR3 adds isolated permission-boundary integration tests demonstrating that unauthorized or unintended mutation patterns against authority-adjacent write-side tables are rejected.
+
+The tests focus on mutation semantics and database privilege boundaries, not business-domain validation.
+
+Implemented test location:
+
+```text
+tests/integration/security/
+```
+
+Implemented support note:
+
+```text
+docs/boundary_notes/layered_testing_strategy_for_permission_and_governance.md
+```
+
+PR3 covers:
+
+```text
+order_events
+idempotency_records
+order_events_global_position_seq
+```
+
+Implemented test coverage:
+
+```text
+compass_app_writer
+= can SELECT / INSERT order_events
+= cannot UPDATE / DELETE order_events
+= can SELECT / INSERT idempotency_records
+= cannot UPDATE / DELETE idempotency_records
+= can consume order_events_global_position_seq
+
+compass_projection_worker
+= can SELECT order_events
+= cannot INSERT / UPDATE / DELETE order_events
+= cannot SELECT / INSERT / UPDATE / DELETE idempotency_records
+= cannot consume order_events_global_position_seq
+
+compass_snapshot_worker
+= can SELECT order_events
+= cannot INSERT / UPDATE / DELETE order_events
+= cannot SELECT / INSERT / UPDATE / DELETE idempotency_records
+= cannot consume order_events_global_position_seq
+
+compass_readonly
+= can SELECT order_events
+= can SELECT idempotency_records
+= cannot INSERT / UPDATE / DELETE order_events
+= cannot INSERT / UPDATE / DELETE idempotency_records
+= cannot consume order_events_global_position_seq
+```
+
+The sequence tests intentionally verify the accepted-history cursor boundary directly instead of relying only on `INSERT order_events` as an indirect proof.
+
+The permission tests use a layered testing model:
+
+```text
+compass_user
+= test-owner setup / cleanup / fixture authority
+
+compass_* runtime roles
+= isolated permission probes through SET ROLE
+```
+
+`SET ROLE` is used only as a test mechanism. It is not a production role-switching abstraction, and it is not intended for Layer 3 causal / multi-role runtime-flow tests.
+
+## Important Boundary
+
+These tests do not replace Compass Layer 1.
+
+Compass Layer 1 decides whether a candidate event is semantically admissible.
+
+Stage 3.5E permission hardening decides whether a runtime actor is allowed to mutate durable state through a given path.
+
+These are different boundaries.
+
+At the current schema level, `idempotency_records` stores only successful request-effect receipts:
+
+```text
+request_id → accepted_event_id
+status = SUCCEEDED
+```
+
+It does not store failed attempts, rejected candidates, retry lifecycle state, failure reasons, or runtime decision traces.
+
+Therefore, `compass_readonly` may SELECT `idempotency_records` in Stage 3.5E. If future governance tables introduce failure reasons, retry attempts, or decision traces, those tables may require a separate audit-oriented read role.
+
+## Non-goals
+
+PR3 does not add:
+
+```text
+new business-domain validation rules
+new Compass Layer 1 semantics
+projection mutation tests
+snapshot trust validation
+SemanticOutcome
+DecisionReceipt
+RuntimeDecisionPolicy
+full RBAC tests
+production role-switching infrastructure
+Layer 3 multi-role causal-flow tests
+```
+
+Derived-state mutation boundaries remain scoped to PR4.
+---
+
+# PR4 — Derived-State Mutation Permission Tests
+
+## Goal
+
+Prove that derived runtime state remains operationally mutable through intended paths.
+
+PR4 verifies that Stage 3.5E does not accidentally treat all durable tables as append-only authority.
+
+## Status
+
+Completed.
+
+## Scope
+
+PR4 adds isolated permission-boundary integration tests showing that projection-related tables support their intended runtime operations while still rejecting unintended mutation paths.
+
+Implemented test location:
+
+```text
+tests/integration/security/
+```
+
+Shared security-test setup:
+
+```text
+tests/integration/security/conftest.py
+```
+
+Implemented closeout note:
+
+```text
+docs/implementation_notes/stage_3_5e/derived_state_mutation_permission_tests.md
+```
+
+PR4 covers:
+
+```text
+projection_states
+projection_checkpoints
+projection_snapshots
+```
+
+Implemented test coverage:
+
+```text
+compass_projection_worker
+= can SELECT / INSERT / UPDATE / DELETE projection_states
+= can SELECT / INSERT / UPDATE / DELETE projection_checkpoints
+= can SELECT projection_snapshots
+= cannot INSERT / UPDATE / DELETE projection_snapshots
+
+compass_snapshot_worker
+= can SELECT projection_states
+= cannot INSERT / UPDATE / DELETE projection_states
+= can SELECT projection_checkpoints
+= cannot INSERT / UPDATE / DELETE projection_checkpoints
+= can SELECT / INSERT projection_snapshots
+= cannot UPDATE / DELETE projection_snapshots
+
+compass_readonly
+= can SELECT projection_states
+= can SELECT projection_checkpoints
+= can SELECT projection_snapshots
+= cannot INSERT / UPDATE / DELETE derived runtime tables
+
+compass_app_writer
+= cannot SELECT / INSERT / UPDATE / DELETE projection_states
+= cannot SELECT / INSERT / UPDATE / DELETE projection_checkpoints
+= cannot SELECT / INSERT / UPDATE / DELETE projection_snapshots
+```
+
+PR4 also verifies that security permission tests can share setup / cleanup infrastructure without converting existing storage or mechanism integration tests into low-privilege role tests.
+
+## Important Boundary
+
+Stage 3.5E should not make all durable tables append-only.
+
+Only accepted history has authority-level append-only semantics.
+
+Successful idempotency receipts are insert-once request-effect evidence under the current schema.
+
+Derived runtime artifacts must remain rebuildable and operational.
+
+The tested distinction is:
+
+```text
+projection_states
+= derived read-side state
+= controlled mutable artifact
+
+projection_checkpoints
+= operational progress metadata
+= controlled mutable artifact
+
+projection_snapshots
+= derived evidence / replay-efficiency artifact
+= insertable by snapshot worker
+= not rewritable or deletable by normal runtime roles
+```
+
+## Assertion Fidelity Lesson
+
+PR4 reinforced a test-design rule:
+
+```text
+If a permission probe uses RETURNING, assert the returned evidence directly.
+```
+
+This matters because row-count-only assertions can hide driver-level type mismatches.
+
+During snapshot permission tests, exact row assertions exposed the PostgreSQL UUID → Python UUID boundary. A weaker assertion such as `len(rows) == 1` would have hidden that mismatch.
+
+The reusable lesson is recorded in:
+
+```text
+docs/postmortems/from_row_count_assertions_to_evidence_assertions.md
+```
+
+## SET ROLE Boundary
+
+PR4 uses `SET ROLE` as a test-time permission probing mechanism.
+
+This proves effective PostgreSQL privileges for runtime responsibility roles.
+
+It does not prove production login identity wiring, role-specific database URLs, secret management, or connection-pool role isolation.
+
+That testing-scope decision is recorded in:
+
+```text
+docs/adr/0015_permission_probing_with_set_role.md
+```
+
+## Deferred Chaos / Production-Hardening Tests
+
+PR4 does not prove production-like behavior under:
+
+```text
+concurrent workers
+independent runtime connections
+connection-pool reuse
+rollback failure
+worker crash windows
+snapshot write races
+checkpoint advancement races
+derived-state corruption recovery
+permission bypass attempts during active workflows
+```
+
+Those belong to later production-hardening / chaos-test work after runtime governance, structured outcomes, retry classification, and decision receipts are more complete.
+
+## Non-goals
+
+PR4 does not add:
+
+```text
+accepted-history mutation tests already covered by PR3
+new projection reducer behavior
+new snapshot trust decision logic
+new replay validator behavior
+new runtime state resolver policy
+new actor metadata schema
+production login users
+connection-pool policy
+chaos tests
+SemanticOutcome
+DecisionReceipt
+RuntimeDecisionPolicy
+Compass Layer 2
+```
+
+---
+
+# PR5 — Minimal Actor Metadata Boundary
+
+## Goal
+
+Document the minimum actor metadata boundary needed before Stage 4 runtime semantic governance.
+
+PR5 clarifies what Stage 3.5E needs to know about runtime actors without turning the stage into a full identity, audit, or governance system.
+
+The key distinction is:
+
+```text
+database role
+≠ actor metadata
+≠ governance decision evidence
+```
+
+PR5 should make that distinction explicit before Stage 4 introduces SemanticOutcome, DecisionReceipt, RuntimeDecisionPolicy, StrategySelector, and RetryGovernance.
+
+## Status
+
+Planned.
+
+## Scope
+
+PR5 should add documentation for the minimal actor metadata boundary.
+
+Expected files:
+
+```text
+docs/boundary_notes/minimal_actor_metadata_boundary.md
+docs/implementation_notes/stage_3_5e/minimal_actor_metadata_boundary.md
+docs/implementation_notes/stage_3_5e/README.md
+docs/implementation_notes/stage_3_5e/pr_breakdown.md
+```
+
+PR5 should clarify:
+
+```text
+what database roles mean
+what actor metadata means
+what created_by-style fields can and cannot prove
+which actor evidence belongs to Stage 4 receipts / governance
+why Stage 3.5E should not introduce a full actor registry
+```
+
+PR5 may remain documentation-only.
+
+A schema migration should be avoided unless review reveals that an existing durable field is actively misleading or undocumented.
+
+## Accepted Boundary
+
+Stage 3.5E accepts this model:
+
+```text
+database role
+= permission identity
+= controls which SQL operations a runtime component may perform
+
+actor metadata
+= producer / trigger metadata
+= records who or what produced a durable artifact
+
+governance decision evidence
+= Stage 4 evidence
+= records what happened, what it meant, who did it, what it cost, and what recovery path was allowed
+```
+
+These should not be collapsed.
+
+In particular:
+
+```text
+created_by
+= baseline producer metadata
+
+validated_by / decision_by / receipt_by / triggered_by
+= Stage 4 governance evidence
+```
+
+## Current Baseline
+
+The current durable schema already contains limited producer metadata in some places.
+
+The clearest example is:
+
+```text
+projection_snapshots.created_by
+```
+
+This field should be interpreted as producer metadata.
+
+It may identify which component, role, or process created a snapshot artifact.
+
+It should not be interpreted as:
+
+```text
+trust proof
+policy approval
+runtime decision evidence
+downstream action safety proof
+```
+
+A snapshot row may identify who created it.
+
+That does not mean the snapshot is trusted.
+
+Snapshot trust still depends on accepted history, lineage checks, payload evidence, schema / reducer compatibility, tail replay, and later receipt-backed trust selection.
+
+## Relationship to Stage 3.5E Roles
+
+The runtime roles introduced in Stage 3.5E remain permission roles:
+
+```text
+compass_app_writer
+compass_projection_worker
+compass_snapshot_worker
+compass_readonly
+```
+
+They answer:
+
+```text
+Which runtime component may mutate which durable artifact?
+```
+
+They do not fully answer:
+
+```text
+Which actor made this semantic decision?
+Which policy was used?
+Which evidence was considered?
+Which recovery path was allowed?
+```
+
+Those questions belong to Stage 4 governance.
+
+## Relationship to Stage 4
+
+PR5 is the bridge between Stage 3.5E permission hardening and Stage 4 runtime semantic governance.
+
+Stage 4 will need actor-related evidence for:
+
+```text
+SemanticOutcome
+DecisionReceipt
+RuntimeDecisionPolicy
+DiagnosticTrace
+StrategySelector
+RetryGovernance
+```
+
+For example, Stage 4B DecisionReceipt may later record fields such as:
+
+```text
+actor_id
+actor_role
+evidence_source
+boundary
+strategy_used
+elapsed_ms
+```
+
+Stage 4 may also introduce governance-specific actor fields such as:
+
+```text
+validated_by
+decision_by
+receipt_by
+triggered_by
+repair_requested_by
+quarantined_by
+```
+
+Those fields should be introduced only when the corresponding Stage 4 concept exists.
+
+Stage 3.5E should not add isolated governance columns before the system has SemanticOutcome, DecisionReceipt, RuntimeDecisionPolicy, and recovery semantics to give them meaning.
+
+## Why This Matters
+
+Without this boundary, the project could accidentally treat permission identity as semantic evidence.
+
+For example:
+
+```text
+compass_snapshot_worker can INSERT projection_snapshots
+```
+
+means:
+
+```text
+the snapshot worker is allowed to produce snapshot artifacts
+```
+
+It does not mean:
+
+```text
+the snapshot is valid
+the snapshot has been selected by runtime policy
+the snapshot can safely drive downstream actions
+```
+
+Permission allows a path.
+
+Actor metadata identifies a producer.
+
+Governance evidence explains a semantic decision.
+
+## Expected Direction
+
+The expected PR5 direction is:
+
+```text
+No schema migration by default.
+No actor registry.
+No audit table.
+No DecisionReceipt table.
+No RuntimeDecisionPolicy.
+Use existing created_by-style fields as baseline producer metadata.
+Defer richer decision attribution to Stage 4.
+```
+
+This keeps Stage 3.5E focused on minimum durable-history permission hardening while preparing the vocabulary needed for Stage 4 receipts.
+
+## Non-goals
+
+PR5 should not implement:
+
+```text
+new PostgreSQL roles
+new SQL migrations
+actor registry
+user table
+role table
+login/session auth
+JWT
+full RBAC
+multi-tenant auth
+cloud IAM integration
+audit dashboard
+DecisionReceipt persistence
+RuntimeDecisionPolicy
+SemanticOutcome
+DiagnosticTrace
+StrategySelector
+RetryGovernance
+production identity wiring
+Stage 4 governance behavior
+```
+
+PR5 also should not update global integration-test or development workflow documentation.
+
+Those belong to Stage 3.5E PR6 closeout.
+
+## Completion Criteria
+
+PR5 is complete when:
+
+```text
+minimal actor metadata boundary is documented
+existing created_by-style metadata is interpreted as producer metadata
+permission identity is separated from governance evidence
+Stage 4 actor evidence is explicitly deferred
+README / PR breakdown notes are aligned
+no full identity / audit / receipt system is introduced
+```
+
+## Final Principle
+
+```text
+Database roles control mutation authority.
+Actor metadata identifies producers and triggers.
+Decision receipts preserve semantic governance evidence.
+```
+
+---
+
+# PR6 — Stage 3.5E Closeout
+
+## Goal
+
+Close Stage 3.5E after the durable-history permission boundary is implemented and documented.
+
+PR6 aligns the stage documentation with the final implementation state and prepares the repository to enter Stage 4 runtime semantic governance.
+
+## Status
+
+Completed.
+
+## Scope
+
+PR6 updates the closeout-facing documentation needed to make Stage 3.5E readable as a completed stage:
+
+```text
+docs/implementation_notes/stage_3_5e/README.md
+docs/implementation_notes/stage_3_5e/pr_breakdown.md
+docs/development/README.md
+docs/development/postgres_local_setup.md
+docs/README.md
+tests/README.md
+tests/integration/security/README.md
+README.md
+```
+
+PR6 may also align roadmap-facing documents if they still describe Stage 3.5E as the current implementation focus.
+
+## Expected Closeout Statements
+
+The closeout records:
+
+```text
+Stage 3.5E completed the minimal durable-history permission boundary.
+
+Accepted history is protected differently from derived runtime state.
+
+Successful idempotency receipts are protected as insert-once request-effect evidence under the current schema.
+
+Derived projection state and checkpoints remain operationally mutable through the projection worker role.
+
+Projection snapshots remain insert-oriented derived evidence artifacts through the snapshot worker role.
+
+Database roles represent runtime responsibility boundaries, not product users or full RBAC.
+
+Minimal actor metadata is documented as producer / trigger metadata, not governance decision evidence.
+
+Full RBAC, login/session auth, cloud IAM, production connection-pool isolation, Compass Layer 2, SemanticOutcome, DecisionReceipt, RuntimeDecisionPolicy, StrategySelector, and RetryGovernance remain deferred to Stage 4 or later production-hardening work.
+```
+
+## Non-goals
+
+PR6 does not add new runtime behavior.
+
+PR6 does not introduce new schema or permission semantics.
+
+PR6 does not implement Stage 4 governance objects.
+
+PR6 does not add chaos / production-hardening tests.
+
+PR6 is a documentation closeout that preserves the completed Stage 3.5E boundary before Stage 4 begins.
+
+---
+
+## Stage 3.5E Non-goals Summary
+
+Across all PRs, Stage 3.5E should avoid:
+
+```text
+full RBAC
+login
+JWT
+session management
+multi-tenant auth
+production IAM
+complete audit platform
+retry lifecycle table
+failed attempt table
+Compass Layer 2
+SemanticOutcome
+DecisionReceipt
+RuntimeDecisionPolicy
+action safety gate
+agent sandboxing
+```
+
+Those belong to later stages.
+
+Stage 3.5E is the minimum durable-history permission hardening layer.
+
+---
+
+## Stage 3.5E Closeout Direction
+
+After PR6, Stage 3.5E may be closed by merging:
+
+```text
+base: main
+compare: feat/stage3.5e-durable-history-permission-hardening
+```
+
+Suggested Stage 3.5E closeout title:
+
+```text
+feat: complete Stage 3.5E durable history permission hardening
+```
+
+Stage 3.5E closes with:
+
+```text
+durable history permission boundary documented
+database role / privilege baseline established
+accepted-history mutation hardening verified
+successful idempotency receipt rewrite prevention verified
+derived-state controlled mutation verified
+minimal actor metadata boundary documented
+full RBAC and Stage 4 runtime governance explicitly deferred
+```
+
+---
+
+## Final Principle
+
+```text
+Accepted history defines truth.
+Successful idempotency receipts preserve request-to-effect evidence.
+Derived runtime state supports operation.
+Permission boundaries must respect those differences.
+```
+
+Stage 3.5E completes the minimum database mutation hardening and actor-boundary baseline needed before broader runtime semantic governance.

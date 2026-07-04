@@ -30,17 +30,16 @@ The project currently has:
 - Stage 3.5C PR0 durable order-event vocabulary hardening, including uppercase `event_type` vocabulary, `proof_prev_status` database constraint, and stream-position unique-constraint rename
 - a completed Stage 3.5C durable read-side baseline, including PostgreSQL-backed projection state, checkpoint progress, global-position projection worker orchestration, and durable replay / rebuild validation
 - a completed Stage 3.5D snapshot trust / replay-efficiency baseline, including projection snapshot schema, store, replay validator, snapshot-assisted state resolver, and aggregate snapshot trust deferral
-- executable tests defending write-side, read-side, durable replay, and snapshot trust baseline semantics
+- a completed Stage 3.5E durable history and permission hardening baseline, including database role / privilege boundaries, accepted-history mutation hardening tests, derived-state mutation permission tests, and a minimal actor metadata boundary
+- executable tests defending write-side, read-side, durable replay, snapshot trust, and durable permission-boundary semantics
+
+Stage 3.5E is now complete at the minimal actor / permission boundary level.
 
 The current implementation focus is:
 
-- **Stage 3.5E — minimal actor / permission boundary**
+- **Stage 4 — runtime semantic governance**
 
-The pre-Stage 3.5E documentation alignment pass has been completed across the roadmap, ADR, and implementation-note layers.
-
-After Stage 3.5E, the roadmap continues toward:
-
-- **Stage 4 — runtime semantic validation, structured semantic outcomes, runtime decision policy, and action safety**
+Stage 4 continues the roadmap toward runtime semantic validation, structured semantic outcomes, decision receipts, runtime decision policy, strategy selection, retry governance, and later action safety.
 
 ---
 
@@ -94,8 +93,8 @@ If you want to understand how the repository thinks rather than only what it imp
 - **Snapshot trust / replay-efficiency baseline**  
   Stage 3.5D establishes projection snapshot schema, snapshot storage, snapshot-assisted replay validation, snapshot-assisted state resolution, and aggregate snapshot trust deferral.
 
-- **Current minimal actor / permission boundary focus**  
-  Stage 3.5E is the current implementation focus after durable write-side, durable read-side, replay-efficiency, and documentation-alignment boundaries became clear.
+- **Completed minimal actor / permission boundary**  
+  Stage 3.5E completes the database role / privilege baseline, accepted-history mutation hardening, derived-state mutation permission tests, and minimal actor metadata boundary before Stage 4.
 
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
@@ -410,9 +409,9 @@ Everything else grows around this core:
 - persistence-backed replay / rebuild validation
 - Stage 3.5D snapshot trust, replay-efficiency, and persistence optimization completed
 - pre-Stage 3.5E documentation alignment completed
-- Stage 3.5E minimal actor / permission boundary is the current focus
+- Stage 3.5E minimal actor / permission boundary completed
 - exact money durability is already established at the baseline level
-- append-only durable history and permission hardening are the next storage-authority concerns
+- durable accepted-history and permission hardening are now established as the pre-Stage 4 baseline
 
 ### Phase 4 — Runtime Semantic Validation and Outcome Structuring
 
@@ -497,19 +496,19 @@ Current boundary of completion:
 - durable read-side projection state, checkpoint progress, global-position worker orchestration, and replay / rebuild validation are established through Stage 3.5C
 - Stage 3.5D snapshot trust, persistence optimization, and replay efficiency is complete at the read-side projection snapshot baseline level
 - write-side aggregate snapshot schema/store and snapshot-assisted write-side rehydration are intentionally deferred
+- Stage 3.5E durable history and permission hardening is complete
 - state-level Compass Layer 2 validation is not yet implemented
 
 Current implementation focus:
 
-- Stage 3.5E minimal actor / permission boundary
+- Stage 4 runtime semantic governance
 
-The pre-Stage 3.5E documentation alignment pass is complete at the roadmap / ADR / implementation-note level.
+Stage 3.5E closeout is complete at the durable history / permission / actor-boundary level.
 
 Next implementation milestones:
 
-- Stage 3.5E durable history and permission hardening
-- Stage 4 runtime semantic validation, semantic outcome structuring, runtime decision policy, and action safety
-- Stage 5 dual-dimension governance demo
+- Stage 4 runtime semantic validation, semantic outcome structuring, decision receipts, runtime decision policy, strategy selection, and retry governance
+- Stage 5 dual-dimension governance demo / action safety
 
 ---
 

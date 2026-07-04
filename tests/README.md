@@ -36,6 +36,10 @@ They also exist to defend the semantic boundaries of the system, including:
 - snapshot-assisted state resolution from qualified snapshot + tail replay
 - aggregate snapshot trust deferral boundaries
 - destructive PostgreSQL test database isolation
+- Stage 3.5E runtime-role permission boundary tests
+- accepted-history mutation hardening through PostgreSQL privileges
+- derived-state mutation permission tests
+- `SET ROLE` permission probes for runtime responsibility roles
 
 In this project, tests are part of the architecture argument.
 
@@ -62,6 +66,7 @@ At the current baseline, the strongest test coverage spans:
 - the Stage 3.5D projection snapshot-assisted replay validator baseline
 - the Stage 3.5D snapshot-assisted state resolver baseline
 - the Stage 3.5D aggregate snapshot trust deferral decision
+- the Stage 3.5E durable history / permission hardening baseline
 
 This currently includes:
 
@@ -99,6 +104,7 @@ This currently includes:
 - snapshot duplicate-write idempotency versus collision behavior
 - snapshot-assisted replay validator result semantics
 - snapshot-assisted resolver unresolved / resolved result semantics
+- PostgreSQL runtime-role permission behavior for accepted history, idempotency records, global-position sequence access, projection state, checkpoints, and snapshots
 
 The test suite is therefore no longer only write-side focused.
 It now also defends durable storage, projection runtime, transactional PostgreSQL-backed write-side behavior, PostgreSQL admission, validation placement, durable read-side worker boundaries, and durable replay validation against accepted history.
@@ -115,6 +121,7 @@ Current test categories include:
 - `tests/integration/`
 - `tests/integration/in_memory/`
 - `tests/integration/storage/`
+- `tests/integration/security/`
 - `tests/integration/pipeline/`
 - `tests/integration/pipeline/transactional/`
 - `tests/integration/pipeline/projection/`
@@ -241,6 +248,30 @@ These tests answer:
 - are destructive PostgreSQL tests isolated from the development database?
 
 These tests require a PostgreSQL-backed test environment in CI or local development.
+
+---
+
+### [tests/integration/security/](integration/security/README.md)
+
+Security integration tests verify PostgreSQL role / privilege boundaries for durable state.
+
+Typical goals:
+
+- verify runtime responsibility roles through `SET ROLE` permission probes
+- verify accepted-history mutation hardening for `order_events`
+- verify successful idempotency receipts cannot be rewritten by normal runtime roles
+- verify only the intended writer role can consume `order_events_global_position_seq`
+- verify derived runtime artifacts remain mutable or insertable through intended roles
+- verify unrelated runtime roles cannot mutate projection state, checkpoints, or snapshots
+
+These tests answer:
+
+- does the database privilege matrix match the durable authority model?
+- can accepted history be protected more strictly than derived runtime state?
+- do permission-boundary tests remain separate from ordinary storage / mechanism integration tests?
+- does `SET ROLE` prove effective role privileges without claiming production login identity wiring?
+
+These tests do not implement full RBAC, login/session auth, production IAM, connection-pool isolation, or chaos-style multi-worker runtime flows.
 
 ---
 
@@ -400,8 +431,10 @@ psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/004_create_projection_snapshots.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/005_create_durable_state_permission_roles.sql
 
 pytest tests/integration/storage -q
+pytest tests/integration/security -q
 pytest tests/integration/pipeline -q
 ```
 

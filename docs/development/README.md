@@ -27,7 +27,7 @@ PostgreSQL is used to support:
 
 | Document | Purpose |
 |---|---|
-| [Local PostgreSQL Setup](postgres_local_setup.md) | Explains how to start the local Docker-based PostgreSQL environment, create the development and test databases, apply migrations through the projection snapshot schema baseline, and run PostgreSQL integration tests. |
+| [Local PostgreSQL Setup](postgres_local_setup.md) | Explains how to start the local Docker-based PostgreSQL environment, create the development and test databases, apply migrations through the durable-state permission role baseline, and run PostgreSQL integration / security tests. |
 
 ---
 
@@ -44,7 +44,8 @@ This directory currently covers:
 - local write-side and read-side migration commands
 - global-position migration command
 - projection snapshot schema migration command
-- destructive PostgreSQL integration test guardrails
+- durable-state permission role migration command
+- destructive PostgreSQL integration and security-test guardrails
 - development-only infrastructure boundaries
 
 ---
@@ -105,6 +106,14 @@ Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
 Stage 3.5D PR1 — Snapshot Trust Contract Boundary
 Stage 3.5D PR1.5 — CI Stage Branch Checks
 Stage 3.5D PR2 — Projection Snapshot Schema Baseline
+Stage 3.5D PR3 — PostgresProjectionSnapshotStore Baseline
+Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
+Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
+Stage 3.5E PR2 — Database Role / Privilege Baseline
+Stage 3.5E PR3 — Accepted-History Mutation Hardening Tests
+Stage 3.5E PR4 — Derived-State Mutation Permission Tests
+Stage 3.5E PR5 — Minimal Actor Metadata Boundary
+Stage 3.5E PR6 — Stage Closeout
 ```
 
 The current durable write-side tables are:
@@ -153,19 +162,20 @@ projection_snapshots
 = derived projection snapshot artifacts with source-boundary evidence
 ```
 
-At this stage, the local PostgreSQL setup includes durable accepted history, durable idempotency memory, durable projection state, durable checkpoint progress, global-position accepted-history consumption, durable replay / rebuild validation, and the initial projection snapshot schema.
+At this stage, the local PostgreSQL setup includes durable accepted history, durable idempotency memory, durable projection state, durable checkpoint progress, global-position accepted-history consumption, durable replay / rebuild validation, projection snapshot schema / store support, and the Stage 3.5E runtime role / permission baseline.
 
 ---
 
 ## Current Migrations
 
-Through Stage 3.5D PR2, local PostgreSQL setup requires four migrations:
+Through Stage 3.5E, local PostgreSQL setup requires five baseline migrations:
 
 ```text
 db/migrations/001_create_write_side_tables.sql
 db/migrations/002_create_read_side_tables.sql
 db/migrations/003_add_order_events_global_position.sql
 db/migrations/004_create_projection_snapshots.sql
+db/migrations/005_create_durable_state_permission_roles.sql
 ```
 
 The expected migration order is:
@@ -175,6 +185,7 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_s
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
+db/migrations/005_create_durable_state_permission_roles.sql
 ```
 
 Use `DATABASE_URL` instead of `TEST_DATABASE_URL` only when applying migrations to the local development database for manual inspection.

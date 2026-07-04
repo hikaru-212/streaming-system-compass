@@ -33,6 +33,7 @@ Postmortems help preserve:
 - cases where logical cursors must be distinguished from committed-history boundaries
 - cases where protocol-level correctness must be distinguished from production wiring proof
 - cases where generic validation intuition must be corrected by authority-based semantic reasoning
+- cases where weak row-count assertions must be replaced by exact evidence assertions
 
 ---
 
@@ -58,6 +59,7 @@ Postmortems help preserve:
 | [from_protocol_satisfaction_to_production_wiring_proof](from_protocol_satisfaction_to_production_wiring_proof.md) | Production Wiring / AI-Assisted Implementation | Explains why protocol-satisfying unit tests do not prove that a production adapter exists or that the real PostgreSQL assembly path works. |
 | [from_generic_validation_to_authority_based_reasoning](from_generic_validation_to_authority_based_reasoning.md) | Snapshot Trust / Authority-Based Validation | Records the PR4 correction from generic input-validation ordering to authority-first reasoning: accepted history must exist before snapshot trust can be evaluated. |
 | [stage_3_5d_local_correctness_global_premise_drift](stage_3_5d_local_correctness_global_premise_drift.md) | Stage Scope / AI-Assisted Engineering | Records the Stage 3.5D correction where locally coherent snapshot PRs remained technically valid, but the stage-level premise had to be re-audited after distinguishing write-side aggregate admission risk from read-side derived-state evidence. |
+| [from_row_count_assertions_to_evidence_assertions](from_row_count_assertions_to_evidence_assertions.md) | Testing / Assertion Fidelity | Records the Stage 3.5E PR4 near miss where exact evidence assertions exposed a PostgreSQL UUID return-type mismatch that row-count-only assertions would have hidden. |
 
 ---
 
@@ -141,6 +143,15 @@ The postmortem [From Generic Validation to Authority-Based Reasoning](from_gener
 - The postmortem records why `NO_ACCEPTED_HISTORY_FOR_ORDER` should be returned when accepted history is missing, even if a snapshot row exists.
 - Snapshot boundary invalidity can be evaluated only after the accepted-history authority foundation exists.
 - This reinforces the Stage 3.5D invariant that snapshots are derived, discardable, and subordinate to accepted history.
+
+---
+
+The postmortem [From Row-Count Assertions to Evidence Assertions](from_row_count_assertions_to_evidence_assertions.md) is related to Stage 3.5E PR4 derived-state permission tests:
+
+- PR4 uses PostgreSQL role probes to verify derived-state table permissions.
+- The projection snapshot tests exposed that PostgreSQL `UUID` columns are returned by `psycopg` as Python `UUID` objects, not strings.
+- The postmortem records why `len(rows) == 1` is too weak when a returned row is part of the evidence.
+- This supports the Stage 3.5E testing rule that permission probes with `RETURNING` or `SELECT` evidence should assert exact returned rows, not only row count.
 
 ---
 

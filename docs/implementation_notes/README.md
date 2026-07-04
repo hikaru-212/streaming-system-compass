@@ -13,6 +13,7 @@ For project-wide sequencing, see:
 - [Stage 3.5B — Durable Write-Side Baseline](./stage_3_5b/)
 - [Stage 3.5C — Durable Read-Side Baseline](./stage_3_5c/)
 - [Stage 3.5D — Snapshot Trust Contract / Replay Efficiency](./stage_3_5d/)
+- [Stage 3.5E — Durable History and Permission Hardening](./stage_3_5e/)
 
 ## Boundary
 
