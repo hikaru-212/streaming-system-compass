@@ -22,6 +22,7 @@ It grew from practical debugging, self-directed system design, and repeated atte
 | [Data Infrastructure vs Semantic Infrastructure](04_data_infra_vs_semantic_infra.md) | Records the future-oriented philosophy that physical infrastructure preserves facts, while Semantic Infrastructure evaluates whether those facts still preserve meaning. |
 | [Policy Evolution to Runtime Truth](05_policy_evolution_to_runtime_truth.md) | Records the future direction where machine-readable policy contracts, Compass runtime admission, and structured semantic outcomes connect into a governance loop. |
 | [AI Suggestions Are Candidate Actions](06_ai_suggestions_are_candidate_actions.md) | Records a methodology case study showing why AI-generated explanations and designs are treated as candidate actions that must pass repository-specific admission before becoming accepted documentation or implementation. |
+| [From Local ETL to Streaming System + Compass](07_from_local_etl_to_streaming_system_compass.md) | Records the project-origin path from local ETL friction and Airflow debugging into Core vs Enablers, semantic correctness, and streaming / event sourcing as the runtime body for Compass. |
 
 ---
 
@@ -29,11 +30,12 @@ It grew from practical debugging, self-directed system design, and repeated atte
 
 1. [Learning and Design Methodology](00_learning_and_design_methodology.md)
 2. [IBO and Core/Enabler Origin](01_ibo_core_enabler_origin.md)
-3. [Unified Design Philosophy](02_unified_design_philosophy.md)
-4. [Core/Enabler as Semantic Fusion of SoC and DIP](03_core_enabler_soc_dip_fusion.md)
-5. [Data Infrastructure vs Semantic Infrastructure](04_data_infra_vs_semantic_infra.md)
-6. [Policy Evolution to Runtime Truth](05_policy_evolution_to_runtime_truth.md)
-7. [AI Suggestions Are Candidate Actions](06_ai_suggestions_are_candidate_actions.md)
+3. [From Local ETL to Streaming System + Compass](from_local_etl_to_streaming_system_compass.md)
+4. [Unified Design Philosophy](02_unified_design_philosophy.md)
+5. [Core/Enabler as Semantic Fusion of SoC and DIP](03_core_enabler_soc_dip_fusion.md)
+6. [Data Infrastructure vs Semantic Infrastructure](04_data_infra_vs_semantic_infra.md)
+7. [Policy Evolution to Runtime Truth](05_policy_evolution_to_runtime_truth.md)
+8. [AI Suggestions Are Candidate Actions](06_ai_suggestions_are_candidate_actions.md)
 
 This order matters because the philosophy in this repository has two layers:
 
@@ -41,6 +43,8 @@ This order matters because the philosophy in this repository has two layers:
 * second, the conceptual models that emerged from that process
 
 The methodology note comes first because it explains how unclear concepts are stabilized before implementation.
+The IBO and Core/Enabler note records the first compact mental model.
+The project-origin note then explains how those early debugging and ETL insights evolved into Streaming System + Compass.
 The later notes explain the philosophy that grew out of that discipline.
 
 The Data Infrastructure vs Semantic Infrastructure note extends the earlier Core/Enabler and dependency-inversion thinking into a future architecture direction:
@@ -80,6 +84,9 @@ AI-generated suggestion
 | Input → Bridge → Output | Command → Transactional Pipeline → Accepted Event / Derived State |
 | Core | Domain rules, aggregate legality, event semantics, pure state transition logic |
 | Enablers | Idempotency, validation, concurrency gate, projection worker, checkpointing, recovery mechanisms |
+| Local ETL friction | Early source of the project’s boundary-first debugging discipline |
+| Airflow as an enabler | Example of separating operational orchestration from core business transformation |
+| Streaming / event sourcing as Compass body | Concrete runtime where candidate actions, accepted history, replay, projection, and trust boundaries can be tested |
 | Static Blueprint | README, architecture notes, ADRs, domain specifications |
 | Dynamic Navigation | retry safety, reload, projection verification, chaos hardening |
 | Compass | Runtime semantic correction and validation |
