@@ -17,6 +17,7 @@ For completed stage execution notes, see:
 - [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
 - [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+- [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 
 This document focuses on a narrower question:
 
@@ -36,7 +37,7 @@ This Compass runtime roadmap answers:
 
 > How does Compass become more capable as a runtime semantic control layer?
 
-The two roadmaps overlap around Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E because Compass depends on durable write-side, durable read-side, snapshot trust, and actor / permission boundaries before stronger runtime validation grows.
+The two roadmaps overlap around Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 4 because Compass depends on durable write-side, durable read-side, snapshot trust, and completed actor / permission boundaries before stronger runtime validation grows.
 
 However, this document avoids repeating detailed schema columns, migrations, store test matrices, and PR-level implementation history.
 
@@ -62,7 +63,7 @@ Project Stage = repository-wide implementation milestone
 For example:
 
 - Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, and the Stage 3.5D replay-efficiency substrate.
-- Stage 3.5E provides a minimal actor / permission boundary before broader runtime governance.
+- Stage 3.5E provides the completed minimal actor / permission boundary before broader runtime governance.
 - Compass Phase 4 roughly maps to the beginning of Stage 4 Layer 2 validation work.
 - Compass Phases 5–7 roughly map to Stage 4 structured semantic outcomes, runtime decision policy, and action safety.
 - Compass Phase 8 maps to the Stage 5 dual-dimension governance demo.
@@ -84,7 +85,7 @@ candidate event
 → only allowed event can reach accepted history
 ```
 
-The project has now completed the main durability and replay-efficiency substrate needed before Stage 3.5E and Stage 4:
+The project has now completed the main durability and replay-efficiency substrate needed before Stage 4:
 
 ```text
 Stage 3.5B = durable write-side baseline
@@ -128,9 +129,18 @@ projection snapshot
 → externally qualified snapshot-assisted state resolution
 ```
 
+Stage 3.5E then added the durable permission and minimal actor boundary:
+
+```text
+accepted history permission hardening
++ derived-state controlled mutation
++ minimal producer metadata
+→ cleaner Stage 4 receipt / governance foundation
+```
+
 This does not make Compass Layer 2 active yet.
 
-It provides durable correctness evidence and replay-efficiency primitives that Layer 2 can later classify and govern.
+It provides durable correctness evidence, replay-efficiency primitives, and actor / permission boundaries that Layer 2 can later classify and govern.
 
 ---
 
@@ -185,6 +195,7 @@ Aggregate snapshot schema / store work and snapshot-assisted write-side rehydrat
 Detailed Stage 3.5D execution notes live in:
 
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+- [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 
 ---
 
@@ -387,6 +398,7 @@ Compass-relevant outcomes include:
 Detailed execution notes live in:
 
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+- [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 
 Stage 3.5D should remain persistence / replay hardening.
 

@@ -20,7 +20,7 @@ An item should remain here only if it has at least one of the following:
 
 Pure naming preference, style cleanup, or already-completed implementation work should not remain in this backlog.
 
-Completed Stage 3.5B, Stage 3.5C, and Stage 3.5D work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
+Completed Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
 
 Current focus:
 
@@ -661,7 +661,7 @@ Stage 3.5E / actor-permission hardening
 
 ### Suggested Timing
 
-During Stage 3.5E minimal actor / permission boundary work.
+During Stage 3.5E minimal actor / permission boundary completed work.
 
 ---
 
@@ -920,3 +920,29 @@ This backlog is not a second roadmap.
 It only preserves intentionally deferred architecture concerns whose timing depends on future evidence, governance, production-hardening, or runtime-complexity needs.
 
 Completed implementation work belongs in implementation notes, not here.
+
+---
+
+## Production-Like Chaos and Concurrency Hardening after Stage 4 Governance
+
+**Status:** Deferred to Stage 4 late phase / Stage 5 production-hardening work.
+
+Stage 3.5E permission tests verify the baseline PostgreSQL role / privilege matrix through isolated permission probes.
+
+They do not prove production-like behavior under:
+
+```text
+concurrent workers
+independent runtime connections
+connection-pool reuse
+rollback failure
+worker crash windows
+snapshot write races
+checkpoint advancement races
+derived-state corruption recovery
+permission bypass attempts during active workflows
+```
+
+Those scenarios should be revisited after Stage 4 introduces structured semantic outcomes, decision receipts, runtime decision policy, strategy selection, and retry governance.
+
+The reason is sequencing: chaos tests are most useful after the system can classify what happened, preserve durable evidence, decide allowed recovery, and distinguish operational failure from semantic risk.
