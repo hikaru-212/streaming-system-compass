@@ -682,9 +682,19 @@ Compass Layer 2
 
 ## Goal
 
-Introduce or document the minimum actor metadata needed before Stage 4 receipts and runtime governance.
+Document the minimum actor metadata boundary needed before Stage 4 runtime semantic governance.
 
-PR5 should clarify what the project needs to know about runtime actors without turning Stage 3.5E into a full identity system.
+PR5 clarifies what Stage 3.5E needs to know about runtime actors without turning the stage into a full identity, audit, or governance system.
+
+The key distinction is:
+
+```text
+database role
+≠ actor metadata
+≠ governance decision evidence
+```
+
+PR5 should make that distinction explicit before Stage 4 introduces SemanticOutcome, DecisionReceipt, RuntimeDecisionPolicy, StrategySelector, and RetryGovernance.
 
 ## Status
 
@@ -692,47 +702,254 @@ Planned.
 
 ## Scope
 
-PR5 may add lightweight metadata concepts such as:
+PR5 should add documentation for the minimal actor metadata boundary.
+
+Expected files:
+
+```text
+docs/boundary_notes/minimal_actor_metadata_boundary.md
+docs/implementation_notes/stage_3_5e/minimal_actor_metadata_boundary.md
+docs/implementation_notes/stage_3_5e/README.md
+docs/implementation_notes/stage_3_5e/pr_breakdown.md
+```
+
+PR5 should clarify:
+
+```text
+what database roles mean
+what actor metadata means
+what created_by-style fields can and cannot prove
+which actor evidence belongs to Stage 4 receipts / governance
+why Stage 3.5E should not introduce a full actor registry
+```
+
+PR5 may remain documentation-only.
+
+A schema migration should be avoided unless review reveals that an existing durable field is actively misleading or undocumented.
+
+## Accepted Boundary
+
+Stage 3.5E accepts this model:
+
+```text
+database role
+= permission identity
+= controls which SQL operations a runtime component may perform
+
+actor metadata
+= producer / trigger metadata
+= records who or what produced a durable artifact
+
+governance decision evidence
+= Stage 4 evidence
+= records what happened, what it meant, who did it, what it cost, and what recovery path was allowed
+```
+
+These should not be collapsed.
+
+In particular:
+
+```text
+created_by
+= baseline producer metadata
+
+validated_by / decision_by / receipt_by / triggered_by
+= Stage 4 governance evidence
+```
+
+## Current Baseline
+
+The current durable schema already contains limited producer metadata in some places.
+
+The clearest example is:
+
+```text
+projection_snapshots.created_by
+```
+
+This field should be interpreted as producer metadata.
+
+It may identify which component, role, or process created a snapshot artifact.
+
+It should not be interpreted as:
+
+```text
+trust proof
+policy approval
+runtime decision evidence
+downstream action safety proof
+```
+
+A snapshot row may identify who created it.
+
+That does not mean the snapshot is trusted.
+
+Snapshot trust still depends on accepted history, lineage checks, payload evidence, schema / reducer compatibility, tail replay, and later receipt-backed trust selection.
+
+## Relationship to Stage 3.5E Roles
+
+The runtime roles introduced in Stage 3.5E remain permission roles:
+
+```text
+compass_app_writer
+compass_projection_worker
+compass_snapshot_worker
+compass_readonly
+```
+
+They answer:
+
+```text
+Which runtime component may mutate which durable artifact?
+```
+
+They do not fully answer:
+
+```text
+Which actor made this semantic decision?
+Which policy was used?
+Which evidence was considered?
+Which recovery path was allowed?
+```
+
+Those questions belong to Stage 4 governance.
+
+## Relationship to Stage 4
+
+PR5 is the bridge between Stage 3.5E permission hardening and Stage 4 runtime semantic governance.
+
+Stage 4 will need actor-related evidence for:
+
+```text
+SemanticOutcome
+DecisionReceipt
+RuntimeDecisionPolicy
+DiagnosticTrace
+StrategySelector
+RetryGovernance
+```
+
+For example, Stage 4B DecisionReceipt may later record fields such as:
 
 ```text
 actor_id
-actor_type
 actor_role
-created_by
-triggered_by
-runtime_component
+evidence_source
+boundary
+strategy_used
+elapsed_ms
 ```
 
-The exact implementation depends on the existing schema and should be kept minimal.
-
-The goal is to prepare for future questions such as:
+Stage 4 may also introduce governance-specific actor fields such as:
 
 ```text
-who produced validation evidence?
-who generated a snapshot?
-who triggered rebuild?
-who requested repair?
-who quarantined runtime state?
-who made a privileged runtime decision?
+validated_by
+decision_by
+receipt_by
+triggered_by
+repair_requested_by
+quarantined_by
 ```
 
-PR5 may be documentation-only if schema changes are not yet justified.
+Those fields should be introduced only when the corresponding Stage 4 concept exists.
+
+Stage 3.5E should not add isolated governance columns before the system has SemanticOutcome, DecisionReceipt, RuntimeDecisionPolicy, and recovery semantics to give them meaning.
+
+## Why This Matters
+
+Without this boundary, the project could accidentally treat permission identity as semantic evidence.
+
+For example:
+
+```text
+compass_snapshot_worker can INSERT projection_snapshots
+```
+
+means:
+
+```text
+the snapshot worker is allowed to produce snapshot artifacts
+```
+
+It does not mean:
+
+```text
+the snapshot is valid
+the snapshot has been selected by runtime policy
+the snapshot can safely drive downstream actions
+```
+
+Permission allows a path.
+
+Actor metadata identifies a producer.
+
+Governance evidence explains a semantic decision.
+
+## Expected Direction
+
+The expected PR5 direction is:
+
+```text
+No schema migration by default.
+No actor registry.
+No audit table.
+No DecisionReceipt table.
+No RuntimeDecisionPolicy.
+Use existing created_by-style fields as baseline producer metadata.
+Defer richer decision attribution to Stage 4.
+```
+
+This keeps Stage 3.5E focused on minimum durable-history permission hardening while preparing the vocabulary needed for Stage 4 receipts.
 
 ## Non-goals
 
 PR5 should not implement:
 
 ```text
-DecisionReceipt
+new PostgreSQL roles
+new SQL migrations
+actor registry
+user table
+role table
+login/session auth
+JWT
+full RBAC
+multi-tenant auth
+cloud IAM integration
+audit dashboard
+DecisionReceipt persistence
 RuntimeDecisionPolicy
 SemanticOutcome
-full actor registry
-user management
-login
-session management
-JWT
-audit dashboard
-cloud IAM integration
+DiagnosticTrace
+StrategySelector
+RetryGovernance
+production identity wiring
+Stage 4 governance behavior
+```
+
+PR5 also should not update global integration-test or development workflow documentation.
+
+Those belong to Stage 3.5E PR6 closeout.
+
+## Completion Criteria
+
+PR5 is complete when:
+
+```text
+minimal actor metadata boundary is documented
+existing created_by-style metadata is interpreted as producer metadata
+permission identity is separated from governance evidence
+Stage 4 actor evidence is explicitly deferred
+README / PR breakdown notes are aligned
+no full identity / audit / receipt system is introduced
+```
+
+## Final Principle
+
+```text
+Database roles control mutation authority.
+Actor metadata identifies producers and triggers.
+Decision receipts preserve semantic governance evidence.
 ```
 
 ---

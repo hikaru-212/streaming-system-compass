@@ -219,6 +219,7 @@ Detailed notes:
 
 - [PR2 — Database Role / Privilege Baseline](database_role_privilege_baseline.md)
 - [PR4 — Derived-State Mutation Permission Tests](derived_state_mutation_permission_tests.md)
+- [PR5 — Minimal Actor Metadata Boundary](minimal_actor_metadata_boundary.md)
 
 This sequence may be adjusted as implementation reveals constraints.
 
@@ -307,7 +308,7 @@ PR3 does not test derived-state mutation permissions. Those remain scoped to PR4
 
 ## PR4 Implementation State
 
-Stage 3.5E PR4 adds isolated permission-boundary integration tests for derived read-side and snapshot-related runtime artifacts.
+Stage 3.5E PR4 adds isolated permission-boundary integration tests for derived read-side durable artifacts.
 
 PR4 verifies the PR2 role / privilege baseline for:
 
@@ -323,33 +324,57 @@ The PR4 tests are located under:
 tests/integration/security/
 ```
 
-PR4 also centralizes security-test setup in:
+PR4 confirms that derived-state artifacts remain operationally mutable or insertable through intended runtime roles:
 
 ```text
-tests/integration/security/conftest.py
+projection_states
+= mutable by compass_projection_worker
+= selectable by compass_snapshot_worker and compass_readonly
+= inaccessible to compass_app_writer by default
+
+projection_checkpoints
+= mutable by compass_projection_worker
+= selectable by compass_snapshot_worker and compass_readonly
+= inaccessible to compass_app_writer by default
+
+projection_snapshots
+= insertable by compass_snapshot_worker
+= selectable by compass_projection_worker and compass_readonly
+= not updateable or deleteable by normal runtime roles
+= inaccessible to compass_app_writer by default
 ```
 
-The tests continue the layered testing model:
+PR4 also records that permission probes use `SET ROLE` as a test-time mechanism, not as proof of production login identity wiring.
+
+Production login identities, role-specific connection pools, connection-pool contamination tests, chaos tests, and multi-worker failure behavior remain deferred.
+
+---
+
+## PR5 Implementation State
+
+Stage 3.5E PR5 defines the minimal actor metadata boundary before Stage 4 runtime semantic governance.
+
+PR5 clarifies:
 
 ```text
-compass_user
-= test-owner setup / cleanup / fixture authority
-
-compass_* runtime roles
-= permission-boundary probes through SET ROLE
+database role
+≠ actor metadata
+≠ governance decision evidence
 ```
 
-PR4 confirms that `compass_projection_worker` can maintain derived projection state and checkpoint progress, while `compass_snapshot_worker` can insert snapshot artifacts without gaining authority to rewrite or delete snapshot evidence.
-
-PR4 also confirms that `compass_app_writer` does not depend on read-side projection tables and that `compass_readonly` remains read-only across derived runtime artifacts.
-
-A detailed closeout note is recorded in:
+The current direction is documentation-only:
 
 ```text
-docs/implementation_notes/stage_3_5e/derived_state_mutation_permission_tests.md
+existing created_by-style fields
+= baseline producer metadata
+
+validated_by / decision_by / receipt_by / triggered_by
+= Stage 4 governance evidence
 ```
 
-PR4 does not prove production-like chaos behavior, concurrent worker safety, role-specific login wiring, connection-pool isolation, snapshot race handling, or derived-state corruption recovery. Those remain deferred to later production-hardening / chaos-test work after Stage 4 runtime governance is more complete.
+PR5 does not introduce a full actor registry, audit table, DecisionReceipt schema, or identity system.
+
+It exists to prepare Stage 4 so that future receipts can record who produced or applied evidence without overloading database roles with semantic decision meaning.
 
 ---
 

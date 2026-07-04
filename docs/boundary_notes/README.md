@@ -103,6 +103,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Snapshot Trust Contract Boundary](snapshot_trust_contract_boundary.md)
 - [Durable History Permission Boundary](durable_history_permission_boundary.md)
 - [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
+- [Minimal Actor Metadata Boundary](minimal_actor_metadata_boundary.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
 
@@ -131,6 +132,8 @@ The durable history permission boundary note extends the same authority model in
 
 The layered testing strategy note extends the permission boundary into the test suite. It clarifies why ordinary storage / mechanism tests may continue to use the test-owner connection, while permission-boundary tests should intentionally use runtime roles through `SET ROLE`, and future Stage 4 governance-flow tests may compose multiple runtime roles.
 
+The minimal actor metadata boundary note extends Stage 3.5E toward Stage 4. It clarifies why database roles, producer metadata such as `created_by`, and future governance decision evidence should not be collapsed into the same concept.
+
 ---
 
 ## How to Use These Notes
@@ -154,10 +157,11 @@ A practical reading order is:
 15. [Snapshot Trust Contract Boundary](snapshot_trust_contract_boundary.md)
 16. [Durable History Permission Boundary](durable_history_permission_boundary.md)
 17. [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
-18. [Compass Layer Boundary](compass_layer_boundary.md)
-19. [Persistence Boundary](persistence_boundary.md)
-20. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
-21. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+18. [Minimal Actor Metadata Boundary](minimal_actor_metadata_boundary.md)
+19. [Compass Layer Boundary](compass_layer_boundary.md)
+20. [Persistence Boundary](persistence_boundary.md)
+21. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+22. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -178,6 +182,7 @@ This roughly follows the intended semantic development order of the project:
 - define snapshot trust qualification for fast-path replay / rehydration
 - define accepted-history mutation posture at the database permission boundary
 - define testing layers for mechanism tests, permission-boundary tests, and future governance-flow tests
+- define minimal actor metadata before Stage 4 decision receipts
 - define semantic validation layers
 - define durable-world persistence discipline
 - define read-side persistence semantics
