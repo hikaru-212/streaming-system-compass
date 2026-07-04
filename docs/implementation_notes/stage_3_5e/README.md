@@ -218,6 +218,7 @@ PR6 — Stage 3.5E Closeout
 Detailed notes:
 
 - [PR2 — Database Role / Privilege Baseline](database_role_privilege_baseline.md)
+- [PR4 — Derived-State Mutation Permission Tests](derived_state_mutation_permission_tests.md)
 
 This sequence may be adjusted as implementation reveals constraints.
 
@@ -301,6 +302,54 @@ It does not store failed attempts, rejected candidates, retry lifecycle state, f
 Therefore, `compass_readonly` may SELECT `idempotency_records` in Stage 3.5E. If future governance tables introduce failure reasons, retry attempts, or decision traces, those tables may require a separate audit-oriented read role.
 
 PR3 does not test derived-state mutation permissions. Those remain scoped to PR4.
+
+---
+
+## PR4 Implementation State
+
+Stage 3.5E PR4 adds isolated permission-boundary integration tests for derived read-side and snapshot-related runtime artifacts.
+
+PR4 verifies the PR2 role / privilege baseline for:
+
+```text
+projection_states
+projection_checkpoints
+projection_snapshots
+```
+
+The PR4 tests are located under:
+
+```text
+tests/integration/security/
+```
+
+PR4 also centralizes security-test setup in:
+
+```text
+tests/integration/security/conftest.py
+```
+
+The tests continue the layered testing model:
+
+```text
+compass_user
+= test-owner setup / cleanup / fixture authority
+
+compass_* runtime roles
+= permission-boundary probes through SET ROLE
+```
+
+PR4 confirms that `compass_projection_worker` can maintain derived projection state and checkpoint progress, while `compass_snapshot_worker` can insert snapshot artifacts without gaining authority to rewrite or delete snapshot evidence.
+
+PR4 also confirms that `compass_app_writer` does not depend on read-side projection tables and that `compass_readonly` remains read-only across derived runtime artifacts.
+
+A detailed closeout note is recorded in:
+
+```text
+docs/implementation_notes/stage_3_5e/derived_state_mutation_permission_tests.md
+```
+
+PR4 does not prove production-like chaos behavior, concurrent worker safety, role-specific login wiring, connection-pool isolation, snapshot race handling, or derived-state corruption recovery. Those remain deferred to later production-hardening / chaos-test work after Stage 4 runtime governance is more complete.
 
 ---
 

@@ -34,6 +34,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0012 | [Two-Phase Concurrency Admission for PostgreSQL Write-Side](0012_two_phase_concurrency_admission.md) | Accepted | Evolves PR5 admission from append-time-only admission into two-phase stream preparation plus append-time admission. |
 | 0013 | [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) | Accepted | Separates PR4.5 snapshot-assisted state resolution from future runtime eligibility policy and persisted validation receipts. |
 | 0014 | [Defer Separate Projection Event Model](0014_defer_projection_events_as_delivery_layer.md) | Accepted | Records why the project defers a separate projection-event / projection-delivery-log model until delivery, fanout, retry, DLQ, or operational-freshness needs become concrete. |
+| 0015 | [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) | Accepted | Records why Stage 3.5E uses test-time `SET ROLE` permission probes instead of introducing production-style login identities and role-specific connection pools. |
 
 ---
 
@@ -63,6 +64,8 @@ Recommended order:
 12. [Two-Phase Concurrency Admission for PostgreSQL Write-Side](0012_two_phase_concurrency_admission.md) — explains why PR5 evolves from append-time-only admission into two-phase stream preparation plus append-time admission.
 13. [Separate Semantic Correctness from Operational Trust](0007_separate_semantic_correctness_from_operational_trust.md) — explains why future trust evaluation should not collapse semantic correctness, projection correctness, operational trust, and action safety into one boolean.
 14. [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) — explains why PR4.5 resolver usage must stay separate from future runtime eligibility policy, fallback decisions, and persisted validation receipts.
+15. [Defer Separate Projection Event Model](0014_defer_projection_events_as_delivery_layer.md) — explains why a separate projection-event / projection-delivery-log model is deferred until delivery and fanout complexity becomes concrete.
+16. [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) — explains why Stage 3.5E validates effective database privileges through test-time `SET ROLE` probes instead of simulating production login identity topology.
 
 ---
 
@@ -97,6 +100,8 @@ ADR 0007 is related to the future evolution from structured semantic outcomes in
 ADR 0013 is related to Stage 3.5D PR4 / PR4.5. It records why projection snapshots are not trusted merely because they exist, why PR4.5 should remain a snapshot-assisted state resolver rather than a full trust-gate or fallback-policy engine, and why persisted validation receipts are deferred to a future hardening step.
 
 ADR 0014 is related to Stage 3.5C / Stage 3.5D read-side boundaries. It records why accepted history remains the authoritative projection input and why a separate projection-event or projection-delivery-log model is deferred until delivery, fanout, retry, DLQ, or operational-freshness requirements become concrete.
+
+ADR 0015 is related to Stage 3.5E database role and permission hardening. It records why the project validates runtime responsibility-role privileges through test-owner `SET ROLE` probes, while deferring production login identities, role-specific database URLs, and connection-pool topology to future deployment hardening.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -164,7 +169,8 @@ Recommended pattern:
 0011_validation_mode_vs_validation_placement.md
 0012_two_phase_concurrency_admission.md
 0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md
-0014_defer_projection_event.md
+0014_defer_projection_events_as_delivery_layer.md
+0015_permission_probing_with_set_role.md
 ```
 
 Evolution or supporting notes may be kept as separate files:

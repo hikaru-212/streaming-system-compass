@@ -484,34 +484,97 @@ Therefore, PR2 avoids broad sequence grants.
 
 ## Permission Tests Boundary
 
-PR2 may introduce roles and grants.
+PR2 introduced roles and grants.
 
-Detailed test matrices should remain staged.
+PR3 and PR4 verify the role / privilege baseline through isolated permission-boundary tests.
 
-The intended later split is:
+Implemented split:
 
 ```text
 PR3 — accepted-history mutation hardening tests
 PR4 — derived-state mutation permission tests
 ```
 
-Existing integration tests should not be rewritten to use low-privilege roles.
-
-Instead:
-
-```text
-existing integration tests
-= storage / runtime behavior tests
-
-Stage 3.5E security tests
-= database role / privilege boundary tests
-```
-
-A likely future location is:
+The implemented security-test location is:
 
 ```text
 tests/integration/security/
 ```
+
+The test model is layered:
+
+```text
+existing integration tests
+= storage / runtime behavior tests
+= may use compass_user for setup, cleanup, fixture insertion, and deterministic reset
+
+Stage 3.5E security tests
+= database role / privilege boundary tests
+= use SET ROLE to probe effective runtime-role permissions
+```
+
+This means PR3 / PR4 do not replace storage correctness tests, replay tests, snapshot trust tests, or runtime behavior tests.
+
+They answer a narrower question:
+
+```text
+When a given runtime responsibility role is active,
+which durable artifacts can it SELECT / INSERT / UPDATE / DELETE?
+```
+
+### PR3 Coverage
+
+```text
+order_events
+idempotency_records
+order_events_global_position_seq
+```
+
+PR3 verifies accepted-history mutation hardening, successful idempotency receipt rewrite prevention, and accepted-history global-position sequence access.
+
+### PR4 Coverage
+
+```text
+projection_states
+projection_checkpoints
+projection_snapshots
+```
+
+PR4 verifies derived-state mutation boundaries:
+
+```text
+projection_states
+= mutable by projection_worker
+= observable by snapshot_worker / readonly
+= inaccessible to app_writer
+
+projection_checkpoints
+= mutable by projection_worker
+= observable by snapshot_worker / readonly
+= inaccessible to app_writer
+
+projection_snapshots
+= insertable by snapshot_worker
+= observable by projection_worker / readonly
+= not rewritable or deletable by normal runtime roles
+= inaccessible to app_writer
+```
+
+### Testing Scope Boundary
+
+The permission tests do not prove production login identity wiring.
+
+They do not require each role to have a separate connection account, password, database URL, secret-manager entry, or production connection pool.
+
+That decision is recorded separately as a testing-scope boundary:
+
+```text
+docs/adr/0015_permission_probing_with_set_role.md
+```
+
+The permission tests also do not prove production-like chaos behavior under concurrent workers, role-specific runtime connections, connection-pool reuse, rollback failure, worker crash windows, snapshot write races, or checkpoint races.
+
+Those remain future production-hardening / chaos-test concerns.
 
 ---
 
@@ -585,7 +648,9 @@ derived runtime tables remain mutable by intended roles
 snapshot records are insert-oriented by default
 read-only role has no mutation privileges
 the role model is documented
-future permission tests have a clear location and boundary
+PR3 accepted-history permission tests are implemented
+PR4 derived-state permission tests are implemented
+future production login / chaos tests remain explicitly out of scope
 ```
 
 ---
