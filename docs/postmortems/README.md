@@ -60,6 +60,7 @@ Postmortems help preserve:
 | [from_generic_validation_to_authority_based_reasoning](from_generic_validation_to_authority_based_reasoning.md) | Snapshot Trust / Authority-Based Validation | Records the PR4 correction from generic input-validation ordering to authority-first reasoning: accepted history must exist before snapshot trust can be evaluated. |
 | [stage_3_5d_local_correctness_global_premise_drift](stage_3_5d_local_correctness_global_premise_drift.md) | Stage Scope / AI-Assisted Engineering | Records the Stage 3.5D correction where locally coherent snapshot PRs remained technically valid, but the stage-level premise had to be re-audited after distinguishing write-side aggregate admission risk from read-side derived-state evidence. |
 | [from_row_count_assertions_to_evidence_assertions](from_row_count_assertions_to_evidence_assertions.md) | Testing / Assertion Fidelity | Records the Stage 3.5E PR4 near miss where exact evidence assertions exposed a PostgreSQL UUID return-type mismatch that row-count-only assertions would have hidden. |
+| [airflow_failure_and_boundary_thinking](airflow_failure_and_boundary_thinking.md) | Debugging / Boundary Thinking | Records how an early Airflow debugging failure exposed the cost of operating a system without first identifying the boundary responsible for the failure. |
 
 ---
 
@@ -152,6 +153,20 @@ The postmortem [From Row-Count Assertions to Evidence Assertions](from_row_count
 - The projection snapshot tests exposed that PostgreSQL `UUID` columns are returned by `psycopg` as Python `UUID` objects, not strings.
 - The postmortem records why `len(rows) == 1` is too weak when a returned row is part of the evidence.
 - This supports the Stage 3.5E testing rule that permission probes with `RETURNING` or `SELECT` evidence should assert exact returned rows, not only row count.
+
+---
+
+
+---
+
+The postmortem [Airflow Failure and Boundary Thinking](airflow_failure_and_boundary_thinking.md) records an earlier learning transition before Streaming System + Compass existed:
+
+- a local ETL / Airflow debugging failure exposed the cost of operating a system without a boundary model;
+- copy-paste debugging with AI could produce candidate fixes, but it did not by itself explain which system layer owned the failure;
+- the corrected habit became `boundary first, implementation second`;
+- this supports the later project discipline around Core vs Enablers, semantic admission, accepted history, and runtime governance.
+
+This postmortem is also related to the philosophy note [From Local ETL to Streaming System + Compass](../philosophy/from_local_etl_to_streaming_system_compass.md), which records how the same early friction evolved into the project’s broader semantic-correctness direction.
 
 ---
 
