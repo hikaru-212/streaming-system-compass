@@ -960,30 +960,32 @@ Decision receipts preserve semantic governance evidence.
 
 Close Stage 3.5E after the durable-history permission boundary is implemented and documented.
 
-PR6 should align the stage documentation with the final implementation state.
+PR6 aligns the stage documentation with the final implementation state and prepares the repository to enter Stage 4 runtime semantic governance.
 
 ## Status
 
-Planned.
+Completed.
 
 ## Scope
 
-PR6 should update only the documents that need closeout alignment, such as:
+PR6 updates the closeout-facing documentation needed to make Stage 3.5E readable as a completed stage:
 
 ```text
 docs/implementation_notes/stage_3_5e/README.md
-docs/roadmap/implementation_roadmap.md
-docs/roadmap/compass_runtime_roadmap.md
-docs/roadmap/deferred_architecture_backlog.md
-docs/adr/README.md
-README.md only if needed
+docs/implementation_notes/stage_3_5e/pr_breakdown.md
+docs/development/README.md
+docs/development/postgres_local_setup.md
+docs/README.md
+tests/README.md
+tests/integration/security/README.md
+README.md
 ```
 
-The exact closeout files should be decided after PR2–PR5 are completed.
+PR6 may also align roadmap-facing documents if they still describe Stage 3.5E as the current implementation focus.
 
 ## Expected Closeout Statements
 
-The closeout should record:
+The closeout records:
 
 ```text
 Stage 3.5E completed the minimal durable-history permission boundary.
@@ -992,16 +994,28 @@ Accepted history is protected differently from derived runtime state.
 
 Successful idempotency receipts are protected as insert-once request-effect evidence under the current schema.
 
-Derived projection state, checkpoints, and snapshots remain operationally mutable or insertable through controlled paths.
+Derived projection state and checkpoints remain operationally mutable through the projection worker role.
 
-Full RBAC, login/session auth, cloud IAM, and Stage 4 runtime decision policy remain deferred.
+Projection snapshots remain insert-oriented derived evidence artifacts through the snapshot worker role.
+
+Database roles represent runtime responsibility boundaries, not product users or full RBAC.
+
+Minimal actor metadata is documented as producer / trigger metadata, not governance decision evidence.
+
+Full RBAC, login/session auth, cloud IAM, production connection-pool isolation, Compass Layer 2, SemanticOutcome, DecisionReceipt, RuntimeDecisionPolicy, StrategySelector, and RetryGovernance remain deferred to Stage 4 or later production-hardening work.
 ```
 
 ## Non-goals
 
-PR6 should not add new runtime behavior.
+PR6 does not add new runtime behavior.
 
-PR6 should not introduce new schema or permission semantics unless a small documentation correction reveals a previously missed alignment issue.
+PR6 does not introduce new schema or permission semantics.
+
+PR6 does not implement Stage 4 governance objects.
+
+PR6 does not add chaos / production-hardening tests.
+
+PR6 is a documentation closeout that preserves the completed Stage 3.5E boundary before Stage 4 begins.
 
 ---
 
@@ -1048,7 +1062,7 @@ Suggested Stage 3.5E closeout title:
 feat: complete Stage 3.5E durable history permission hardening
 ```
 
-Stage 3.5E should close with:
+Stage 3.5E closes with:
 
 ```text
 durable history permission boundary documented
@@ -1056,7 +1070,7 @@ database role / privilege baseline established
 accepted-history mutation hardening verified
 successful idempotency receipt rewrite prevention verified
 derived-state controlled mutation verified
-minimal actor metadata boundary documented or explicitly deferred
+minimal actor metadata boundary documented
 full RBAC and Stage 4 runtime governance explicitly deferred
 ```
 
@@ -1071,4 +1085,4 @@ Derived runtime state supports operation.
 Permission boundaries must respect those differences.
 ```
 
-Stage 3.5E completes the minimum database mutation hardening needed before broader runtime semantic governance.
+Stage 3.5E completes the minimum database mutation hardening and actor-boundary baseline needed before broader runtime semantic governance.

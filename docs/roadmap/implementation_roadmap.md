@@ -9,13 +9,14 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the completion of Stage 3.5D:
+This version reflects the project position after the completion of Stage 3.5E:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
 - Stage 3.5D snapshot trust / replay-efficiency implementation details have been moved to implementation notes.
-- Stage 3.5E remains the next implementation stage.
-- Stage 4 and later stages remain forward-looking runtime governance work.
+- Stage 3.5E durable history and permission hardening is complete.
+- Stage 4 is now the next implementation stage.
+- Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
 
@@ -31,6 +32,7 @@ The project has completed an executable baseline across:
 - durable PostgreSQL-backed read-side persistence
 - durable replay / rebuild validation
 - projection snapshot trust / replay-efficiency baseline
+- durable history and permission hardening baseline
 
 This means:
 
@@ -41,20 +43,22 @@ This means:
 - Stage 3.5B is complete as the durable write-side baseline.
 - Stage 3.5C is complete as the durable read-side baseline.
 - Stage 3.5D is complete as the projection snapshot trust / replay-efficiency baseline.
+- Stage 3.5E is complete as the durable history and permission hardening baseline.
 - Write-side aggregate snapshot implementation is explicitly deferred.
-- Stage 3.5E is the next implementation stage.
+- Stage 4 is the next implementation stage.
 
 Detailed completed-stage execution records now live under:
 
 - [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
 - [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+- [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 
 The current major focus is:
 
-- **Stage 3.5E — Durable History and Permission Hardening**
+- **Stage 4 — Runtime Semantic Governance**
 
-After Stage 3.5E, the project can proceed toward:
+After Stage 3.5E, the project can now proceed toward:
 
 - Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
 - Stage 5 dual-dimension governance demo
@@ -343,6 +347,7 @@ Write-side aggregate snapshots are explicitly deferred because they may influenc
 Detailed PR-level execution records and snapshot-specific implementation notes are maintained in:
 
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+- [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 
 ---
 
@@ -350,119 +355,175 @@ Detailed PR-level execution records and snapshot-specific implementation notes a
 
 ## Goal
 
-Harden the durable storage authority boundary after the durable write-side, durable read-side, and replay-efficiency baselines are clear.
+Harden the durable storage authority boundary after the durable write-side, durable read-side, and replay-efficiency baselines became clear.
 
-Stage 3.5E focuses on making accepted history harder to rewrite accidentally or improperly at the database boundary.
+Stage 3.5E made accepted history harder to rewrite accidentally or improperly at the database permission boundary while preserving controlled mutability for derived runtime artifacts.
 
 ## Why
 
-Stage 3.5B establishes PostgreSQL-backed accepted history.
+Stage 3.5B established PostgreSQL-backed accepted history.
 
-Stage 3.5C establishes PostgreSQL-backed durable read-side state.
+Stage 3.5C established PostgreSQL-backed durable read-side state.
 
-Stage 3.5D improves replay, rehydrate, and rebuild efficiency without replacing accepted history.
+Stage 3.5D improved replay, rehydrate, and rebuild efficiency without replacing accepted history.
 
-After these baselines exist, the project can define database-level authority more accurately:
+After those baselines existed, the project could define database-level authority more accurately:
 
 ```text
 order_events = accepted history / source of truth
-idempotency_records = successful request-result memory
+idempotency_records = successful request-effect evidence
 projection_states = mutable derived runtime view
 projection_checkpoints = mutable worker progress metadata
+projection_snapshots = derived state compression / evidence artifact
 ```
 
-This stage exists because these tables do not have the same mutability requirements.
+Stage 3.5E exists because these tables do not have the same authority level or mutability requirements.
 
-`order_events` should move toward append-only accepted history.
+## Status
 
-`projection_states` and `projection_checkpoints` must remain mutable enough to support upsert, resume, reset, and rebuild.
+Completed.
 
-If Stage 3.5D introduces aggregate snapshot tables, Stage 3.5E may also evaluate whether snapshot rows should follow append-only derived-artifact discipline. This is different from making snapshots the source of truth. It only protects derived artifact integrity.
+## Summary
 
-## Main Work
+Stage 3.5E established:
 
-Stage 3.5E may include:
+- durable history permission boundary documentation
+- PostgreSQL role / privilege baseline
+- accepted-history mutation hardening tests
+- successful idempotency receipt rewrite-prevention tests
+- accepted-history global-position sequence permission tests
+- derived-state mutation permission tests
+- projection snapshot insert-oriented evidence protection
+- test-time `SET ROLE` permission probing boundary
+- minimal actor metadata boundary
+- explicit deferral of full RBAC, production login identity wiring, connection-pool isolation, chaos tests, and Stage 4 governance objects
 
-- database role boundary documentation
-- migration owner vs runtime role separation
-- write-side runtime permission baseline
-- projection worker permission baseline
-- read-only observer permission baseline
-- revoking runtime `UPDATE` / `DELETE` authority from `order_events`
-- optional trigger-based rejection of `UPDATE` / `DELETE` on `order_events`
-- tests proving runtime roles cannot rewrite accepted history
-- documentation explaining why read-side tables remain mutable while accepted history is hardened
-- optional snapshot table permission review if snapshot tables exist:
-  - restrict casual UPDATE / DELETE on snapshot rows
-  - preserve insert-only snapshot history if chosen
-  - document why snapshot append-only protects derived artifact integrity, not source-of-truth authority
-
-## Candidate Role Model
-
-A minimal role model may distinguish:
+The implemented runtime responsibility roles are:
 
 ```text
-migration_owner
-write_side_runtime
-projection_worker
-read_only_observer
+compass_migration_owner
+compass_app_writer
+compass_projection_worker
+compass_snapshot_worker
+compass_readonly
 ```
 
-Possible baseline permissions:
+The completed baseline preserves the intended authority split:
 
-| Role | `order_events` | `idempotency_records` | `projection_states` | `projection_checkpoints` |
-|---|---|---|---|---|
-| `migration_owner` | schema owner | schema owner | schema owner | schema owner |
-| `write_side_runtime` | SELECT / INSERT | SELECT / INSERT | no access or SELECT only | no access |
-| `projection_worker` | SELECT | no access or SELECT | SELECT / INSERT / UPDATE | SELECT / INSERT / UPDATE |
-| `read_only_observer` | SELECT | SELECT | SELECT | SELECT |
+```text
+accepted history
+= mutation-restricted authority
 
-The exact grants should follow the final Stage 3.5C / 3.5D runtime shape.
+successful idempotency receipts
+= insert-once request-effect evidence under the current schema
 
-## Completion Criteria
+derived runtime state
+= controlled mutable / rebuildable operational state
 
-Stage 3.5E is complete at the baseline level when:
+projection snapshots
+= derived insert-oriented evidence artifacts, not accepted-history authority
+```
+
+## Implemented Work
+
+Stage 3.5E completed:
+
+- database role boundary documentation
+- migration owner vs runtime responsibility-role separation
+- write-side runtime permission baseline
+- projection worker permission baseline
+- snapshot worker permission baseline
+- read-only observer permission baseline
+- runtime `UPDATE` / `DELETE` restriction for `order_events`
+- runtime `UPDATE` / `DELETE` restriction for `idempotency_records` under the current successful-receipt design
+- runtime sequence-usage restriction for `order_events_global_position_seq`
+- tests proving runtime roles cannot rewrite accepted history
+- tests proving runtime roles cannot rewrite successful idempotency receipts
+- tests proving only the intended writer role can consume the accepted-history global-position sequence
+- tests proving derived runtime tables remain operationally mutable through intended roles
+- tests proving snapshot records are insert-oriented and not rewritable by normal runtime roles
+- documentation explaining why read-side tables remain mutable while accepted history is hardened
+- documentation clarifying that `created_by`-style metadata is producer metadata, not governance decision evidence
+
+## Final Role Model
+
+The implemented baseline distinguishes:
+
+```text
+compass_migration_owner
+= migration / setup authority, not a normal runtime role
+
+compass_app_writer
+= write-side runtime; may append accepted events and insert successful idempotency receipts
+
+compass_projection_worker
+= read-side projection runtime; may mutate derived projection state and checkpoints
+
+compass_snapshot_worker
+= snapshot artifact producer; may insert projection snapshots and inspect required source state
+
+compass_readonly
+= observation role; may read but not mutate durable state
+```
+
+## Completion Result
+
+Stage 3.5E is complete at the baseline level because:
 
 - accepted history is protected by database-level permission boundaries
-- runtime roles cannot casually update or delete `order_events`
+- normal runtime roles cannot casually update or delete `order_events`
+- successful idempotency receipts cannot be casually rewritten by normal runtime roles
 - projection worker permissions are separated from write-side event admission authority
 - read-only observer access is separated from mutation authority
 - mutable read-side tables remain able to support projection upsert, checkpoint updates, reset, and rebuild
-- tests verify the core permission / append-only assumptions in local PostgreSQL
-- documentation clearly states that append-only hardening protects accepted history, not derived read-side views
+- snapshot records are insert-oriented evidence artifacts rather than mutable authority
+- security permission tests verify the core role / privilege assumptions in local PostgreSQL
+- documentation clearly states that permission hardening protects authority boundaries without making derived read-side views authoritative
 
 ## Non-goals
 
-Stage 3.5E does not implement:
+Stage 3.5E did not implement:
 
 - cloud IAM
 - production secret-manager integration
+- production login identity wiring
+- connection-pool role isolation
 - full deployment security architecture
 - multi-tenant access control
 - complex audit policy framework
+- actor registry
+- user table
+- login / session auth
 - Compass Layer 2 validation
 - structured `SemanticOutcome`
+- `DecisionReceipt`
 - runtime decision policy
 - action safety gate
 - cryptographic snapshot sealing
 - HMAC signatures
 - hash chains
 - agent runtime isolation
+- production-like chaos / concurrency tests
 
-Those belong to later production hardening or Stage 4 / Stage 5 runtime governance work.
+Those belong to Stage 4, Stage 5, or later production-hardening work.
 
 ## Boundary Statement
 
-Stage 3.5E hardens storage authority.
+Stage 3.5E hardened storage authority.
 
-It does not change the source of truth.
+It did not change the source of truth.
 
 ```text
 accepted history remains the source of truth
 permission hardening limits who can mutate storage
-append-only enforcement reduces accidental or improper history rewrites
-read-side state remains derived and rebuildable
+derived read-side state remains operational and rebuildable
+producer metadata does not equal trust evidence
+actor metadata does not equal governance decision evidence
 ```
+
+Detailed execution records are maintained in:
+
+- [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 
 ---
 

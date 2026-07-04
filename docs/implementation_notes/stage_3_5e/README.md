@@ -10,7 +10,7 @@ This directory records the implementation plan for:
 Stage 3.5E — Durable History and Permission Hardening
 ```
 
-Stage 3.5E introduces the minimal database-level and runtime-facing permission boundary needed before Compass grows into stronger runtime semantic governance.
+Stage 3.5E introduced the minimal database-level and runtime-facing permission boundary needed before Compass grows into stronger runtime semantic governance.
 
 The goal is not to build a full authentication or authorization system.
 
@@ -88,7 +88,7 @@ projection_snapshots
 = insertable and selectable only under explicit trust / evidence boundaries
 ```
 
-Stage 3.5E makes these differences explicit.
+Stage 3.5E makes these differences explicit and now closes with that baseline documented and tested.
 
 ---
 
@@ -378,9 +378,32 @@ It exists to prepare Stage 4 so that future receipts can record who produced or 
 
 ---
 
+## PR6 Implementation State
+
+Stage 3.5E PR6 closes the durable-history permission hardening stage.
+
+PR6 aligns the stage-level documentation, test-suite guidance, security-test documentation, and development setup notes so the repository is ready to enter Stage 4 runtime semantic governance.
+
+The closeout records that Stage 3.5E completed:
+
+```text
+PR1 — Durable History Permission Boundary
+PR2 — Database Role / Privilege Baseline
+PR3 — Accepted-History Mutation Hardening Tests
+PR4 — Derived-State Mutation Permission Tests
+PR5 — Minimal Actor Metadata Boundary
+PR6 — Stage Closeout
+```
+
+PR6 does not introduce new runtime behavior, schema, permissions, or governance objects.
+
+Its purpose is to make the completed Stage 3.5E boundary readable before Stage 4 begins.
+
+---
+
 ## Stage Completion Criteria
 
-Stage 3.5E is complete when the project can clearly demonstrate:
+Stage 3.5E is complete because the project can now clearly demonstrate:
 
 ```text
 accepted history cannot be casually mutated through the same assumptions as derived state
@@ -396,4 +419,4 @@ minimal actor metadata exists or is clearly deferred
 future Stage 4 receipt / decision policy work has a stable durable-history foundation
 ```
 
-The end state should be stronger semantic infrastructure, not a full security platform.
+The end state is stronger semantic infrastructure, not a full security platform. Stage 4 may now build semantic outcomes, receipts, policy, strategy selection, and retry governance on top of this durable permission / actor boundary.

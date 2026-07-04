@@ -12,13 +12,13 @@ Use roadmap documents to understand:
 * what depends on what
 * which features are intentionally deferred
 * how the project moves from durable truth toward runtime governance
-* how the project has completed the pre-Stage 3.5E documentation alignment and is entering Stage 3.5E
+* how the project has completed Stage 3.5E and is entering Stage 4 runtime semantic governance
 
 ---
 
 ## Completed Baseline
 
-The project has completed the baseline sequence up to Stage 3.5D:
+The project has completed the baseline sequence up to Stage 3.5E:
 
 * Stage 1 — Transactional Semantic Core
 * Stage 2 — Compass Layer 1 Write-side Validation
@@ -27,6 +27,7 @@ The project has completed the baseline sequence up to Stage 3.5D:
 * Stage 3.5B — Durable Write-Side Baseline
 * Stage 3.5C — Durable Read-Side Baseline
 * Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
+* Stage 3.5E — Durable History and Permission Hardening
 
 Detailed sequencing remains in [Implementation Roadmap](implementation_roadmap.md).
 
@@ -35,8 +36,9 @@ Completed implementation details from Stage 3.5B onward are preserved in [Implem
 * [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
 * [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
 * [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+* [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 
-The pre-Stage 3.5E documentation alignment pass has also been completed at the roadmap / ADR / implementation-note level.
+Stage 3.5E has completed the minimal durable-history role / permission boundary and actor-metadata boundary needed before Stage 4.
 
 ---
 
@@ -69,14 +71,12 @@ The deferred architecture backlog should be read after the main roadmaps. It doe
 Current implementation focus:
 
 ```text
-Stage 3.5E — Minimal Actor / Permission Boundary
+Stage 4 — Runtime Semantic Governance
 ```
 
-The pre-Stage 3.5E cleanup pass has completed at the roadmap / ADR / implementation-note level.
+Stage 3.5E is now complete at the baseline level. It established database responsibility roles, permission-boundary tests, SET ROLE probing scope, minimal actor metadata semantics, and explicit deferrals for full RBAC and production identity wiring.
 
-Stage 3.5E should stay minimal.
-
-It should clarify actor / permission semantics needed before Stage 4 receipts and runtime governance, without turning the project into full RBAC, login/session handling, JWT infrastructure, multi-tenant auth, or a complete access-control platform.
+Stage 4 can now begin from a cleaner foundation: durable authority is protected, derived state remains operationally mutable, and actor metadata has been separated from governance decision evidence.
 
 ---
 
