@@ -60,7 +60,7 @@ The current major focus is:
 
 After Stage 3.5E, the project can now proceed toward:
 
-- Stage 4 runtime semantic governance: SemanticOutcome, DecisionReceipt, measurement evidence, diagnostic traces, policy-linked runtime decisions, StrategySelector, and retry governance
+- Stage 4 runtime semantic governance: SemanticOutcome, DecisionReceipt, diagnostic traces, measurement evidence, policy-linked runtime decisions, StrategySelector, and retry governance
 - Stage 5 dual-dimension governance demo / action safety
 - Stage 5+ production and agent-facing hardening
 
@@ -908,8 +908,8 @@ Stage 4 is complete when the system can represent a governable runtime semantic 
 technical evidence
 → SemanticOutcome
 → DecisionReceipt
-→ measurement evidence
 → diagnostic trace when needed
+→ measurement matrix / cost evidence
 → policy-linked runtime decision
 → strategy selection
 → retry governance
