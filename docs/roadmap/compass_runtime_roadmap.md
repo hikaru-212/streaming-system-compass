@@ -458,8 +458,8 @@ The high-level flow is:
 technical evidence
 → SemanticOutcome
 → DecisionReceipt
-→ measurement evidence
 → DiagnosticTrace when needed
+→ Measurement Matrix / cost evidence
 → policy-linked RuntimeDecision
 → StrategySelector
 → Retry Governance
