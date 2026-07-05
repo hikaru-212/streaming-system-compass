@@ -46,8 +46,8 @@ Stage 3.5E has completed the minimal durable-history role / permission boundary 
 
 | Document | Purpose |
 |---|---|
-| [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, durable persistence, snapshot trust / replay efficiency, minimal actor / permission boundary, runtime semantic outcomes, runtime decision policy, action safety, Stage 5 dual-dimension governance, and later isolated derived-state runtime evaluation. |
-| [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward durable runtime validation, snapshot-aware state validation, structured semantic outcomes, retry reason classification, runtime decisions, action safety, dual-dimension governance, and later agent-facing governance hardening. |
+| [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, durable persistence, snapshot trust / replay efficiency, minimal actor / permission boundary, Stage 4 runtime semantic governance, Stage 5 action safety, and later production / agent-facing hardening. |
+| [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward runtime semantic governance, structured semantic outcomes, runtime decisions, strategy selection, retry governance, action safety, and later production / agent-facing hardening. |
 | [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred beyond the current implementation scope, including aggregate snapshot revival, UUIDv7 evaluation, protocol boundaries, JSONB evidence hydration, metadata timing, append-only hardening, retry classification, cleanup failure handling, isolated derived-state runtime, and later production / governance-hardening concerns. |
 
 ---
@@ -60,7 +60,7 @@ Stage 3.5E has completed the minimal durable-history role / permission boundary 
 
 The implementation roadmap gives the global project sequence.
 
-The Compass runtime roadmap gives a more focused view of how Compass should evolve from the current write-side baseline toward durable persistence, runtime semantic validation, structured semantic outcomes, runtime decision policy, action safety, and dual-dimension governance.
+The Compass runtime roadmap gives a more focused view of how Compass should evolve from the current write-side baseline toward runtime semantic governance, structured semantic outcomes, runtime decisions, strategy selection, retry governance, action safety, and later hardening.
 
 The deferred architecture backlog should be read after the main roadmaps. It does not expand the current implementation scope. It records known architecture concerns that have been intentionally postponed until the right stage.
 
@@ -74,9 +74,14 @@ Current implementation focus:
 Stage 4 — Runtime Semantic Governance
 ```
 
-Stage 3.5E is now complete at the baseline level. It established database responsibility roles, permission-boundary tests, SET ROLE probing scope, minimal actor metadata semantics, and explicit deferrals for full RBAC and production identity wiring.
+Stage 3.5E is complete at the baseline level. It established database responsibility roles, permission-boundary tests, SET ROLE probing scope, minimal actor metadata semantics, and explicit deferrals for full RBAC and production identity wiring.
 
-Stage 4 can now begin from a cleaner foundation: durable authority is protected, derived state remains operationally mutable, and actor metadata has been separated from governance decision evidence.
+Stage 4 now starts from a cleaner foundation:
+
+- durable authority is protected
+- derived state remains operationally mutable under controlled runtime roles
+- snapshots remain derived and subordinate to accepted history
+- minimal actor metadata is separated from governance decision evidence
 
 ---
 
@@ -95,116 +100,79 @@ semantic truth
 → durable read-side baseline
 → snapshot trust qualification / replay efficiency
 → minimal actor / permission boundary
-→ runtime semantic validation
-→ structured semantic outcome
-→ retry reason classification and intent consistency
-→ runtime decision policy
-→ action safety gate
-→ dual-dimension governance demo
-→ later isolated derived-state runtime and adversarial hardening
+→ runtime semantic governance
+→ action safety demo
+→ later production and agent-facing hardening
 ```
 
-The system should not attempt to solve chaos, broad governance, agent isolation, or distributed complexity before the transactional semantic core, write-side safety boundaries, runtime semantics, and durable persistence boundaries are coherent.
+The system should not attempt to solve chaos, broad governance, agent isolation, or distributed complexity before the transactional semantic core, write-side safety boundaries, runtime semantics, durable persistence boundaries, and runtime governance vocabulary are coherent.
 
 ---
 
-## Stage 3.5E Reminder
+## Stage 4 Entrance
 
-Stage 3.5E is reserved for minimal actor / permission boundary hardening after durable write-side, durable read-side, and replay-efficiency boundaries are clear.
+Stage 4 introduces Compass runtime semantic governance.
 
-The first hardening target is accepted history:
+The public sequence is:
 
 ```text
-order_events = accepted history / source of truth
-```
-
-Stage 3.5E should evaluate:
-
-* system / admin / operator / test actor semantics
-* privileged operation boundaries
-* `created_by` / future `validated_by` / `decision_by` metadata alignment
-* migration owner vs runtime role separation
-* write-side runtime permissions
-* projection worker permissions
-* read-only observer permissions
-* whether runtime roles should be prevented from casual `UPDATE` / `DELETE` on accepted-history tables
-
-Stage 3.5E should not implement:
-
-* full RBAC
-* login / session management
-* JWT auth
-* multi-tenant auth
-* complete access-control infrastructure
-* Compass Layer 2 validation
-* `SemanticOutcome`
-* runtime decision policy
-* action safety gate
-
----
-
-## Deferred Architecture Backlog Reminder
-
-The deferred backlog should contain only future architecture concerns whose timing depends on stage readiness, production need, runtime evidence, or governance maturity.
-
-It should not collect completed PR details.
-
-Examples of valid deferred concerns include:
-
-* aggregate snapshot revival
-* worker leasing / checkpoint row locking
-* UUIDv7 evaluation
-* durable JSONB evidence hydration
-* registry-stage timing evidence
-* append-only database hardening
-* retry reason classification
-* isolated derived-state runtime
-
----
-
-## Stage 4 Reminder
-
-Stage 4 should introduce Compass Layer 2 and structured runtime governance.
-
-The main direction is:
-
-```text
-accepted history
-→ derived state
-→ validation result
-→ structured SemanticOutcome
-→ runtime decision
-→ action safety gate
+technical evidence
+→ SemanticOutcome
+→ DecisionReceipt
+→ measurement evidence
+→ DiagnosticTrace when needed
+→ policy-linked RuntimeDecision
+→ StrategySelector
+→ Retry Governance
 ```
 
 Stage 4 should not be reduced to an error taxonomy.
 
-It should create machine-readable semantic outcomes that can support runtime decisions, retry classification, recovery, receipts, and future agent-facing safety boundaries.
+It should turn runtime correctness evidence into governable semantic meaning.
 
-### Retry Reason Classification
+Important boundaries:
 
-Stage 4 should distinguish retry-like situations such as:
+```text
+technical status ≠ semantic outcome
+semantic outcome ≠ runtime decision
+runtime decision ≠ execution strategy
+retry attempt ≠ same intent
+```
 
-* idempotent replay
-* idempotency conflict
-* stale-write retry
-* transient infrastructure retry
-* projection-drift rebuild
-* snapshot-trust fallback
-* future agent intent drift
+Stage 4 does not yet claim to implement production benchmarking, full observability, full authorization, general policy authoring, agent workflow orchestration, or final action safety.
 
-Retry classification belongs in `SemanticOutcome` / request-attempt evidence design, not directly in `idempotency_records`.
+Those belong to later stages.
+
+---
+
+## Stage 4 Public Subsequence
+
+Stage 4 is expected to proceed through:
+
+* Stage 4A — SemanticOutcome Core
+* Stage 4B — DecisionReceipt / Runtime Evidence Record
+* Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
+* Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
+* Stage 4B.5 — Order Domain Policy Contract v0
+* Stage 4C — RuntimeDecisionPolicy
+* Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
+* Stage 4D — StrategySelector / Fast-Path Health Policy
+* Stage 4E — Retry Governance / Attempt Classification
+
+The detailed implementation of each step belongs in stage-specific implementation notes and PRs, not in this roadmap index.
 
 ---
 
 ## Stage 5 Reminder
 
-Stage 5 should demonstrate dual-dimension governance:
+Stage 5 should demonstrate dual-dimension governance / action safety:
 
 ```text
 semantic correctness
 ×
-operational freshness
+operational freshness / runtime trust
+→
+action safety
 ```
 
 The key cases are:
@@ -220,16 +188,16 @@ This is where Compass can show that a system may be technically live but semanti
 
 ---
 
-## Stage 5+ Reminder
+## Later Work Reminder
 
-Later work may evaluate isolated derived-state runtime / oblivious agent runtime.
+Later work may evaluate production and agent-facing hardening such as:
 
-This should wait until the project has:
+* benchmark suite
+* evidence retention policy
+* cost-aware semantic governance
+* projection delivery layer if needed
+* isolated derived-state runtime
+* oblivious agent runtime evaluation
+* broader governance hardening
 
-* Layer 2 validation
-* structured semantic outcomes
-* runtime decision policy
-* action safety gate
-* dual-dimension governance demo
-
-This should remain future governance hardening, not a Stage 3.5E requirement.
+These should wait until the project has a working Stage 4 semantic governance pipeline.

@@ -60,9 +60,9 @@ The current major focus is:
 
 After Stage 3.5E, the project can now proceed toward:
 
-- Stage 4 runtime semantic validation, structured semantic outcomes, and runtime decision policy
-- Stage 5 dual-dimension governance demo
-- Stage 5+ isolated derived-state runtime / oblivious agent runtime evaluation
+- Stage 4 runtime semantic governance: SemanticOutcome, DecisionReceipt, measurement evidence, diagnostic traces, policy-linked runtime decisions, StrategySelector, and retry governance
+- Stage 5 dual-dimension governance demo / action safety
+- Stage 5+ production and agent-facing hardening
 
 ---
 
@@ -82,11 +82,11 @@ The project should evolve from:
 10. persistence optimization / replay efficiency
 11. snapshot trust qualification for fast-path replay
 12. durable history immutability and permission hardening
-13. runtime semantic outcomes
-14. runtime decision policy
-15. action safety gate
-16. dual-dimension governance demo
-17. later isolated derived-state runtime and adversarial hardening
+13. runtime semantic governance
+14. decision receipts / runtime evidence
+15. strategy selection and retry governance
+16. action safety gate / dual-dimension governance demo
+17. later production and agent-facing hardening
 
 This order is intentional.
 
@@ -527,57 +527,287 @@ Detailed execution records are maintained in:
 
 ---
 
-# Stage 4: Runtime Semantic Validation and Runtime Decision Boundary
+# Stage 4: Runtime Semantic Governance
 
-Stage 4 is not only an error classification stage.
+## Goal
 
-It is the transition from:
+Stage 4 introduces the first public-facing runtime semantic governance layer after the durable history, snapshot trust, and minimal actor / permission baselines are in place.
 
-```text
-semantic failure detection
-```
+The goal is not to add another pile of validators, logs, or retry labels.
 
-to:
+The goal is to make runtime correctness evidence governable:
 
 ```text
-structured semantic outcome
-→ runtime decision policy
-→ action safety boundary
+technical evidence
+→ semantic interpretation
+→ durable evidence
+→ policy-linked decision
+→ execution strategy
+→ retry governance
 ```
 
-The core idea is:
+Stage 4 is where Compass begins to answer:
 
-> Error semantics are not only for observation.  
-> They should give the runtime authority to continue, retry, rebuild, block, quarantine, stop, or escalate.
-
-## Reasoning Bridge
-
-Stage 4 follows from the limitation that raw exception strings, boolean results, and ad hoc rejection reasons are not enough for runtime governance.
-
-For the reasoning behind this transition, see:
-
-- [From Exception Strings to Governable Outcomes](../postmortems/from_exception_strings_to_governable_outcomes.md)
-
-That postmortem explains why the project must evolve from:
-
-```text
-raise ValueError(...)
-→ structured semantic outcome
-→ runtime decision policy
-→ runtime decision
-→ action safety gate
-→ layered trust / governance
-```
-
-The purpose is not to claim that Stage 4 is already implemented.
+> Given technical runtime evidence, what does this mean for semantic correctness, and what should the system be allowed to do next?
 
 ---
 
-## Stage 4A — Layer 2 Minimal Validator
+## Why Stage 4 Comes After Stage 3.5E
+
+Stage 3.5E completed the minimal durable-history and permission boundary needed before runtime governance grows:
+
+- accepted history has stronger mutation boundaries
+- derived state remains operationally mutable under controlled runtime roles
+- snapshot artifacts remain derived and subordinate to accepted history
+- runtime role responsibility is clearer
+- minimal actor metadata is separated from future governance decision evidence
+
+Stage 4 can now build on this foundation without mixing authority, derived state, actor identity, and governance decisions into one layer.
+
+---
+
+## Core Principle
+
+Stage 4 preserves the following distinctions:
+
+```text
+technical status
+≠
+semantic outcome
+
+semantic outcome
+≠
+runtime decision
+
+runtime decision
+≠
+execution strategy
+
+retry attempt
+≠
+same intent
+```
+
+These distinctions prevent Compass from treating a raw exception, a failed replay, a stale snapshot, a retry attempt, or a fast path as if each already carried enough semantic meaning to decide what should happen next.
+
+---
+
+## Public Stage 4 Sequence
+
+The public Stage 4 sequence is:
+
+```text
+Stage 4A — SemanticOutcome Core
+Stage 4B — DecisionReceipt / Runtime Evidence Record
+Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
+Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
+Stage 4B.5 — Order Domain Policy Contract v0
+Stage 4C — RuntimeDecisionPolicy
+Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
+Stage 4D — StrategySelector / Fast-Path Health Policy
+Stage 4E — Retry Governance / Attempt Classification
+```
+
+This sequence is intentionally staged.
+
+Compass should first define semantic meaning, then preserve decision evidence, then connect outcomes to policy, then decide runtime action, then choose execution strategy, and only then govern retries.
+
+---
+
+## Stage 4A — SemanticOutcome Core
 
 ### Goal
 
-Add the first read-side / state-level Compass validator.
+Stage 4A defines the semantic outcome vocabulary for runtime correctness.
+
+It maps technical runtime evidence into structured semantic meaning.
+
+Examples of technical evidence include:
+
+- replay validation result
+- projection drift detection
+- snapshot trust failure
+- snapshot fast-path unavailability
+- idempotency classification
+- concurrency conflict
+- unresolved runtime state
+
+Stage 4A should not make final runtime decisions directly.
+
+It should answer:
+
+```text
+What does this evidence mean semantically?
+```
+
+not:
+
+```text
+Which execution path is cheapest?
+```
+
+### Non-goals
+
+Stage 4A does not implement:
+
+- receipt persistence
+- diagnostic trace tables
+- policy contract
+- strategy selector
+- retry governance
+- benchmark suite
+- action safety gate
+
+---
+
+## Stage 4B — DecisionReceipt / Runtime Evidence Record
+
+### Goal
+
+Stage 4B records the semantic outcome and the evidence used to produce it.
+
+A receipt should preserve summary-level runtime evidence:
+
+- what semantic outcome was produced
+- what evidence source was used
+- what boundary was evaluated
+- which actor or runtime role was involved
+- whether fallback, rebuild, quarantine, review, or retry may be required
+- selected timing / cost summaries when relevant
+
+A receipt is not a full diagnostic trace table.
+
+It should make runtime semantic decisions reviewable without turning every internal detail into permanent business history.
+
+---
+
+## Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
+
+### Goal
+
+Stage 4B.1 separates detailed failure-path diagnostics from primary semantic results and decision receipts.
+
+The rule is:
+
+```text
+resolved state belongs in the primary result only when resolution succeeds
+partial progress belongs in diagnostic trace
+```
+
+This keeps primary contracts strict while still preserving useful investigation evidence when resolution fails.
+
+---
+
+## Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
+
+### Goal
+
+Stage 4B.2 defines what cost and timing evidence should be observable before StrategySelector can make cost-aware decisions.
+
+This is not a benchmark suite.
+
+It is a measurement vocabulary for later runtime governance.
+
+Stage 4B.2 should help distinguish:
+
+```text
+semantic trust
+≠
+execution cost
+≠
+runtime strategy
+```
+
+The purpose is not to always choose the fastest path.
+
+The purpose is to eventually choose the lowest-cost path among semantically acceptable paths.
+
+### Public Boundary
+
+Stage 4B.2 may define high-level measurement categories such as:
+
+- validation cost
+- replay cost
+- resolver cost
+- transaction duration
+- lock wait
+- retry count
+- tail length
+- snapshot usage
+- receipt usage
+- fallback usage
+- semantic risk level
+
+It should not yet become a production benchmark suite, performance dashboard, or automatic optimization system.
+
+---
+
+## Stage 4B.5 — Order Domain Policy Contract v0
+
+### Goal
+
+Stage 4B.5 introduces a narrow policy-contract boundary for the current order/payment domain.
+
+The purpose is to connect semantic outcomes to stable rule references and recovery hints without turning Stage 4 into a general policy platform.
+
+Core boundary:
+
+```text
+policy contract defines intended correctness
+Compass verifies runtime semantic truth
+runtime policy decides allowed action
+```
+
+Policy contract does not replace Compass.
+
+Compass does not replace policy contract.
+
+### Non-goals
+
+Stage 4B.5 does not implement:
+
+- general policy authoring platform
+- policy promotion workflow
+- cross-domain governance
+- automatic policy evolution
+- agent workflow orchestration
+
+---
+
+## Stage 4C — RuntimeDecisionPolicy
+
+### Goal
+
+Stage 4C converts semantic outcomes and supporting evidence into runtime decisions.
+
+It answers:
+
+```text
+Given this semantic outcome and evidence, what should the system be allowed to do?
+```
+
+Examples of runtime decisions may include:
+
+- allow
+- block
+- replay prior accepted result
+- fallback to authority
+- rebuild
+- quarantine
+- retry after reload
+- escalate
+
+Stage 4C decides what action is semantically allowed.
+
+It does not choose the cheapest execution path. That belongs to Stage 4D.
+
+---
+
+## Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
+
+### Goal
+
+Stage 4C.5 aligns write-side Layer 1 and read-side Layer 2 around compatible semantic outcome and runtime decision vocabulary.
 
 Layer 1 protects:
 
@@ -591,744 +821,227 @@ Layer 2 protects:
 accepted history → derived runtime state
 ```
 
-### Detects
+They should not become separate semantic worlds.
 
-- projection drift
-- replay vs persisted projection mismatch
-- reducer mismatch
-- checkpoint / state mismatch
-- snapshot metadata invalidity
-- snapshot hash mismatch
-- unsupported snapshot schema
-- untrusted snapshot reducer version
-- snapshot tail discontinuity
-- snapshot replay mismatch
-
-### Minimal Flow
-
-```text
-accepted event history
-        ↓
-replay using canonical reducer
-        ↓
-expected_state
-        ↓ compare
-persisted_projection_state
-        ↓
-Layer 2 validation result
-```
-
-### Completion Criteria
-
-- deterministically create at least 1–2 projection drift cases
-- replay accepted history into expected state
-- compare expected state vs persisted projection state
-- emit a clear validation result
-
-### Non-goal
-
-Stage 4A should not yet decide what the runtime should do.
-
-It only answers:
-
-> Is derived state semantically correct?
+The purpose of Stage 4C.5 is alignment, not rewriting the already-working write-side admission model.
 
 ---
 
-## Stage 4B — Structured Semantic Outcome / Error Model v1
+## Stage 4D — StrategySelector / Fast-Path Health Policy
 
 ### Goal
 
-Convert validation results from bool / exception / string forms into machine-readable semantic outcomes.
+Stage 4D selects execution strategy under changing runtime conditions.
 
-### Preferred Name
+It should choose among paths that are already allowed by semantic outcome, policy contract, and runtime decision.
 
-Use `SemanticOutcome` rather than only `ErrorModel`.
+Examples of strategy questions:
 
-Reason:
+- should the runtime use authority replay or snapshot fast path?
+- is a receipt-backed trusted snapshot sufficient?
+- should a repeated fast-path failure temporarily disable the fast path?
+- should projection be rebuilt or quarantined?
+- should write-side contention prefer optimistic or pessimistic admission strategy?
 
-Some outcomes are not exceptions.  
-They may represent semantic drift, trust issues, violations, or action-safety risks.
-
-### Minimal Structure
-
-```python
-@dataclass(frozen=True)
-class SemanticOutcome:
-    outcome_id: str
-    ok: bool
-    layer: str
-    error_code: str | None
-    error_type: str | None
-    severity: str
-    reversibility: str
-    risk_level: str
-    context: dict
-    evidence: dict
-    message: str
-```
-
-### Retry Reason Classification and Intent Consistency
-
-Stage 4B should explicitly classify retry-like situations.
-
-Retry is not a single category.
-
-A retry-like situation may represent:
-
-- idempotent replay of the same request identity
-- idempotency conflict where the same request identity carries different command meaning
-- stale-write retry caused by concurrency admission
-- transient infrastructure retry
-- rebuild-oriented retry caused by projection / snapshot drift
-- future agent intent drift where the agent claims to retry the same task but changes the intended meaning
-
-This classification should belong to `SemanticOutcome` / request-attempt evidence design.
-
-It should not be added to `idempotency_records`.
-
-Candidate context fields:
+Important principle:
 
 ```text
-retry_observed
-retry_class
-retry_cause
-retry_safety
-intent_consistency
-idempotency_verdict
-admission_verdict
-validation_verdict
-stored_fingerprint
-incoming_fingerprint
-expected_version
-actual_version
+StrategySelector should not choose the fastest path.
+It should choose the lowest-cost path among semantically acceptable paths.
 ```
-
-Candidate values:
-
-```text
-retry_class:
-- IDEMPOTENT_REPLAY
-- CONCURRENCY_RETRY
-- INFRASTRUCTURE_RETRY
-- SEMANTIC_CONFLICT
-- SEMANTIC_DRIFT
-- REBUILD_REQUIRED
-- UNKNOWN
-
-retry_safety:
-- SAFE_TO_REPLAY
-- SAFE_TO_RETRY_AFTER_RELOAD
-- RETRY_WITH_BACKOFF
-- REBUILD_REQUIRED
-- NOT_RETRYABLE
-- BLOCK_AND_ESCALATE
-- UNKNOWN
-
-intent_consistency:
-- SAME_INTENT
-- SAME_IDENTITY_DIFFERENT_MEANING
-- NOT_AN_IDEMPOTENCY_REPLAY
-- AGENT_INTENT_DRIFT
-- NOT_APPLICABLE
-- UNKNOWN
-```
-
-### Why `reversibility` Matters
-
-Policy must know whether the failure is:
-
-- reversible
-- rebuildable
-- recoverable
-- irreversible boundary risk
-
-Examples:
-
-- projection drift → reversible / rebuildable
-- invalid transition before event append → irreversible boundary risk
-- stale checkpoint → operational risk
-- reducer mismatch → high severity semantic risk
-
-### Minimal Error Types
-
-- `SEMANTIC_PROJECTION_DRIFT`
-- `CHECKPOINT_STATE_MISMATCH`
-- `REPLAY_REDUCER_MISMATCH`
-- `DOMAIN_TRANSITION_VIOLATION`
-- `IRREVERSIBLE_BOUNDARY_RISK`
-- `OPERATIONAL_STALENESS`
-- `SNAPSHOT_METADATA_INVALID`
-- `SNAPSHOT_HASH_MISMATCH`
-- `SNAPSHOT_SCHEMA_UNSUPPORTED`
-- `SNAPSHOT_REDUCER_VERSION_UNTRUSTED`
-- `SNAPSHOT_TAIL_DISCONTINUITY`
-- `SNAPSHOT_REPLAY_MISMATCH`
-- `IDEMPOTENCY_CONFLICT`
-- `STALE_WRITE`
-- `AGENT_INTENT_DRIFT`
-
-### Completion Criteria
-
-- projection drift emits `SemanticOutcome`
-- outcome contains context and evidence
-- tests assert structured fields
-- tests do not depend only on exception message strings
-
-### Boundary
-
-Stage 4B classifies what happened.
-
-It does not decide what the runtime should do.
 
 ---
 
-
-## Stage 4B.5 — Order Domain Policy Contract v0
+## Stage 4E — Retry Governance / Attempt Classification
 
 ### Goal
 
-Add a small domain-specific policy contract for the current order/payment model so that `SemanticOutcome` can reference stable rule IDs and recovery strategies.
+Stage 4E classifies and governs retry attempts.
 
-This stage should be treated as an optional Stage 4 extension between structured outcomes and runtime decisions.
-
-It should not become a general-purpose policy framework.
-
-### Why
-
-Stage 4B gives the system structured semantic outcomes.
-
-However, an outcome that only says:
+Core rule:
 
 ```text
-what failed
-why it failed
+retry attempt
+≠
+same intent
 ```
 
-is still not enough for governed agentic retry.
+A retry loop may preserve request identity while changing action path, target state, semantic meaning, or safety boundary.
 
-A retrying agent or workflow also needs to know:
+Stage 4E should distinguish retry-like situations such as:
 
-```text
-which rule was violated
-whether retry is allowed
-which recovery path is semantically valid
-whether replay is allowed
-whether the action must be blocked or escalated
-```
+- idempotent replay
+- concurrency retry
+- infrastructure retry
+- semantic conflict
+- semantic drift
+- rebuild-required retry
+- future agent intent drift
 
-Without a rule / recovery source, retry can degrade into blind trial-and-error against Compass.
+Retry governance should come after SemanticOutcome, DecisionReceipt, policy boundary, runtime decision policy, and strategy selection because a retry cannot be classified safely without knowing what semantic outcome happened before it.
 
-The purpose of Stage 4B.5 is to provide a minimal comparison source for policy-guided recovery.
+---
 
-### Candidate Artifact
+## Stage 4 Non-goals
 
-Introduce a narrow contract file such as:
+Stage 4 does not attempt to complete:
 
-```text
-contracts/order_domain_policy_contract_v1.yaml
-```
-
-The contract should be derived from the existing Order Domain v1 rules and should cover only the current minimal commerce model.
-
-Candidate scope:
-
-- allowed transitions: `INIT → CREATED`, `CREATED → PAID`
-- forbidden transitions: `INIT → PAID`, `PAID → PAID` for new requests
-- positive amount rules
-- full-payment semantics for v1
-- idempotent replay with same request identity and same semantic fingerprint
-- idempotency conflict for same request identity with different semantic fingerprint
-- stale-write recovery by reloading accepted history and rebuilding the candidate once
-- projection drift recovery by rebuild / quarantine decision
-
-### Candidate YAML Shape
-
-```yaml
-contract_id: order_domain_v1
-domain: order
-version: 1
-
-rules:
-  - id: order.transition.init_to_created
-    type: transition
-    from: INIT
-    to: CREATED
-    allowed: true
-
-  - id: order.transition.created_to_paid
-    type: transition
-    from: CREATED
-    to: PAID
-    allowed: true
-
-  - id: order.transition.init_to_paid
-    type: transition
-    from: INIT
-    to: PAID
-    allowed: false
-    violation: DOMAIN_TRANSITION_VIOLATION
-    recovery: BLOCK
-
-  - id: order.transition.paid_to_paid_new_request
-    type: transition
-    from: PAID
-    to: PAID
-    allowed: false
-    violation: DUPLICATE_PAYMENT_ATTEMPT
-    recovery: BLOCK
-
-  - id: order.request.same_id_same_fingerprint
-    type: idempotency
-    outcome: IDEMPOTENT_REPLAY
-    recovery: ALLOW_REPLAY
-
-  - id: order.request.same_id_different_fingerprint
-    type: idempotency
-    violation: IDEMPOTENCY_CONFLICT
-    recovery: BLOCK
-
-  - id: order.admission.requires_fresh_version
-    type: admission
-    violation: STALE_WRITE
-    recovery: REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE
-
-recovery_strategies:
-  BLOCK:
-    retryable: false
-    human_required: false
-
-  REFRESH_ACCEPTED_HISTORY_AND_REBUILD_ONCE:
-    retryable: true
-    max_attempts: 1
-    required_action: reload_accepted_history
-
-  ALLOW_REPLAY:
-    retryable: false
-    required_action: return_prior_accepted_result
-
-  BLOCK_AND_ESCALATE:
-    retryable: false
-    human_required: true
-```
-
-### SemanticOutcome Extension
-
-Stage 4B.5 may add a small policy reference type:
-
-```python
-@dataclass(frozen=True)
-class PolicyRuleRef:
-    contract_id: str
-    rule_id: str
-    version: int
-```
-
-`SemanticOutcome` may then include optional fields such as:
-
-```python
-policy_ref: PolicyRuleRef | None
-recovery_hint: str | None
-```
-
-The important point is that `SemanticOutcome` remains descriptive.
-
-It may identify the violated or relevant rule, but it should not directly execute the recovery decision.
-
-### Relationship to Stage 4C
-
-Stage 4C can consume:
-
-```text
-SemanticOutcome.error_type
-SemanticOutcome.policy_ref
-SemanticOutcome.recovery_hint
-```
-
-and produce:
-
-```text
-RuntimeDecision
-```
-
-This keeps the flow explicit:
-
-```text
-Domain Policy Contract
-→ SemanticOutcome
-→ RuntimeDecisionPolicy
-→ RuntimeDecision
-→ ActionSafetyGate
-```
-
-### Completion Criteria
-
-Stage 4B.5 is minimally complete when:
-
-- `contracts/order_domain_policy_contract_v1.yaml` exists
-- it contains rule IDs for the current v1 order/payment model
-- it contains recovery strategies for block, replay, reload/rebuild-once, and escalate
-- `SemanticOutcome` can optionally reference `policy_ref`
-- tests prove at least a few outcomes are linked to rule IDs
-- runtime decision tests can consume recovery hints without hardcoding every rule directly in the decision policy
-
-### Non-goals
-
-Stage 4B.5 does not implement:
-
-- a general policy authoring platform
-- compiled execution plans
-- release packs
-- policy promotion workflow
-- policy diff tooling
-- cross-domain governance
+- full production benchmark suite
+- observability platform
+- production SLO system
+- full RBAC or identity management
+- general-purpose policy platform
 - agent workflow orchestration
+- projection delivery layer
+- final action-safety demo
+- automatic strategy optimization
+
+These belong to later hardening stages or Stage 5.
 
 ---
 
-## Stage 4C — Runtime Decision Policy v1
+## Stage 4 Completion Direction
 
-### Goal
-
-Convert `SemanticOutcome` into `RuntimeDecision`.
-
-This is the detect → classify → decide step.
-
-If Stage 4B.5 is implemented, this policy may also consume `policy_ref` and `recovery_hint` from `SemanticOutcome` so that decisions are guided by the order-domain contract rather than only by hardcoded error-code mapping.
-
-### Minimal Structure
-
-```python
-class RuntimeAction(Enum):
-    ALLOW = "allow"
-    BLOCK = "block"
-    REBUILD = "rebuild"
-    ESCALATE = "escalate"
-    QUARANTINE = "quarantine"
-```
-
-```python
-@dataclass(frozen=True)
-class RuntimeDecision:
-    action: RuntimeAction
-    allowed: bool
-    reason: str
-    outcome_id: str
-    requires_human_review: bool = False
-```
-
-```python
-class RuntimeDecisionPolicy:
-    def decide(self, outcome: SemanticOutcome) -> RuntimeDecision:
-        ...
-```
-
-### Minimal Policy Rules
-
-- `ok=True` → `ALLOW`
-- `SEMANTIC_PROJECTION_DRIFT` + `severity=ERROR` → `REBUILD` or `QUARANTINE`
-- `CHECKPOINT_STATE_MISMATCH` → `REBUILD` or `ESCALATE`
-- `REPLAY_REDUCER_MISMATCH` → `BLOCK` or `ESCALATE`
-- `DOMAIN_TRANSITION_VIOLATION` → `BLOCK`
-- `IRREVERSIBLE_BOUNDARY_RISK` → `BLOCK`
-
-Retry-related mappings may include:
+Stage 4 is complete when the system can represent a governable runtime semantic pipeline:
 
 ```text
-IDEMPOTENT_REPLAY
-→ ALLOW_REPLAY
-
-IDEMPOTENCY_CONFLICT / SEMANTIC_CONFLICT
-→ BLOCK
-
-CONCURRENCY_RETRY
-→ RETRY_AFTER_RELOAD or BLOCK
-
-INFRASTRUCTURE_RETRY
-→ RETRY_WITH_BACKOFF or ESCALATE
-
-REBUILD_REQUIRED
-→ REBUILD or QUARANTINE
-
-AGENT_INTENT_DRIFT
-→ BLOCK_AND_ESCALATE
+technical evidence
+→ SemanticOutcome
+→ DecisionReceipt
+→ measurement evidence
+→ diagnostic trace when needed
+→ policy-linked runtime decision
+→ strategy selection
+→ retry governance
 ```
 
-`SemanticOutcome` describes why the retry-like situation occurred.
+The important result is not that every production concern is fully optimized.
 
-`RuntimeDecisionPolicy` decides whether the system should replay, retry, reload, rebuild, block, quarantine, or escalate.
-
-### Completion Criteria
-
-- policy converts projection drift outcome into `REBUILD` / `QUARANTINE` / `ESCALATE`
-- policy converts irreversible semantic violation into `BLOCK`
-- tests assert `decision.action`
-- tests assert `allowed=True / False`
-- irreversible action does not proceed when decision is `BLOCK`
+The important result is that runtime correctness evidence is no longer only raw technical status. It becomes structured semantic meaning that can support reviewable decisions and safe recovery.
 
 ---
 
-## Stage 4D — Layer 1 / Layer 2 Outcome + Decision Alignment
-
-### Goal
-
-Align write-side Layer 1 and read-side Layer 2 around the same flow:
+## Final Principle
 
 ```text
-SemanticOutcome
-        ↓
-RuntimeDecisionPolicy
-        ↓
-RuntimeDecision
+A green runtime path does not prove semantic correctness.
+A logged technical trace does not prove semantic understanding.
+A successful retry does not prove intent preservation.
+A measured fast path does not justify trust unless the trust source is explicit.
+A policy rule does not replace runtime admission.
 ```
 
-### Why This Comes After Stage 4C
 
-Layer 1 already works.
-
-The safer order is:
-
-1. build Layer 2 validation
-2. define structured outcomes
-3. define decision policy
-4. backport / align Layer 1 with the same outcome + decision family
-
-### Target Flow
-
-Layer 1:
-
-```text
-candidate event violates transition truth
-        ↓
-SemanticOutcome(
-  error_type=DOMAIN_TRANSITION_VIOLATION,
-  layer=LAYER_1_WRITE_SIDE,
-  reversibility=IRREVERSIBLE_BOUNDARY_RISK
-)
-        ↓
-RuntimeDecision(BLOCK)
-        ↓
-event does not enter EventStore
-```
-
-Layer 2:
-
-```text
-persisted projection state differs from replay expected state
-        ↓
-SemanticOutcome(
-  error_type=SEMANTIC_PROJECTION_DRIFT,
-  layer=LAYER_2_READ_SIDE,
-  reversibility=REVERSIBLE
-)
-        ↓
-RuntimeDecision(REBUILD or QUARANTINE)
-```
-
-### Completion Criteria
-
-- Layer 1 invalid transition emits `SemanticOutcome`
-- Layer 1 invalid transition maps to `RuntimeDecision(BLOCK)`
-- Layer 2 drift maps to `RuntimeDecision(REBUILD / QUARANTINE / ESCALATE)`
-- both layers can be described as Compass semantic runtime control
-
----
-
-## Stage 4E — Domain Action Safety Gate
-
-### Goal
-
-Add the first domain-level safety gate before dependent actions.
-
-Do not start with an agent protocol.  
-Do not start with a universal executor.
-
-Start with the project domain and define a minimal action-safety boundary.
-
-### Candidate Domain Actions
-
-These can be simulations rather than real external calls:
-
-- `EMIT_DOWNSTREAM_SIGNAL`
-- `GENERATE_SETTLEMENT_REPORT`
-- `MARK_PROJECTION_TRUSTED`
-- `ADVANCE_EXTERNAL_EXPORT`
-
-### Minimal Flow
-
-```text
-requested action
-        ↓
-semantic state check
-        ↓
-SemanticOutcome
-        ↓
-RuntimeDecisionPolicy
-        ↓
-RuntimeDecision
-        ↓
-ActionSafetyGate
-        ↓
-execute or block
-```
-
-### Completion Criteria
-
-- unsafe semantic outcome blocks dependent action
-- projection drift can block or quarantine downstream action
-- clean semantic state allows action
-- tests prove blocked action is not executed
-
----
-
-# Stage 5: Dual-Dimension Governance Demo
+# Stage 5: Dual-Dimension Governance Demo / Action Safety
 
 ## Goal
 
-Create a reviewer-facing demo that evaluates system trust using two dimensions:
+Stage 5 demonstrates how runtime semantic governance can be used before externally meaningful actions are executed.
+
+Stage 4 creates the semantic governance pipeline.
+
+Stage 5 makes that pipeline visible as a reviewer-facing action-safety demo.
+
+The key relationship is:
 
 ```text
-semantic correctness × operational freshness
+semantic correctness
+×
+operational freshness / runtime trust
+→
+action safety
 ```
-
-The purpose of this stage is not only to observe whether the system is correct after the fact.
-
-The purpose is to decide whether a dependent action is safe before it executes.
-
-Snapshot / projection trust should contribute to the semantic correctness signal. A state may be operationally fresh but semantically untrusted if projection differs from accepted-history replay, snapshot trust checks fail, reducer version is untrusted, or checkpoint and projection state disagree.
-
-This is especially important for irreversible or high-risk actions, where post-hoc monitoring is too late.
-
-The final question is:
-
-> Is this state true enough, fresh enough, and safe enough to act on?
-
-## Core Matrix
-
-|  | Operational Fresh | Operational Stale |
-|---|---|---|
-| Semantic Correct | Safe to act | Semantically correct but stale |
-| Semantic Incorrect | Operationally healthy but semantically unsafe | Unsafe / stop / escalate |
-
-## Four Required Cases
-
-### Case 1 — Semantic Correct + Operational Fresh
-
-Signals:
-
-- accepted history replay equals persisted projection state
-- checkpoint recent
-- worker healthy
-
-Decision:
-
-- `SAFE_TO_ACT`
-
-### Case 2 — Semantic Correct + Operational Stale
-
-Signals:
-
-- accepted history replay equals persisted projection state
-- checkpoint too old
-- worker heartbeat stale
-
-Decision:
-
-- `STALE_BUT_SEMANTICALLY_VALID`
-- `REFRESH_BEFORE_ACTION`
-- or `ESCALATE`
-
-### Case 3 — Semantic Incorrect + Operational Fresh
-
-Signals:
-
-- worker recently ran
-- checkpoint fresh
-- projection state differs from replay expected state
-
-Decision:
-
-- `BLOCK_ACTION`
-- `REBUILD_PROJECTION`
-
-This is a key project insight:
-
-> Freshness does not imply correctness.
-
-### Case 4 — Semantic Incorrect + Operational Stale
-
-Signals:
-
-- projection drift exists
-- checkpoint stale
-- worker heartbeat stale
-
-Decision:
-
-- `STOP`
-- `QUARANTINE`
-- `ESCALATE`
-
-## Minimal Structures
-
-```python
-@dataclass(frozen=True)
-class SemanticSignal:
-    correct: bool
-    outcome: SemanticOutcome | None
-```
-
-```python
-@dataclass(frozen=True)
-class OperationalSignal:
-    fresh: bool
-    checkpoint_age_ms: int
-    worker_lag: int
-    reason: str
-```
-
-```python
-@dataclass(frozen=True)
-class ActionSafetyVerdict:
-    semantic_correct: bool
-    operational_fresh: bool
-    action: str
-    safe_to_act: bool
-    reason: str
-```
-
-```python
-class DualDimensionTrustEvaluator:
-    def evaluate(
-        self,
-        semantic_signal: SemanticSignal,
-        operational_signal: OperationalSignal,
-    ) -> ActionSafetyVerdict:
-        ...
-```
-
-## Demo Story
-
-The final demo should show:
-
-1. Layer 1 blocks invalid event truth before accepted history.
-2. Layer 2 detects projection drift from accepted history replay.
-3. `SemanticOutcome` explains the failure with evidence.
-4. `RuntimeDecisionPolicy` converts semantic outcome into `BLOCK` / `REBUILD` / `ESCALATE`.
-5. `DualDimensionTrustEvaluator` combines semantic correctness and operational freshness.
-6. `ActionSafetyGate` blocks unsafe dependent action when semantic correctness or operational freshness is insufficient.
-
-## Completion Criteria
-
-- README can explain the demo in 3–5 minutes
-- demo script can produce all 4 matrix cases
-- tests cover the 4 matrix cases
-- semantic incorrect + operational fresh case is clearly shown
-- semantic correct + operational stale case is clearly shown
-- action-safety verdict is explicit
-- docs clearly separate implemented vs future work
 
 ---
+
+## Why This Comes After Stage 4
+
+Action safety should not be built directly from raw technical status.
+
+Before an action-safety gate can make trustworthy decisions, the system needs:
+
+- SemanticOutcome
+- DecisionReceipt
+- runtime decision policy
+- strategy selection
+- retry governance
+- clear separation between accepted history and derived state
+
+Stage 5 uses those pieces to decide whether a downstream or externally visible action should proceed.
+
+---
+
+## Candidate Action Classes
+
+Stage 5 may simulate actions such as:
+
+- emitting a downstream signal
+- generating a settlement report
+- marking derived state as trusted
+- advancing an external export
+- allowing an agent-facing action to proceed
+
+The exact action set can remain narrow.
+
+The purpose is to demonstrate the governance loop, not to build a full production action platform.
+
+---
+
+## Dual-Dimension Matrix
+
+Stage 5 should demonstrate at least four cases:
+
+```text
+semantic correct + operational fresh
+semantic correct + operational stale
+semantic incorrect + operational fresh
+semantic incorrect + operational stale
+```
+
+This shows why technical liveness and semantic correctness are different dimensions.
+
+A system can be operationally fresh but semantically unsafe.
+
+A system can be semantically correct but operationally too stale for certain actions.
+
+---
+
+## Public Completion Direction
+
+Stage 5 is complete when the project can demonstrate:
+
+```text
+requested action
+→ semantic state check
+→ SemanticOutcome
+→ DecisionReceipt
+→ RuntimeDecisionPolicy
+→ StrategySelector
+→ ActionSafetyGate
+→ execute or block
+```
+
+---
+
+## Non-goals
+
+Stage 5 does not need to implement:
+
+- production-grade external integrations
+- full agent orchestration
+- general workflow engine
+- production SLO system
+- full policy authoring platform
+
+---
+
+## Final Principle
+
+```text
+A system should not execute externally meaningful actions only because the pipeline is green.
+It should execute them only when semantic correctness and operational trust are both acceptable for the action.
+```
+
 
 # Later Work: Governance and Chaos Hardening
 
@@ -1392,17 +1105,20 @@ Stage 3.5E:
 Durable History and Permission Hardening
 
 Stage 4:
-Runtime Semantic Validation and Runtime Decision Boundary
-  4A Layer 2 Minimal Validator
-  4B Structured Semantic Outcome / Error Model v1
+Runtime Semantic Governance
+  4A SemanticOutcome Core
+  4B DecisionReceipt / Runtime Evidence Record
+  4B.1 DiagnosticTrace / ResolutionTrace Boundary
+  4B.2 Measurement Matrix / Cost Evidence Inventory
   4B.5 Order Domain Policy Contract v0
-  4C Runtime Decision Policy v1
-  4D Layer 1 / Layer 2 Outcome + Decision Alignment
-  4E Domain Action Safety Gate
+  4C RuntimeDecisionPolicy
+  4C.5 Layer 1 / Layer 2 Outcome Alignment
+  4D StrategySelector / Fast-Path Health Policy
+  4E Retry Governance / Attempt Classification
 
 Stage 5:
-Dual-Dimension Governance Demo
-  semantic correctness × operational freshness
+Dual-Dimension Governance Demo / Action Safety
+  semantic correctness × operational freshness / runtime trust
   action safety verdict
 ```
 
@@ -1417,10 +1133,10 @@ durable truth
 → derived truth validation
 → replay-efficiency hardening
 → durable history hardening
-→ structured semantic outcome
-→ runtime decision policy
-→ action safety gate
-→ dual-dimension governance demo
+→ runtime semantic governance
+→ decision receipts / runtime evidence
+→ strategy selection and retry governance
+→ action safety / dual-dimension governance demo
 ```
 
 The project is not only trying to know that something failed.

@@ -24,6 +24,7 @@ It now also serves as the reference frame for an executable baseline covering:
 - projection snapshot schema, store, replay validator, and snapshot-assisted state resolver
 - aggregate snapshot trust deferral decision
 - Stage 3.5E durable history / permission hardening and minimal actor metadata boundary
+- Stage 4 runtime semantic governance as the current roadmap entry point
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 

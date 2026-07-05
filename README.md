@@ -39,7 +39,7 @@ The current implementation focus is:
 
 - **Stage 4 — runtime semantic governance**
 
-Stage 4 continues the roadmap toward runtime semantic validation, structured semantic outcomes, decision receipts, runtime decision policy, strategy selection, retry governance, and later action safety.
+Stage 4 continues the roadmap toward runtime semantic governance: structured semantic outcomes, decision receipts, measurement evidence, diagnostic traces, runtime decision policy, strategy selection, retry governance, and later action safety.
 
 ---
 
@@ -95,6 +95,9 @@ If you want to understand how the repository thinks rather than only what it imp
 
 - **Completed minimal actor / permission boundary**  
   Stage 3.5E completes the database role / privilege baseline, accepted-history mutation hardening, derived-state mutation permission tests, and minimal actor metadata boundary before Stage 4.
+
+- **Stage 4 runtime semantic governance is now the active branch direction**  
+  Stage 4 begins the transition from technical validation evidence into `SemanticOutcome`, `DecisionReceipt`, runtime decision policy, strategy selection, and retry governance.
 
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
@@ -413,28 +416,34 @@ Everything else grows around this core:
 - exact money durability is already established at the baseline level
 - durable accepted-history and permission hardening are now established as the pre-Stage 4 baseline
 
-### Phase 4 — Runtime Semantic Validation and Outcome Structuring
+### Phase 4 — Runtime Semantic Governance
 
-- projected state invariants
-- replay vs incremental consistency checks
-- Layer 2 minimal validator
-- structured semantic outcomes
-- future Layer 1 / Layer 2 outcome-family alignment
+- SemanticOutcome core
+- DecisionReceipt / runtime evidence record
+- DiagnosticTrace / ResolutionTrace boundary
+- Measurement Matrix / Cost Evidence Inventory
+- narrow policy-contract boundary for the current order/payment domain
+- RuntimeDecisionPolicy
+- Layer 1 / Layer 2 outcome-family alignment
+- StrategySelector / fast-path health policy
+- Retry Governance / attempt classification
 
-### Phase 5 — Demo, Packaging, and Reviewer-Facing Story
+### Phase 5 — Action Safety / Dual-Dimension Governance Demo
 
-- reviewer-friendly demo packaging
-- documentation alignment
+- reviewer-facing action-safety demo
+- semantic correctness × operational freshness / runtime trust
+- execute / block decision for externally meaningful actions
 - clear implementation vs future-work boundary
-- portfolio / open-source-ready milestone
 
-### Phase 6 — Governance and Chaos Hardening
+### Phase 6 — Later Production and Agent-Facing Hardening
 
-- advanced governance policy actions
-- warning / quarantine / audit behavior
-- evidence logging
-- semantic alerts
-- adversarial failure validation through chaos scenarios
+- benchmark suite if needed
+- evidence retention policy
+- cost-aware semantic governance
+- projection delivery layer if needed
+- isolated derived-state runtime / oblivious agent runtime evaluation when Stage 4 and Stage 5 foundations are stable
+- broader adversarial hardening
+
 
 ---
 
@@ -507,7 +516,7 @@ Stage 3.5E closeout is complete at the durable history / permission / actor-boun
 
 Next implementation milestones:
 
-- Stage 4 runtime semantic validation, semantic outcome structuring, decision receipts, runtime decision policy, strategy selection, and retry governance
+- Stage 4 runtime semantic governance: SemanticOutcome, DecisionReceipt, measurement evidence, diagnostic traces, policy-linked runtime decisions, StrategySelector, and retry governance
 - Stage 5 dual-dimension governance demo / action safety
 
 ---
@@ -535,7 +544,7 @@ The repository remains intentionally conservative:
 - `tests/` make selected invariants and failure paths executable
 - the current Stage 3 baseline remains intentionally minimal and in-memory
 - Stage 3.5A has hardened exact-money semantics before persistence expands
-- later phases will extend this baseline toward durable persistence, runtime semantic outcomes, and adversarial hardening
+- later phases will extend this baseline toward Stage 4 runtime semantic governance, Stage 5 action safety, and production / agent-facing hardening
 
 ---
 
