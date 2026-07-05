@@ -23,6 +23,7 @@ It grew from practical debugging, self-directed system design, and repeated atte
 | [Policy Evolution to Runtime Truth](05_policy_evolution_to_runtime_truth.md) | Records the future direction where machine-readable policy contracts, Compass runtime admission, and structured semantic outcomes connect into a governance loop. |
 | [AI Suggestions Are Candidate Actions](06_ai_suggestions_are_candidate_actions.md) | Records a methodology case study showing why AI-generated explanations and designs are treated as candidate actions that must pass repository-specific admission before becoming accepted documentation or implementation. |
 | [From Local ETL to Streaming System + Compass](07_from_local_etl_to_streaming_system_compass.md) | Records the project-origin path from local ETL friction and Airflow debugging into Core vs Enablers, semantic correctness, and streaming / event sourcing as the runtime body for Compass. |
+| [Prompt Engineering and the Trade-off Boundary](08_prompt_engineering_and_tradeoff_boundary.md) | Explains why prompt engineering can improve candidate generation but cannot replace project-specific architectural trade-off judgment. |
 
 ---
 
@@ -30,12 +31,13 @@ It grew from practical debugging, self-directed system design, and repeated atte
 
 1. [Learning and Design Methodology](00_learning_and_design_methodology.md)
 2. [IBO and Core/Enabler Origin](01_ibo_core_enabler_origin.md)
-3. [From Local ETL to Streaming System + Compass](from_local_etl_to_streaming_system_compass.md)
+3. [From Local ETL to Streaming System + Compass](07_from_local_etl_to_streaming_system_compass.md)
 4. [Unified Design Philosophy](02_unified_design_philosophy.md)
 5. [Core/Enabler as Semantic Fusion of SoC and DIP](03_core_enabler_soc_dip_fusion.md)
 6. [Data Infrastructure vs Semantic Infrastructure](04_data_infra_vs_semantic_infra.md)
 7. [Policy Evolution to Runtime Truth](05_policy_evolution_to_runtime_truth.md)
 8. [AI Suggestions Are Candidate Actions](06_ai_suggestions_are_candidate_actions.md)
+9. [Prompt Engineering and the Trade-off Boundary](08_prompt_engineering_and_tradeoff_boundary.md)
 
 This order matters because the philosophy in this repository has two layers:
 
@@ -73,6 +75,14 @@ AI-generated suggestion
 → accepted documentation / implementation
 ```
 
+The Prompt Engineering and Trade-off Boundary note extends that discipline one step further:
+
+```text
+better prompt
+→ better candidate
+≠ accepted architecture
+```
+
 ---
 
 ## How These Notes Relate to the Project
@@ -81,6 +91,7 @@ AI-generated suggestion
 |---|---|
 | Definition alignment before implementation | Boundary notes, ADRs, and staged implementation before code expansion |
 | AI suggestions as candidate actions | AI-generated explanations are reviewed against actual schema, dependency direction, and repository boundaries before becoming accepted docs or code |
+| Prompt engineering as candidate shaping | Prompts can improve generated candidates, but architectural admission still depends on project stage, cost, scope, and trade-off judgment |
 | Input → Bridge → Output | Command → Transactional Pipeline → Accepted Event / Derived State |
 | Core | Domain rules, aggregate legality, event semantics, pure state transition logic |
 | Enablers | Idempotency, validation, concurrency gate, projection worker, checkpointing, recovery mechanisms |
@@ -111,6 +122,7 @@ They explain why the project emphasizes:
 * documentation before implementation
 * defensive review before coding
 * AI-assisted design review without surrendering architectural ownership
+* prompt engineering as candidate shaping rather than architectural authority
 * future separation between physical infrastructure and semantic governance
 * future connection between policy evolution, runtime admission, structured outcomes, and recovery evidence
 
