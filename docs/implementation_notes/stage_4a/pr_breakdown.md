@@ -245,38 +245,101 @@ Introduce the minimal in-code vocabulary and result contract for runtime semanti
 
 PR2 translates the Stage 4A boundary into a small code-level contract.
 
+It defines how runtime correctness evidence can be represented as semantic meaning without deciding recovery, strategy, retry, or durable receipt behavior.
+
 ## Status
 
-Planned after PR1.
+Implemented by:
+
+```text
+feat/stage4a-pr2-semantic-outcome-result-contract
+```
 
 ## Scope
 
-PR2 may include:
+PR2 adds:
 
 ```text
-SemanticOutcome model
-SemanticOutcomeCategory or SemanticOutcomeCode enum
-Layer / boundary identifiers
-severity / risk / reversibility vocabulary
-basic construction helpers
-unit tests for model invariants
+src/compass/runtime/__init__.py
+src/compass/runtime/semantic_outcome.py
+tests/unit/compass/runtime/test_semantic_outcome.py
+docs/implementation_notes/stage_4a/semantic_outcome_result_contract.md
 ```
 
-The exact model shape should be chosen during implementation.
+PR2 introduces:
 
-The important point is that the result contract should describe semantic meaning without deciding recovery.
+```text
+SemanticOutcome
+SemanticOutcomeCategory
+SemanticOutcomeCode
+SemanticBoundary
+SemanticSeverity
+SemanticRiskLevel
+SemanticReversibility
+```
+
+The contract preserves:
+
+```text
+outcome identity
+boundary identity
+semantic category
+semantic code
+severity
+risk level
+reversibility
+reason
+context evidence
+runtime evidence
+```
+
+PR2 also establishes that `context` and `evidence` are defensively copied and frozen for common container types.
+
+This prevents semantic outcome evidence from being mutated after construction through the original input objects.
+
+## Important Boundary
+
+PR2 defines semantic interpretation only.
+
+It does not map existing technical statuses into outcomes yet.
+
+For example, PR2 defines that these meanings can exist:
+
+```text
+FAST_PATH_UNAVAILABLE
+DRIFT_DETECTED
+```
+
+But PR2 does not yet implement the mapper from:
+
+```text
+TAIL_REPLAY_FAILED
+→ FAST_PATH_UNAVAILABLE
+
+SNAPSHOT_ASSISTED_DRIFT
+→ DRIFT_DETECTED
+```
+
+That mapping belongs to PR3 / PR4.
 
 ## Non-goals
 
 PR2 does not implement:
 
 ```text
-DecisionReceipt persistence
-runtime policy
-strategy selection
-retry governance
-policy contract
-benchmark suite
+technical status mapping
+ProjectionSnapshotReplayValidationStatus mapping
+ProjectionSnapshotAssistedResolutionStatus mapping
+write-side admission mapping
+DecisionReceipt
+DiagnosticTrace
+Measurement Matrix
+policy contract YAML
+RuntimeDecisionPolicy
+StrategySelector
+RetryGovernance
+SQL migrations
+durable receipt store
 ```
 
 ---
