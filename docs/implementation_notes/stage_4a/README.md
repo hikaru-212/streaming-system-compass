@@ -343,6 +343,7 @@ Detailed notes:
 
 - [PR Breakdown](pr_breakdown.md)
 - [Runtime SemanticOutcome Boundary](semantic_outcome_boundary.md)
+- [SemanticOutcome Result Contract](semantic_outcome_result_contract.md)
 
 This sequence may be adjusted as implementation reveals constraints.
 
