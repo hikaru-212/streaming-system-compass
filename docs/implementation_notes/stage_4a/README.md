@@ -177,18 +177,17 @@ StrategySelector / Fast-Path Health Policy
 Retry Governance / Attempt Classification
 ```
 
-However, Stage 4A PR1 should remain documentation-first.
+However, Stage 4A should remain focused on semantic outcome vocabulary and mapping.
 
-It should define the SemanticOutcome boundary before introducing production code.
+It should not introduce durable receipts, policy execution, strategy selection, retry governance, or action-safety gates.
 
 ---
 
 ## Non-goals
 
-Stage 4A PR1 does not implement:
+Stage 4A does not implement:
 
 ```text
-production SemanticOutcome dataclass
 DecisionReceipt persistence
 DiagnosticTrace tables
 Measurement Matrix implementation
@@ -203,9 +202,7 @@ agent workflow orchestration
 full observability platform
 ```
 
-Stage 4A PR1 is a boundary PR.
-
-It should make the first Layer 2 semantic vocabulary clear without turning the PR into all of Stage 4.
+Stage 4A should make the first Layer 2 semantic vocabulary clear without turning the sub-stage into all of Stage 4.
 
 ---
 
@@ -344,8 +341,9 @@ Detailed notes:
 - [PR Breakdown](pr_breakdown.md)
 - [Runtime SemanticOutcome Boundary](semantic_outcome_boundary.md)
 - [SemanticOutcome Result Contract](semantic_outcome_result_contract.md)
+- [Runtime Technical Status Mapping](runtime_technical_status_mapping.md)
+- [Drift Validation Cost Boundary](drift_validation_cost_boundary.md)
 
 This sequence may be adjusted as implementation reveals constraints.
 
 However, Stage 4A should avoid expanding into receipts, policy, strategy selection, or retry governance.
-
