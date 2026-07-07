@@ -101,7 +101,7 @@ Individual PR branches should be created from the current Stage 4A sub-stage bra
 ```text
 feat/stage4a-pr1-semantic-outcome-boundary
 feat/stage4a-pr2-semantic-outcome-result-contract
-feat/stage4a-pr3-technical-status-mapping
+feat/stage4a-pr3-runtime-technical-status-mapping
 ```
 
 Each Stage 4A PR branch should be merged back into the Stage 4A sub-stage branch.
@@ -132,12 +132,11 @@ one commit = one smaller boundary-preserving change
 For example, a Stage 4A PR may contain:
 
 ```text
-docs: add stage 4 implementation notes baseline
-docs: define runtime semantic outcome boundary
-docs: align stage 4 roadmap with semantic outcome boundary
+feat: add runtime technical status mapping
+docs: document runtime technical status mapping
 ```
 
-These commits may all belong to the same PR if they serve the same PR-level semantic goal.
+These commits may belong to the same PR if they serve the same PR-level semantic goal.
 
 The commit boundary should remain small enough to explain what changed and why.
 
@@ -191,11 +190,15 @@ PR1 establishes why SemanticOutcome exists and how it differs from raw technical
 
 ## Status
 
-Planned.
+Implemented by:
+
+```text
+feat/stage4a-pr1-semantic-outcome-boundary
+```
 
 ## Scope
 
-PR1 should add:
+PR1 adds:
 
 ```text
 docs/implementation_notes/stage_4a/README.md
@@ -204,7 +207,7 @@ docs/implementation_notes/stage_4a/semantic_outcome_boundary.md
 docs/boundary_notes/runtime_semantic_outcome_boundary.md
 ```
 
-PR1 should clarify:
+PR1 clarifies:
 
 ```text
 why Stage 4A exists
@@ -348,67 +351,172 @@ durable receipt store
 
 ## Goal
 
-Map existing runtime technical statuses into SemanticOutcome.
+Introduce a generic mapper from raw runtime technical status names into `SemanticOutcome`.
 
-PR3 begins converting raw validator / resolver outputs into structured semantic interpretation.
+PR3 begins converting raw validator / resolver / runtime statuses into structured semantic interpretation without coupling the mapper to specific validator result objects.
 
 ## Status
 
-Planned after PR2.
+Implemented by:
+
+```text
+feat/stage4a-pr3-runtime-technical-status-mapping
+```
 
 ## Scope
 
-PR3 may include mappings from existing technical statuses such as:
+PR3 adds:
+
+```text
+src/compass/runtime/technical_status_mapping.py
+tests/unit/compass/runtime/test_technical_status_mapping.py
+docs/implementation_notes/stage_4a/runtime_technical_status_mapping.md
+docs/implementation_notes/stage_4a/drift_validation_cost_boundary.md
+```
+
+PR3 updates:
+
+```text
+src/compass/runtime/__init__.py
+docs/implementation_notes/stage_4a/README.md
+docs/implementation_notes/stage_4a/pr_breakdown.md
+```
+
+PR3 introduces:
+
+```text
+RuntimeTechnicalStatusMapping
+map_runtime_technical_status
+supported_runtime_technical_statuses
+```
+
+PR3 supports an initial generic status set, including:
 
 ```text
 MATCH
+RESOLVED_FROM_SNAPSHOT
 MISSING_SNAPSHOT
+MISSING_PROJECTION
+NO_ACCEPTED_HISTORY
 NO_ACCEPTED_HISTORY_FOR_ORDER
 INVALID_SNAPSHOT_BOUNDARY
-SNAPSHOT_ASSISTED_DRIFT
-RESOLVED_FROM_SNAPSHOT
 INVALID_SNAPSHOT_PRECONDITION
 INVALID_SNAPSHOT_COMPATIBILITY
 TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
 TAIL_REPLAY_FAILED
+DRIFT
+SNAPSHOT_ASSISTED_DRIFT
+OCC_CONFLICT_AFTER_VALIDATION
+LOCK_TIMEOUT
+IDEMPOTENT_REPLAY
+IDEMPOTENCY_CONFLICT
 ```
 
-into semantic outcomes such as:
+The mapping preserves context and evidence without making policy decisions.
+
+## Important Boundary
+
+PR3 defines generic status-to-outcome mapping only.
+
+It does not inspect adapter-specific result objects.
+
+For example, PR3 may map:
 
 ```text
-SEMANTICALLY_VALID
-RUNTIME_UNRESOLVED
-DERIVED_STATE_UNTRUSTED
-DRIFT_DETECTED
-FAST_PATH_UNAVAILABLE
-REQUIRES_AUTHORITY_FALLBACK
-REQUIRES_REBUILD
-REQUIRES_OPERATOR_REVIEW
-REJECT_DOWNSTREAM_USAGE
+TAIL_REPLAY_FAILED
+→ FAST_PATH_UNAVAILABLE
+
+SNAPSHOT_ASSISTED_DRIFT
+→ DRIFT_DETECTED
 ```
 
-The mapping should preserve context and evidence without making policy decisions.
+But PR3 does not yet convert:
 
-PR3 must also preserve the distinction between semantic drift and fast-path failure.
-In particular, `TAIL_REPLAY_FAILED` should not automatically imply snapshot corruption.
+```text
+ProjectionSnapshotReplayValidationResult
+ProjectionSnapshotAssistedResolutionResult
+DurableReplayValidationResult
+```
+
+into `SemanticOutcome`.
+
+That adapter work belongs to PR4.
+
+PR3 also does not convert explicit Layer 1 admission rejection results into `SemanticOutcome`.
+
+That line belongs to PR5.
+
+## Drift / Fast-Path Boundary
+
+PR3 preserves the distinction between semantic drift and fast-path failure.
+
+`TAIL_REPLAY_FAILED` should not automatically imply snapshot corruption.
+
 A tail replay failure means the current resolution path failed or became unavailable.
-It should usually map toward fast-path unavailability, unresolved runtime state, or authority fallback.
 
-By contrast, `SNAPSHOT_ASSISTED_DRIFT` means snapshot-assisted reconstruction diverged from what accepted history implies.
-That is a semantic drift signal and may require rebuild, quarantine, or operator review in later stages.
+It maps toward fast-path unavailability.
+
+By contrast, `SNAPSHOT_ASSISTED_DRIFT` means snapshot-assisted reconstruction diverged from accepted-history authority.
+
+It maps toward semantic drift.
 
 This distinction prevents Stage 4A from collapsing infrastructure / replay-path failure into semantic corruption.
+
+## Idempotency Boundary
+
+`IDEMPOTENCY_CONFLICT` is intentionally mapped conservatively in PR3.
+
+PR3 does not inspect operation mismatch, fingerprint mismatch, stored request evidence, or incoming request evidence.
+
+Later write-side admission / idempotency adapters may split this into more precise statuses such as:
+
+```text
+IDEMPOTENCY_OPERATION_MISMATCH
+→ INTENT_INCONSISTENT / INTENT_DRIFT_DETECTED
+
+IDEMPOTENCY_FINGERPRINT_MISMATCH
+→ INTENT_INCONSISTENT / SEMANTIC_CONFLICT_DETECTED
+```
+
+This split belongs to PR5 or Stage 4E, not this generic mapper.
+
+## Cost Boundary
+
+PR3 documents a cost boundary for drift validation.
+
+Projection state drift validation may be cheap when scoped by aggregate identity, such as `order_id`.
+
+Snapshot trust validation is different because repeated full authority comparison before every fast-path request can defeat the purpose of the snapshot path.
+
+Global projection consistency validation is different again and may require global or partition-wide checks.
+
+See:
+
+```text
+docs/implementation_notes/stage_4a/drift_validation_cost_boundary.md
+```
 
 ## Non-goals
 
 PR3 does not implement:
 
 ```text
+ProjectionSnapshotReplayValidationResult adapter
+ProjectionSnapshotAssistedResolutionResult adapter
+DurableReplayValidationResult adapter
+write-side admission rejection adapter
 runtime action selection
 fallback execution
 rebuild orchestration
 quarantine mechanism
-receipt persistence
+DecisionReceipt
+DiagnosticTrace
+Measurement Matrix
+RuntimeDecisionPolicy
+StrategySelector
+RetryGovernance
+SQL migrations
+durable receipt store
 ```
 
 ---
@@ -466,6 +574,15 @@ PR5 should not rewrite Layer 1.
 
 It should begin aligning the representation of write-side admission results with the runtime semantic outcome family.
 
+PR5 should include the explicit line:
+
+```text
+Layer 1 write-side admission rejection
+→ SemanticOutcome
+```
+
+This line should make Layer 1 rejection semantics machine-readable without allowing rejected candidates to enter accepted history.
+
 ## Status
 
 Planned after read-side outcome mapping is stable.
@@ -476,6 +593,12 @@ PR5 may include mappings for:
 
 ```text
 domain transition violation
+undefined event transition
+domain invariant violation
+missing required proof
+proof-candidate mismatch
+candidate payload invalid
+candidate conflicts with accepted state
 idempotent replay
 idempotency conflict
 OCC conflict after validation
@@ -483,27 +606,32 @@ concurrency uncertainty
 Compass Layer 1 block
 ```
 
-The goal is compatibility, not replacement.
-
-Layer 1 still protects:
+PR5 should preserve:
 
 ```text
-candidate event
-→ accepted history
-```
-
-Layer 2 protects:
-
-```text
-accepted history
-→ derived runtime state / runtime interpretation
+accepted history = admitted facts only
+rejected candidate = outside accepted history
+Layer 1 protects accepted history
+Stage 4A mapping explains why a candidate was rejected
 ```
 
 ## Non-goals
 
-PR5 does not implement the full Stage 4C.5 alignment.
+PR5 does not implement:
 
-It should only prepare compatible vocabulary where straightforward.
+```text
+rejected candidate table
+admission_rejection_records
+candidate_attempts table
+rejected_event_log
+durable receipt writing
+retry governance
+agent policy decision
+automatic retry blocking
+strategy selection
+accepted history changes
+Layer 1 validator rewrite
+```
 
 ---
 
@@ -511,56 +639,28 @@ It should only prepare compatible vocabulary where straightforward.
 
 ## Goal
 
-Close Stage 4A after SemanticOutcome has a stable boundary, vocabulary, and initial mappings.
+Close Stage 4A by aligning documentation, exports, tests, and follow-up notes.
 
-PR6 should update documentation and confirm that later Stage 4 stages can safely build on SemanticOutcome.
+PR6 should confirm that Stage 4A has a coherent SemanticOutcome core before Stage 4B begins.
 
 ## Status
 
-Planned.
+Planned after PR5.
 
 ## Scope
 
 PR6 may include:
 
 ```text
-README alignment
-roadmap alignment
-Stage 4A closeout notes
-summary of implemented outcome mappings
-deferred items for Stage 4B / 4C / 4D / 4E
+Stage 4A README alignment
+PR breakdown closeout
+follow-up notes for Stage 4B / 4C / 4D / 4E
+cleanup of temporary wording
+final test run notes
 ```
 
-## Completion Criteria
+## Non-goals
 
-Stage 4A is complete when:
+PR6 should not introduce new runtime governance features.
 
-```text
-technical validator / resolver results can be mapped into SemanticOutcome
-projection drift produces a structured SemanticOutcome
-snapshot trust failure produces a structured SemanticOutcome
-runtime unresolved states produce structured outcomes
-idempotency / concurrency cases have compatible outcome vocabulary or explicit deferral
-tests assert structured fields instead of exception strings
-no runtime decision is made directly from raw technical status
-```
-
----
-
-## Later Stage 4 Sequence
-
-After Stage 4A, later work may proceed as:
-
-```text
-Stage 4B — DecisionReceipt / Runtime Evidence Record
-Stage 4B.1 — DiagnosticTrace / ResolutionTrace
-Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
-Stage 4B.5 — Order Domain Policy Contract v0
-Stage 4C — RuntimeDecisionPolicy
-Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
-Stage 4D — StrategySelector / Fast-Path Health Policy
-Stage 4E — Retry Governance / Attempt Classification
-```
-
-Those stages should consume SemanticOutcome rather than bypass it.
-
+It should close the stage, not expand it.
