@@ -102,6 +102,7 @@ Individual PR branches should be created from the current Stage 4A sub-stage bra
 feat/stage4a-pr1-semantic-outcome-boundary
 feat/stage4a-pr2-semantic-outcome-result-contract
 feat/stage4a-pr3-runtime-technical-status-mapping
+feat/stage4a-pr4-read-side-outcome-mapping
 ```
 
 Each Stage 4A PR branch should be merged back into the Stage 4A sub-stage branch.
@@ -525,42 +526,325 @@ durable receipt store
 
 ## Goal
 
-Apply SemanticOutcome mapping to read-side correctness boundaries.
+Apply SemanticOutcome mapping to read-side correctness and snapshot-trust boundaries.
 
-PR4 should connect SemanticOutcome to projection replay validation, snapshot-assisted replay validation, and snapshot-assisted resolution.
+PR4 connects concrete validator / resolver result objects to the Stage 4A `SemanticOutcome` contract.
+
+The core direction is:
+
+```text
+read-side validator / resolver result
+→ technical_status + boundary + reason + context + evidence
+→ map_runtime_technical_status(...)
+→ SemanticOutcome
+```
+
+PR4 is the adapter layer between Stage 3.5 read-side result objects and Stage 4A semantic outcomes.
 
 ## Status
 
-Planned after PR3.
+Implemented by:
+
+```text
+feat/stage4a-pr4-read-side-outcome-mapping
+```
 
 ## Scope
 
-PR4 may include:
+PR4 adds:
 
 ```text
-projection drift outcome mapping
-snapshot trust failure outcome mapping
-snapshot fast-path unavailable mapping
-resolver unresolved-state mapping
-authority fallback required mapping
-read-side tests asserting semantic outcomes
+src/compass/runtime/read_side_outcome_mapping.py
+tests/unit/compass/runtime/test_read_side_outcome_mapping.py
+docs/implementation_notes/stage_4a/read_side_outcome_mapping.md
+docs/implementation_notes/stage_4a/pr4_closeout.md
 ```
 
-PR4 should preserve the existing authority model:
+PR4 updates:
 
 ```text
-accepted history = authority
-projection = derived state
-snapshot = derived compression
+src/compass/runtime/__init__.py
+docs/implementation_notes/stage_4a/README.md
+docs/implementation_notes/stage_4a/pr_breakdown.md
+```
+
+PR4 maps:
+
+```text
+ReplayValidationResult
+ProjectionSnapshotReplayValidationResult
+ProjectionSnapshotAssistedResolutionResult
+```
+
+into `SemanticOutcome`.
+
+## Implemented Mapping Functions
+
+PR4 introduces:
+
+```text
+map_replay_validation_result_to_semantic_outcome
+map_projection_snapshot_replay_validation_result_to_semantic_outcome
+map_projection_snapshot_assisted_resolution_result_to_semantic_outcome
+```
+
+These functions do not own semantic status mapping tables directly.
+
+They delegate normalized technical statuses to the PR3 mapper:
+
+```text
+map_runtime_technical_status(...)
+```
+
+## Boundary Mapping
+
+The observation boundary is determined by where the result was produced.
+
+```text
+ReplayValidationResult
+→ LAYER_2_READ_SIDE
+```
+
+because durable replay validation observes whether persisted projection state matches accepted-history replay.
+
+```text
+ProjectionSnapshotReplayValidationResult
+→ SNAPSHOT_TRUST
+```
+
+because snapshot replay validation observes whether snapshot-assisted replay can be trusted against accepted-history authority replay.
+
+```text
+ProjectionSnapshotAssistedResolutionResult
+→ SNAPSHOT_TRUST
+```
+
+because snapshot-assisted resolution consumes a pre-qualified snapshot identity and attempts snapshot + tail reconstruction.
+
+## Observation Boundary vs Root Cause Boundary
+
+PR4 establishes an important rule:
+
+```text
+SemanticBoundary records where the condition was observed.
+It does not prove the original root cause.
+```
+
+For example:
+
+```text
+NO_ACCEPTED_HISTORY
+observed by DurableReplayValidator
+→ boundary = LAYER_2_READ_SIDE
+```
+
+and:
+
+```text
+NO_ACCEPTED_HISTORY_FOR_ORDER
+observed by ProjectionSnapshotReplayValidator
+→ boundary = SNAPSHOT_TRUST
+```
+
+These outcomes do not claim that Layer 1 write-side admission failed.
+
+They only claim that the current read-side or snapshot-trust boundary cannot establish authority-backed validation because accepted-history evidence is unavailable for the requested order.
+
+Future write-side admission outcomes may explain why no accepted event exists.
+
+That correlation belongs to later `DecisionReceipt`, `DiagnosticTrace`, or `ResolutionTrace` layers.
+
+PR4 must remain conservative:
+
+```text
+read-side / snapshot observation
+→ RUNTIME_UNRESOLVED
+```
+
+It must not infer:
+
+```text
+read-side missing authority evidence
+→ write-side failure
+```
+
+## Tail Source Contract Violation Boundary
+
+PR4 preserves the distinction:
+
+```text
+TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
+≠
+SNAPSHOT_ASSISTED_DRIFT
+```
+
+A tail source contract violation means the snapshot-assisted path did not complete safely.
+
+The validator may already have:
+
+```text
+snapshot boundary state
+authority state
+```
+
+but if tail replay cannot safely advance, the system does not have completed drift evidence.
+
+Therefore the semantic result is:
+
+```text
+RUNTIME_UNRESOLVED
+```
+
+not:
+
+```text
+DRIFT_DETECTED
+```
+
+Drift requires a completed comparison:
+
+```text
+completed snapshot-assisted state
+vs
+authority_state
+```
+
+## Resolver vs Validator Boundary
+
+PR4 distinguishes:
+
+```text
+ProjectionSnapshotReplayValidator
+= full authority replay validator
+```
+
+from:
+
+```text
+ProjectionSnapshotAssistedStateResolver
+= snapshot-assisted resolver / fast-path reconstruction primitive
+```
+
+The validator may expose:
+
+```text
+authority_state
+snapshot_assisted_state
+```
+
+The resolver exposes:
+
+```text
+resolved_state
+```
+
+because it does not perform full accepted-history replay.
+
+PR4 tests preserve this difference through evidence flags such as:
+
+```text
+authority_state_present
+snapshot_assisted_state_present
+resolved_state_present
+```
+
+## Reason Fallback Boundary
+
+PR4 preserves result reasons when present.
+
+If a result reason is missing or blank, the adapter records the result source type:
+
+```text
+Missing explicit reason from ReplayValidationResult.
+Missing explicit reason from ProjectionSnapshotReplayValidationResult.
+Missing explicit reason from ProjectionSnapshotAssistedResolutionResult.
+```
+
+This prevents blank reasons from being normalized into a source-less generic message.
+
+## Deferred Projection Worker Mapping
+
+PR4 intentionally does not include ordinary projection worker execution mapping.
+
+Projection validation answers:
+
+```text
+Does derived read-side state match accepted-history authority?
+```
+
+Projection worker execution answers:
+
+```text
+Is the projection runtime currently processing accepted events successfully and freshly?
+```
+
+These are related, but they are not the same.
+
+```text
+projection worker failure ≠ projection drift
+projection lag ≠ semantic corruption
+projection freshness ≠ accepted-history authority
+```
+
+Projection worker freshness evidence belongs to Stage 5+ / later dual-dimension governance, where action safety may require both:
+
+```text
+semantic correctness
+×
+operational freshness / runtime trust
 ```
 
 ## Non-goals
 
-PR4 does not make StrategySelector decisions.
+PR4 does not implement:
 
-It may say that authority fallback is semantically required.
+```text
+write-side admission rejection adapter
+root-cause inference
+ProjectionWorker execution mapping
+projection delivery log
+projection inbox
+worker governance
+runtime action selection
+fallback execution
+rebuild orchestration
+quarantine mechanism
+DecisionReceipt
+DiagnosticTrace
+Measurement Matrix
+RuntimeDecisionPolicy
+StrategySelector
+RetryGovernance
+SQL migrations
+durable receipt store
+```
 
-It should not choose the cheapest authority fallback path.
+## Relationship to PR5
+
+PR5 should add the explicit write-side line:
+
+```text
+Layer 1 write-side admission rejection
+→ SemanticOutcome
+```
+
+PR5 should not retroactively change PR4 read-side or snapshot outcomes into Layer 1 outcomes.
+
+The intended relationship is:
+
+```text
+PR4:
+read-side / snapshot observation
+→ SemanticOutcome
+
+PR5:
+write-side admission rejection
+→ SemanticOutcome
+```
+
+Later receipt and trace layers may correlate PR4 observations with PR5 write-side causes.
+
+Stage 4A itself should not perform root-cause inference.
 
 ---
 

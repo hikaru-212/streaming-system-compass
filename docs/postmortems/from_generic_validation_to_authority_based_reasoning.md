@@ -3,6 +3,7 @@
 [← Back to Postmortems Index](README.md)
 
 **Recorded on:** 2026-06-24
+**Updated for Stage 4A:** 2026-07-08
 
 ---
 
@@ -358,6 +359,128 @@ system authority model
 ```
 
 must all point to the same semantic boundary.
+
+---
+
+## Follow-up: Green Tests Are Not Semantic Proofs
+
+A later Stage 4A mapping test exposed a related but more subtle issue:
+
+```text
+a test can pass while still encoding the wrong semantic evidence shape
+```
+
+The concrete case was:
+
+```text
+TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
+```
+
+At first glance, it is enough for the mapping test to assert:
+
+```text
+technical_status = TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
+category = UNRESOLVED
+semantic_code = RUNTIME_UNRESOLVED
+```
+
+That would make the test green.
+
+But the fixture still matters.
+
+For the full `ProjectionSnapshotReplayValidator`, the validator has two conceptual paths:
+
+```text
+authority path:
+accepted history → full replay → authority_state
+
+snapshot-assisted path:
+snapshot → hydrate boundary state → tail replay → snapshot_assisted_state
+```
+
+A tail source contract violation means:
+
+```text
+snapshot boundary state may already exist
+authority_state may already exist
+but the snapshot-assisted path could not safely advance through tail replay
+```
+
+Therefore, the fixture must not imply that:
+
+```text
+snapshot_assisted_state is missing
+```
+
+because that would collapse this case into something closer to `MISSING_SNAPSHOT`.
+
+It also must not imply that:
+
+```text
+snapshot_assisted_state == authority_state
+```
+
+because that would suggest the snapshot-assisted path already completed successfully.
+
+The correct fixture shape is:
+
+```text
+snapshot_assisted_state = snapshot boundary state
+authority_state = full accepted-history replay state
+snapshot_assisted_state may differ from authority_state
+status = TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
+semantic_code = RUNTIME_UNRESOLVED
+```
+
+The important distinction is:
+
+```text
+difference before completed tail replay
+≠
+drift evidence
+```
+
+Drift requires a completed comparison:
+
+```text
+completed snapshot-assisted state
+vs
+authority_state
+```
+
+If the tail event source violates its contract, the comparison precondition does not hold.
+
+Therefore, even if the partial snapshot-assisted state differs from authority state, the correct mapping is:
+
+```text
+RUNTIME_UNRESOLVED
+```
+
+not:
+
+```text
+DRIFT_DETECTED
+```
+
+This follow-up reinforces the earlier postmortem lesson:
+
+```text
+test name
+fixture setup
+partial evidence
+asserted status
+semantic boundary
+```
+
+must all point to the same proof.
+
+A green test only proves that assertions passed.
+
+It does not prove that the test fixture preserves the system’s semantic contract.
+
+For Compass, tests should not merely check output labels.
+
+They should preserve the evidence shape required for future receipts, diagnostic traces, and root-cause reasoning.
 
 ---
 
