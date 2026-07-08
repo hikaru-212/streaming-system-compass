@@ -121,6 +121,30 @@ Given technical runtime evidence,
 what does this mean for semantic correctness?
 ```
 
+As of PR4, Stage 4A also includes a concrete read-side adapter layer:
+
+```text
+ReplayValidationResult
+ProjectionSnapshotReplayValidationResult
+ProjectionSnapshotAssistedResolutionResult
+→ SemanticOutcome
+```
+
+This adapter layer preserves observation boundaries:
+
+```text
+DurableReplayValidator
+→ LAYER_2_READ_SIDE
+
+ProjectionSnapshotReplayValidator
+→ SNAPSHOT_TRUST
+
+ProjectionSnapshotAssistedStateResolver
+→ SNAPSHOT_TRUST
+```
+
+The adapter does not infer root cause, execute fallback, rebuild projections, quarantine snapshots, choose strategy, govern retries, or map ordinary projection worker execution outcomes.
+
 Stage 4A should come before receipts, traces, measurement matrices, policy contracts, strategy selection, and retry governance.
 
 It is the place where the system begins to translate runtime results such as:
@@ -336,6 +360,17 @@ PR5 — Write-Side Admission Outcome Mapping
 PR6 — Stage 4A Closeout
 ```
 
+Current Stage 4A implementation status:
+
+```text
+PR1 — Runtime SemanticOutcome Boundary ✅
+PR2 — SemanticOutcome Vocabulary / Result Contract ✅
+PR3 — Runtime Technical Status Mapping ✅
+PR4 — Snapshot / Projection Outcome Mapping ✅
+PR5 — Write-Side Admission Outcome Mapping planned
+PR6 — Stage 4A Closeout planned
+```
+
 Detailed notes:
 
 - [PR Breakdown](pr_breakdown.md)
@@ -343,6 +378,8 @@ Detailed notes:
 - [SemanticOutcome Result Contract](semantic_outcome_result_contract.md)
 - [Runtime Technical Status Mapping](runtime_technical_status_mapping.md)
 - [Drift Validation Cost Boundary](drift_validation_cost_boundary.md)
+- [Read-Side Outcome Mapping](read_side_outcome_mapping.md)
+- [PR4 Closeout](pr4_closeout.md)
 
 This sequence may be adjusted as implementation reveals constraints.
 
