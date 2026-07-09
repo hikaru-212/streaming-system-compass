@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This directory records the implementation plan for:
+This directory records the implementation plan and closeout state for:
 
 ```text
 Stage 4A — Compass Layer 2 SemanticOutcome Core
@@ -15,6 +15,8 @@ Stage 4A begins the Stage 4 transition from runtime correctness evidence into go
 The goal is not to build a general policy engine, observability platform, benchmark suite, or agent protocol.
 
 The goal is to make runtime validation results interpretable, durable where needed, and safe to use as inputs for later decisions.
+
+As of PR6, Stage 4A is closed.
 
 ---
 
@@ -202,9 +204,28 @@ SEMANTIC_CONFLICT_DETECTED
 INTENT_DRIFT_DETECTED
 ```
 
-The exact vocabulary may evolve during implementation.
+The exact vocabulary may evolve during later stages.
 
 The important boundary is that the system should not treat a raw technical result as a complete semantic decision.
+
+---
+
+## Final Stage 4A Scope
+
+After PR6, Stage 4A provides:
+
+```text
+Runtime SemanticOutcome boundary
+SemanticOutcome vocabulary / result contract
+Runtime technical status mapping
+Read-side / snapshot outcome mapping
+Write-side admission outcome mapping
+Stage 4A closeout notes
+```
+
+Stage 4A now provides a stable semantic interpretation layer for later receipt, trace, policy, strategy, and retry-governance work.
+
+It does not provide runtime decisions, durable receipts, trace persistence, policy execution, strategy selection, retry governance, or action safety.
 
 ---
 
@@ -224,9 +245,9 @@ StrategySelector / Fast-Path Health Policy
 Retry Governance / Attempt Classification
 ```
 
-However, Stage 4A should remain focused on semantic outcome vocabulary and mapping.
+However, Stage 4A remains focused on semantic outcome vocabulary and mapping.
 
-It should not introduce durable receipts, policy execution, strategy selection, retry governance, or action-safety gates.
+It does not introduce durable receipts, policy execution, strategy selection, retry governance, or action-safety gates.
 
 ---
 
@@ -249,7 +270,7 @@ agent workflow orchestration
 full observability platform
 ```
 
-Stage 4A should make the first Layer 2 semantic vocabulary clear without turning the sub-stage into all of Stage 4.
+Stage 4A makes the first Layer 2 semantic vocabulary clear without turning the sub-stage into all of Stage 4.
 
 ---
 
@@ -308,7 +329,7 @@ snapshot-assisted validation = evidence producer
 snapshot-assisted resolver = trust consumer
 ```
 
-Stage 4A should be able to map snapshot trust and resolver outcomes into semantic outcomes.
+Stage 4A maps snapshot trust and resolver outcomes into semantic outcomes.
 
 ---
 
@@ -326,7 +347,7 @@ actor metadata
 governance evidence
 ```
 
-Stage 4A does not introduce governance evidence persistence yet.
+Stage 4A does not introduce governance evidence persistence.
 
 It prepares the semantic vocabulary that later receipts and decisions can record.
 
@@ -364,15 +385,15 @@ Stage 4E
 = governs retries and distinguishes attempt identity from intent preservation
 ```
 
-Stage 4A should not implement those layers early.
+Stage 4A does not implement those layers early.
 
-It should only preserve extension points so those later layers can consume the outcome vocabulary cleanly.
+It only preserves extension points so those later layers can consume the outcome vocabulary cleanly.
 
 ---
 
-## Expected PR Sequence
+## Completed PR Sequence
 
-A minimal Stage 4 sequence should be:
+Stage 4A was completed through:
 
 ```text
 PR1 — Runtime SemanticOutcome Boundary
@@ -391,7 +412,7 @@ PR2 — SemanticOutcome Vocabulary / Result Contract ✅
 PR3 — Runtime Technical Status Mapping ✅
 PR4 — Snapshot / Projection Outcome Mapping ✅
 PR5 — Write-Side Admission Outcome Mapping ✅
-PR6 — Stage 4A Closeout planned
+PR6 — Stage 4A Closeout ✅
 ```
 
 Detailed notes:
@@ -402,10 +423,19 @@ Detailed notes:
 - [Runtime Technical Status Mapping](runtime_technical_status_mapping.md)
 - [Drift Validation Cost Boundary](drift_validation_cost_boundary.md)
 - [Read-Side Outcome Mapping](read_side_outcome_mapping.md)
-- [PR4 Closeout](pr4_closeout.md)
 - [Write-Side Admission Outcome Mapping](write_side_admission_outcome_mapping.md)
-- [PR5 Closeout](pr5_closeout.md)
+- [Stage 4A Closeout](stage_4a_closeout.md)
 
-This sequence may be adjusted as implementation reveals constraints.
+Optional / supporting notes:
 
-However, Stage 4A should avoid expanding into receipts, policy, strategy selection, or retry governance.
+- [Agent Rule-Bypass Risk / Semantic Mapping Stability](agent_rule_bypass_risk_semantic_mapping_stability.md)
+
+Stage 4A is now closed.
+
+The next stage should begin from:
+
+```text
+Stage 4B — DecisionReceipt / DiagnosticTrace
+```
+
+Stage 4B may consume `SemanticOutcome` as stable semantic evidence, but should not retroactively expand Stage 4A into policy, strategy selection, retry governance, or action safety.

@@ -14,6 +14,21 @@ For project-wide sequencing, see:
 - [Stage 3.5C — Durable Read-Side Baseline](./stage_3_5c/)
 - [Stage 3.5D — Snapshot Trust Contract / Replay Efficiency](./stage_3_5d/)
 - [Stage 3.5E — Durable History and Permission Hardening](./stage_3_5e/)
+- [Stage 4A — SemanticOutcome Core](./stage_4a/)
+
+## Current Position
+
+Stage 4A is complete.
+
+The next implementation focus is:
+
+```text
+Stage 4B — DecisionReceipt / DiagnosticTrace
+```
+
+Stage 4A introduced the stable `SemanticOutcome` core, runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
+
+Stage 4B should build on that semantic interpretation layer by defining durable receipt and trace boundaries without reopening Stage 4A mapping scope unless receipt or trace requirements expose a missing evidence contract.
 
 ## Boundary
 
