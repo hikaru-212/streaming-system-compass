@@ -104,6 +104,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Durable History Permission Boundary](durable_history_permission_boundary.md)
 - [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
 - [Minimal Actor Metadata Boundary](minimal_actor_metadata_boundary.md)
+- [Runtime SemanticOutcome Boundary](runtime_semantic_outcome_boundary.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
 
@@ -134,6 +135,8 @@ The layered testing strategy note extends the permission boundary into the test 
 
 The minimal actor metadata boundary note extends Stage 3.5E toward Stage 4. It clarifies why database roles, producer metadata such as `created_by`, and future governance decision evidence should not be collapsed into the same concept.
 
+The runtime SemanticOutcome boundary note starts Stage 4A. It clarifies why raw technical runtime status should not be treated as semantic outcome, why semantic outcome should not make runtime decisions, and why fast-path failure should not be collapsed into semantic drift.
+
 ---
 
 ## How to Use These Notes
@@ -158,10 +161,11 @@ A practical reading order is:
 16. [Durable History Permission Boundary](durable_history_permission_boundary.md)
 17. [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
 18. [Minimal Actor Metadata Boundary](minimal_actor_metadata_boundary.md)
-19. [Compass Layer Boundary](compass_layer_boundary.md)
-20. [Persistence Boundary](persistence_boundary.md)
-21. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
-22. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+19. [Runtime SemanticOutcome Boundary](runtime_semantic_outcome_boundary.md)
+20. [Compass Layer Boundary](compass_layer_boundary.md)
+21. [Persistence Boundary](persistence_boundary.md)
+22. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+23. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -183,6 +187,7 @@ This roughly follows the intended semantic development order of the project:
 - define accepted-history mutation posture at the database permission boundary
 - define testing layers for mechanism tests, permission-boundary tests, and future governance-flow tests
 - define minimal actor metadata before Stage 4 decision receipts
+- define runtime semantic outcomes before receipts, policies, strategies, and retry governance
 - define semantic validation layers
 - define durable-world persistence discipline
 - define read-side persistence semantics

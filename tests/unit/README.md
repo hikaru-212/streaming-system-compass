@@ -22,6 +22,8 @@ Unit tests should answer questions such as:
 - Does a result model expose stable machine-readable status?
 - Does a helper preserve exact money, event identity, or payload hashing semantics?
 - Does a snapshot validator / resolver classify one boundary condition without needing a database?
+- Does a runtime semantic mapper translate technical evidence without making decisions?
+- Does an adapter preserve observation boundary, context identity, and evidence shape?
 
 In this repository, unit tests are not only low-level checks. They are the first executable form of boundary claims.
 
@@ -34,7 +36,7 @@ The exact folder layout may evolve, but the current unit-test responsibilities c
 ```text
 tests/unit/
 ├── core/          # domain-local behavior
-├── compass/       # validation result and transition-proof behavior
+├── compass/       # validation, transition-proof, and runtime semantic behavior
 ├── pipeline/      # local pipeline validators / reducers / resolvers
 ├── storage/       # local storage helpers and error/result contracts
 └── ...            # additional small module-level boundaries
@@ -68,8 +70,15 @@ At the current baseline, unit tests cover or support:
 - snapshot boundary and tail replay edge cases
 - snapshot-assisted state resolver result contracts
 - compatibility checks for schema version, reducer version, state hydration, and tail source boundaries
+- structured `SemanticOutcome` result contracts
+- generic runtime technical status mapping
+- read-side replay validation outcome mapping
+- snapshot replay validation outcome mapping
+- snapshot-assisted resolver outcome mapping
+- write-side admission / orchestration outcome mapping
+- write-side identity lineage hardening
 
-Stage 3.5D adds an important cluster of unit-level concerns:
+Stage 3.5D added an important cluster of unit-level concerns:
 
 ```text
 projection snapshot evidence
@@ -84,6 +93,36 @@ These tests support the broader Stage 3.5D rule:
 accepted history = authority
 snapshot = derived state compression
 ```
+
+Stage 4A adds a runtime semantic governance unit-test cluster:
+
+```text
+technical runtime status
+→ SemanticOutcome
+→ read-side / snapshot outcome adapter
+→ write-side admission outcome adapter
+```
+
+These tests support the Stage 4A rule:
+
+```text
+technical status ≠ semantic outcome
+semantic outcome ≠ runtime decision
+```
+
+Stage 4A unit tests cover:
+
+- structured `SemanticOutcome` result contract
+- defensive copying and freezing of outcome context / evidence
+- generic runtime technical status mapping
+- read-side replay validation outcome mapping
+- snapshot replay validation outcome mapping
+- snapshot-assisted resolver outcome mapping
+- write-side admission / orchestration outcome mapping
+- write-side identity lineage hardening
+- rejection of contradictory technical status evidence
+- rejection of contradictory protected context identity
+- preservation of non-goals such as decision, strategy, retry, and recovery behavior
 
 ---
 
@@ -111,6 +150,36 @@ They do **not** prove:
 - full Compass Layer 2 governance
 
 Those belong to integration tests or future stages.
+
+---
+
+## Stage 4A SemanticOutcome Unit Test Intent
+
+Stage 4A unit tests should remain clear about what they prove.
+
+They may prove:
+
+- a raw technical status maps to a stable `SemanticOutcome`
+- read-side validation results preserve their observation boundary
+- snapshot trust results do not infer write-side root cause
+- tail replay failure does not collapse into drift detection
+- write-side accepted / replay / conflict / validation-blocked outcomes map to semantic meaning
+- stale accepted-history state maps to concurrency uncertainty
+- write-side infrastructure abnormality maps to operator-review semantic meaning
+- adapter-derived protected identity cannot be contradicted by caller context
+- internal write-side identity evidence cannot contradict itself
+
+They do **not** prove:
+
+- runtime decision policy
+- automatic retry authorization or blocking
+- fallback execution
+- snapshot rebuild execution
+- operator review execution
+- rejected candidate persistence
+- durable `DecisionReceipt`
+- `DiagnosticTrace`
+- Stage 5 action safety gates
 
 ---
 
@@ -173,6 +242,8 @@ Examples include:
 - projection replay validation statuses
 - snapshot replay validation statuses
 - resolver statuses
+- `SemanticOutcome` categories / codes / boundaries
+- runtime technical status mappings
 
 A result model test should usually assert:
 
@@ -226,6 +297,8 @@ For example:
 
 - a unit test can prove `ProjectionSnapshotAssistedReplayValidator` returns `SNAPSHOT_ASSISTED_DRIFT` for a specific constructed mismatch
 - an integration test can prove PostgreSQL-backed snapshot rows, event rows, and replay logic interact correctly through stores and pipeline code
+- a Stage 4A unit test can prove write-side admission evidence maps to `SemanticOutcome`
+- a later integration test may prove durable receipts preserve that outcome correctly
 
 Both are useful, but they should not be collapsed.
 
@@ -238,9 +311,12 @@ Unit tests do not yet fully cover:
 - Stage 3.5E database role / permission behavior
 - append-only trigger enforcement
 - production deployment security
-- full Compass Layer 2 runtime governance
-- structured `SemanticOutcome`
+- durable `DecisionReceipt`
+- `DiagnosticTrace`
+- Measurement Matrix implementation
 - runtime decision policy
+- strategy selection
+- retry governance
 - action safety gate
 - persisted validation receipts
 - worker leasing or multi-worker coordination
@@ -261,6 +337,12 @@ Run only Compass transition unit tests:
 
 ```bash
 pytest tests/unit/compass -v
+```
+
+Run only Stage 4A runtime semantic outcome tests:
+
+```bash
+pytest tests/unit/compass/runtime -v
 ```
 
 Run only pipeline unit tests:
@@ -287,7 +369,11 @@ If you are reading unit tests to understand the system, a useful order is:
 4. projection replay validation result tests
 5. snapshot-assisted replay validator tests
 6. snapshot-assisted state resolver tests
-7. helper / result-model tests
+7. SemanticOutcome result contract tests
+8. runtime technical status mapping tests
+9. read-side / snapshot outcome mapping tests
+10. write-side admission outcome mapping tests
+11. helper / result-model tests
 
 This mirrors the project evolution:
 
@@ -297,7 +383,8 @@ meaning
 → projection derivation
 → replay comparison
 → snapshot-assisted fast path
-→ future governance substrate
+→ runtime semantic interpretation
+→ future receipt / trace / decision governance
 ```
 
 ---
@@ -308,13 +395,16 @@ Unit tests protect local meaning.
 
 They keep each boundary honest before the boundary is composed into a larger runtime flow.
 
-After Stage 3.5D, the unit test layer should clearly distinguish:
+After Stage 4A, the unit test layer should clearly distinguish:
 
 ```text
 accepted-history authority checks
 snapshot eligibility checks
 snapshot-assisted reconstruction
-future runtime governance
+SemanticOutcome mapping
+future receipt / trace / policy governance
 ```
 
-The current goal is not to test every future governance behavior early. It is to make the existing semantic, projection, replay, and snapshot boundaries precise enough that Stage 3.5E and Stage 4 can build on them safely.
+The current goal is not to test every future governance behavior early.
+
+It is to make existing semantic, projection, replay, snapshot, and runtime-outcome boundaries precise enough that Stage 4B can build on them safely.

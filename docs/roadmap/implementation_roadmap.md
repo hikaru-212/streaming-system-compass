@@ -9,13 +9,14 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the completion of Stage 3.5E:
+This version reflects the project position after the completion of Stage 4A:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
 - Stage 3.5D snapshot trust / replay-efficiency implementation details have been moved to implementation notes.
 - Stage 3.5E durable history and permission hardening is complete.
-- Stage 4 is now the next implementation stage.
+- Stage 4A SemanticOutcome core is complete.
+- Stage 4B DecisionReceipt / DiagnosticTrace is now the next implementation stage.
 - Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
@@ -45,7 +46,8 @@ This means:
 - Stage 3.5D is complete as the projection snapshot trust / replay-efficiency baseline.
 - Stage 3.5E is complete as the durable history and permission hardening baseline.
 - Write-side aggregate snapshot implementation is explicitly deferred.
-- Stage 4 is the next implementation stage.
+- Stage 4A is complete as the SemanticOutcome core.
+- Stage 4B is the next implementation stage.
 
 Detailed completed-stage execution records now live under:
 
@@ -53,14 +55,15 @@ Detailed completed-stage execution records now live under:
 - [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
+- [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 
 The current major focus is:
 
-- **Stage 4 — Runtime Semantic Governance**
+- **Stage 4B — DecisionReceipt / DiagnosticTrace**
 
-After Stage 3.5E, the project can now proceed toward:
+After Stage 4A, the project can now proceed toward:
 
-- Stage 4 runtime semantic governance: SemanticOutcome, DecisionReceipt, measurement evidence, diagnostic traces, policy-linked runtime decisions, StrategySelector, and retry governance
+- Stage 4B DecisionReceipt / DiagnosticTrace: durable runtime evidence records, diagnostic traces, evidence shape, and correlation boundaries
 - Stage 5 dual-dimension governance demo / action safety
 - Stage 5+ production and agent-facing hardening
 
@@ -82,7 +85,7 @@ The project should evolve from:
 10. persistence optimization / replay efficiency
 11. snapshot trust qualification for fast-path replay
 12. durable history immutability and permission hardening
-13. runtime semantic governance
+13. runtime semantic governance / SemanticOutcome core
 14. decision receipts / runtime evidence
 15. strategy selection and retry governance
 16. action safety gate / dual-dimension governance demo
@@ -348,6 +351,7 @@ Detailed PR-level execution records and snapshot-specific implementation notes a
 
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
+- [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 
 ---
 
@@ -524,6 +528,7 @@ actor metadata does not equal governance decision evidence
 Detailed execution records are maintained in:
 
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
+- [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 
 ---
 
@@ -620,6 +625,8 @@ Compass should first define semantic meaning, then preserve decision evidence, t
 
 Stage 4A defines the semantic outcome vocabulary for runtime correctness.
 
+Status: Completed.
+
 It maps technical runtime evidence into structured semantic meaning.
 
 Examples of technical evidence include:
@@ -632,7 +639,7 @@ Examples of technical evidence include:
 - concurrency conflict
 - unresolved runtime state
 
-Stage 4A should not make final runtime decisions directly.
+Stage 4A does not make final runtime decisions directly.
 
 It should answer:
 
@@ -664,7 +671,9 @@ Stage 4A does not implement:
 
 ### Goal
 
-Stage 4B records the semantic outcome and the evidence used to produce it.
+Stage 4B is the next implementation stage.
+
+It records the semantic outcome and the evidence used to produce it.
 
 A receipt should preserve summary-level runtime evidence:
 
@@ -908,8 +917,8 @@ Stage 4 is complete when the system can represent a governable runtime semantic 
 technical evidence
 → SemanticOutcome
 → DecisionReceipt
-→ measurement evidence
 → diagnostic trace when needed
+→ measurement matrix / cost evidence
 → policy-linked runtime decision
 → strategy selection
 → retry governance
@@ -1120,6 +1129,12 @@ Stage 5:
 Dual-Dimension Governance Demo / Action Safety
   semantic correctness × operational freshness / runtime trust
   action safety verdict
+
+Stage 5+:
+Projection Worker Freshness / Runtime Execution Evidence
+  semantic correctness × operational freshness / runtime trust
+  future ActionSafetyGate evidence source
+
 ```
 
 ---
@@ -1145,6 +1160,196 @@ It is trying to make semantic failure understandable enough that the runtime can
 
 
 ---
+
+
+
+## Stage 5+ Candidate — Projection Worker Freshness / Runtime Execution Evidence
+
+Projection worker execution evidence is deferred until after the Stage 4 governance pipeline is stable.
+
+Stage 4 focuses on:
+
+```text
+technical correctness evidence
+→ SemanticOutcome
+→ DecisionReceipt
+→ DiagnosticTrace / ResolutionTrace
+→ Measurement Matrix
+→ Policy Contract
+→ RuntimeDecisionPolicy
+→ StrategySelector
+→ RetryGovernance
+```
+
+Projection worker mapping is not required for Stage 4A because Stage 4A PR4 maps read-side correctness validation results, not ordinary worker execution outcomes.
+
+Projection validation and projection worker execution are different boundaries.
+
+Projection validation answers:
+
+```text
+Does derived read-side state match accepted-history authority?
+```
+
+Projection worker execution answers:
+
+```text
+Is the projection runtime currently processing accepted events successfully and freshly?
+```
+
+These are related, but they are not the same.
+
+```text
+projection worker failure ≠ projection drift
+projection lag ≠ semantic corruption
+projection freshness ≠ accepted-history authority
+```
+
+Projection drift must still be established through authority comparison.
+
+Worker freshness only tells the system whether derived state is operationally current enough for a given action.
+
+This line belongs to the Stage 5 dual-dimension governance direction:
+
+```text
+semantic correctness
+×
+operational freshness / runtime trust
+→
+action safety
+```
+
+Projection worker freshness evidence belongs to the second dimension:
+
+```text
+operational freshness / runtime trust
+```
+
+It is not the `ActionSafetyGate` itself.
+
+It is one possible evidence source that Stage 5 or later action-safety logic may consume.
+
+### Candidate Future Evidence Fields
+
+```text
+last_processed_global_position
+latest_accepted_global_position
+projection_lag
+checkpoint_advance_status
+reducer_apply_status
+projection_state_write_status
+projection_worker_error_count
+worker_last_success_at
+worker_last_failure_at
+worker_runtime_role
+projection_worker_elapsed_ms
+reducer_apply_elapsed_ms
+projection_state_write_elapsed_ms
+checkpoint_advance_elapsed_ms
+worker_idle_ms
+worker_lag_ms
+```
+
+### Candidate Future Technical Statuses
+
+```text
+PROJECTION_WORKER_APPLIED
+PROJECTION_WORKER_LAGGING
+REDUCER_APPLY_FAILED
+PROJECTION_STATE_WRITE_FAILED
+CHECKPOINT_ADVANCE_FAILED
+PROJECTION_DELIVERY_STALLED
+PROJECTION_WORKER_UNAVAILABLE
+```
+
+These should not be added to Stage 4A unless there is already a stable `ProjectionWorkerResult` or equivalent execution-result contract.
+
+### Conservative Semantic Interpretation
+
+Future projection worker statuses may map conservatively to semantic families such as:
+
+```text
+RUNTIME_UNRESOLVED
+CONCURRENCY_UNCERTAIN
+ESCALATION_REQUIRED
+```
+
+They should not be mapped directly to:
+
+```text
+DRIFT_DETECTED
+```
+
+A worker failure may mean the projection path is incomplete, delayed, or unresolved.
+
+It does not by itself prove that persisted projection state semantically diverges from accepted-history authority.
+
+### Relationship to Stage 5
+
+Stage 5 dual-dimension governance should eventually demonstrate cases such as:
+
+```text
+semantic correct + operational fresh
+semantic correct + operational stale
+semantic incorrect + operational fresh
+semantic incorrect + operational stale
+```
+
+Example:
+
+```text
+Replay validation confirms projection state matches authority up to checkpoint N.
+Projection worker lag shows accepted history has advanced to N + 500.
+Semantic correctness may hold for checkpoint N,
+but operational freshness may be insufficient for an external action.
+```
+
+A future `ActionSafetyGate` may consume:
+
+```text
+SemanticOutcome
+DecisionReceipt
+RuntimeDecision
+StrategySelector output
+projection worker freshness evidence
+```
+
+to decide whether a downstream or externally meaningful action should proceed.
+
+### Non-goals
+
+This future line does not introduce now:
+
+```text
+ProjectionWorker execution mapping in Stage 4A PR4
+projection delivery log
+projection inbox
+projection work item lifecycle
+fanout retry control
+worker governance
+production observability platform
+full SLO system
+```
+
+Immediate rule:
+
+```text
+Keep Stage 4 focused.
+Do not expand Stage 4A PR4.
+Record projection worker freshness evidence as future Stage 5+ support
+for dual-dimension governance.
+```
+
+Final principle:
+
+```text
+Projection validation proves semantic consistency against authority.
+
+Projection worker freshness proves operational currency of the derived-state pipeline.
+
+Action safety may need both.
+```
+
 
 # Stage 5+ / Later Governance Hardening
 

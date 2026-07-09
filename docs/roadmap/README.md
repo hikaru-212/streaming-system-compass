@@ -12,13 +12,13 @@ Use roadmap documents to understand:
 * what depends on what
 * which features are intentionally deferred
 * how the project moves from durable truth toward runtime governance
-* how the project has completed Stage 3.5E and is entering Stage 4 runtime semantic governance
+* how the project has completed Stage 4A and is entering Stage 4B DecisionReceipt / DiagnosticTrace work
 
 ---
 
 ## Completed Baseline
 
-The project has completed the baseline sequence up to Stage 3.5E:
+The project has completed the baseline sequence up to Stage 4A:
 
 * Stage 1 — Transactional Semantic Core
 * Stage 2 — Compass Layer 1 Write-side Validation
@@ -28,6 +28,7 @@ The project has completed the baseline sequence up to Stage 3.5E:
 * Stage 3.5C — Durable Read-Side Baseline
 * Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
 * Stage 3.5E — Durable History and Permission Hardening
+* Stage 4A — SemanticOutcome Core
 
 Detailed sequencing remains in [Implementation Roadmap](implementation_roadmap.md).
 
@@ -37,8 +38,9 @@ Completed implementation details from Stage 3.5B onward are preserved in [Implem
 * [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
 * [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 * [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
+* [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 
-Stage 3.5E has completed the minimal durable-history role / permission boundary and actor-metadata boundary needed before Stage 4.
+Stage 4A has completed the SemanticOutcome core needed before Stage 4B receipt and trace work.
 
 ---
 
@@ -71,17 +73,17 @@ The deferred architecture backlog should be read after the main roadmaps. It doe
 Current implementation focus:
 
 ```text
-Stage 4 — Runtime Semantic Governance
+Stage 4B — DecisionReceipt / DiagnosticTrace
 ```
 
-Stage 3.5E is complete at the baseline level. It established database responsibility roles, permission-boundary tests, SET ROLE probing scope, minimal actor metadata semantics, and explicit deferrals for full RBAC and production identity wiring.
+Stage 4A is complete at the SemanticOutcome core level. It established runtime semantic outcome vocabulary, generic technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
 
-Stage 4 now starts from a cleaner foundation:
+Stage 4B now starts from a cleaner semantic foundation:
 
-- durable authority is protected
-- derived state remains operationally mutable under controlled runtime roles
-- snapshots remain derived and subordinate to accepted history
-- minimal actor metadata is separated from governance decision evidence
+- raw technical status has a stable SemanticOutcome interpretation layer
+- read-side / snapshot observations preserve their observation boundaries
+- write-side admission outcomes preserve Layer 1 boundary semantics
+- identity evidence hardening is recorded before durable receipts and traces
 
 ---
 
@@ -100,7 +102,8 @@ semantic truth
 → durable read-side baseline
 → snapshot trust qualification / replay efficiency
 → minimal actor / permission boundary
-→ runtime semantic governance
+→ SemanticOutcome core
+→ DecisionReceipt / DiagnosticTrace
 → action safety demo
 → later production and agent-facing hardening
 ```
@@ -119,8 +122,8 @@ The public sequence is:
 technical evidence
 → SemanticOutcome
 → DecisionReceipt
-→ measurement evidence
 → DiagnosticTrace when needed
+→ Measurement Matrix / cost evidence
 → policy-linked RuntimeDecision
 → StrategySelector
 → Retry Governance

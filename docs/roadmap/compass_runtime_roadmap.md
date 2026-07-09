@@ -18,6 +18,7 @@ For completed stage execution notes, see:
 - [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
+- [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 
 This document focuses on a narrower question:
 
@@ -64,6 +65,7 @@ For example:
 
 - Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, and the Stage 3.5D replay-efficiency substrate.
 - Stage 3.5E provides the completed minimal actor / permission boundary before broader runtime governance.
+- Stage 4A provides the completed `SemanticOutcome` core for runtime semantic interpretation.
 - Compass Phase 4 maps to Stage 4 runtime semantic governance.
 - Compass Phase 5 maps to the Stage 5 action safety / dual-dimension governance demo.
 - Compass Phase 6 maps to later production and agent-facing hardening.
@@ -138,9 +140,14 @@ accepted history permission hardening
 → cleaner Stage 4 receipt / governance foundation
 ```
 
-This does not make Compass Layer 2 active yet.
+Stage 4A then adds the first Compass Layer 2 semantic interpretation boundary:
 
-It provides durable correctness evidence, replay-efficiency primitives, and actor / permission boundaries that Layer 2 can later classify and govern.
+```text
+technical runtime evidence
+→ SemanticOutcome
+```
+
+The next Compass runtime step is Stage 4B, where semantic outcomes and their evidence become durable receipts and traces.
 
 ---
 
@@ -150,15 +157,13 @@ Compass does not yet make runtime governance decisions for derived state.
 
 The system can now preserve durable accepted history, persist derived read-side state, compare persisted projection state against accepted-history replay, validate snapshot-assisted replay, and resolve read-side state from an externally qualified snapshot id.
 
-However, Compass has not yet become a full state-level governance layer.
+Stage 4A has made these results semantically interpretable, but Compass has not yet become a full state-level governance layer.
 
 That means the next question is no longer only whether drift or snapshot mismatch can be detected. The next question is:
 
 > If derived-state drift, snapshot mismatch, or runtime trust failure is detected, what does it mean, and what should the runtime do?
 
-That interpretation and decision boundary belongs to Stage 4 runtime semantic governance and later Stage 5 action safety work.
-
-Before that, Stage 3.5E should establish the minimal actor / permission boundary needed for future receipts and privileged runtime actions.
+That interpretation began in Stage 4A through `SemanticOutcome` mapping. The next boundary is Stage 4B receipt / trace persistence, followed by later runtime decision policy and Stage 5 action safety work.
 
 ---
 
@@ -196,6 +201,7 @@ Detailed Stage 3.5D execution notes live in:
 
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
+- [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 
 ---
 
@@ -209,9 +215,9 @@ write-side event truth
 → durable derived state
 → snapshot trust / replay-efficiency substrate
 → minimal actor / permission boundary
-→ Layer 2 state validation
-→ minimal domain policy contract / policy-linked recovery basis
 → structured semantic outcomes
+→ DecisionReceipt / DiagnosticTrace
+→ minimal domain policy contract / policy-linked recovery basis
 → runtime decisions
 → action safety
 → dual-dimension governance
@@ -399,6 +405,7 @@ Detailed execution notes live in:
 
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
+- [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 
 Stage 3.5D should remain persistence / replay hardening.
 
@@ -458,8 +465,8 @@ The high-level flow is:
 technical evidence
 → SemanticOutcome
 → DecisionReceipt
-→ measurement evidence
 → DiagnosticTrace when needed
+→ Measurement Matrix / cost evidence
 → policy-linked RuntimeDecision
 → StrategySelector
 → Retry Governance
