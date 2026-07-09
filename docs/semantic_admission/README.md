@@ -198,6 +198,7 @@ Start with:
 11. [shared_context_is_not_shared_contract.md](./shared_context_is_not_shared_contract.md)
 12. [crud_is_not_a_safe_boundary_for_agentic_commerce.md](./crud_is_not_a_safe_boundary_for_agentic_commerce.md)
 13. [Agent-Assisted Compass Layer Construction](./agent_assisted_compass_layer_construction.md)
+14. [input_guardrail_vs_admission_boundary_origin.public](./input_guardrail_vs_admission_boundary_origin.public.md)
 
 ---
 
