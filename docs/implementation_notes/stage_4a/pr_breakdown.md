@@ -103,6 +103,7 @@ feat/stage4a-pr1-semantic-outcome-boundary
 feat/stage4a-pr2-semantic-outcome-result-contract
 feat/stage4a-pr3-runtime-technical-status-mapping
 feat/stage4a-pr4-read-side-outcome-mapping
+feat/stage4a-pr5-write-side-admission-outcome-mapping
 ```
 
 Each Stage 4A PR branch should be merged back into the Stage 4A sub-stage branch.
@@ -407,8 +408,12 @@ TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
 TAIL_REPLAY_FAILED
 DRIFT
 SNAPSHOT_ASSISTED_DRIFT
+CONCURRENT_STATE_STALENESS
 OCC_CONFLICT_AFTER_VALIDATION
 LOCK_TIMEOUT
+WRITE_SIDE_ACCEPTED
+COMPASS_VALIDATION_BLOCKED
+WRITE_SIDE_INFRASTRUCTURE_ERROR
 IDEMPOTENT_REPLAY
 IDEMPOTENCY_CONFLICT
 ```
@@ -547,6 +552,7 @@ Implemented by:
 
 ```text
 feat/stage4a-pr4-read-side-outcome-mapping
+feat/stage4a-pr5-write-side-admission-outcome-mapping
 ```
 
 ## Scope
@@ -852,52 +858,180 @@ Stage 4A itself should not perform root-cause inference.
 
 ## Goal
 
-Prepare write-side Compass Layer 1 outcomes to use compatible SemanticOutcome vocabulary.
+Map concrete write-side admission and orchestration results into `SemanticOutcome` without changing Layer 1 admission behavior.
 
-PR5 should not rewrite Layer 1.
-
-It should begin aligning the representation of write-side admission results with the runtime semantic outcome family.
-
-PR5 should include the explicit line:
+PR5 adds the explicit line:
 
 ```text
-Layer 1 write-side admission rejection
+Layer 1 write-side admission / orchestration evidence
 → SemanticOutcome
 ```
 
-This line should make Layer 1 rejection semantics machine-readable without allowing rejected candidates to enter accepted history.
+This makes write-side acceptance, replay, rejection, validation block, concurrency uncertainty, and infrastructure abnormality machine-readable without allowing rejected candidates to enter accepted history.
 
 ## Status
 
-Planned after read-side outcome mapping is stable.
+Implemented by:
+
+```text
+feat/stage4a-pr5-write-side-admission-outcome-mapping
+```
 
 ## Scope
 
-PR5 may include mappings for:
+PR5 adds:
 
 ```text
-domain transition violation
-undefined event transition
-domain invariant violation
-missing required proof
-proof-candidate mismatch
-candidate payload invalid
-candidate conflicts with accepted state
-idempotent replay
-idempotency conflict
-OCC conflict after validation
-concurrency uncertainty
-Compass Layer 1 block
+src/compass/runtime/write_side_outcome_mapping.py
+tests/unit/compass/runtime/test_write_side_outcome_mapping.py
+docs/implementation_notes/stage_4a/write_side_admission_outcome_mapping.md
+docs/implementation_notes/stage_4a/pr5_closeout.md
 ```
 
-PR5 should preserve:
+PR5 updates:
 
 ```text
-accepted history = admitted facts only
-rejected candidate = outside accepted history
-Layer 1 protects accepted history
-Stage 4A mapping explains why a candidate was rejected
+src/compass/runtime/__init__.py
+src/compass/runtime/technical_status_mapping.py
+tests/unit/compass/runtime/test_technical_status_mapping.py
+docs/implementation_notes/stage_4a/README.md
+docs/implementation_notes/stage_4a/pr_breakdown.md
 ```
+
+## Concrete Adapter Boundary
+
+PR5 introduces two write-side adapter functions:
+
+```text
+map_write_side_admission_status_to_semantic_outcome(...)
+map_postgres_write_side_result_to_semantic_outcome(...)
+```
+
+The first adapter pins generic write-side technical status mapping to:
+
+```text
+SemanticBoundary.LAYER_1_WRITE_SIDE
+```
+
+The second adapter maps:
+
+```text
+PostgresWriteSideResult
+→ write-side technical status
+→ SemanticOutcome
+```
+
+## Mapped Write-Side Result Shape
+
+PR5 maps `PostgresWriteSideOutcome` values as follows:
+
+```text
+ACCEPTED
+→ WRITE_SIDE_ACCEPTED
+→ SEMANTICALLY_VALID
+
+REPLAY
+→ IDEMPOTENT_REPLAY
+→ IDEMPOTENT_REPLAY_ALLOWED
+
+CONFLICT
+→ IDEMPOTENCY_CONFLICT
+→ SEMANTIC_CONFLICT_DETECTED
+
+VALIDATION_BLOCKED
+→ COMPASS_VALIDATION_BLOCKED
+→ SEMANTIC_CONFLICT_DETECTED
+
+ADMISSION_REJECTED + STALE_WRITE
+→ CONCURRENT_STATE_STALENESS
+→ CONCURRENCY_UNCERTAIN
+
+ADMISSION_REJECTED + LOCK_TIMEOUT
+→ LOCK_TIMEOUT
+→ CONCURRENCY_UNCERTAIN
+
+ADMISSION_REJECTED + INFRASTRUCTURE_ERROR
+→ WRITE_SIDE_INFRASTRUCTURE_ERROR
+→ REQUIRES_OPERATOR_REVIEW
+```
+
+`OCC_CONFLICT_AFTER_VALIDATION` remains supported as a generic technical status from PR3, but PR5 maps the write-side admission verdict `STALE_WRITE` to the more storage-neutral `CONCURRENT_STATE_STALENESS`.
+
+## Identity Lineage Hardening
+
+PR5 treats write-side identity fields as protected context:
+
+```text
+write_side_outcome
+order_id
+request_id
+candidate_event_id
+accepted_event_id
+```
+
+Caller-provided context may enrich the outcome, but it must not contradict adapter-derived protected context.
+
+PR5 also rejects contradictory identity evidence inside the write-side result itself.
+
+For example, if multiple write-side evidence sources produce different `order_id` or `request_id` values, the adapter refuses to produce a `SemanticOutcome` instead of silently choosing one source.
+
+This protects later Stage 4B / Stage 4C layers from building receipts, traces, or decisions on ambiguous identity lineage.
+
+## Accepted Event Boundary
+
+PR5 preserves the boundary:
+
+```text
+accepted_event_id
+exists only for accepted history or replay of a prior accepted event
+```
+
+A rejected append-time admission result must not carry `accepted_event_id`.
+
+An idempotency conflict may expose a prior `accepted_event_id` from the stored idempotency record, but that identifier belongs to the previous accepted result, not to the current rejected candidate.
+
+## Infrastructure Error Boundary
+
+PR5 deliberately maps write-side infrastructure failure to:
+
+```text
+ESCALATION_REQUIRED
+REQUIRES_OPERATOR_REVIEW
+```
+
+rather than ordinary:
+
+```text
+UNRESOLVED
+RUNTIME_UNRESOLVED
+```
+
+This does not execute operator review or fail-closed policy.
+
+It only preserves the semantic distinction that write-side infrastructure abnormality occurs near the accepted-history admission path and should not be treated as a generic retry-friendly unresolved observation by later governance layers.
+
+## ValidationResult Identity Checkpoint
+
+PR5 does not change `ValidationResult`.
+
+`ValidationResult` currently provides formal validation evidence such as:
+
+```text
+candidate_event_id
+validator_name
+validation_mode
+reason
+timing fields
+metadata
+```
+
+It does not provide first-class `order_id` or `request_id`.
+
+For PR5, this is acceptable because write-side mapping obtains core `order_id` evidence from outer write-side orchestration sources such as accepted events, stream admission results, and idempotency records.
+
+`ValidationResult.metadata["order_id"]` must not be treated as authoritative identity evidence unless it is later promoted into the schema-level contract.
+
+This is recorded as a Stage 4B design checkpoint.
 
 ## Non-goals
 
@@ -908,14 +1042,23 @@ rejected candidate table
 admission_rejection_records
 candidate_attempts table
 rejected_event_log
-durable receipt writing
-retry governance
+DecisionReceipt persistence
+DiagnosticTrace
+Measurement Matrix
+RuntimeDecisionPolicy
+StrategySelector
+RetryGovernance
 agent policy decision
 automatic retry blocking
 strategy selection
 accepted history changes
 Layer 1 validator rewrite
+ValidationResult schema changes
 ```
+
+## Relationship to PR6
+
+After PR5, PR6 should close Stage 4A by aligning stage-level documentation, final follow-up notes, and any remaining cleanup before Stage 4B begins.
 
 ---
 
