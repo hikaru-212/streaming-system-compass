@@ -185,6 +185,7 @@ def test_snapshot_assisted_drift_status_maps_to_snapshot_trust_drift_detected() 
 @pytest.mark.parametrize(
     "technical_status",
     [
+        "CONCURRENT_STATE_STALENESS",
         "OCC_CONFLICT_AFTER_VALIDATION",
         "LOCK_TIMEOUT",
     ],
@@ -204,6 +205,54 @@ def test_concurrency_statuses_map_to_concurrency_uncertain(
     assert outcome.severity == SemanticSeverity.WARNING
     assert outcome.risk_level == SemanticRiskLevel.MEDIUM
     assert outcome.reversibility == SemanticReversibility.REVERSIBLE
+
+
+def test_write_side_accepted_maps_to_semantically_valid() -> None:
+    outcome = map_status(
+        "WRITE_SIDE_ACCEPTED",
+        boundary=SemanticBoundary.LAYER_1_WRITE_SIDE,
+    )
+
+    assert outcome.ok is True
+    assert outcome.boundary == SemanticBoundary.LAYER_1_WRITE_SIDE
+    assert outcome.category == SemanticOutcomeCategory.VALID
+    assert outcome.semantic_code == SemanticOutcomeCode.SEMANTICALLY_VALID
+    assert outcome.severity == SemanticSeverity.INFO
+    assert outcome.risk_level == SemanticRiskLevel.LOW
+    assert outcome.reversibility == SemanticReversibility.REVERSIBLE
+
+
+def test_compass_validation_blocked_maps_to_semantic_conflict() -> None:
+    outcome = map_status(
+        "COMPASS_VALIDATION_BLOCKED",
+        boundary=SemanticBoundary.LAYER_1_WRITE_SIDE,
+    )
+
+    assert outcome.ok is False
+    assert outcome.boundary == SemanticBoundary.LAYER_1_WRITE_SIDE
+    assert outcome.category == SemanticOutcomeCategory.BLOCK_REQUIRED
+    assert (
+        outcome.semantic_code
+        == SemanticOutcomeCode.SEMANTIC_CONFLICT_DETECTED
+    )
+    assert outcome.severity == SemanticSeverity.ERROR
+    assert outcome.risk_level == SemanticRiskLevel.HIGH
+    assert outcome.reversibility == SemanticReversibility.UNKNOWN
+
+
+def test_write_side_infrastructure_error_maps_to_operator_review() -> None:
+    outcome = map_status(
+        "WRITE_SIDE_INFRASTRUCTURE_ERROR",
+        boundary=SemanticBoundary.LAYER_1_WRITE_SIDE,
+    )
+
+    assert outcome.ok is False
+    assert outcome.boundary == SemanticBoundary.LAYER_1_WRITE_SIDE
+    assert outcome.category == SemanticOutcomeCategory.ESCALATION_REQUIRED
+    assert outcome.semantic_code == SemanticOutcomeCode.REQUIRES_OPERATOR_REVIEW
+    assert outcome.severity == SemanticSeverity.ERROR
+    assert outcome.risk_level == SemanticRiskLevel.HIGH
+    assert outcome.reversibility == SemanticReversibility.UNKNOWN
 
 
 def test_idempotent_replay_maps_to_idempotent_replay_allowed() -> None:
@@ -450,6 +499,38 @@ def test_runtime_technical_status_mappings_are_stable() -> None:
             SemanticRiskLevel.HIGH,
             SemanticReversibility.REBUILDABLE,
         ),
+        "WRITE_SIDE_ACCEPTED": (
+            True,
+            SemanticOutcomeCategory.VALID,
+            SemanticOutcomeCode.SEMANTICALLY_VALID,
+            SemanticSeverity.INFO,
+            SemanticRiskLevel.LOW,
+            SemanticReversibility.REVERSIBLE,
+        ),
+        "COMPASS_VALIDATION_BLOCKED": (
+            False,
+            SemanticOutcomeCategory.BLOCK_REQUIRED,
+            SemanticOutcomeCode.SEMANTIC_CONFLICT_DETECTED,
+            SemanticSeverity.ERROR,
+            SemanticRiskLevel.HIGH,
+            SemanticReversibility.UNKNOWN,
+        ),
+        "WRITE_SIDE_INFRASTRUCTURE_ERROR": (
+            False,
+            SemanticOutcomeCategory.ESCALATION_REQUIRED,
+            SemanticOutcomeCode.REQUIRES_OPERATOR_REVIEW,
+            SemanticSeverity.ERROR,
+            SemanticRiskLevel.HIGH,
+            SemanticReversibility.UNKNOWN,
+        ),
+        "CONCURRENT_STATE_STALENESS": (
+            False,
+            SemanticOutcomeCategory.CONCURRENCY_UNCERTAIN,
+            SemanticOutcomeCode.CONCURRENCY_UNCERTAIN,
+            SemanticSeverity.WARNING,
+            SemanticRiskLevel.MEDIUM,
+            SemanticReversibility.REVERSIBLE,
+        ),
         "OCC_CONFLICT_AFTER_VALIDATION": (
             False,
             SemanticOutcomeCategory.CONCURRENCY_UNCERTAIN,
@@ -523,6 +604,10 @@ def test_supported_runtime_technical_statuses_are_stable() -> None:
             "TAIL_REPLAY_FAILED",
             "DRIFT",
             "SNAPSHOT_ASSISTED_DRIFT",
+            "WRITE_SIDE_ACCEPTED",
+            "COMPASS_VALIDATION_BLOCKED",
+            "WRITE_SIDE_INFRASTRUCTURE_ERROR",
+            "CONCURRENT_STATE_STALENESS",
             "OCC_CONFLICT_AFTER_VALIDATION",
             "LOCK_TIMEOUT",
             "IDEMPOTENT_REPLAY",

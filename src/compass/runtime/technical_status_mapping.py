@@ -139,6 +139,38 @@ _STATUS_MAPPINGS: dict[str, RuntimeTechnicalStatusMapping] = {
         risk_level=SemanticRiskLevel.HIGH,
         reversibility=SemanticReversibility.REBUILDABLE,
     ),
+    "WRITE_SIDE_ACCEPTED": RuntimeTechnicalStatusMapping(
+        ok=True,
+        category=SemanticOutcomeCategory.VALID,
+        semantic_code=SemanticOutcomeCode.SEMANTICALLY_VALID,
+        severity=SemanticSeverity.INFO,
+        risk_level=SemanticRiskLevel.LOW,
+        reversibility=SemanticReversibility.REVERSIBLE,
+    ),
+    "COMPASS_VALIDATION_BLOCKED": RuntimeTechnicalStatusMapping(
+        ok=False,
+        category=SemanticOutcomeCategory.BLOCK_REQUIRED,
+        semantic_code=SemanticOutcomeCode.SEMANTIC_CONFLICT_DETECTED,
+        severity=SemanticSeverity.ERROR,
+        risk_level=SemanticRiskLevel.HIGH,
+        reversibility=SemanticReversibility.UNKNOWN,
+    ),
+    "CONCURRENT_STATE_STALENESS": RuntimeTechnicalStatusMapping(
+        ok=False,
+        category=SemanticOutcomeCategory.CONCURRENCY_UNCERTAIN,
+        semantic_code=SemanticOutcomeCode.CONCURRENCY_UNCERTAIN,
+        severity=SemanticSeverity.WARNING,
+        risk_level=SemanticRiskLevel.MEDIUM,
+        reversibility=SemanticReversibility.REVERSIBLE,
+    ),
+    "WRITE_SIDE_INFRASTRUCTURE_ERROR": RuntimeTechnicalStatusMapping(
+        ok=False,
+        category=SemanticOutcomeCategory.ESCALATION_REQUIRED,
+        semantic_code=SemanticOutcomeCode.REQUIRES_OPERATOR_REVIEW,
+        severity=SemanticSeverity.ERROR,
+        risk_level=SemanticRiskLevel.HIGH,
+        reversibility=SemanticReversibility.UNKNOWN,
+    ),
     "OCC_CONFLICT_AFTER_VALIDATION": RuntimeTechnicalStatusMapping(
         ok=False,
         category=SemanticOutcomeCategory.CONCURRENCY_UNCERTAIN,
@@ -246,10 +278,9 @@ def _normalize_technical_status(value: str | Enum) -> str:
 
 
 def _require_non_empty_status(value: str) -> str:
-    normalized = value.strip()
-    if not normalized:
+    if not value.strip():
         raise ValueError("technical_status must be a non-empty string")
-    return normalized
+    return value
 
 
 def _merge_technical_status_into_evidence(
@@ -257,13 +288,13 @@ def _merge_technical_status_into_evidence(
     technical_status: str,
     evidence: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    merged_evidence = dict(evidence or {})
-    existing_status = merged_evidence.get("technical_status")
+    merged = dict(evidence or {})
 
-    if existing_status is not None and existing_status != technical_status:
+    existing = merged.get("technical_status")
+    if existing is not None and existing != technical_status:
         raise ValueError(
             "evidence technical_status must match mapped technical_status"
         )
 
-    merged_evidence["technical_status"] = technical_status
-    return merged_evidence
+    merged["technical_status"] = technical_status
+    return merged
