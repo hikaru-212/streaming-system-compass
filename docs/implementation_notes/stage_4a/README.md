@@ -121,7 +121,7 @@ Given technical runtime evidence,
 what does this mean for semantic correctness?
 ```
 
-As of PR4, Stage 4A also includes a concrete read-side adapter layer:
+As of PR4, Stage 4A includes a concrete read-side adapter layer:
 
 ```text
 ReplayValidationResult
@@ -143,7 +143,26 @@ ProjectionSnapshotAssistedStateResolver
 → SNAPSHOT_TRUST
 ```
 
-The adapter does not infer root cause, execute fallback, rebuild projections, quarantine snapshots, choose strategy, govern retries, or map ordinary projection worker execution outcomes.
+The read-side adapter does not infer root cause, execute fallback, rebuild projections, quarantine snapshots, choose strategy, govern retries, or map ordinary projection worker execution outcomes.
+
+As of PR5, Stage 4A also includes a concrete write-side admission adapter layer:
+
+```text
+PostgresWriteSideResult
+→ write-side technical status
+→ SemanticOutcome
+```
+
+This adapter layer preserves the Layer 1 write-side observation boundary:
+
+```text
+PostgresWriteSideResult
+→ LAYER_1_WRITE_SIDE
+```
+
+PR5 maps write-side outcomes such as accepted events, idempotent replay, idempotency conflict, Compass validation blocks, stale accepted-history state, lock timeout, and write-side infrastructure errors into SemanticOutcome.
+
+The write-side adapter does not append accepted history, persist rejected candidates, persist DecisionReceipt, decide retry behavior, select execution strategy, or mutate write-side state.
 
 Stage 4A should come before receipts, traces, measurement matrices, policy contracts, strategy selection, and retry governance.
 
@@ -157,6 +176,10 @@ SNAPSHOT_ASSISTED_DRIFT
 RESOLVED_FROM_SNAPSHOT
 INVALID_SNAPSHOT_PRECONDITION
 TAIL_REPLAY_FAILED
+WRITE_SIDE_ACCEPTED
+COMPASS_VALIDATION_BLOCKED
+CONCURRENT_STATE_STALENESS
+WRITE_SIDE_INFRASTRUCTURE_ERROR
 OCC_CONFLICT_AFTER_VALIDATION
 IDEMPOTENT_REPLAY
 IDEMPOTENCY_CONFLICT
@@ -367,7 +390,7 @@ PR1 — Runtime SemanticOutcome Boundary ✅
 PR2 — SemanticOutcome Vocabulary / Result Contract ✅
 PR3 — Runtime Technical Status Mapping ✅
 PR4 — Snapshot / Projection Outcome Mapping ✅
-PR5 — Write-Side Admission Outcome Mapping planned
+PR5 — Write-Side Admission Outcome Mapping ✅
 PR6 — Stage 4A Closeout planned
 ```
 
@@ -380,6 +403,8 @@ Detailed notes:
 - [Drift Validation Cost Boundary](drift_validation_cost_boundary.md)
 - [Read-Side Outcome Mapping](read_side_outcome_mapping.md)
 - [PR4 Closeout](pr4_closeout.md)
+- [Write-Side Admission Outcome Mapping](write_side_admission_outcome_mapping.md)
+- [PR5 Closeout](pr5_closeout.md)
 
 This sequence may be adjusted as implementation reveals constraints.
 
