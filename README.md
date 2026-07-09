@@ -19,6 +19,7 @@ It is a production-inspired streaming-system project focused on:
 - **replay-safe projection runtime design**
 - **exact-money hardening before durable persistence**
 - **snapshot trust as derived-state replay efficiency, not source-of-truth replacement**
+- **SemanticOutcome as the first runtime semantic interpretation boundary**
 
 The project currently has:
 
@@ -31,15 +32,16 @@ The project currently has:
 - a completed Stage 3.5C durable read-side baseline, including PostgreSQL-backed projection state, checkpoint progress, global-position projection worker orchestration, and durable replay / rebuild validation
 - a completed Stage 3.5D snapshot trust / replay-efficiency baseline, including projection snapshot schema, store, replay validator, snapshot-assisted state resolver, and aggregate snapshot trust deferral
 - a completed Stage 3.5E durable history and permission hardening baseline, including database role / privilege boundaries, accepted-history mutation hardening tests, derived-state mutation permission tests, and a minimal actor metadata boundary
-- executable tests defending write-side, read-side, durable replay, snapshot trust, and durable permission-boundary semantics
+- a completed Stage 4A SemanticOutcome core, including runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping
+- executable tests defending write-side, read-side, durable replay, snapshot trust, durable permission-boundary, and Stage 4A runtime semantic-outcome semantics
 
-Stage 3.5E is now complete at the minimal actor / permission boundary level.
+Stage 4A is now complete at the SemanticOutcome core level.
 
 The current implementation focus is:
 
-- **Stage 4 — runtime semantic governance**
+- **Stage 4B — DecisionReceipt / DiagnosticTrace**
 
-Stage 4 continues the roadmap toward runtime semantic governance: structured semantic outcomes, decision receipts, measurement evidence, diagnostic traces, runtime decision policy, strategy selection, retry governance, and later action safety.
+Stage 4B continues the roadmap from structured semantic outcomes toward durable decision receipts, diagnostic traces, measurement evidence, runtime decision policy, strategy selection, retry governance, and later action safety.
 
 ---
 
@@ -96,8 +98,11 @@ If you want to understand how the repository thinks rather than only what it imp
 - **Completed minimal actor / permission boundary**  
   Stage 3.5E completes the database role / privilege baseline, accepted-history mutation hardening, derived-state mutation permission tests, and minimal actor metadata boundary before Stage 4.
 
-- **Stage 4 runtime semantic governance is now the active branch direction**  
-  Stage 4 begins the transition from technical validation evidence into `SemanticOutcome`, `DecisionReceipt`, runtime decision policy, strategy selection, and retry governance.
+- **Stage 4A SemanticOutcome core is complete**  
+  Stage 4A completed the transition from technical validation evidence into structured `SemanticOutcome` mapping for read-side, snapshot, and write-side admission outcomes.
+
+- **Stage 4B DecisionReceipt / DiagnosticTrace is now the active branch direction**  
+  Stage 4B should preserve semantic outcomes and evidence in durable receipts and traces before policy, strategy selection, and retry governance are introduced.
 
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
@@ -506,17 +511,18 @@ Current boundary of completion:
 - Stage 3.5D snapshot trust, persistence optimization, and replay efficiency is complete at the read-side projection snapshot baseline level
 - write-side aggregate snapshot schema/store and snapshot-assisted write-side rehydration are intentionally deferred
 - Stage 3.5E durable history and permission hardening is complete
-- state-level Compass Layer 2 validation is not yet implemented
+- Stage 4A SemanticOutcome core is complete
 
 Current implementation focus:
 
-- Stage 4 runtime semantic governance
+- Stage 4B — DecisionReceipt / DiagnosticTrace
 
-Stage 3.5E closeout is complete at the durable history / permission / actor-boundary level.
+Stage 4A closeout is complete at the runtime semantic interpretation level.
 
 Next implementation milestones:
 
-- Stage 4 runtime semantic governance: SemanticOutcome, DecisionReceipt, measurement evidence, diagnostic traces, policy-linked runtime decisions, StrategySelector, and retry governance
+- Stage 4B DecisionReceipt / DiagnosticTrace: durable runtime evidence records, diagnostic traces, evidence shape, and correlation boundaries
+- Stage 4C+ runtime decision policy, StrategySelector, and retry governance
 - Stage 5 dual-dimension governance demo / action safety
 
 ---
@@ -544,7 +550,7 @@ The repository remains intentionally conservative:
 - `tests/` make selected invariants and failure paths executable
 - the current Stage 3 baseline remains intentionally minimal and in-memory
 - Stage 3.5A has hardened exact-money semantics before persistence expands
-- later phases will extend this baseline toward Stage 4 runtime semantic governance, Stage 5 action safety, and production / agent-facing hardening
+- later phases will extend this baseline from Stage 4B receipt / trace work toward runtime decision policy, Stage 5 action safety, and production / agent-facing hardening
 
 ---
 
