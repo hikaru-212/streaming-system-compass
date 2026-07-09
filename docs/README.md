@@ -24,7 +24,8 @@ It now also serves as the reference frame for an executable baseline covering:
 - projection snapshot schema, store, replay validator, and snapshot-assisted state resolver
 - aggregate snapshot trust deferral decision
 - Stage 3.5E durable history / permission hardening and minimal actor metadata boundary
-- Stage 4 runtime semantic governance as the current roadmap entry point
+- Stage 4A SemanticOutcome core as completed runtime semantic interpretation work
+- Stage 4B DecisionReceipt / DiagnosticTrace as the next roadmap entry point
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -59,12 +60,11 @@ Stage 3.5E is now complete at the minimal actor / permission boundary level.
 
 The current focus is now:
 
-- Stage 4 runtime semantic governance
-- structured `SemanticOutcome` mapping
+- Stage 4B DecisionReceipt / DiagnosticTrace
 - durable `DecisionReceipt` / runtime evidence records
 - runtime decision policy, strategy selection, and retry governance
 
-Stage 3.5E intentionally stops before Compass Layer 2 governance objects. It provides the durable permission and actor-boundary foundation that Stage 4 can build on.
+Stage 4A completes the first Compass Layer 2 semantic interpretation boundary. It provides the `SemanticOutcome` foundation that Stage 4B receipt and trace work can build on.
 
 ---
 
@@ -125,7 +125,8 @@ top-level system structure
 → implementation notes for completed stage / PR execution
 → pre-Stage 3.5E documentation alignment
 → completed minimal actor / permission boundary
-→ runtime semantic validation and outcome structuring
+→ completed SemanticOutcome core
+→ DecisionReceipt / DiagnosticTrace
 → runtime decision policy and action safety
 → boundary clarification
 → postmortem lessons

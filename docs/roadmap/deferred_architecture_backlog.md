@@ -25,7 +25,7 @@ Completed Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E work should be reco
 Current focus:
 
 ```text
-Stage 3.5E — Minimal Actor / Permission Boundary
+Stage 4B — DecisionReceipt / DiagnosticTrace
 ```
 
 Completed implementation details now live under:
@@ -33,28 +33,30 @@ Completed implementation details now live under:
 - [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
 - [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
+- [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
+- [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 
-This backlog should now be used only for concerns intentionally deferred beyond the completed durable write-side, durable read-side, and read-side snapshot trust baselines.
+This backlog should now be used only for concerns intentionally deferred beyond the completed durable write-side, durable read-side, read-side snapshot trust, durable permission, and Stage 4A SemanticOutcome baselines.
 
 ---
 
 ## Status Legend
 
 ```text
-Stage 4 / evidence design
-→ should wait for SemanticOutcome, runtime evidence, receipts, or governance work
+Stage 4B / evidence design
+→ should wait for DecisionReceipt, DiagnosticTrace, runtime evidence, or governance work
 
-Stage 4 / retry classification
-→ should wait for SemanticOutcome / request-attempt evidence design
+Stage 4E / retry classification
+→ should wait for DecisionReceipt / request-attempt evidence design
 
-Stage 4 / domain policy contract
+Stage 4B.5 / domain policy contract
 → should wait until SemanticOutcome v1 exists, then may be introduced as a minimal order-domain rule / recovery contract before RuntimeDecisionPolicy v1 hardens
 
 Stage 4 / connection-pool hardening
 → should wait until structured error modeling, connection lifecycle policy, or pooled database connections exist
 
-Stage 3.5E / actor-permission hardening
-→ should wait until minimal actor semantics and durable-history role boundaries are being defined
+Completed Stage 3.5E / actor-permission hardening
+→ moved to implementation notes unless a later production-hardening concern remains
 
 Later evaluation
 → should be revisited only when a concrete runtime, storage, or operational need appears

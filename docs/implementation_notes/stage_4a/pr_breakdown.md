@@ -1066,28 +1066,77 @@ After PR5, PR6 should close Stage 4A by aligning stage-level documentation, fina
 
 ## Goal
 
-Close Stage 4A by aligning documentation, exports, tests, and follow-up notes.
+Close Stage 4A by aligning documentation, exports, tests, roadmap notes, and follow-up checkpoints.
 
-PR6 should confirm that Stage 4A has a coherent SemanticOutcome core before Stage 4B begins.
+PR6 confirms that Stage 4A has a coherent `SemanticOutcome` core before Stage 4B begins.
 
 ## Status
 
-Planned after PR5.
+Implemented by:
+
+```text
+feat/stage4a-pr6-closeout
+```
 
 ## Scope
 
-PR6 may include:
+PR6 includes:
 
 ```text
 Stage 4A README alignment
 PR breakdown closeout
-follow-up notes for Stage 4B / 4C / 4D / 4E
-cleanup of temporary wording
+Stage 4A closeout note
+PR6 closeout note
+unit test documentation alignment
+roadmap / documentation index alignment
+Stage 4B design checkpoints
 final test run notes
+```
+
+PR6 may also include public conceptual notes that support Stage 4A boundaries, as long as they do not introduce new runtime contracts.
+
+## Closeout Result
+
+After PR6, Stage 4A is considered closed.
+
+The completed Stage 4A scope is:
+
+```text
+Runtime SemanticOutcome boundary
+SemanticOutcome vocabulary / result contract
+Runtime technical status mapping
+Read-side / snapshot outcome mapping
+Write-side admission outcome mapping
+Stage 4A closeout notes
+```
+
+Stage 4A now provides a stable semantic interpretation layer for later receipt, trace, policy, strategy, and retry-governance work.
+
+The next implementation stage should begin with:
+
+```text
+Stage 4B — DecisionReceipt / DiagnosticTrace
 ```
 
 ## Non-goals
 
-PR6 should not introduce new runtime governance features.
+PR6 does not introduce new runtime governance features.
 
-It should close the stage, not expand it.
+It does not implement:
+
+```text
+new SemanticOutcome mapper
+DecisionReceipt
+DiagnosticTrace
+Measurement Matrix
+RuntimeDecisionPolicy
+StrategySelector
+RetryGovernance
+ActionSafetyGate
+SQL migrations
+rejected candidate persistence
+operator review execution
+automatic retry blocking
+```
+
+PR6 closes the stage; it does not expand it.
