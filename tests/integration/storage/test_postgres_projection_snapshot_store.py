@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from uuid import UUID
 from uuid import uuid4
 
 import pytest
@@ -10,59 +9,11 @@ from psycopg import errors
 
 from src.storage.postgres_projection_snapshot_store import (
     PostgresProjectionSnapshotStore,
-    ProjectionSnapshot,
     SnapshotWriteCollisionError,
 )
+from tests.shared.postgres import count_rows
+from tests.shared.projection_snapshots import make_snapshot
 
-
-def make_snapshot(
-    *,
-    snapshot_id: UUID | None = None,
-    order_id: str = "order-001",
-    source_event_id: UUID | None = None,
-    source_event_sequence: int = 1,
-    source_global_position: int = 1,
-    state_status: str = "CREATED",
-    total_amount: Decimal = Decimal("100.00"),
-    paid_amount: Decimal = Decimal("0.00"),
-    state_version: int = 1,
-    snapshot_schema_version: int = 1,
-    reducer_version: str = "order_projection_reducer:v1",
-    payload_hash: str = "sha256:test-payload-hash",
-    metadata: dict | None = None,
-    created_by: str = "test",
-) -> ProjectionSnapshot:
-    if snapshot_id is None:
-        snapshot_id = uuid4()
-
-    if source_event_id is None:
-        source_event_id = uuid4()
-
-    if metadata is None:
-        metadata = {}
-
-    return ProjectionSnapshot(
-        snapshot_id=snapshot_id,
-        order_id=order_id,
-        source_event_id=source_event_id,
-        source_event_sequence=source_event_sequence,
-        source_global_position=source_global_position,
-        state_status=state_status,
-        total_amount=total_amount,
-        paid_amount=paid_amount,
-        state_version=state_version,
-        snapshot_schema_version=snapshot_schema_version,
-        reducer_version=reducer_version,
-        payload_hash=payload_hash,
-        metadata=metadata,
-        created_by=created_by,
-    )
-
-
-def count_projection_snapshots(connection: Connection) -> int:
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT COUNT(*) FROM projection_snapshots")
-        return cursor.fetchone()[0]
 
 
 def test_load_latest_snapshot_returns_none_when_missing(
@@ -274,7 +225,7 @@ def test_clear_snapshots_removes_only_one_order(
 
     assert store.load_latest_snapshot("order-001") is None
     assert store.load_latest_snapshot("order-002") is not None
-    assert count_projection_snapshots(db_connection) == 1
+    assert count_rows(db_connection, "projection_snapshots") == 1
 
 
 def test_same_full_source_boundary_and_same_payload_hash_is_idempotent_success(
@@ -305,7 +256,7 @@ def test_same_full_source_boundary_and_same_payload_hash_is_idempotent_success(
     store.save_snapshot(first)
     store.save_snapshot(duplicate)
 
-    assert count_projection_snapshots(db_connection) == 1
+    assert count_rows(db_connection, "projection_snapshots") == 1
 
     loaded = store.load_latest_snapshot("order-001")
     assert loaded is not None
@@ -418,7 +369,7 @@ def test_allows_same_source_event_sequence_for_different_orders(
         )
     )
 
-    assert count_projection_snapshots(db_connection) == 2
+    assert count_rows(db_connection, "projection_snapshots") == 2
 
 
 def test_store_preserves_database_shape_constraints(
@@ -489,7 +440,7 @@ def test_connection_remains_usable_after_idempotent_collision(
         )
     )
 
-    assert count_projection_snapshots(db_connection) == 2
+    assert count_rows(db_connection, "projection_snapshots") == 2
 
 
 def test_connection_remains_usable_after_snapshot_write_collision(
@@ -529,7 +480,7 @@ def test_connection_remains_usable_after_snapshot_write_collision(
         )
     )
 
-    assert count_projection_snapshots(db_connection) == 2
+    assert count_rows(db_connection, "projection_snapshots") == 2
 
 
 def test_same_source_event_id_same_payload_hash_but_different_lineage_raises_collision(
