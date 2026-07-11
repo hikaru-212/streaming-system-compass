@@ -6,11 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from src.core.order.enums import EventType
 from src.core.order.enums import OrderStatus
-from src.core.order.events import OrderEvent
-from src.core.order.proofs import Proof
-from src.core.order.state import OrderState
 from src.pipeline.projection.projection_snapshot_assisted_state_resolver import (
     ProjectionSnapshotAssistedResolutionResult,
 )
@@ -22,6 +18,10 @@ from src.pipeline.projection.projection_snapshot_assisted_state_resolver import 
 )
 from src.storage.postgres_projection_event_source import ProjectionEventRecord
 from src.storage.postgres_projection_snapshot_store import ProjectionSnapshot
+from tests.shared.order_events import make_created_event
+from tests.shared.order_events import make_paid_event
+from tests.shared.order_states import make_order_state
+from tests.shared.projection_snapshots import make_snapshot
 
 
 class FakeSnapshotStore:
@@ -96,108 +96,6 @@ class OutOfOrderTailEventSource:
                 event=created_event,
             ),
         ]
-
-
-def make_order_state(
-    *,
-    order_id: str = "order-001",
-    status: OrderStatus = OrderStatus.CREATED,
-    total_amount: Decimal = Decimal("100.00"),
-    paid_amount: Decimal = Decimal("0.00"),
-    version: int = 1,
-) -> OrderState:
-    return OrderState(
-        order_id=order_id,
-        status=status,
-        total_amount=total_amount,
-        paid_amount=paid_amount,
-        version=version,
-    )
-
-
-def make_snapshot(
-    *,
-    snapshot_id: UUID | None = None,
-    order_id: str = "order-001",
-    source_event_id: UUID | None = None,
-    source_event_sequence: int = 1,
-    source_global_position: int = 1,
-    state_status: str = "CREATED",
-    total_amount: Decimal = Decimal("100.00"),
-    paid_amount: Decimal = Decimal("0.00"),
-    state_version: int = 1,
-    snapshot_schema_version: int = 1,
-    reducer_version: str = "order_projection_reducer:v1",
-    payload_hash: str = "sha256:test-payload-hash",
-    metadata: dict | None = None,
-    created_by: str = "test",
-) -> ProjectionSnapshot:
-    if snapshot_id is None:
-        snapshot_id = uuid4()
-
-    if source_event_id is None:
-        source_event_id = uuid4()
-
-    if metadata is None:
-        metadata = {}
-
-    return ProjectionSnapshot(
-        snapshot_id=snapshot_id,
-        order_id=order_id,
-        source_event_id=source_event_id,
-        source_event_sequence=source_event_sequence,
-        source_global_position=source_global_position,
-        state_status=state_status,
-        total_amount=total_amount,
-        paid_amount=paid_amount,
-        state_version=state_version,
-        snapshot_schema_version=snapshot_schema_version,
-        reducer_version=reducer_version,
-        payload_hash=payload_hash,
-        metadata=metadata,
-        created_by=created_by,
-    )
-
-
-def make_created_event(
-    *,
-    order_id: str = "order-001",
-    request_id: str = "create-001",
-    sequence: int = 1,
-    amount: Decimal = Decimal("100.00"),
-) -> OrderEvent:
-    return OrderEvent.create(
-        request_id=request_id,
-        order_id=order_id,
-        sequence=sequence,
-        event_type=EventType.CREATED,
-        amount=amount,
-        proof=Proof(
-            prev_status=OrderStatus.INIT,
-            prev_version=0,
-            prev_event_id=None,
-        ),
-    )
-
-
-def make_paid_event(
-    *,
-    previous_event: OrderEvent,
-    request_id: str = "pay-001",
-    amount: Decimal = Decimal("100.00"),
-) -> OrderEvent:
-    return OrderEvent.create(
-        request_id=request_id,
-        order_id=previous_event.order_id,
-        sequence=previous_event.sequence + 1,
-        event_type=EventType.PAID,
-        amount=amount,
-        proof=Proof(
-            prev_status=OrderStatus.CREATED,
-            prev_version=previous_event.sequence,
-            prev_event_id=previous_event.event_id,
-        ),
-    )
 
 
 def make_resolver(

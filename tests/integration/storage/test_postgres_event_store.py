@@ -7,45 +7,20 @@ from src.core.order.enums import EventType, OrderStatus
 from src.core.order.events import OrderEvent
 from src.core.order.proofs import Proof
 from src.storage.postgres_event_store import PostgresEventStore
+from tests.shared.order_events import make_created_event
+from tests.shared.order_events import make_paid_event
 
 
 pytestmark = pytest.mark.usefixtures("clean_database")
 
-def build_created_event(order_id: str = "order-postgres-1") -> OrderEvent:
-    return OrderEvent.create(
-        request_id="create-001",
-        order_id=order_id,
-        sequence=1,
-        event_type=EventType.CREATED,
-        amount=Decimal("100.00"),
-        proof=Proof(
-            prev_status=OrderStatus.INIT,
-            prev_version=0,
-            prev_event_id=None,
-        ),
-    )
-
-
-def build_paid_event(created_event: OrderEvent) -> OrderEvent:
-    return OrderEvent.create(
-        request_id="pay-001",
-        order_id=created_event.order_id,
-        sequence=2,
-        event_type=EventType.PAID,
-        amount=Decimal("100.00"),
-        proof=Proof(
-            prev_status=OrderStatus.CREATED,
-            prev_version=1,
-            prev_event_id=created_event.event_id,
-        ),
-    )
-
-
 def test_append_and_load_returns_ordered_history(db_connection):
     store = PostgresEventStore(db_connection)
 
-    created = build_created_event()
-    paid = build_paid_event(created)
+    created = make_created_event(
+        request_id="create-001",
+        order_id="order-postgres-1",
+    )
+    paid = make_paid_event(previous_event=created, request_id="pay-001")
 
     store.append(created, expected_current_version=0)
     store.append(paid, expected_current_version=1)
@@ -61,8 +36,11 @@ def test_append_and_load_returns_ordered_history(db_connection):
 def test_last_event_returns_latest_event(db_connection):
     store = PostgresEventStore(db_connection)
 
-    created = build_created_event()
-    paid = build_paid_event(created)
+    created = make_created_event(
+        request_id="create-001",
+        order_id="order-postgres-1",
+    )
+    paid = make_paid_event(previous_event=created, request_id="pay-001")
 
     store.append(created, expected_current_version=0)
     store.append(paid, expected_current_version=1)
@@ -77,7 +55,10 @@ def test_last_event_returns_latest_event(db_connection):
 def test_append_rejects_stale_expected_version(db_connection):
     store = PostgresEventStore(db_connection)
 
-    created = build_created_event()
+    created = make_created_event(
+        request_id="create-001",
+        order_id="order-postgres-1",
+    )
 
     store.append(created, expected_current_version=0)
     db_connection.commit()
@@ -102,7 +83,10 @@ def test_append_rejects_stale_expected_version(db_connection):
 def test_uuid_decimal_and_proof_status_round_trip(db_connection):
     store = PostgresEventStore(db_connection)
 
-    created = build_created_event()
+    created = make_created_event(
+        request_id="create-001",
+        order_id="order-postgres-1",
+    )
 
     store.append(created, expected_current_version=0)
     db_connection.commit()
@@ -121,7 +105,10 @@ def test_uuid_decimal_and_proof_status_round_trip(db_connection):
 def test_jsonb_fields_and_event_schema_version_are_persisted(db_connection):
     store = PostgresEventStore(db_connection)
 
-    created = build_created_event()
+    created = make_created_event(
+        request_id="create-001",
+        order_id="order-postgres-1",
+    )
 
     store.append(created, expected_current_version=0)
     db_connection.commit()
@@ -152,7 +139,10 @@ def test_jsonb_fields_and_event_schema_version_are_persisted(db_connection):
 def test_append_rejects_broken_sequence(db_connection):
     store = PostgresEventStore(db_connection)
 
-    created = build_created_event()
+    created = make_created_event(
+        request_id="create-001",
+        order_id="order-postgres-1",
+    )
     store.append(created, expected_current_version=0)
     db_connection.commit()
 

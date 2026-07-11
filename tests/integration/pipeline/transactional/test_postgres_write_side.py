@@ -29,6 +29,7 @@ from src.pipeline.transactional.postgres_write_side_config import (
 from src.storage.idempotency_store import IdempotencyVerdict
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_idempotency_store import PostgresIdempotencyStore
+from tests.shared.postgres import count_rows
 
 
 def _status_value(status):
@@ -162,13 +163,6 @@ def write_side(db_connection):
         validation_runtime=FakeValidationRuntimeAllow(),
     )
 
-
-def count_rows(db_connection, table_name: str) -> int:
-    with db_connection.cursor() as cursor:
-        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-        result = cursor.fetchone()
-
-    return result[0]
 
 
 def test_create_order_accepts_event_and_records_idempotency(db_connection, write_side):

@@ -1,16 +1,9 @@
 import pytest
 from psycopg import Connection
+from tests.shared.postgres import count_rows
 
 
 pytestmark = pytest.mark.usefixtures("clean_database")
-
-
-def count_rows(connection: Connection, table_name: str) -> int:
-    with connection.cursor() as cursor:
-        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-        row = cursor.fetchone()
-
-    return row[0]
 
 
 def test_connected_to_test_database(db_connection: Connection):
