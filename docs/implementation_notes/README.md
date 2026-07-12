@@ -15,20 +15,37 @@ For project-wide sequencing, see:
 - [Stage 3.5D — Snapshot Trust Contract / Replay Efficiency](./stage_3_5d/)
 - [Stage 3.5E — Durable History and Permission Hardening](./stage_3_5e/)
 - [Stage 4A — SemanticOutcome Core](./stage_4a/)
+- [Stage 4B — DecisionReceipt / Runtime Evidence Record](./stage_4b/)
 
 ## Current Position
 
 Stage 4A is complete.
 
+Stage 4 Interlude PR0 — test helper consolidation before Stage 4B — is complete.
+
 The next implementation focus is:
 
 ```text
-Stage 4B — DecisionReceipt / DiagnosticTrace
+Stage 4B — DecisionReceipt / Runtime Evidence Record
 ```
 
 Stage 4A introduced the stable `SemanticOutcome` core, runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
 
-Stage 4B should build on that semantic interpretation layer by defining durable receipt and trace boundaries without reopening Stage 4A mapping scope unless receipt or trace requirements expose a missing evidence contract.
+Stage 4B builds on that semantic interpretation layer by defining how selected `SemanticOutcome`-derived evidence becomes compact, reviewable, machine-readable runtime governance evidence.
+
+Stage 4B should not reopen Stage 4A mapping scope unless receipt requirements expose a missing evidence contract.
+
+Stage 4B should also not collapse later Stage 4 layers into the receipt boundary.
+
+```test
+Later Stage 4 work remains separate:
+Stage 4B.1 — DiagnosticTrace / ResolutionTrace
+Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
+Stage 4B.5 — Order Domain Policy Contract v0
+Stage 4C   — RuntimeDecisionPolicy
+Stage 4D   — StrategySelector / Fast-Path Health Policy
+Stage 4E   — Retry Governance / Attempt Classification
+```
 
 ## Boundary
 
