@@ -35,6 +35,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0013 | [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) | Accepted | Separates PR4.5 snapshot-assisted state resolution from future runtime eligibility policy and persisted validation receipts. |
 | 0014 | [Defer Separate Projection Event Model](0014_defer_projection_events_as_delivery_layer.md) | Accepted | Records why the project defers a separate projection-event / projection-delivery-log model until delivery, fanout, retry, DLQ, or operational-freshness needs become concrete. |
 | 0015 | [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) | Accepted | Records why Stage 3.5E uses test-time `SET ROLE` permission probes instead of introducing production-style login identities and role-specific connection pools. |
+| 0016 | [DecisionReceipt Is Governance Evidence, Not Application Logging](0016_decision_receipt_is_governance_evidence.md) | Accepted | Records why Stage 4B introduces DecisionReceipt as durable semantic governance evidence rather than application logging or a generic error table. |
 
 ---
 
@@ -66,6 +67,7 @@ Recommended order:
 14. [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) — explains why PR4.5 resolver usage must stay separate from future runtime eligibility policy, fallback decisions, and persisted validation receipts.
 15. [Defer Separate Projection Event Model](0014_defer_projection_events_as_delivery_layer.md) — explains why a separate projection-event / projection-delivery-log model is deferred until delivery and fanout complexity becomes concrete.
 16. [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) — explains why Stage 3.5E validates effective database privileges through test-time `SET ROLE` probes instead of simulating production login identity topology.
+17. [DecisionReceipt Is Governance Evidence, Not Application Logging](0016_decision_receipt_is_governance_evidence.md) — explains why Stage 4B persists selected semantic outcomes as durable governance evidence instead of treating them as ordinary application logs, error logs, diagnostic traces, or retry attempt records.
 
 ---
 
@@ -102,6 +104,8 @@ ADR 0013 is related to Stage 3.5D PR4 / PR4.5. It records why projection snapsho
 ADR 0014 is related to Stage 3.5C / Stage 3.5D read-side boundaries. It records why accepted history remains the authoritative projection input and why a separate projection-event or projection-delivery-log model is deferred until delivery, fanout, retry, DLQ, or operational-freshness requirements become concrete.
 
 ADR 0015 is related to Stage 3.5E database role and permission hardening. It records why the project validates runtime responsibility-role privileges through test-owner `SET ROLE` probes, while deferring production login identities, role-specific database URLs, and connection-pool topology to future deployment hardening.
+
+ADR 0016 is related to Stage 4B DecisionReceipt / runtime evidence design. It records why selected `SemanticOutcome` values should become compact, durable, reviewable governance evidence, while ordinary logs, detailed diagnostic traces, retry attempt logs, runtime policy decisions, and execution strategies remain separate boundaries.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -171,6 +175,7 @@ Recommended pattern:
 0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md
 0014_defer_projection_events_as_delivery_layer.md
 0015_permission_probing_with_set_role.md
+0016_decision_receipt_is_governance_evidence.md
 ```
 
 Evolution or supporting notes may be kept as separate files:
