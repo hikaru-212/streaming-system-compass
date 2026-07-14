@@ -448,6 +448,7 @@ Detailed PR scope should be recorded in:
 
 - [PR Breakdown](pr_breakdown.md)
 - [DecisionReceipt Boundary](decision_receipt_boundary.md)
+- [DecisionReceipt Runtime Contract](decision_receipt_contract.md)
 - DecisionReceipt Persistence — to be added in PR6 as `decision_receipt_persistence.md`
 
 
