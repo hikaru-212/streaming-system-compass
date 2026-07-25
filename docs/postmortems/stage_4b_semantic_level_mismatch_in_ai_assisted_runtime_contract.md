@@ -591,7 +591,28 @@ These are separate axes.
 
 ---
 
-## 16. Final Decision
+## 16. Follow-up Contract Refinement
+
+The evidence-source correction later exposed two additional axes that also
+needed explicit separation:
+
+```text
+identity provenance
+event admission fate
+```
+
+ADR 0017 records that follow-up.
+
+It also clarifies that concrete producer ownership wins over status-name
+resemblance, and that an early idempotent replay may reference an accepted event
+without constructing a new candidate event.
+
+The historical analysis above remains unchanged because it records the original
+semantic-level mismatch.
+
+---
+
+## 17. Final Decision
 
 Current decision:
 

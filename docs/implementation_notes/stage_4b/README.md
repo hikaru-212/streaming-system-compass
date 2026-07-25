@@ -26,6 +26,27 @@ The purpose is to define how selected semantic outcomes become compact, reviewab
 
 ---
 
+## Current Status
+
+```text
+PR1 — Complete
+PR2 — Complete
+PR3 — Next
+PR4–PR7 — Planned
+```
+
+Reported focused PR2 verification:
+
+```text
+test_semantic_outcome.py
+→ 25 passed
+
+test_decision_receipt.py
+→ 102 passed
+```
+
+---
+
 ## Why This Stage Exists
 
 Stage 4A made runtime correctness evidence semantically interpretable.
@@ -143,7 +164,6 @@ It may include:
 
 ```text
 DecisionReceipt purpose and evidence boundary
-DecisionReceipt runtime contract
 SemanticOutcome → DecisionReceipt mapping
 write-side DecisionReceipt mapping
 read-side / snapshot DecisionReceipt mapping
@@ -309,11 +329,10 @@ Do not introduce a database schema before the receipt boundary and mapping shape
 
 ## Non-goals
 
-Stage 4B PR1 does not implement:
+Stage 4B does not implement the later governance layers that consume
+DecisionReceipt evidence:
 
 ```text
-DecisionReceipt runtime contract
-DecisionReceipt mapping code
 DiagnosticTrace
 Measurement Matrix
 Order Domain Policy Contract
@@ -332,6 +351,13 @@ benchmark suite
 observability platform
 LLM token accounting
 model routing policy
+```
+
+Within Stage 4B:
+
+```text
+SQL migrations and durable receipt persistence remain deferred to PR6.
+PostgresDecisionReceiptStore remains deferred to PR6.
 ```
 
 ---
@@ -392,63 +418,12 @@ Stage 4B may record actor or runtime-role evidence when receipt-safe.
 
 It should not treat database permissions alone as governance receipts.
 
-## Relationship to Future Stage 4 Work
-
-Stage 4B remains narrow.
-
-Later stages may build on it:
-
-```text
-Stage 4B.1
-= DiagnosticTrace / ResolutionTrace
-
-Stage 4B.2
-= Measurement Matrix / Cost Evidence Inventory
-
-Stage 4B.5
-= Order Domain Policy Contract v0
-
-Stage 4C
-= RuntimeDecisionPolicy
-
-Stage 4C.5
-= Layer 1 / Layer 2 Outcome Alignment
-
-Stage 4D
-= StrategySelector / Fast-Path Health Policy
-
-Stage 4E
-= Retry Governance / Attempt Classification
-```
-
-Stage 4B should not implement those layers early.
-
-It should preserve clear extension points so those layers can consume receipt evidence later.
-
-## Current PR Sequence
-
-Stage 4B is expected to proceed through:
-
-```text
-PR1 — DecisionReceipt / Runtime Evidence Boundary
-PR2 — DecisionReceipt Runtime Contract
-PR3 — SemanticOutcome to DecisionReceipt Adapter
-PR4 — Write-Side Admission DecisionReceipt Mapping
-PR5 — Read-Side Snapshot DecisionReceipt Mapping
-PR6 — DecisionReceipt Durable Persistence
-PR7 — Stage 4B Closeout
-```
-
-Detailed PR scope should be recorded in:
-
-- [PR Breakdown](pr_breakdown.md)
-
-
 ## Detailed Notes
 
 - [PR Breakdown](pr_breakdown.md)
 - [DecisionReceipt Boundary](decision_receipt_boundary.md)
 - [DecisionReceipt Runtime Contract](decision_receipt_contract.md)
+- [DecisionReceipt Evidence Source Alignment Note](decision_receipt_evidence_source_alignment_note.md)
 - DecisionReceipt Persistence — to be added in PR6 as `decision_receipt_persistence.md`
 
 

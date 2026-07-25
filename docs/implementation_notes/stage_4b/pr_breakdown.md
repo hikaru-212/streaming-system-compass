@@ -195,7 +195,7 @@ PR1 establishes why `DecisionReceipt` exists and how it differs from ordinary lo
 
 ## Status
 
-Planned.
+Complete.
 
 Recommended branch:
 
@@ -288,24 +288,28 @@ PR2 translates the Stage 4B boundary into a small code-level contract.
 
 ## Status
 
-Planned.
-
-Recommended branch:
-
-```text
-feat/stage4b-pr2-decision-receipt-contract
-```
+Complete.
 
 ## Scope
 
-PR2 may add:
+PR2 adds or updates:
 
 ```text
 src/compass/runtime/json_types.py
 src/compass/runtime/decision_receipt.py
+src/compass/runtime/semantic_outcome.py
 tests/unit/compass/runtime/test_decision_receipt.py
+tests/unit/compass/runtime/test_semantic_outcome.py
 docs/implementation_notes/stage_4b/decision_receipt_contract.md
+docs/implementation_notes/stage_4b/
+  decision_receipt_evidence_source_alignment_note.md
+docs/adrs/0017_separate_evidence_path_identity_provenance_and_admission_fate.md
+docs/postmortems/
+  stage_4b_semantic_level_mismatch_in_ai_assisted_runtime_contract.md
 ```
+
+The `semantic_outcome.py` change is narrow primitive hardening and does not
+reopen Stage 4A mapping scope.
 
 PR2 may introduce:
 
@@ -316,8 +320,10 @@ DecisionReceipt
 DecisionReceiptEvidenceSource
 DecisionReceiptSubject
 DecisionReceiptCorrelation
+DecisionReceiptIdentitySource
+DecisionReceiptAdmissionEvidence
+EventAdmissionDisposition
 DecisionReceiptActor
-DecisionReceiptEvidenceSummary
 DecisionReceiptCostSummary
 DecisionReceiptFlags
 ```

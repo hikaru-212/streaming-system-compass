@@ -14,6 +14,19 @@ PR2 translates the Stage 4B boundary into a minimal code-level contract.
 
 The contract preserves selected semantic governance evidence after Stage 4A has produced a `SemanticOutcome`.
 
+Focused verification currently reports:
+
+```text
+tests/unit/compass/runtime/test_semantic_outcome.py
+→ 25 passed
+
+tests/unit/compass/runtime/test_decision_receipt.py
+→ 102 passed
+```
+
+Repository-wide lint, type checking, and the full test suite remain separate
+PR2 closeout checks.
+
 ---
 
 ## Core Relationship
@@ -49,7 +62,9 @@ PR2 introduces:
 ```text
 src/compass/runtime/json_types.py
 src/compass/runtime/decision_receipt.py
+src/compass/runtime/semantic_outcome.py
 tests/unit/compass/runtime/test_decision_receipt.py
+tests/unit/compass/runtime/test_semantic_outcome.py
 ```
 
 The main contract is:
@@ -77,6 +92,7 @@ correlation
 actor
 cost_summary
 flags
+admission_evidence
 evidence_summary
 metadata
 ```
@@ -167,11 +183,11 @@ database connection
 Initial values:
 
 ```text
-RUNTIME_TECHNICAL_STATUS
-READ_SIDE_REPLAY
-SNAPSHOT_REPLAY
-SNAPSHOT_ASSISTED_RESOLUTION
 WRITE_SIDE_ADMISSION
+READ_SIDE_PATH
+SNAPSHOT_TRUST_PATH
+SNAPSHOT_ASSISTED_PATH
+RUNTIME_OBSERVATION
 UNKNOWN
 ```
 
@@ -200,7 +216,8 @@ REQUEST
 CANDIDATE_EVENT
 ACCEPTED_EVENT
 SNAPSHOT
-RUNTIME_OBSERVATION
+PROJECTION
+RUNTIME
 UNKNOWN
 ```
 
@@ -226,8 +243,8 @@ Initial identity sources:
 
 ```text
 ACCEPTED_HISTORY
-PRE_ADMISSION_CANDIDATE
-WRITE_SIDE_ORCHESTRATION
+CANDIDATE_EVENT_IDENTITY
+WRITE_SIDE_CORRELATION
 READ_SIDE_OBSERVATION
 SNAPSHOT_LINEAGE
 CALLER_CONTEXT
@@ -255,6 +272,61 @@ order_id from accepted_event
 PR2 only provides the contract for preserving this distinction.
 
 PR3 and later adapter PRs decide how concrete runtime evidence maps into this contract.
+
+---
+
+## Event Admission Evidence
+
+`DecisionReceiptAdmissionEvidence` records typed write-side event admission fate.
+
+It contains:
+
+```text
+disposition
+```
+
+Current `EventAdmissionDisposition` values:
+
+```text
+ADMITTED_TO_ACCEPTED_HISTORY
+MATCHED_EXISTING_ACCEPTED_EVENT
+SEMANTIC_ADMISSION_REJECTED
+APPEND_CONCURRENCY_CONFLICT
+COMMIT_OUTCOME_UNRESOLVED
+ADMISSION_NOT_REACHED
+UNKNOWN
+```
+
+Event identifiers remain owned by `DecisionReceiptCorrelation`.
+
+The current cross-field rules are:
+
+```text
+ADMITTED_TO_ACCEPTED_HISTORY
+→ candidate_event_id required
+→ accepted_event_id required
+→ both IDs equal
+
+MATCHED_EXISTING_ACCEPTED_EVENT
+→ accepted_event_id required
+→ candidate_event_id optional
+
+SEMANTIC_ADMISSION_REJECTED
+APPEND_CONCURRENCY_CONFLICT
+COMMIT_OUTCOME_UNRESOLVED
+→ candidate_event_id required
+→ accepted_event_id absent
+
+ADMISSION_NOT_REACHED
+→ candidate_event_id absent
+→ accepted_event_id absent
+```
+
+The optional candidate ID for idempotent replay preserves early replay before
+candidate construction.
+
+`COMMIT_OUTCOME_UNRESOLVED` currently has no established production producer.
+Generic infrastructure failures must not be mapped to it automatically.
 
 ---
 
@@ -359,10 +431,29 @@ string-key JSON object enforcement
 correlation identity source classification
 invalid identity field rejection
 non-negative cost fields
+boolean rejection for integer positions and cost fields
 boolean governance flags
+event admission identity invariants
+early idempotent replay without a candidate event
 absence of runtime action / strategy / retry fields
 stable enum member sets
 ```
+
+25 SemanticOutcome tests passed
+102 DecisionReceipt tests passed
+Full repository verification:
+
+pytest
+→ 719 passed 
+
+---
+
+## Implementation Status
+
+Complete.
+
+The Stage 4B PR2 runtime contract is implemented and unit-tested.
+SemanticOutcome-to-DecisionReceipt mapping remains deferred to PR3.
 
 ---
 
