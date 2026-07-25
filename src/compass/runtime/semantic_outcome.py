@@ -141,6 +141,7 @@ class SemanticOutcome:
 
     def __post_init__(self) -> None:
         _require_uuid(self.outcome_id, "outcome_id")
+        _require_bool(self.ok, "ok")
         _require_non_empty_string(self.reason, "reason")
         _require_enum(self.boundary, SemanticBoundary, "boundary")
         _require_enum(self.category, SemanticOutcomeCategory, "category")
@@ -162,6 +163,11 @@ class SemanticOutcome:
 def _require_uuid(value: object, field_name: str) -> None:
     if not isinstance(value, UUID):
         raise TypeError(f"{field_name} must be UUID")
+
+
+def _require_bool(value: object, field_name: str) -> None:
+    if not isinstance(value, bool):
+        raise TypeError(f"{field_name} must be bool")
 
 
 def _require_non_empty_string(value: str, field_name: str) -> None:
