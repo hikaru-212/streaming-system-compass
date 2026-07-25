@@ -618,6 +618,103 @@ def test_read_side_mapping_preserves_caller_context_and_evidence() -> None:
     }
 
 
+def test_replay_mapping_accepts_matching_canonical_context() -> None:
+    result = ReplayValidationResult(
+        order_id="order-001",
+        status=ReplayValidationStatus.MATCH,
+        expected_state=make_order_state(),
+        persisted_state=make_order_state(),
+        reason="Persisted projection state matches replay-derived state",
+    )
+
+    outcome = map_replay_validation_result_to_semantic_outcome(
+        outcome_id=OUTCOME_ID,
+        result=result,
+        context={
+            "order_id": "order-001",
+            "trace_label": "nightly-check",
+        },
+    )
+
+    assert outcome.context == {
+        "order_id": "order-001",
+        "trace_label": "nightly-check",
+    }
+
+
+def test_replay_mapping_rejects_conflicting_order_id_context() -> None:
+    result = ReplayValidationResult(
+        order_id="order-001",
+        status=ReplayValidationStatus.MATCH,
+        expected_state=make_order_state(),
+        persisted_state=make_order_state(),
+        reason="Persisted projection state matches replay-derived state",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="caller context conflicts with canonical context: order_id",
+    ):
+        map_replay_validation_result_to_semantic_outcome(
+            outcome_id=OUTCOME_ID,
+            result=result,
+            context={"order_id": "order-999"},
+        )
+
+
+def test_snapshot_replay_mapping_rejects_conflicting_snapshot_id_context() -> None:
+    snapshot_id = uuid4()
+
+    result = ProjectionSnapshotReplayValidationResult(
+        status=ProjectionSnapshotReplayValidationStatus.MATCH,
+        order_id="order-001",
+        snapshot_id=snapshot_id,
+        source_global_position=10,
+        snapshot_assisted_state=make_order_state(),
+        authority_state=make_order_state(),
+        reason="Snapshot-assisted replay matches accepted-history replay.",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="caller context conflicts with canonical context: snapshot_id",
+    ):
+        map_projection_snapshot_replay_validation_result_to_semantic_outcome(
+            outcome_id=OUTCOME_ID,
+            result=result,
+            context={"snapshot_id": uuid4()},
+        )
+
+
+def test_snapshot_assisted_mapping_rejects_conflicting_global_position_context() -> None:
+    snapshot_id = uuid4()
+
+    result = ProjectionSnapshotAssistedResolutionResult(
+        order_id="order-001",
+        status=(
+            ProjectionSnapshotAssistedResolutionStatus
+            .RESOLVED_FROM_SNAPSHOT
+        ),
+        resolved_state=make_order_state(),
+        snapshot_id=snapshot_id,
+        source_global_position=10,
+        reason="Projection state resolved from snapshot and tail replay.",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "caller context conflicts with canonical context: "
+            "source_global_position"
+        ),
+    ):
+        map_projection_snapshot_assisted_resolution_result_to_semantic_outcome(
+            outcome_id=OUTCOME_ID,
+            result=result,
+            context={"source_global_position": 11},
+        )
+
+
 def test_read_side_mapping_rejects_contradictory_technical_status_evidence() -> None:
     result = ReplayValidationResult(
         order_id="order-001",
