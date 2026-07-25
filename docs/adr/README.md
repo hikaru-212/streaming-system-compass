@@ -36,6 +36,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0014 | [Defer Separate Projection Event Model](0014_defer_projection_events_as_delivery_layer.md) | Accepted | Records why the project defers a separate projection-event / projection-delivery-log model until delivery, fanout, retry, DLQ, or operational-freshness needs become concrete. |
 | 0015 | [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) | Accepted | Records why Stage 3.5E uses test-time `SET ROLE` permission probes instead of introducing production-style login identities and role-specific connection pools. |
 | 0016 | [DecisionReceipt Is Governance Evidence, Not Application Logging](0016_decision_receipt_is_governance_evidence.md) | Accepted | Records why Stage 4B introduces DecisionReceipt as durable semantic governance evidence rather than application logging or a generic error table. |
+| 0017 | [Separate Evidence Path, Identity Provenance, and Event Admission Fate in DecisionReceipt](0017_separate_evidence_path_identity_provenance_and_admission_fate.md) | Accepted | Separates receipt evidence path, primary identity provenance, and typed write-side admission fate, including early idempotent replay and candidate / accepted-event invariants. |
 
 ---
 
@@ -68,6 +69,7 @@ Recommended order:
 15. [Defer Separate Projection Event Model](0014_defer_projection_events_as_delivery_layer.md) — explains why a separate projection-event / projection-delivery-log model is deferred until delivery and fanout complexity becomes concrete.
 16. [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) — explains why Stage 3.5E validates effective database privileges through test-time `SET ROLE` probes instead of simulating production login identity topology.
 17. [DecisionReceipt Is Governance Evidence, Not Application Logging](0016_decision_receipt_is_governance_evidence.md) — explains why Stage 4B persists selected semantic outcomes as durable governance evidence instead of treating them as ordinary application logs, error logs, diagnostic traces, or retry attempt records.
+18. [Separate Evidence Path, Identity Provenance, and Event Admission Fate in DecisionReceipt](0017_separate_evidence_path_identity_provenance_and_admission_fate.md) — refines the Stage 4B receipt contract by separating evidence-path ownership, primary correlation provenance, and typed event-admission fate, including early idempotent replay and cross-field identity invariants.
 
 ---
 
@@ -106,6 +108,8 @@ ADR 0014 is related to Stage 3.5C / Stage 3.5D read-side boundaries. It records 
 ADR 0015 is related to Stage 3.5E database role and permission hardening. It records why the project validates runtime responsibility-role privileges through test-owner `SET ROLE` probes, while deferring production login identities, role-specific database URLs, and connection-pool topology to future deployment hardening.
 
 ADR 0016 is related to Stage 4B DecisionReceipt / runtime evidence design. It records why selected `SemanticOutcome` values should become compact, durable, reviewable governance evidence, while ordinary logs, detailed diagnostic traces, retry attempt logs, runtime policy decisions, and execution strategies remain separate boundaries.
+
+ADR 0017 refines the Stage 4B DecisionReceipt runtime contract established after ADR 0016. It records why evidence path, primary identity provenance, and event admission fate must remain separate; why nullable candidate / accepted event identifiers cannot safely encode admission meaning by themselves; why early idempotent replay may reference an accepted event without a newly constructed candidate; and why field-level identity provenance remains deferred until future adapters, persistence, audit, or policy consumers require it.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -176,6 +180,7 @@ Recommended pattern:
 0014_defer_projection_events_as_delivery_layer.md
 0015_permission_probing_with_set_role.md
 0016_decision_receipt_is_governance_evidence.md
+0017_separate_evidence_path_identity_provenance_and_admission_fate.md
 ```
 
 Evolution or supporting notes may be kept as separate files:

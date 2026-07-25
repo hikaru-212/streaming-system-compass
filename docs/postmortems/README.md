@@ -61,6 +61,7 @@ Postmortems help preserve:
 | [stage_3_5d_local_correctness_global_premise_drift](stage_3_5d_local_correctness_global_premise_drift.md) | Stage Scope / AI-Assisted Engineering | Records the Stage 3.5D correction where locally coherent snapshot PRs remained technically valid, but the stage-level premise had to be re-audited after distinguishing write-side aggregate admission risk from read-side derived-state evidence. |
 | [from_row_count_assertions_to_evidence_assertions](from_row_count_assertions_to_evidence_assertions.md) | Testing / Assertion Fidelity | Records the Stage 3.5E PR4 near miss where exact evidence assertions exposed a PostgreSQL UUID return-type mismatch that row-count-only assertions would have hidden. |
 | [airflow_failure_and_boundary_thinking](airflow_failure_and_boundary_thinking.md) | Debugging / Boundary Thinking | Records how an early Airflow debugging failure exposed the cost of operating a system without first identifying the boundary responsible for the failure. |
+| [stage_4b_semantic_level_mismatch_in_ai_assisted_runtime_contract](stage_4b_semantic_level_mismatch_in_ai_assisted_runtime_contract.md) | Runtime Contract / AI-Assisted Engineering | Records the Stage 4B PR2 correction where a locally strong `DecisionReceipt` contract mixed evidence-source paths with operation/status vocabulary, and preserves the rule that AI-generated contracts require semantic-level admission review. |
 
 ---
 

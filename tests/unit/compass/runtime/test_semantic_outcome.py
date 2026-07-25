@@ -123,6 +123,21 @@ def test_semantic_outcome_rejects_non_uuid_outcome_id() -> None:
         make_semantic_outcome(outcome_id="outcome-001")
 
 
+@pytest.mark.parametrize(
+    "bad_ok",
+    [
+        1,
+        0,
+        "true",
+        "false",
+        None,
+    ],
+)
+def test_semantic_outcome_rejects_non_bool_ok(bad_ok: object) -> None:
+    with pytest.raises(TypeError, match="ok must be bool"):
+        make_semantic_outcome(ok=bad_ok)
+
+
 @pytest.mark.parametrize("reason", ["", "   "])
 def test_semantic_outcome_rejects_blank_reason(reason: str) -> None:
     with pytest.raises(ValueError, match="reason must be a non-empty string"):

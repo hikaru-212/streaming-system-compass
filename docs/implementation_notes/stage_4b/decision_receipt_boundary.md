@@ -428,7 +428,7 @@ Stage 4B should preserve this as receipt-level evidence:
 ```text
 operator_review_required = true
 boundary = LAYER_1_WRITE_SIDE
-evidence_source = write_side_admission
+evidence_source = WRITE_SIDE_ADMISSION
 ```
 
 Stage 4B does not execute operator review.
@@ -557,6 +557,56 @@ than semantic transition validation
 Stage 4B PR1 records this checkpoint only.
 
 It does not change `ValidationResult`.
+
+---
+
+## PR2 Contract Follow-up
+
+PR2 implements the boundary above through separate typed axes:
+
+```text
+DecisionReceiptEvidenceSource
+= evidence path
+
+DecisionReceiptIdentitySource
+= primary correlation provenance
+
+EventAdmissionDisposition
+= write-side event-attempt fate
+```
+
+Current evidence-path values are:
+
+```text
+WRITE_SIDE_ADMISSION
+READ_SIDE_PATH
+SNAPSHOT_TRUST_PATH
+SNAPSHOT_ASSISTED_PATH
+RUNTIME_OBSERVATION
+UNKNOWN
+```
+
+Current admission values are:
+
+```text
+ADMITTED_TO_ACCEPTED_HISTORY
+MATCHED_EXISTING_ACCEPTED_EVENT
+SEMANTIC_ADMISSION_REJECTED
+APPEND_CONCURRENCY_CONFLICT
+COMMIT_OUTCOME_UNRESOLVED
+ADMISSION_NOT_REACHED
+UNKNOWN
+```
+
+For `MATCHED_EXISTING_ACCEPTED_EVENT`, `accepted_event_id` is required while
+`candidate_event_id` is optional. This preserves early idempotent replay before
+candidate construction.
+
+`COMMIT_OUTCOME_UNRESOLVED` remains reserved vocabulary without an established
+production producer.
+
+PR2 defines constructable contract states. PR4 and PR5 remain responsible for
+mapping concrete runtime evidence into those states.
 
 ---
 
