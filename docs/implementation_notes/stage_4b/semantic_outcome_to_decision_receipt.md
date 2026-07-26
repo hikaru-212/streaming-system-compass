@@ -647,7 +647,99 @@ PR3 does not reopen this primitive boundary.
 
 ## Implementation Status
 
-Documentation baseline defined.
+Complete.
 
-Production adapter and unit tests remain to be implemented in the next PR3
-commit.
+Stage 4B PR3 implements the generic:
+
+```text
+SemanticOutcome
+→ DecisionReceipt
+```
+
+construction boundary.
+
+The production adapter:
+
+- preserves the complete typed `SemanticOutcome` semantic tuple;
+- requires caller-supplied `receipt_id` and `evidence_source`;
+- accepts explicit optional receipt supporting contracts;
+- accepts only caller-preselected `evidence_summary` and `metadata`;
+- delegates supporting-contract, admission-invariant, and JSON-safety checks to
+  the existing `DecisionReceipt` contract;
+- never inspects or copies `SemanticOutcome.context` or
+  `SemanticOutcome.evidence`;
+- does not infer subject, correlation, identity provenance, admission fate,
+  governance flags, runtime policy, strategy, retry authorization, or
+  persistence behavior.
+
+Schema-level ownership tests explicitly classify every current
+`SemanticOutcome` and `DecisionReceipt` field so future contract evolution
+cannot silently bypass the generic mapper boundary.
+
+---
+
+## PR3 Closeout Decision
+
+PR3 is complete and should merge before producer-specific receipt mapping
+begins.
+
+The next work is not PR4 or PR5.
+
+The next required step is:
+
+```text
+Interlude — DecisionReceipt Flag Evaluation State
+```
+
+The Interlude must review the shared `DecisionReceiptFlags` contract before
+PR4 and PR5 begin producing durable flag evidence.
+
+The current boolean defaults cannot distinguish:
+
+```text
+explicit true
+explicit false after evaluation
+not evaluated
+not supplied
+not applicable
+incomplete flag evidence
+```
+
+PR3 correctly preserves the existing shared contract and does not create a
+mapper-specific flag interpretation.
+
+The shared flag contract must therefore be reviewed separately rather than
+modified only inside the PR3 adapter.
+
+---
+
+## Next Work: Flag Evaluation State Interlude
+
+The Interlude should determine:
+
+```text
+whether TRUE / FALSE / NOT_EVALUATED is sufficient
+whether NOT_APPLICABLE is required
+whether FALSE always means evaluated and explicitly denied
+whether NOT_EVALUATED covers both not supplied and not executed
+whether classification completeness must be represented
+how future policy consumers interpret each state
+the stable JSON representation
+Java / Rust portability
+whether the decision requires a new ADR
+```
+
+The Interlude must complete before PR4 and PR5 implementation because those
+specialized adapters will be the first production producers of
+producer-specific flag evidence.
+
+It must also complete before PR6 persistence so durable storage does not
+collapse unknown or absent evaluation into `False`.
+
+After the shared flag contract stabilizes, PR4 and PR5 should first perform
+separate read-only audits. If implemented in parallel, they must use separate
+Git worktrees.
+
+PR4 and PR5 must stop and report if they discover another shared
+`DecisionReceipt` contract blocker. They must not independently modify shared
+contracts from producer-specific branches.

@@ -176,6 +176,7 @@ PR1 — DecisionReceipt / Runtime Evidence Boundary
 PR2 — DecisionReceipt Runtime Contract
 Interlude — Read-Side Canonical Context Protection
 PR3 — SemanticOutcome to DecisionReceipt Adapter
+Interlude — DecisionReceipt Flag Evaluation State
 PR4 — Write-Side Admission DecisionReceipt Mapping
 PR5 — Read-Side Snapshot DecisionReceipt Mapping
 PR6 — DecisionReceipt Durable Persistence
@@ -437,7 +438,7 @@ strategy, or retry behavior.
 
 ## Status
 
-In progress.
+Complete.
 
 Recommended branch:
 
@@ -445,24 +446,27 @@ Recommended branch:
 feat/stage4b-pr3-outcome-to-receipt-adapter
 ```
 
-## Documentation-First Scope
+## Completed Scope
 
-The first PR3 commit adds or updates:
+PR3 adds or updates:
 
 ```text
+src/compass/runtime/decision_receipt_mapping.py
+tests/unit/compass/runtime/test_decision_receipt_mapping.py
+src/compass/runtime/__init__.py
 docs/implementation_notes/stage_4b/
   semantic_outcome_to_decision_receipt.md
 docs/implementation_notes/stage_4b/pr_breakdown.md
 docs/implementation_notes/stage_4b/README.md
 ```
 
-The implementation commit may then add:
+The production module introduces only:
 
 ```text
-src/compass/runtime/decision_receipt_mapping.py
-tests/unit/compass/runtime/test_decision_receipt_mapping.py
-src/compass/runtime/__init__.py
+map_semantic_outcome_to_decision_receipt
 ```
+
+The implementation remains a thin generic constructor adapter.
 
 ## Required Semantic Preservation
 
@@ -672,6 +676,122 @@ no read-side / snapshot path inference
 no flag / policy / retry inference
 no persistence behavior
 ```
+
+---
+
+# Interlude — DecisionReceipt Flag Evaluation State
+
+## Goal
+
+Stabilize the shared `DecisionReceiptFlags` evaluation-state contract before
+PR4 and PR5 begin producing producer-specific receipt flags.
+
+The current boolean fields are:
+
+```text
+fallback_required
+rebuild_required
+operator_review_required
+retry_candidate
+```
+
+The current default value `False` is ambiguous because it may mean:
+
+```text
+evaluated and explicitly false
+not evaluated
+not supplied
+not applicable
+incomplete flag evidence
+```
+
+The Interlude must decide how the shared contract distinguishes explicit
+positive evidence, explicit negative evidence, and absence of evaluation.
+
+## Status
+
+Next.
+
+Recommended branch:
+
+```text
+feat/stage4b-decision-receipt-flag-evaluation-state
+```
+
+## Audit-First Scope
+
+The Interlude should begin with a read-only contract audit.
+
+It should decide:
+
+```text
+whether TRUE / FALSE / NOT_EVALUATED is sufficient
+whether NOT_APPLICABLE is required
+whether FALSE means evaluated and explicitly denied
+whether NOT_EVALUATED combines not supplied and not executed
+whether classification completeness needs a separate representation
+how future policy consumers interpret each state
+the stable JSON representation
+Java / Rust portability
+whether a new ADR is required
+```
+
+## Boundary
+
+The Interlude owns the shared:
+
+```text
+DecisionReceiptFlags contract
+```
+
+It does not belong only to the PR3 mapper.
+
+PR3 correctly performs:
+
+```text
+explicit flags supplied
+→ pass through
+
+flags omitted
+→ use the current shared contract default
+```
+
+The ambiguity must not be fixed only in PR3 because direct
+`DecisionReceipt` construction and later specialized adapters must share one
+flag interpretation.
+
+## Timing
+
+The Interlude must complete before:
+
+```text
+PR4 — Write-Side Admission DecisionReceipt Mapping
+PR5 — Read-Side Snapshot DecisionReceipt Mapping
+PR6 — DecisionReceipt Durable Persistence
+```
+
+PR4 and PR5 will be the first producer-specific flag evidence producers.
+
+PR6 must not persist `False` where the true meaning was not evaluated or not
+provided.
+
+## Non-goals
+
+The Interlude does not implement:
+
+```text
+write-side receipt mapping
+read-side / snapshot receipt mapping
+runtime policy
+retry authorization
+fallback execution
+rebuild execution
+operator-review execution
+persistence schema
+```
+
+After the Interlude stabilizes the shared contract, PR4 and PR5 should first
+perform separate read-only audits before implementation.
 
 ---
 

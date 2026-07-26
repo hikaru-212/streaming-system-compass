@@ -32,7 +32,8 @@ The purpose is to define how selected semantic outcomes become compact, reviewab
 PR1 — Complete
 PR2 — Complete
 Interlude — Read-Side Canonical Context Protection — Complete
-PR3 — In progress
+PR3 — Complete
+Interlude — DecisionReceipt Flag Evaluation State — Next
 PR4–PR7 — Planned
 ```
 
@@ -301,6 +302,84 @@ it does not inspect the open-ended outcome mappings.
 
 ---
 
+## SemanticOutcome to DecisionReceipt Adapter
+
+PR3 is complete.
+
+The generic mapper establishes:
+
+```text
+SemanticOutcome
++ explicit receipt-specific inputs
+→ DecisionReceipt
+```
+
+It preserves the complete typed semantic tuple and accepts explicit receipt
+identity, evidence source, supporting contracts, preselected JSON-safe evidence,
+and metadata.
+
+It does not inspect or copy:
+
+```text
+SemanticOutcome.context
+SemanticOutcome.evidence
+```
+
+It also does not infer producer ownership, subject, correlation, identity
+provenance, admission disposition, governance flags, policy, strategy, retry
+authorization, serialization, or persistence.
+
+PR4 and PR5 must remain producer-specific wrappers around this stable generic
+construction boundary.
+
+---
+
+## DecisionReceipt Flag Evaluation State
+
+The next work is:
+
+```text
+Interlude — DecisionReceipt Flag Evaluation State
+```
+
+The current `DecisionReceiptFlags` boolean defaults cannot distinguish:
+
+```text
+evaluated and explicitly false
+not evaluated
+not supplied
+not applicable
+incomplete flag evidence
+```
+
+PR3 correctly preserves the existing shared flag contract and performs no flag
+derivation.
+
+The next Interlude must review the shared flag evaluation-state model before
+PR4 and PR5 begin producing producer-specific flags and before PR6 defines
+durable storage.
+
+The review should determine whether the contract requires:
+
+```text
+TRUE
+FALSE
+NOT_EVALUATED
+```
+
+and whether an additional:
+
+```text
+NOT_APPLICABLE
+```
+
+state or completeness representation is necessary.
+
+The Interlude should begin with a read-only audit. It must not start PR4, PR5,
+or persistence design.
+
+---
+
 ## Relationship to Future Stage 4 Work
 
 Stage 4B remains narrow.
@@ -345,6 +424,7 @@ PR1 — DecisionReceipt / Runtime Evidence Boundary
 PR2 — DecisionReceipt Runtime Contract
 Interlude — Read-Side Canonical Context Protection
 PR3 — SemanticOutcome to DecisionReceipt Adapter
+Interlude — DecisionReceipt Flag Evaluation State
 PR4 — Write-Side Admission DecisionReceipt Mapping
 PR5 — Read-Side Snapshot DecisionReceipt Mapping
 PR6 — DecisionReceipt Durable Persistence
@@ -455,7 +535,7 @@ It should not treat database permissions alone as governance receipts.
 - [DecisionReceipt Runtime Contract](decision_receipt_contract.md)
 - [DecisionReceipt Evidence Source Alignment Note](decision_receipt_evidence_source_alignment_note.md)
 - [SemanticOutcome to DecisionReceipt Adapter](semantic_outcome_to_decision_receipt.md)
+- DecisionReceipt Flag Evaluation State — to be documented by the next Interlude
 - DecisionReceipt Persistence — to be added in PR6 as `decision_receipt_persistence.md`
-
 
 
