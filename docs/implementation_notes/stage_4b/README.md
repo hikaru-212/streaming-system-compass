@@ -31,6 +31,7 @@ The purpose is to define how selected semantic outcomes become compact, reviewab
 ```text
 PR1 — Complete
 PR2 — Complete
+Interlude — Read-Side Canonical Context Protection — Complete
 PR3 — Next
 PR4–PR7 — Planned
 ```
@@ -272,6 +273,30 @@ It should not trigger a large retroactive refactor of stable earlier code.
 
 ---
 
+## Read-Side Canonical Context Protection
+
+Before PR3, the read-side Stage 4A adapters were hardened so caller-provided
+context can add supplementary values but cannot contradict canonical context
+derived from typed runtime results.
+
+The protected context remains producer-owned:
+
+```text
+ReplayValidationResult
+→ order_id
+
+ProjectionSnapshotReplayValidationResult
+ProjectionSnapshotAssistedResolutionResult
+→ order_id
+→ snapshot_id
+→ source_global_position
+```
+
+This Interlude does not make all `SemanticOutcome.context` receipt-safe.
+PR3 must still select receipt-safe context and evidence explicitly.
+
+---
+
 ## Relationship to Future Stage 4 Work
 
 Stage 4B remains narrow.
@@ -314,6 +339,7 @@ Stage 4B is expected to proceed through:
 ```text
 PR1 — DecisionReceipt / Runtime Evidence Boundary
 PR2 — DecisionReceipt Runtime Contract
+Interlude — Read-Side Canonical Context Protection
 PR3 — SemanticOutcome to DecisionReceipt Adapter
 PR4 — Write-Side Admission DecisionReceipt Mapping
 PR5 — Read-Side Snapshot DecisionReceipt Mapping

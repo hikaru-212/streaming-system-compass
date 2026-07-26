@@ -174,6 +174,7 @@ It should define the DecisionReceipt boundary before code introduces a runtime c
 ```text
 PR1 — DecisionReceipt / Runtime Evidence Boundary
 PR2 — DecisionReceipt Runtime Contract
+Interlude — Read-Side Canonical Context Protection
 PR3 — SemanticOutcome to DecisionReceipt Adapter
 PR4 — Write-Side Admission DecisionReceipt Mapping
 PR5 — Read-Side Snapshot DecisionReceipt Mapping
@@ -341,6 +342,72 @@ read-side / snapshot receipt mapping
 SQL persistence
 DiagnosticTrace
 RuntimeDecisionPolicy
+```
+
+---
+
+# Interlude — Read-Side Canonical Context Protection
+
+## Goal
+
+Prevent caller-provided context from contradicting adapter-derived canonical
+read-side identity and lineage context before PR3 converts `SemanticOutcome`
+values into durable `DecisionReceipt` evidence.
+
+## Status
+
+Complete.
+
+## Scope
+
+The Interlude updates:
+
+```text
+src/compass/runtime/read_side_outcome_mapping.py
+tests/unit/compass/runtime/test_read_side_outcome_mapping.py
+docs/implementation_notes/stage_4b/pr_breakdown.md
+docs/implementation_notes/stage_4b/README.md
+```
+
+The read-side adapters now preserve this rule:
+
+```text
+caller-provided context
+may add non-canonical context
+
+caller-provided context
+must not contradict adapter-derived canonical context
+```
+
+Canonical context remains producer-owned.
+
+Current protected context is supplied separately by each concrete adapter:
+
+```text
+ReplayValidationResult
+→ order_id
+
+ProjectionSnapshotReplayValidationResult
+→ order_id
+→ snapshot_id
+→ source_global_position
+
+ProjectionSnapshotAssistedResolutionResult
+→ order_id
+→ snapshot_id
+→ source_global_position
+```
+
+The Interlude does not:
+
+```text
+change SemanticOutcome evidence merging
+add DecisionReceipt mapping
+select receipt subjects or correlations
+map receipt flags
+map admission disposition
+serialize or persist receipts
+refactor the Stage 4A mapping framework
 ```
 
 ---

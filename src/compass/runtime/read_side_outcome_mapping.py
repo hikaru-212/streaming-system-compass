@@ -45,11 +45,11 @@ def map_replay_validation_result_to_semantic_outcome(
         technical_status=result.status,
         boundary=SemanticBoundary.LAYER_2_READ_SIDE,
         reason=_require_reason(result.reason, "ReplayValidationResult"),
-        context=_merge_mappings(
-            {
+        context=_merge_caller_context_with_canonical_context(
+            caller_context=context,
+            canonical_context={
                 "order_id": result.order_id,
             },
-            context,
         ),
         evidence=_merge_mappings(
             {
@@ -92,13 +92,13 @@ def map_projection_snapshot_replay_validation_result_to_semantic_outcome(
             result.reason,
             "ProjectionSnapshotReplayValidationResult"
         ),
-        context=_merge_mappings(
-            {
+        context=_merge_caller_context_with_canonical_context(
+            caller_context=context,
+            canonical_context={
                 "order_id": result.order_id,
                 "snapshot_id": result.snapshot_id,
                 "source_global_position": result.source_global_position,
             },
-            context,
         ),
         evidence=_merge_mappings(
             {
@@ -145,13 +145,13 @@ def map_projection_snapshot_assisted_resolution_result_to_semantic_outcome(
             result.reason,
             "ProjectionSnapshotAssistedResolutionResult"
         ),
-        context=_merge_mappings(
-            {
+        context=_merge_caller_context_with_canonical_context(
+            caller_context=context,
+            canonical_context={
                 "order_id": result.order_id,
                 "snapshot_id": result.snapshot_id,
                 "source_global_position": result.source_global_position,
             },
-            context,
         ),
         evidence=_merge_mappings(
             {
@@ -175,4 +175,22 @@ def _merge_mappings(
 ) -> dict[str, Any]:
     merged = dict(base)
     merged.update(dict(override or {}))
+    return merged
+
+
+def _merge_caller_context_with_canonical_context(
+    *,
+    caller_context: Mapping[str, Any] | None,
+    canonical_context: Mapping[str, Any],
+) -> dict[str, Any]:
+    merged = dict(caller_context or {})
+
+    for key, canonical_value in canonical_context.items():
+        if key in merged and merged[key] != canonical_value:
+            raise ValueError(
+                f"caller context conflicts with canonical context: {key}"
+            )
+
+        merged[key] = canonical_value
+
     return merged
