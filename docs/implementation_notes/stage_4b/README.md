@@ -32,7 +32,7 @@ The purpose is to define how selected semantic outcomes become compact, reviewab
 PR1 — Complete
 PR2 — Complete
 Interlude — Read-Side Canonical Context Protection — Complete
-PR3 — Next
+PR3 — In progress
 PR4–PR7 — Planned
 ```
 
@@ -292,8 +292,12 @@ ProjectionSnapshotAssistedResolutionResult
 → source_global_position
 ```
 
-This Interlude does not make all `SemanticOutcome.context` receipt-safe.
-PR3 must still select receipt-safe context and evidence explicitly.
+This Interlude does not make `SemanticOutcome.context` or
+`SemanticOutcome.evidence` automatically receipt-safe.
+
+PR4, PR5, or caller / orchestration must explicitly preselect receipt-safe
+`evidence_summary` and `metadata`. PR3 only accepts and validates those inputs;
+it does not inspect the open-ended outcome mappings.
 
 ---
 
@@ -450,6 +454,8 @@ It should not treat database permissions alone as governance receipts.
 - [DecisionReceipt Boundary](decision_receipt_boundary.md)
 - [DecisionReceipt Runtime Contract](decision_receipt_contract.md)
 - [DecisionReceipt Evidence Source Alignment Note](decision_receipt_evidence_source_alignment_note.md)
+- [SemanticOutcome to DecisionReceipt Adapter](semantic_outcome_to_decision_receipt.md)
 - DecisionReceipt Persistence — to be added in PR6 as `decision_receipt_persistence.md`
+
 
 
