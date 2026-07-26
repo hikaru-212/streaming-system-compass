@@ -33,7 +33,8 @@ PR1 — Complete
 PR2 — Complete
 Interlude — Read-Side Canonical Context Protection — Complete
 PR3 — Complete
-Interlude — DecisionReceipt Flag Evaluation State — Next
+Interlude — DecisionReceipt Flag Evaluation State — Contract defined;
+runtime migration pending
 PR4–PR7 — Planned
 ```
 
@@ -336,47 +337,32 @@ construction boundary.
 
 ## DecisionReceipt Flag Evaluation State
 
-The next work is:
+The documentation-first contract decision is:
 
 ```text
-Interlude — DecisionReceipt Flag Evaluation State
+DecisionReceiptFlagState
+= TRUE | FALSE | NOT_EVALUATED
 ```
 
-The current `DecisionReceiptFlags` boolean defaults cannot distinguish:
+Every flag defaults to:
 
 ```text
-evaluated and explicitly false
-not evaluated
-not supplied
-not applicable
-incomplete flag evidence
-```
-
-PR3 correctly preserves the existing shared flag contract and performs no flag
-derivation.
-
-The next Interlude must review the shared flag evaluation-state model before
-PR4 and PR5 begin producing producer-specific flags and before PR6 defines
-durable storage.
-
-The review should determine whether the contract requires:
-
-```text
-TRUE
-FALSE
 NOT_EVALUATED
 ```
 
-and whether an additional:
+`FALSE` is reserved for a completed evaluation that explicitly negates the
+condition. `NOT_EVALUATED` means the receipt contains no completed evaluation
+and must not be interpreted as `FALSE`.
 
-```text
-NOT_APPLICABLE
-```
+No current producer, consumer, invariant, or test justifies
+`NOT_APPLICABLE`.
 
-state or completeness representation is necessary.
+PR3 remains pass-through only. PR4 and PR5 may later construct only
+producer-supported evaluation states. Stage 4E alone owns retry classification
+and authorization.
 
-The Interlude should begin with a read-only audit. It must not start PR4, PR5,
-or persistence design.
+The shared runtime contract and tests still require a separately authorized
+migration before PR4, PR5, or persistence work begins.
 
 ---
 
@@ -535,7 +521,6 @@ It should not treat database permissions alone as governance receipts.
 - [DecisionReceipt Runtime Contract](decision_receipt_contract.md)
 - [DecisionReceipt Evidence Source Alignment Note](decision_receipt_evidence_source_alignment_note.md)
 - [SemanticOutcome to DecisionReceipt Adapter](semantic_outcome_to_decision_receipt.md)
-- DecisionReceipt Flag Evaluation State — to be documented by the next Interlude
+- [DecisionReceipt Flag Evaluation State](decision_receipt_flag_evaluation_state.md)
 - DecisionReceipt Persistence — to be added in PR6 as `decision_receipt_persistence.md`
-
 

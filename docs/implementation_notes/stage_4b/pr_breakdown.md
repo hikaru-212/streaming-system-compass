@@ -710,7 +710,10 @@ positive evidence, explicit negative evidence, and absence of evaluation.
 
 ## Status
 
-Next.
+Documentation-first contract decision complete.
+
+Shared runtime-contract and test migration remains pending before PR4, PR5, or
+PR6 begins.
 
 Recommended branch:
 
@@ -720,20 +723,30 @@ feat/stage4b-decision-receipt-flag-evaluation-state
 
 ## Audit-First Scope
 
-The Interlude should begin with a read-only contract audit.
+The Interlude began with a read-only contract audit.
 
-It should decide:
+The audit selected:
 
 ```text
-whether TRUE / FALSE / NOT_EVALUATED is sufficient
-whether NOT_APPLICABLE is required
-whether FALSE means evaluated and explicitly denied
-whether NOT_EVALUATED combines not supplied and not executed
-whether classification completeness needs a separate representation
-how future policy consumers interpret each state
-the stable JSON representation
-Java / Rust portability
-whether a new ADR is required
+TRUE
+FALSE
+NOT_EVALUATED
+```
+
+`FALSE` means evaluated and explicitly negated.
+
+`NOT_EVALUATED` means the receipt contains no completed evaluation for the
+condition. It is the default and must not be interpreted as `FALSE`.
+
+No current producer, consumer, invariant, or test justifies
+`NOT_APPLICABLE`. A new ADR is not required for this narrow refinement of the
+existing DecisionReceipt evidence contract.
+
+The complete ownership, consumer, retry, portability, and migration decision is
+recorded in:
+
+```text
+decision_receipt_flag_evaluation_state.md
 ```
 
 ## Boundary
@@ -792,6 +805,10 @@ persistence schema
 
 After the Interlude stabilizes the shared contract, PR4 and PR5 should first
 perform separate read-only audits before implementation.
+
+The documentation-first contract is defined. The shared runtime contract and
+tests must be migrated in a separately authorized task before those audits
+begin.
 
 ---
 
