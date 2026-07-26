@@ -176,6 +176,7 @@ PR1 — DecisionReceipt / Runtime Evidence Boundary
 PR2 — DecisionReceipt Runtime Contract
 Interlude — Read-Side Canonical Context Protection
 PR3 — SemanticOutcome to DecisionReceipt Adapter
+Interlude — DecisionReceipt Flag Evaluation State
 PR4 — Write-Side Admission DecisionReceipt Mapping
 PR5 — Read-Side Snapshot DecisionReceipt Mapping
 PR6 — DecisionReceipt Durable Persistence
@@ -209,8 +210,8 @@ feat/stage4b-pr1-decision-receipt-boundary
 PR1 adds or updates:
 
 ```text
-docs/adrs/0016_decision_receipt_is_governance_evidence.md
-docs/adrs/README.md
+docs/adr/0016_decision_receipt_is_governance_evidence.md
+docs/adr/README.md
 docs/boundary_notes/README.md
 docs/boundary_notes/decision_receipt_boundary.md
 docs/implementation_notes/README.md
@@ -304,7 +305,7 @@ tests/unit/compass/runtime/test_semantic_outcome.py
 docs/implementation_notes/stage_4b/decision_receipt_contract.md
 docs/implementation_notes/stage_4b/
   decision_receipt_evidence_source_alignment_note.md
-docs/adrs/0017_separate_evidence_path_identity_provenance_and_admission_fate.md
+docs/adr/0017_separate_evidence_path_identity_provenance_and_admission_fate.md
 docs/postmortems/
   stage_4b_semantic_level_mismatch_in_ai_assisted_runtime_contract.md
 ```
@@ -416,13 +417,28 @@ refactor the Stage 4A mapping framework
 
 ## Goal
 
-Map `SemanticOutcome` into `DecisionReceipt` through a receipt-safe evidence boundary.
+Introduce a thin generic adapter that constructs `DecisionReceipt` from an
+existing `SemanticOutcome` without reinterpreting semantic meaning or inferring
+producer-specific authority.
 
-The adapter should preserve semantic summary while preventing arbitrary context / evidence from becoming durable governance evidence.
+The intended relationship is:
+
+```text
+SemanticOutcome
++ explicit receipt identity
++ explicit evidence path
++ explicit supporting receipt evidence
+→ DecisionReceipt
+```
+
+PR3 establishes a receipt-construction boundary.
+
+It does not establish write-side, read-side, snapshot, persistence, policy,
+strategy, or retry behavior.
 
 ## Status
 
-Planned.
+Complete.
 
 Recommended branch:
 
@@ -430,23 +446,352 @@ Recommended branch:
 feat/stage4b-pr3-outcome-to-receipt-adapter
 ```
 
-## Scope
+## Completed Scope
 
-PR3 may add:
+PR3 adds or updates:
 
 ```text
 src/compass/runtime/decision_receipt_mapping.py
 tests/unit/compass/runtime/test_decision_receipt_mapping.py
-docs/implementation_notes/stage_4b/semantic_outcome_to_decision_receipt.md
+src/compass/runtime/__init__.py
+docs/implementation_notes/stage_4b/
+  semantic_outcome_to_decision_receipt.md
+docs/implementation_notes/stage_4b/pr_breakdown.md
+docs/implementation_notes/stage_4b/README.md
 ```
+
+The production module introduces only:
+
+```text
+map_semantic_outcome_to_decision_receipt
+```
+
+The implementation remains a thin generic constructor adapter.
+
+## Required Semantic Preservation
+
+The generic adapter must preserve the existing `SemanticOutcome` tuple exactly:
+
+```text
+outcome_id
+ok
+boundary
+category
+semantic_code
+severity
+risk_level
+reversibility
+reason
+```
+
+PR3 must not perform a second semantic interpretation.
+
+```text
+SemanticOutcome → DecisionReceipt
+= semantic preservation
+
+SemanticOutcome → DecisionReceipt
+≠ semantic remapping
+```
+
+## Explicit Inputs
+
+The generic adapter should require explicit:
+
+```text
+receipt_id
+outcome
+evidence_source
+```
+
+It may accept the existing receipt supporting contracts explicitly:
+
+```text
+subject
+correlation
+actor
+cost_summary
+flags
+admission_evidence
+evidence_summary
+metadata
+```
+
+When optional supporting contracts are omitted, the adapter should preserve the
+current `DecisionReceipt` defaults.
+
+## Receipt-Safe Evidence Boundary
 
 Important boundary:
 
 ```text
 SemanticOutcome.context / evidence
-≠
-automatically receipt-safe evidence
+≠ automatically receipt-safe evidence
 ```
+
+The generic adapter must not inspect, flatten, namespace, allowlist, convert, or
+wholesale-copy `SemanticOutcome.context` or `SemanticOutcome.evidence`.
+
+Only explicitly preselected:
+
+```text
+evidence_summary
+metadata
+```
+
+may enter the receipt flexible evidence fields.
+
+The existing `DecisionReceipt` JSON-safe boundary remains responsible for
+rejecting unsupported values.
+
+Identity and lineage evidence should use typed receipt fields whenever possible,
+rather than being duplicated in flexible JSON.
+
+## Ownership Boundary
+
+PR3 owns:
+
+```text
+exact semantic tuple preservation
+explicit receipt construction
+existing DecisionReceipt default application
+pass-through of explicitly supplied typed supporting contracts
+JSON-safe validation through the DecisionReceipt contract
+```
+
+PR3 does not own:
+
+```text
+receipt_id generation
+evidence_source inference
+subject inference
+correlation inference
+identity-provenance inference
+actor discovery
+cost measurement
+flag derivation
+admission-disposition inference
+producer-specific evidence selection
+serialization
+persistence
+policy
+strategy
+retry authorization
+```
+
+`receipt_id` is supplied by caller / orchestration.
+
+Concrete evidence-source, subject, correlation, identity, admission, and
+producer-specific evidence choices belong to PR4 and PR5.
+
+## Flags Boundary
+
+PR3 should accept explicit `DecisionReceiptFlags`.
+
+It should not derive flags from:
+
+```text
+ok
+category
+semantic_code
+severity
+risk_level
+reversibility
+boundary
+technical_status
+```
+
+No complete authoritative `SemanticOutcome → DecisionReceiptFlags` mapping
+currently exists.
+
+When flags are omitted, the current all-false `DecisionReceiptFlags()` default
+is preserved.
+
+This default means no flag evidence was supplied through this adapter. Future
+consumers must not treat the default as proof that fallback, rebuild, operator
+review, or retry relevance was fully evaluated and ruled out.
+
+## Admission Evidence Boundary
+
+PR3 may pass through explicitly supplied `DecisionReceiptAdmissionEvidence`.
+
+It must not infer admission fate from:
+
+```text
+SemanticOutcome boundary
+SemanticOutcome category
+SemanticOutcome code
+identifier presence
+technical status
+```
+
+Concrete admission-disposition mapping belongs to PR4.
+
+## Non-goals
+
+PR3 does not implement:
+
+```text
+write-side evidence-source selection
+write-side subject / correlation mapping
+event-ID string-to-UUID conversion
+write-side admission disposition mapping
+idempotent replay receipt mapping
+read-side evidence-source selection
+snapshot evidence-source selection
+snapshot subject / lineage mapping
+producer-specific receipt evidence selection
+automatic flag derivation
+serialization
+schema versioning
+SQL migrations
+PostgresDecisionReceiptStore
+receipt query APIs
+DiagnosticTrace
+RuntimeDecisionPolicy
+StrategySelector
+RetryGovernance
+automatic retry
+automatic fallback
+automatic rebuild
+operator-review execution
+```
+
+## Validation Expectations
+
+PR3 unit tests should cover:
+
+```text
+exact semantic tuple preservation
+explicit receipt_id preservation
+explicit evidence_source preservation
+default supporting contracts
+explicit supporting contracts
+receipt-safe evidence acceptance
+non-JSON-safe evidence rejection
+no wholesale context copying
+no wholesale evidence copying
+no write-side admission inference
+no read-side / snapshot path inference
+no flag / policy / retry inference
+no persistence behavior
+```
+
+---
+
+# Interlude — DecisionReceipt Flag Evaluation State
+
+## Goal
+
+Stabilize the shared `DecisionReceiptFlags` evaluation-state contract before
+PR4 and PR5 begin producing producer-specific receipt flags.
+
+The current boolean fields are:
+
+```text
+fallback_required
+rebuild_required
+operator_review_required
+retry_candidate
+```
+
+The current default value `False` is ambiguous because it may mean:
+
+```text
+evaluated and explicitly false
+not evaluated
+not supplied
+not applicable
+incomplete flag evidence
+```
+
+The Interlude must decide how the shared contract distinguishes explicit
+positive evidence, explicit negative evidence, and absence of evaluation.
+
+## Status
+
+Next.
+
+Recommended branch:
+
+```text
+feat/stage4b-decision-receipt-flag-evaluation-state
+```
+
+## Audit-First Scope
+
+The Interlude should begin with a read-only contract audit.
+
+It should decide:
+
+```text
+whether TRUE / FALSE / NOT_EVALUATED is sufficient
+whether NOT_APPLICABLE is required
+whether FALSE means evaluated and explicitly denied
+whether NOT_EVALUATED combines not supplied and not executed
+whether classification completeness needs a separate representation
+how future policy consumers interpret each state
+the stable JSON representation
+Java / Rust portability
+whether a new ADR is required
+```
+
+## Boundary
+
+The Interlude owns the shared:
+
+```text
+DecisionReceiptFlags contract
+```
+
+It does not belong only to the PR3 mapper.
+
+PR3 correctly performs:
+
+```text
+explicit flags supplied
+→ pass through
+
+flags omitted
+→ use the current shared contract default
+```
+
+The ambiguity must not be fixed only in PR3 because direct
+`DecisionReceipt` construction and later specialized adapters must share one
+flag interpretation.
+
+## Timing
+
+The Interlude must complete before:
+
+```text
+PR4 — Write-Side Admission DecisionReceipt Mapping
+PR5 — Read-Side Snapshot DecisionReceipt Mapping
+PR6 — DecisionReceipt Durable Persistence
+```
+
+PR4 and PR5 will be the first producer-specific flag evidence producers.
+
+PR6 must not persist `False` where the true meaning was not evaluated or not
+provided.
+
+## Non-goals
+
+The Interlude does not implement:
+
+```text
+write-side receipt mapping
+read-side / snapshot receipt mapping
+runtime policy
+retry authorization
+fallback execution
+rebuild execution
+operator-review execution
+persistence schema
+```
+
+After the Interlude stabilizes the shared contract, PR4 and PR5 should first
+perform separate read-only audits before implementation.
 
 ---
 
