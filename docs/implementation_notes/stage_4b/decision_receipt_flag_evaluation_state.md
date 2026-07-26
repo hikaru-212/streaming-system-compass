@@ -13,13 +13,13 @@ DecisionReceiptFlags
 It is a documentation-first refinement of the existing `DecisionReceipt`
 governance-evidence contract.
 
-It does not implement the runtime contract change.
+The shared runtime contract and tests now implement this refinement.
 
 ---
 
 ## Problem
 
-The current shared contract stores four booleans:
+Before this Interlude, the shared contract stored four booleans:
 
 ```text
 fallback_required: bool = False
@@ -28,7 +28,7 @@ operator_review_required: bool = False
 retry_candidate: bool = False
 ```
 
-That representation collapses:
+That representation collapsed:
 
 ```text
 evaluated and explicitly false
@@ -43,8 +43,8 @@ into the same durable value:
 False
 ```
 
-The collapse is unsafe for governance evidence. A future consumer cannot tell
-whether a producer explicitly negated a condition or never completed an
+The collapse was unsafe for governance evidence. A future consumer could not
+tell whether a producer explicitly negated a condition or never completed an
 evaluation for it.
 
 The intended default must no longer be an implicit negative assertion.
@@ -53,7 +53,7 @@ The intended default must no longer be an implicit negative assertion.
 
 ## Chosen State Vocabulary
 
-The shared contract should use one explicit portable enum:
+The shared contract uses one explicit portable enum:
 
 ```python
 class DecisionReceiptFlagState(str, Enum):
@@ -62,10 +62,10 @@ class DecisionReceiptFlagState(str, Enum):
     NOT_EVALUATED = "NOT_EVALUATED"
 ```
 
-Each field in `DecisionReceiptFlags` should use
+Each field in `DecisionReceiptFlags` uses
 `DecisionReceiptFlagState`.
 
-The default for every field should be:
+The default for every field is:
 
 ```text
 NOT_EVALUATED
@@ -204,10 +204,10 @@ that distinction.
 Current production code contains:
 
 ```text
-the shared flag dataclass and boolean validation
-three boolean convenience properties
+the public DecisionReceiptFlagState enum and runtime-package export
+the shared flag dataclass and strict enum validation
 the PR3 pass-through/default boundary
-runtime-package exports
+no boolean convenience properties that collapse FALSE and NOT_EVALUATED
 ```
 
 There are no producer-specific receipt flag adapters yet.
@@ -248,7 +248,7 @@ owns it.
 
 ## Default and Omission
 
-The default `DecisionReceiptFlags()` should mean:
+The default `DecisionReceiptFlags()` means:
 
 ```text
 fallback_required = NOT_EVALUATED
@@ -380,7 +380,7 @@ Stage 4C and later policy layers may consume this evidence to choose policy.
 Those layers must define their own safe behavior for `NOT_EVALUATED`; the
 receipt contract does not supply a policy default.
 
-The current boolean convenience properties:
+The former boolean convenience properties:
 
 ```text
 requires_operator_review
@@ -388,9 +388,8 @@ requires_rebuild
 requires_fallback
 ```
 
-cannot remain boolean consumers if they make `FALSE` and `NOT_EVALUATED`
-indistinguishable. The future runtime-contract migration must remove or
-redesign them so callers inspect the state explicitly.
+were removed because they made `FALSE` and `NOT_EVALUATED` indistinguishable.
+Callers inspect the enum state directly.
 
 ---
 
@@ -498,18 +497,18 @@ meaning a stable name across Python, Java, Rust, and JSON.
 
 ## Migration Impact on Existing Code and Tests
 
-This Interlude does not perform the migration.
+The shared runtime-contract migration is complete.
 
-A later, separately authorized shared-contract implementation must update:
+The implementation updated:
 
 ```text
 DecisionReceiptFlags field types and defaults
 flag-state runtime validation
 runtime package export for DecisionReceiptFlagState
-boolean convenience properties
+removal of boolean convenience properties
 ```
 
-Existing DecisionReceipt tests will need to replace:
+DecisionReceipt tests replaced:
 
 ```text
 boolean construction and validation
@@ -524,12 +523,12 @@ the exact three-member enum
 NOT_EVALUATED defaults for every field
 explicit TRUE preservation
 explicit FALSE preservation
-rejection of bool, raw string, None, and unsupported enum values
+rejection of bool, raw string, None, integer, and unsupported enum values
 no bool coercion or state collapse
 flags remain evidence rather than runtime actions
 ```
 
-Existing PR3 mapper tests will need to prove:
+PR3 mapper tests prove:
 
 ```text
 omitted flags become all NOT_EVALUATED
@@ -539,6 +538,46 @@ semantic categories and codes still derive no flag state
 
 No current producer-specific receipt tests require migration because PR4 and
 PR5 have not started.
+
+---
+
+## Implementation Status
+
+Complete.
+
+`DecisionReceiptFlagState` is implemented and publicly exported.
+`DecisionReceiptFlags` uses it for all four fields, defaults every field to
+`NOT_EVALUATED`, and rejects legacy booleans, raw strings, `None`, integers,
+and unrelated enum values.
+
+`NOT_APPLICABLE` was not added.
+
+The old boolean convenience properties were removed. PR3 remains unchanged and
+pass-through-only.
+
+Focused DecisionReceipt tests and the runtime unit suite passed:
+
+```text
+test_decision_receipt.py
+→ 150 passed
+
+test_decision_receipt_mapping.py
+→ 21 passed
+
+tests/unit/compass/runtime
+→ 276 passed
+```
+
+The full repository suite was attempted:
+
+```text
+511 passed
+84 skipped
+197 PostgreSQL integration setup errors
+```
+
+The PostgreSQL integration tests could not start because `TEST_DATABASE_URL`
+was unavailable.
 
 ---
 
@@ -591,7 +630,7 @@ contract for theoretical completeness.
 
 ## Decision Summary
 
-The shared contract direction is:
+The shared contract is:
 
 ```text
 DecisionReceiptFlagState
@@ -619,7 +658,7 @@ Stage 4E
 = retry classification and authorization
 ```
 
-The documentation-first decision is complete.
+The Interlude is complete.
 
-The shared runtime contract and tests still require a separate authorized
-implementation before PR4, PR5, or persistence work begins.
+The next work is separate PR4 / PR5 read-only audits. Producer-specific flag
+mapping tables remain deferred to those later scopes.

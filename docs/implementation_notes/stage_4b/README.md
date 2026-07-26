@@ -33,9 +33,9 @@ PR1 — Complete
 PR2 — Complete
 Interlude — Read-Side Canonical Context Protection — Complete
 PR3 — Complete
-Interlude — DecisionReceipt Flag Evaluation State — Contract defined;
-runtime migration pending
-PR4–PR7 — Planned
+Interlude — DecisionReceipt Flag Evaluation State — Complete
+PR4 / PR5 audits — Next
+PR4–PR7 implementation — Planned
 ```
 
 Reported focused PR2 verification:
@@ -337,7 +337,7 @@ construction boundary.
 
 ## DecisionReceipt Flag Evaluation State
 
-The documentation-first contract decision is:
+The implemented shared contract is:
 
 ```text
 DecisionReceiptFlagState
@@ -361,8 +361,25 @@ PR3 remains pass-through only. PR4 and PR5 may later construct only
 producer-supported evaluation states. Stage 4E alone owns retry classification
 and authorization.
 
-The shared runtime contract and tests still require a separately authorized
-migration before PR4, PR5, or persistence work begins.
+`DecisionReceiptFlagState` is publicly exported. All four
+`DecisionReceiptFlags` fields use it and default to `NOT_EVALUATED`. Strict
+validation rejects legacy booleans, raw strings, `None`, integers, and
+unrelated enum values. The old boolean convenience properties were removed.
+
+Focused DecisionReceipt tests and the runtime unit suite passed.
+
+The full repository suite was attempted, but PostgreSQL integration tests could
+not start because `TEST_DATABASE_URL` was unavailable. The exact reviewed
+results are recorded in
+`decision_receipt_flag_evaluation_state.md`.
+
+The next work is:
+
+```text
+PR4 / PR5 read-only audits
+```
+
+PR4 and PR5 implementation has not started.
 
 ---
 
@@ -523,4 +540,3 @@ It should not treat database permissions alone as governance receipts.
 - [SemanticOutcome to DecisionReceipt Adapter](semantic_outcome_to_decision_receipt.md)
 - [DecisionReceipt Flag Evaluation State](decision_receipt_flag_evaluation_state.md)
 - DecisionReceipt Persistence — to be added in PR6 as `decision_receipt_persistence.md`
-
