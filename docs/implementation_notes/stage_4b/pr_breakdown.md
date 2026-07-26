@@ -604,8 +604,9 @@ technical_status
 No complete authoritative `SemanticOutcome → DecisionReceiptFlags` mapping
 currently exists.
 
-When flags are omitted, the current all-false `DecisionReceiptFlags()` default
-is preserved.
+When PR3 was initially completed, omitted flags used the then-current all-false
+`DecisionReceiptFlags()` default. After the Flag Evaluation State Interlude,
+omitted flags use the shared all-`NOT_EVALUATED` default.
 
 This default means no flag evidence was supplied through this adapter. Future
 consumers must not treat the default as proof that fallback, rebuild, operator
@@ -686,7 +687,7 @@ no persistence behavior
 Stabilize the shared `DecisionReceiptFlags` evaluation-state contract before
 PR4 and PR5 begin producing producer-specific receipt flags.
 
-The current boolean fields are:
+The pre-Interlude boolean fields were:
 
 ```text
 fallback_required
@@ -695,7 +696,7 @@ operator_review_required
 retry_candidate
 ```
 
-The current default value `False` is ambiguous because it may mean:
+The prior default value `False` was ambiguous because it could mean:
 
 ```text
 evaluated and explicitly false
@@ -705,12 +706,12 @@ not applicable
 incomplete flag evidence
 ```
 
-The Interlude must decide how the shared contract distinguishes explicit
-positive evidence, explicit negative evidence, and absence of evaluation.
+The Interlude distinguishes explicit positive evidence, explicit negative
+evidence, and absence of evaluation.
 
 ## Status
 
-Next.
+Complete.
 
 Recommended branch:
 
@@ -718,22 +719,45 @@ Recommended branch:
 feat/stage4b-decision-receipt-flag-evaluation-state
 ```
 
-## Audit-First Scope
+## Completed Scope
 
-The Interlude should begin with a read-only contract audit.
+The Interlude began with a read-only contract audit.
 
-It should decide:
+The completed scope includes:
 
 ```text
-whether TRUE / FALSE / NOT_EVALUATED is sufficient
-whether NOT_APPLICABLE is required
-whether FALSE means evaluated and explicitly denied
-whether NOT_EVALUATED combines not supplied and not executed
-whether classification completeness needs a separate representation
-how future policy consumers interpret each state
-the stable JSON representation
-Java / Rust portability
-whether a new ADR is required
+DecisionReceiptFlagState enum
+DecisionReceiptFlags field migration
+NOT_EVALUATED defaults
+strict state validation
+runtime package export
+removal of boolean convenience properties
+DecisionReceipt contract tests
+PR3 mapper compatibility tests
+```
+
+The audit selected:
+
+```text
+TRUE
+FALSE
+NOT_EVALUATED
+```
+
+`FALSE` means evaluated and explicitly negated.
+
+`NOT_EVALUATED` means the receipt contains no completed evaluation for the
+condition. It is the default and must not be interpreted as `FALSE`.
+
+No current producer, consumer, invariant, or test justifies
+`NOT_APPLICABLE`. A new ADR is not required for this narrow refinement of the
+existing DecisionReceipt evidence contract.
+
+The complete ownership, consumer, retry, portability, and migration decision is
+recorded in:
+
+```text
+decision_receipt_flag_evaluation_state.md
 ```
 
 ## Boundary
@@ -753,7 +777,7 @@ explicit flags supplied
 → pass through
 
 flags omitted
-→ use the current shared contract default
+→ use the shared all-NOT_EVALUATED default
 ```
 
 The ambiguity must not be fixed only in PR3 because direct
@@ -762,7 +786,7 @@ flag interpretation.
 
 ## Timing
 
-The Interlude must complete before:
+The Interlude completed before:
 
 ```text
 PR4 — Write-Side Admission DecisionReceipt Mapping
@@ -790,8 +814,15 @@ operator-review execution
 persistence schema
 ```
 
-After the Interlude stabilizes the shared contract, PR4 and PR5 should first
-perform separate read-only audits before implementation.
+## Verification
+
+Focused DecisionReceipt tests and the runtime unit suite passed. The full
+repository suite was attempted, but PostgreSQL integration tests could not
+start because `TEST_DATABASE_URL` was unavailable. The exact reviewed results
+are recorded in `decision_receipt_flag_evaluation_state.md`.
+
+The next work is separate PR4 / PR5 read-only audits. PR4 and PR5
+implementation has not started.
 
 ---
 

@@ -4,7 +4,10 @@ from uuid import UUID
 
 import pytest
 
-from src.compass.runtime import map_semantic_outcome_to_decision_receipt
+from src.compass.runtime import (
+    DecisionReceiptFlagState,
+    map_semantic_outcome_to_decision_receipt,
+)
 from src.compass.runtime.decision_receipt import (
     DecisionReceipt,
     DecisionReceiptActor,
@@ -33,6 +36,12 @@ OUTCOME_ID = UUID("00000000-0000-0000-0000-000000000101")
 RECEIPT_ID = UUID("00000000-0000-0000-0000-000000000201")
 EVENT_ID = UUID("00000000-0000-0000-0000-000000000301")
 SNAPSHOT_ID = UUID("00000000-0000-0000-0000-000000000401")
+FLAG_FIELD_NAMES = (
+    "fallback_required",
+    "rebuild_required",
+    "operator_review_required",
+    "retry_candidate",
+)
 
 
 def make_semantic_outcome(**overrides: object) -> SemanticOutcome:
@@ -63,6 +72,13 @@ def map_outcome(
     values.update(overrides)
     return map_semantic_outcome_to_decision_receipt(  # type: ignore[arg-type]
         **values
+    )
+
+
+def assert_all_flags_not_evaluated(flags: DecisionReceiptFlags) -> None:
+    assert all(
+        getattr(flags, field_name) == DecisionReceiptFlagState.NOT_EVALUATED
+        for field_name in FLAG_FIELD_NAMES
     )
 
 
@@ -118,6 +134,7 @@ def test_mapper_uses_current_supporting_contract_defaults() -> None:
     assert receipt.actor == DecisionReceiptActor()
     assert receipt.cost_summary == DecisionReceiptCostSummary()
     assert receipt.flags == DecisionReceiptFlags()
+    assert_all_flags_not_evaluated(receipt.flags)
     assert receipt.admission_evidence is None
     assert receipt.evidence_summary == {}
     assert receipt.metadata == {}
@@ -144,7 +161,15 @@ def test_mapper_preserves_explicit_supporting_contracts() -> None:
         elapsed_ms=12,
         transaction_elapsed_ms=8,
     )
-    flags = DecisionReceiptFlags(operator_review_required=True)
+    # These mixed states verify PR3 pass-through behavior only. Producer-
+    # specific decisions about when each flag is TRUE, FALSE, or NOT_EVALUATED
+    # belong to PR4 and PR5.
+    flags = DecisionReceiptFlags(
+        fallback_required=DecisionReceiptFlagState.TRUE,
+        rebuild_required=DecisionReceiptFlagState.FALSE,
+        operator_review_required=DecisionReceiptFlagState.NOT_EVALUATED,
+        retry_candidate=DecisionReceiptFlagState.TRUE,
+    )
     admission_evidence = DecisionReceiptAdmissionEvidence(
         disposition=EventAdmissionDisposition.ADMITTED_TO_ACCEPTED_HISTORY
     )
@@ -280,6 +305,7 @@ def test_mapper_does_not_infer_flags(
     receipt = map_outcome(outcome)
 
     assert receipt.flags == DecisionReceiptFlags()
+    assert_all_flags_not_evaluated(receipt.flags)
 
 
 def test_mapper_does_not_infer_write_side_admission_contracts() -> None:
@@ -369,6 +395,7 @@ def test_mapper_ignores_receipt_like_keys_in_outcome_payloads() -> None:
     receipt = map_outcome(outcome)
 
     assert receipt.flags == DecisionReceiptFlags()
+    assert_all_flags_not_evaluated(receipt.flags)
     assert receipt.actor == DecisionReceiptActor()
     assert receipt.subject == DecisionReceiptSubject(
         subject_type=DecisionReceiptSubjectType.UNKNOWN

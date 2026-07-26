@@ -33,8 +33,9 @@ PR1 — Complete
 PR2 — Complete
 Interlude — Read-Side Canonical Context Protection — Complete
 PR3 — Complete
-Interlude — DecisionReceipt Flag Evaluation State — Next
-PR4–PR7 — Planned
+Interlude — DecisionReceipt Flag Evaluation State — Complete
+PR4 / PR5 audits — Next
+PR4–PR7 implementation — Planned
 ```
 
 Reported focused PR2 verification:
@@ -336,47 +337,49 @@ construction boundary.
 
 ## DecisionReceipt Flag Evaluation State
 
-The next work is:
+The implemented shared contract is:
 
 ```text
-Interlude — DecisionReceipt Flag Evaluation State
+DecisionReceiptFlagState
+= TRUE | FALSE | NOT_EVALUATED
 ```
 
-The current `DecisionReceiptFlags` boolean defaults cannot distinguish:
+Every flag defaults to:
 
 ```text
-evaluated and explicitly false
-not evaluated
-not supplied
-not applicable
-incomplete flag evidence
-```
-
-PR3 correctly preserves the existing shared flag contract and performs no flag
-derivation.
-
-The next Interlude must review the shared flag evaluation-state model before
-PR4 and PR5 begin producing producer-specific flags and before PR6 defines
-durable storage.
-
-The review should determine whether the contract requires:
-
-```text
-TRUE
-FALSE
 NOT_EVALUATED
 ```
 
-and whether an additional:
+`FALSE` is reserved for a completed evaluation that explicitly negates the
+condition. `NOT_EVALUATED` means the receipt contains no completed evaluation
+and must not be interpreted as `FALSE`.
+
+No current producer, consumer, invariant, or test justifies
+`NOT_APPLICABLE`.
+
+PR3 remains pass-through only. PR4 and PR5 may later construct only
+producer-supported evaluation states. Stage 4E alone owns retry classification
+and authorization.
+
+`DecisionReceiptFlagState` is publicly exported. All four
+`DecisionReceiptFlags` fields use it and default to `NOT_EVALUATED`. Strict
+validation rejects legacy booleans, raw strings, `None`, integers, and
+unrelated enum values. The old boolean convenience properties were removed.
+
+Focused DecisionReceipt tests and the runtime unit suite passed.
+
+The full repository suite was attempted, but PostgreSQL integration tests could
+not start because `TEST_DATABASE_URL` was unavailable. The exact reviewed
+results are recorded in
+`decision_receipt_flag_evaluation_state.md`.
+
+The next work is:
 
 ```text
-NOT_APPLICABLE
+PR4 / PR5 read-only audits
 ```
 
-state or completeness representation is necessary.
-
-The Interlude should begin with a read-only audit. It must not start PR4, PR5,
-or persistence design.
+PR4 and PR5 implementation has not started.
 
 ---
 
@@ -535,7 +538,5 @@ It should not treat database permissions alone as governance receipts.
 - [DecisionReceipt Runtime Contract](decision_receipt_contract.md)
 - [DecisionReceipt Evidence Source Alignment Note](decision_receipt_evidence_source_alignment_note.md)
 - [SemanticOutcome to DecisionReceipt Adapter](semantic_outcome_to_decision_receipt.md)
-- DecisionReceipt Flag Evaluation State — to be documented by the next Interlude
+- [DecisionReceipt Flag Evaluation State](decision_receipt_flag_evaluation_state.md)
 - DecisionReceipt Persistence — to be added in PR6 as `decision_receipt_persistence.md`
-
-

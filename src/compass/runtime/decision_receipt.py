@@ -220,28 +220,72 @@ class DecisionReceiptCostSummary:
         _require_optional_non_negative_int(self.lock_wait_ms, "lock_wait_ms")
 
 
+class DecisionReceiptFlagState(str, Enum):
+    """
+    Durable evaluation state for one DecisionReceipt flag proposition.
+
+    TRUE and FALSE are completed, producer-owned evidence assertions.
+    NOT_EVALUATED means the receipt contains no completed evaluation for the
+    proposition. It is not a negative assertion and must not be treated as
+    FALSE.
+
+    The enum records governance evidence only. It does not authorize or execute
+    fallback, rebuild, operator review, or retry.
+    """
+
+    TRUE = "TRUE"
+    FALSE = "FALSE"
+    NOT_EVALUATED = "NOT_EVALUATED"
+
+
 @dataclass(frozen=True)
 class DecisionReceiptFlags:
     """
-    Governance-relevant flags carried as evidence.
+    Producer-owned evaluation states carried as governance evidence.
 
-    These flags do not execute operator review, fallback, rebuild, or retry.
-    Later runtime policy / strategy / retry governance layers may consume them.
+    TRUE and FALSE require a completed evaluation by the evidence owner.
+    NOT_EVALUATED is the default and preserves the absence of a completed
+    evaluation without making an implicit negative assertion.
+
+    These states do not execute operator review, fallback, rebuild, or retry.
+    They do not authorize retry. Later policy, strategy, and retry-governance
+    layers may consume them without treating NOT_EVALUATED as FALSE.
     """
 
-    fallback_required: bool = False
-    rebuild_required: bool = False
-    operator_review_required: bool = False
-    retry_candidate: bool = False
+    fallback_required: DecisionReceiptFlagState = (
+        DecisionReceiptFlagState.NOT_EVALUATED
+    )
+    rebuild_required: DecisionReceiptFlagState = (
+        DecisionReceiptFlagState.NOT_EVALUATED
+    )
+    operator_review_required: DecisionReceiptFlagState = (
+        DecisionReceiptFlagState.NOT_EVALUATED
+    )
+    retry_candidate: DecisionReceiptFlagState = (
+        DecisionReceiptFlagState.NOT_EVALUATED
+    )
 
     def __post_init__(self) -> None:
-        _require_bool(self.fallback_required, "fallback_required")
-        _require_bool(self.rebuild_required, "rebuild_required")
-        _require_bool(
+        _require_enum(
+            self.fallback_required,
+            DecisionReceiptFlagState,
+            "fallback_required",
+        )
+        _require_enum(
+            self.rebuild_required,
+            DecisionReceiptFlagState,
+            "rebuild_required",
+        )
+        _require_enum(
             self.operator_review_required,
+            DecisionReceiptFlagState,
             "operator_review_required",
         )
-        _require_bool(self.retry_candidate, "retry_candidate")
+        _require_enum(
+            self.retry_candidate,
+            DecisionReceiptFlagState,
+            "retry_candidate",
+        )
 
 
 @dataclass(frozen=True)
@@ -359,18 +403,6 @@ class DecisionReceipt:
     @property
     def is_valid(self) -> bool:
         return self.category == SemanticOutcomeCategory.VALID
-
-    @property
-    def requires_operator_review(self) -> bool:
-        return self.flags.operator_review_required
-
-    @property
-    def requires_rebuild(self) -> bool:
-        return self.flags.rebuild_required
-
-    @property
-    def requires_fallback(self) -> bool:
-        return self.flags.fallback_required
 
 
 
