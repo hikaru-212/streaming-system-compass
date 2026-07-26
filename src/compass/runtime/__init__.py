@@ -5,6 +5,7 @@ from src.compass.runtime.decision_receipt import (
     DecisionReceiptCorrelation,
     DecisionReceiptCostSummary,
     DecisionReceiptEvidenceSource,
+    DecisionReceiptFlagState,
     DecisionReceiptFlags,
     DecisionReceiptIdentitySource,
     DecisionReceiptSubject,
@@ -49,7 +50,8 @@ from src.compass.runtime.write_side_outcome_mapping import (
 __all__ = [
     "DecisionReceipt", "DecisionReceiptActor", "DecisionReceiptAdmissionEvidence",
     "DecisionReceiptCorrelation", "DecisionReceiptCostSummary",
-    "DecisionReceiptEvidenceSource", "DecisionReceiptFlags",
+    "DecisionReceiptEvidenceSource", "DecisionReceiptFlagState",
+    "DecisionReceiptFlags",
     "DecisionReceiptIdentitySource", "DecisionReceiptSubject",
     "DecisionReceiptSubjectType", "EventAdmissionDisposition",
     "JsonObject", "JsonScalar", "JsonValue", "MAX_JSON_DEPTH",

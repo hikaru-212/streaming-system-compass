@@ -12,6 +12,7 @@ from src.compass.runtime.decision_receipt import (
     DecisionReceiptCorrelation,
     DecisionReceiptCostSummary,
     DecisionReceiptEvidenceSource,
+    DecisionReceiptFlagState,
     DecisionReceiptFlags,
     DecisionReceiptIdentitySource,
     DecisionReceiptSubject,
@@ -38,6 +39,12 @@ OUTCOME_ID = UUID("00000000-0000-0000-0000-000000000101")
 CANDIDATE_EVENT_ID = UUID("00000000-0000-0000-0000-000000000301")
 ACCEPTED_EVENT_ID = UUID("00000000-0000-0000-0000-000000000302")
 SNAPSHOT_ID = UUID("00000000-0000-0000-0000-000000000401")
+FLAG_FIELD_NAMES = (
+    "fallback_required",
+    "rebuild_required",
+    "operator_review_required",
+    "retry_candidate",
+)
 
 
 def make_decision_receipt(**overrides: object) -> DecisionReceipt:
@@ -72,7 +79,9 @@ def make_decision_receipt(**overrides: object) -> DecisionReceipt:
             elapsed_ms=12,
             replay_elapsed_ms=8,
         ),
-        "flags": DecisionReceiptFlags(rebuild_required=True),
+        "flags": DecisionReceiptFlags(
+            rebuild_required=DecisionReceiptFlagState.TRUE
+        ),
         "evidence_summary": {
             "technical_status": "SNAPSHOT_ASSISTED_DRIFT",
             "snapshot_state": {"status": "PAID", "paid_amount": "100.00"},
@@ -129,7 +138,9 @@ def test_decision_receipt_preserves_subject_correlation_actor_cost_and_flags() -
         elapsed_ms=12,
         replay_elapsed_ms=8,
     )
-    assert receipt.flags == DecisionReceiptFlags(rebuild_required=True)
+    assert receipt.flags == DecisionReceiptFlags(
+        rebuild_required=DecisionReceiptFlagState.TRUE
+    )
 
 
 def test_decision_receipt_defaults_to_empty_supporting_contracts() -> None:
@@ -755,36 +766,114 @@ def test_decision_receipt_cost_summary_does_not_include_generic_extra_field() ->
     assert "future_cost_evidence" not in field_names
 
 
+def test_decision_receipt_flag_state_member_set_is_stable() -> None:
+    assert {item.value for item in DecisionReceiptFlagState} == {
+        "TRUE",
+        "FALSE",
+        "NOT_EVALUATED",
+    }
+
+
+def test_decision_receipt_flags_default_every_field_to_not_evaluated() -> None:
+    flags = DecisionReceiptFlags()
+
+    assert all(
+        getattr(flags, field_name) == DecisionReceiptFlagState.NOT_EVALUATED
+        for field_name in FLAG_FIELD_NAMES
+    )
+
+
+@pytest.mark.parametrize("field_name", FLAG_FIELD_NAMES)
 @pytest.mark.parametrize(
-    "field_name",
+    "state",
     [
-        "fallback_required",
-        "rebuild_required",
-        "operator_review_required",
-        "retry_candidate",
+        DecisionReceiptFlagState.TRUE,
+        DecisionReceiptFlagState.FALSE,
+        DecisionReceiptFlagState.NOT_EVALUATED,
     ],
 )
-def test_decision_receipt_flags_reject_non_bool_values(field_name: str) -> None:
-    with pytest.raises(TypeError, match=f"{field_name} must be bool"):
-        DecisionReceiptFlags(**{field_name: "true"})
+def test_decision_receipt_flags_accept_explicit_states(
+    field_name: str,
+    state: DecisionReceiptFlagState,
+) -> None:
+    flags = DecisionReceiptFlags(**{field_name: state})
+
+    assert getattr(flags, field_name) == state
+
+
+@pytest.mark.parametrize("field_name", FLAG_FIELD_NAMES)
+@pytest.mark.parametrize(
+    "bad_value",
+    [
+        True,
+        False,
+        None,
+        "TRUE",
+        "FALSE",
+        "NOT_EVALUATED",
+        0,
+        1,
+        DecisionReceiptEvidenceSource.RUNTIME_OBSERVATION,
+    ],
+)
+def test_decision_receipt_flags_reject_non_flag_states(
+    field_name: str,
+    bad_value: object,
+) -> None:
+    with pytest.raises(
+        TypeError,
+        match=f"{field_name} must be DecisionReceiptFlagState",
+    ):
+        DecisionReceiptFlags(**{field_name: bad_value})
+
+
+def test_decision_receipt_flags_are_frozen() -> None:
+    flags = DecisionReceiptFlags()
+
+    with pytest.raises(FrozenInstanceError):
+        flags.fallback_required = (  # type: ignore[misc]
+            DecisionReceiptFlagState.TRUE
+        )
+
+
+def test_decision_receipt_preserves_mixed_explicit_flag_states() -> None:
+    # These mixed states are synthetic contract data used to prove that each
+    # flag is stored independently. They do not define an approved
+    # producer-specific or business-semantic mapping.
+    flags = DecisionReceiptFlags(
+        fallback_required=DecisionReceiptFlagState.TRUE,
+        rebuild_required=DecisionReceiptFlagState.FALSE,
+        operator_review_required=DecisionReceiptFlagState.NOT_EVALUATED,
+        retry_candidate=DecisionReceiptFlagState.TRUE,
+    )
+
+    receipt = make_decision_receipt(flags=flags)
+
+    assert receipt.flags == flags
+    assert receipt.flags.fallback_required == DecisionReceiptFlagState.TRUE
+    assert receipt.flags.rebuild_required == DecisionReceiptFlagState.FALSE
+    assert (
+        receipt.flags.operator_review_required
+        == DecisionReceiptFlagState.NOT_EVALUATED
+    )
+    assert receipt.flags.retry_candidate == DecisionReceiptFlagState.TRUE
 
 
 def test_decision_receipt_flags_are_evidence_not_runtime_actions() -> None:
     receipt = make_decision_receipt(
         flags=DecisionReceiptFlags(
-            fallback_required=True,
-            rebuild_required=True,
-            operator_review_required=True,
-            retry_candidate=True,
+            fallback_required=DecisionReceiptFlagState.TRUE,
+            rebuild_required=DecisionReceiptFlagState.TRUE,
+            operator_review_required=DecisionReceiptFlagState.TRUE,
+            retry_candidate=DecisionReceiptFlagState.TRUE,
         )
     )
 
-    assert receipt.requires_fallback is True
-    assert receipt.requires_rebuild is True
-    assert receipt.requires_operator_review is True
-
     field_names = {field.name for field in fields(DecisionReceipt)}
 
+    assert not hasattr(receipt, "requires_fallback")
+    assert not hasattr(receipt, "requires_rebuild")
+    assert not hasattr(receipt, "requires_operator_review")
     assert "runtime_action" not in field_names
     assert "decision" not in field_names
     assert "strategy" not in field_names
@@ -794,7 +883,7 @@ def test_decision_receipt_flags_are_evidence_not_runtime_actions() -> None:
     assert "diagnostic_trace" not in field_names
 
 
-def test_decision_receipt_properties_reflect_summary_evidence_only() -> None:
+def test_decision_receipt_is_valid_property_reflects_semantic_summary() -> None:
     valid_receipt = make_decision_receipt(
         ok=True,
         category=SemanticOutcomeCategory.VALID,
@@ -804,19 +893,9 @@ def test_decision_receipt_properties_reflect_summary_evidence_only() -> None:
         reversibility=SemanticReversibility.REVERSIBLE,
         flags=DecisionReceiptFlags(),
     )
-    review_receipt = make_decision_receipt(
-        category=SemanticOutcomeCategory.ESCALATION_REQUIRED,
-        semantic_code=SemanticOutcomeCode.REQUIRES_OPERATOR_REVIEW,
-        flags=DecisionReceiptFlags(operator_review_required=True),
-    )
 
     assert valid_receipt.is_valid is True
-    assert valid_receipt.requires_operator_review is False
-    assert valid_receipt.requires_rebuild is False
-    assert valid_receipt.requires_fallback is False
-
-    assert review_receipt.is_valid is False
-    assert review_receipt.requires_operator_review is True
+    assert make_decision_receipt().is_valid is False
 
 
 def test_decision_receipt_enum_member_sets_are_stable() -> None:
