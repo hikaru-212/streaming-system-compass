@@ -11,6 +11,9 @@ from src.compass.runtime.decision_receipt import (
     DecisionReceiptSubjectType,
     EventAdmissionDisposition,
 )
+from src.compass.runtime.decision_receipt_mapping import (
+    map_semantic_outcome_to_decision_receipt,
+)
 from src.compass.runtime.json_types import (
     MAX_JSON_DEPTH,
     JsonObject,
@@ -57,6 +60,7 @@ __all__ = [
     "map_projection_snapshot_assisted_resolution_result_to_semantic_outcome",
     "map_projection_snapshot_replay_validation_result_to_semantic_outcome",
     "map_replay_validation_result_to_semantic_outcome", "map_runtime_technical_status",
+    "map_semantic_outcome_to_decision_receipt",
     "map_write_side_admission_status_to_semantic_outcome",
     "supported_runtime_technical_statuses",
 ]
