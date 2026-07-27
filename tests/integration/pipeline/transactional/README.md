@@ -75,8 +75,8 @@ The current transactional integration tests cover:
 - stale-write rejection
 - lock-timeout mapping
 - autocommit guard for transaction-scoped pessimistic admission
-- default / explicit `IN_TRANSACTION` validation placement
-- minimal `PRE_TRANSACTION` validation placement guarded by append-time admission
+- default `PRE_TRANSACTION` validation placement guarded by append-time admission
+- explicit `IN_TRANSACTION` validation placement
 - destructive test cleanup through the PostgreSQL test database boundary
 
 This directory currently focuses on the completed Stage 3.5B PostgreSQL-backed transactional write-side baseline.
@@ -278,8 +278,8 @@ These tests verify that validation placement is configurable without collapsing 
 
 They prove:
 
-- default / explicit `IN_TRANSACTION` behavior preserves the durable write-side path
-- minimal `PRE_TRANSACTION` validation can validate before the write transaction
+- default `PRE_TRANSACTION` behavior validates before the write transaction
+- explicit `IN_TRANSACTION` behavior preserves the alternative durable write-side path
 - `PRE_TRANSACTION` replay / conflict paths do not run validation or build admission gates
 - `PRE_TRANSACTION` validation block creates no durable rows
 - `PRE_TRANSACTION` append-time admission rejection does not record idempotency

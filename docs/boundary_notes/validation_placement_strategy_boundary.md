@@ -257,7 +257,8 @@ Expected work:
 
 - define `ValidationPlacement`
 - introduce a minimal write-side configuration or factory boundary
-- preserve `IN_TRANSACTION` as the default behavior
+- use `PRE_TRANSACTION` as the default behavior while retaining explicit
+  `IN_TRANSACTION`
 - add a minimal `PRE_TRANSACTION` orchestration path
 - keep append-time admission mandatory for `PRE_TRANSACTION`
 - add tests proving stale pre-validated candidates cannot enter accepted history
