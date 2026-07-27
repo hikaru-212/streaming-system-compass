@@ -465,10 +465,12 @@ Current values are:
 ```text
 ADMITTED_TO_ACCEPTED_HISTORY
 MATCHED_EXISTING_ACCEPTED_EVENT
+IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
 SEMANTIC_ADMISSION_REJECTED
 APPEND_CONCURRENCY_CONFLICT
+APPEND_TECHNICAL_FAILURE
 COMMIT_OUTCOME_UNRESOLVED
-ADMISSION_NOT_REACHED
+APPEND_ADMISSION_NOT_REACHED
 UNKNOWN
 ```
 
@@ -517,6 +519,7 @@ For:
 ```text
 SEMANTIC_ADMISSION_REJECTED
 APPEND_CONCURRENCY_CONFLICT
+APPEND_TECHNICAL_FAILURE
 COMMIT_OUTCOME_UNRESOLVED
 ```
 
@@ -534,22 +537,25 @@ For `COMMIT_OUTCOME_UNRESOLVED`, the absent accepted ID does not prove rollback.
 `COMMIT_OUTCOME_UNRESOLVED` is currently reserved contract vocabulary.
 No current production producer is established for it, and generic infrastructure failures must not be mapped to it automatically.
 
-### Admission not reached
+### Append admission not reached
 
 For:
 
 ```text
-ADMISSION_NOT_REACHED
+APPEND_ADMISSION_NOT_REACHED
 ```
 
 the current contract requires:
 
 ```text
-candidate_event_id is absent
+candidate_event_id is optional
 accepted_event_id is absent
 ```
 
-This prevents request-level or pre-candidate failure from being misrepresented as candidate-level admission evidence.
+This means candidate-level `append_if_admitted(...)` was not invoked. A
+candidate may already exist in an explicitly selected non-default or custom
+composition where candidate construction precedes a rejecting
+`prepare_stream(...)` result.
 
 ---
 

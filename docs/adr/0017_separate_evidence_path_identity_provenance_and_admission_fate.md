@@ -71,7 +71,7 @@ match an existing accepted event as an idempotent replay
 be semantically rejected
 encounter an append concurrency conflict
 reach an unresolved commit outcome
-never reach event admission
+never reach candidate-level append admission
 ```
 
 Without a typed admission-fate contract, readers and future governance layers
@@ -171,10 +171,10 @@ accepted_event_id = None
 It could mean:
 
 ```text
-rejected before append
+rejected before candidate-level append admission
 append conflict
 commit outcome unresolved
-admission not reached
+append admission not reached
 missing mapping evidence
 ```
 
@@ -246,10 +246,12 @@ The current event-admission vocabulary is:
 ```text
 ADMITTED_TO_ACCEPTED_HISTORY
 MATCHED_EXISTING_ACCEPTED_EVENT
+IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
 SEMANTIC_ADMISSION_REJECTED
 APPEND_CONCURRENCY_CONFLICT
+APPEND_TECHNICAL_FAILURE
 COMMIT_OUTCOME_UNRESOLVED
-ADMISSION_NOT_REACHED
+APPEND_ADMISSION_NOT_REACHED
 UNKNOWN
 ```
 
@@ -360,7 +362,7 @@ A typed disposition allows the receipt to distinguish:
 known semantic rejection
 known append concurrency conflict
 unknown commit result
-admission not reached
+append admission not reached
 idempotent match
 successful append
 ```
@@ -414,6 +416,7 @@ For:
 ```text
 SEMANTIC_ADMISSION_REJECTED
 APPEND_CONCURRENCY_CONFLICT
+APPEND_TECHNICAL_FAILURE
 COMMIT_OUTCOME_UNRESOLVED
 ```
 
@@ -428,23 +431,25 @@ In the unresolved-commit case, `accepted_event_id = None` does not prove that
 the transaction rolled back. It means the receipt lacks authoritative evidence
 that permits it to name an accepted event.
 
-### Admission not reached
+### Append admission not reached
 
 For:
 
 ```text
-ADMISSION_NOT_REACHED
+APPEND_ADMISSION_NOT_REACHED
 ```
 
 the receipt requires:
 
 ```text
-candidate_event_id = None
+candidate_event_id may be present or absent
 accepted_event_id = None
 ```
 
-This prevents request-level or infrastructure failure from being misrepresented
-as candidate-level admission evidence.
+This means candidate-level `append_if_admitted(...)` was not invoked. Candidate
+construction may already have occurred in a non-default or custom composition;
+the disposition does not claim that idempotency, history loading, Compass
+validation, or stream preparation was skipped.
 
 ---
 
@@ -473,6 +478,18 @@ candidate_event_id may be present or absent
 
 If the candidate identifier is present, the identifiers may differ.
 
+### `IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY`
+
+Requires:
+
+```text
+accepted_event_id is present
+candidate_event_id may be present or absent
+```
+
+The accepted identifier belongs to the prior accepted idempotency record and
+does not establish acceptance for the current attempt.
+
 ### `SEMANTIC_ADMISSION_REJECTED`
 
 Requires:
@@ -491,6 +508,18 @@ candidate_event_id is present
 accepted_event_id is absent
 ```
 
+### `APPEND_TECHNICAL_FAILURE`
+
+Requires:
+
+```text
+candidate_event_id is present
+accepted_event_id is absent
+```
+
+This records a typed append-boundary technical failure with a known
+non-accepted result, not an ambiguous commit.
+
 ### `COMMIT_OUTCOME_UNRESOLVED`
 
 Requires:
@@ -506,14 +535,18 @@ evidence available to the receipt.
 No current production producer is established for this disposition. Generic
 infrastructure failures must not be mapped to it automatically.
 
-### `ADMISSION_NOT_REACHED`
+### `APPEND_ADMISSION_NOT_REACHED`
 
 Requires:
 
 ```text
-candidate_event_id is absent
+candidate_event_id may be present or absent
 accepted_event_id is absent
 ```
+
+The append boundary was not invoked. Candidate identity remains optional
+because candidate construction can precede a rejecting stream-preparation
+result in an explicitly selected non-default or custom composition.
 
 These rules make contradictory receipt states unconstructable at the runtime
 contract boundary.
@@ -661,7 +694,7 @@ disposition = COMMIT_OUTCOME_UNRESOLVED
 
 This does not claim either commit success or rollback.
 
-### Failure before candidate creation
+### Stream-preparation rejection before candidate creation
 
 ```text
 evidence_source = WRITE_SIDE_ADMISSION
@@ -669,7 +702,7 @@ subject = REQUEST
 identity_source = WRITE_SIDE_CORRELATION
 candidate_event_id = None
 accepted_event_id = None
-disposition = ADMISSION_NOT_REACHED
+disposition = APPEND_ADMISSION_NOT_REACHED
 ```
 
 ---
@@ -707,7 +740,7 @@ mappings.
 Rejected.
 
 `accepted_event_id = None` cannot distinguish rejection, append conflict,
-unresolved commit, admission not reached, or incomplete mapping.
+unresolved commit, append admission not reached, or incomplete mapping.
 
 ### Alternative 4: Treat semantic validity as proof of accepted-history admission
 

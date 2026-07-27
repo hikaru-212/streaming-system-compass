@@ -591,16 +591,23 @@ Current admission values are:
 ```text
 ADMITTED_TO_ACCEPTED_HISTORY
 MATCHED_EXISTING_ACCEPTED_EVENT
+IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
 SEMANTIC_ADMISSION_REJECTED
 APPEND_CONCURRENCY_CONFLICT
+APPEND_TECHNICAL_FAILURE
 COMMIT_OUTCOME_UNRESOLVED
-ADMISSION_NOT_REACHED
+APPEND_ADMISSION_NOT_REACHED
 UNKNOWN
 ```
 
 For `MATCHED_EXISTING_ACCEPTED_EVENT`, `accepted_event_id` is required while
 `candidate_event_id` is optional. This preserves early idempotent replay before
 candidate construction.
+
+For `APPEND_ADMISSION_NOT_REACHED`, `accepted_event_id` is absent while
+`candidate_event_id` is optional. This means candidate-level
+`append_if_admitted(...)` was not invoked; it does not claim that no candidate,
+Compass validation, or stream-preparation work occurred.
 
 `COMMIT_OUTCOME_UNRESOLVED` remains reserved vocabulary without an established
 production producer.

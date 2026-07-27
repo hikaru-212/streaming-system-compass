@@ -290,10 +290,12 @@ Current `EventAdmissionDisposition` values:
 ```text
 ADMITTED_TO_ACCEPTED_HISTORY
 MATCHED_EXISTING_ACCEPTED_EVENT
+IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
 SEMANTIC_ADMISSION_REJECTED
 APPEND_CONCURRENCY_CONFLICT
+APPEND_TECHNICAL_FAILURE
 COMMIT_OUTCOME_UNRESOLVED
-ADMISSION_NOT_REACHED
+APPEND_ADMISSION_NOT_REACHED
 UNKNOWN
 ```
 
@@ -311,19 +313,25 @@ MATCHED_EXISTING_ACCEPTED_EVENT
 → accepted_event_id required
 → candidate_event_id optional
 
+IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
+→ accepted_event_id required
+→ candidate_event_id optional
+
 SEMANTIC_ADMISSION_REJECTED
 APPEND_CONCURRENCY_CONFLICT
+APPEND_TECHNICAL_FAILURE
 COMMIT_OUTCOME_UNRESOLVED
 → candidate_event_id required
 → accepted_event_id absent
 
-ADMISSION_NOT_REACHED
-→ candidate_event_id absent
+APPEND_ADMISSION_NOT_REACHED
+→ candidate_event_id optional
 → accepted_event_id absent
 ```
 
-The optional candidate ID for idempotent replay preserves early replay before
-candidate construction.
+The optional candidate ID for `APPEND_ADMISSION_NOT_REACHED` preserves the
+distinction between candidate construction and invocation of
+`append_if_admitted(...)`.
 
 `COMMIT_OUTCOME_UNRESOLVED` currently has no established production producer.
 Generic infrastructure failures must not be mapped to it automatically.
