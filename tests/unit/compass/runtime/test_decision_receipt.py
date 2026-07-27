@@ -556,6 +556,38 @@ def test_admitted_event_rejects_changed_accepted_event_identity() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("candidate_event_id", "accepted_event_id", "expected_message"),
+    [
+        (
+            None,
+            ACCEPTED_EVENT_ID,
+            "candidate_event_id is required when an event is admitted",
+        ),
+        (
+            CANDIDATE_EVENT_ID,
+            None,
+            "accepted_event_id is required when an event is admitted",
+        ),
+    ],
+)
+def test_admitted_event_still_requires_both_event_identities(
+    candidate_event_id: UUID | None,
+    accepted_event_id: UUID | None,
+    expected_message: str,
+) -> None:
+    with pytest.raises(ValueError, match=expected_message):
+        make_decision_receipt(
+            correlation=DecisionReceiptCorrelation(
+                candidate_event_id=candidate_event_id,
+                accepted_event_id=accepted_event_id,
+            ),
+            admission_evidence=DecisionReceiptAdmissionEvidence(
+                disposition=EventAdmissionDisposition.ADMITTED_TO_ACCEPTED_HISTORY
+            ),
+        )
+
+
 def test_idempotent_replay_can_reference_existing_accepted_event() -> None:
     receipt = make_decision_receipt(
         evidence_source=DecisionReceiptEvidenceSource.WRITE_SIDE_ADMISSION,
@@ -631,6 +663,74 @@ def test_idempotent_replay_requires_existing_accepted_event() -> None:
         )
 
 
+def test_early_idempotency_conflict_preserves_prior_accepted_event() -> None:
+    receipt = make_decision_receipt(
+        correlation=DecisionReceiptCorrelation(
+            request_id="request-001",
+            candidate_event_id=None,
+            accepted_event_id=ACCEPTED_EVENT_ID,
+        ),
+        admission_evidence=DecisionReceiptAdmissionEvidence(
+            disposition=(
+                EventAdmissionDisposition
+                .IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
+            )
+        ),
+    )
+
+    assert receipt.correlation.candidate_event_id is None
+    assert receipt.correlation.accepted_event_id == ACCEPTED_EVENT_ID
+
+
+def test_post_validation_idempotency_conflict_preserves_distinct_identities() -> None:
+    receipt = make_decision_receipt(
+        correlation=DecisionReceiptCorrelation(
+            request_id="request-001",
+            candidate_event_id=CANDIDATE_EVENT_ID,
+            accepted_event_id=ACCEPTED_EVENT_ID,
+        ),
+        admission_evidence=DecisionReceiptAdmissionEvidence(
+            disposition=(
+                EventAdmissionDisposition
+                .IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
+            )
+        ),
+    )
+
+    assert receipt.correlation.candidate_event_id == CANDIDATE_EVENT_ID
+    assert receipt.correlation.accepted_event_id == ACCEPTED_EVENT_ID
+    assert CANDIDATE_EVENT_ID != ACCEPTED_EVENT_ID
+
+
+def test_idempotency_conflict_requires_prior_accepted_event() -> None:
+    with pytest.raises(
+        ValueError,
+        match=(
+            "accepted_event_id is required for an idempotency conflict "
+            "with accepted history"
+        ),
+    ):
+        make_decision_receipt(
+            correlation=DecisionReceiptCorrelation(
+                candidate_event_id=CANDIDATE_EVENT_ID,
+                accepted_event_id=None,
+            ),
+            admission_evidence=DecisionReceiptAdmissionEvidence(
+                disposition=(
+                    EventAdmissionDisposition
+                    .IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
+                )
+            ),
+        )
+
+
+def test_idempotency_conflict_disposition_is_distinct_from_replay() -> None:
+    conflict = EventAdmissionDisposition.IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
+
+    assert conflict != EventAdmissionDisposition.MATCHED_EXISTING_ACCEPTED_EVENT
+    assert conflict.value == "IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY"
+
+
 @pytest.mark.parametrize(
     "disposition",
     [
@@ -658,7 +758,103 @@ def test_non_accepted_candidate_requires_candidate_without_accepted_event(
     assert receipt.correlation.accepted_event_id is None
 
 
-def test_admission_not_reached_uses_request_without_event_identity() -> None:
+@pytest.mark.parametrize(
+    "disposition",
+    [
+        EventAdmissionDisposition.SEMANTIC_ADMISSION_REJECTED,
+        EventAdmissionDisposition.APPEND_CONCURRENCY_CONFLICT,
+        EventAdmissionDisposition.COMMIT_OUTCOME_UNRESOLVED,
+    ],
+)
+def test_existing_candidate_only_dispositions_still_require_candidate(
+    disposition: EventAdmissionDisposition,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="candidate_event_id is required after a candidate event exists",
+    ):
+        make_decision_receipt(
+            correlation=DecisionReceiptCorrelation(
+                candidate_event_id=None,
+                accepted_event_id=None,
+            ),
+            admission_evidence=DecisionReceiptAdmissionEvidence(
+                disposition=disposition
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    "disposition",
+    [
+        EventAdmissionDisposition.SEMANTIC_ADMISSION_REJECTED,
+        EventAdmissionDisposition.APPEND_CONCURRENCY_CONFLICT,
+        EventAdmissionDisposition.COMMIT_OUTCOME_UNRESOLVED,
+    ],
+)
+def test_existing_candidate_only_dispositions_still_reject_accepted_event(
+    disposition: EventAdmissionDisposition,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="accepted_event_id must be None without authoritative",
+    ):
+        make_decision_receipt(
+            correlation=DecisionReceiptCorrelation(
+                candidate_event_id=CANDIDATE_EVENT_ID,
+                accepted_event_id=ACCEPTED_EVENT_ID,
+            ),
+            admission_evidence=DecisionReceiptAdmissionEvidence(
+                disposition=disposition
+            ),
+        )
+
+
+def test_append_technical_failure_requires_candidate_without_accepted_event() -> None:
+    receipt = make_decision_receipt(
+        correlation=DecisionReceiptCorrelation(
+            candidate_event_id=CANDIDATE_EVENT_ID,
+            accepted_event_id=None,
+        ),
+        admission_evidence=DecisionReceiptAdmissionEvidence(
+            disposition=EventAdmissionDisposition.APPEND_TECHNICAL_FAILURE
+        ),
+    )
+
+    assert receipt.correlation.candidate_event_id == CANDIDATE_EVENT_ID
+    assert receipt.correlation.accepted_event_id is None
+
+
+def test_append_technical_failure_rejects_missing_candidate() -> None:
+    with pytest.raises(
+        ValueError,
+        match="candidate_event_id is required after a candidate event exists",
+    ):
+        make_decision_receipt(
+            correlation=DecisionReceiptCorrelation(),
+            admission_evidence=DecisionReceiptAdmissionEvidence(
+                disposition=EventAdmissionDisposition.APPEND_TECHNICAL_FAILURE
+            ),
+        )
+
+
+def test_append_technical_failure_rejects_accepted_event() -> None:
+    with pytest.raises(
+        ValueError,
+        match="accepted_event_id must be None without authoritative",
+    ):
+        make_decision_receipt(
+            correlation=DecisionReceiptCorrelation(
+                candidate_event_id=CANDIDATE_EVENT_ID,
+                accepted_event_id=ACCEPTED_EVENT_ID,
+            ),
+            admission_evidence=DecisionReceiptAdmissionEvidence(
+                disposition=EventAdmissionDisposition.APPEND_TECHNICAL_FAILURE
+            ),
+        )
+
+
+def test_append_admission_not_reached_without_candidate_is_valid() -> None:
     receipt = make_decision_receipt(
         evidence_source=DecisionReceiptEvidenceSource.WRITE_SIDE_ADMISSION,
         subject=DecisionReceiptSubject(
@@ -670,21 +866,62 @@ def test_admission_not_reached_uses_request_without_event_identity() -> None:
             identity_source=DecisionReceiptIdentitySource.WRITE_SIDE_CORRELATION,
         ),
         admission_evidence=DecisionReceiptAdmissionEvidence(
-            disposition=EventAdmissionDisposition.ADMISSION_NOT_REACHED
+            disposition=EventAdmissionDisposition.APPEND_ADMISSION_NOT_REACHED
         ),
     )
     assert receipt.correlation.candidate_event_id is None
     assert receipt.correlation.accepted_event_id is None
 
 
+def test_append_admission_not_reached_with_candidate_is_valid() -> None:
+    receipt = make_decision_receipt(
+        correlation=DecisionReceiptCorrelation(
+            candidate_event_id=CANDIDATE_EVENT_ID,
+            accepted_event_id=None,
+        ),
+        admission_evidence=DecisionReceiptAdmissionEvidence(
+            disposition=EventAdmissionDisposition.APPEND_ADMISSION_NOT_REACHED
+        ),
+    )
+
+    assert receipt.correlation.candidate_event_id == CANDIDATE_EVENT_ID
+    assert receipt.correlation.accepted_event_id is None
+
+
+@pytest.mark.parametrize("candidate_event_id", [None, CANDIDATE_EVENT_ID])
+def test_append_admission_not_reached_rejects_accepted_event(
+    candidate_event_id: UUID | None,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=(
+            "accepted_event_id must be None when append admission was not "
+            "reached"
+        ),
+    ):
+        make_decision_receipt(
+            correlation=DecisionReceiptCorrelation(
+                candidate_event_id=candidate_event_id,
+                accepted_event_id=ACCEPTED_EVENT_ID,
+            ),
+            admission_evidence=DecisionReceiptAdmissionEvidence(
+                disposition=(
+                    EventAdmissionDisposition.APPEND_ADMISSION_NOT_REACHED
+                )
+            ),
+        )
+
+
 def test_event_admission_disposition_enum_member_set_is_stable() -> None:
     assert {item.value for item in EventAdmissionDisposition} == {
         "ADMITTED_TO_ACCEPTED_HISTORY",
         "MATCHED_EXISTING_ACCEPTED_EVENT",
+        "IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY",
         "SEMANTIC_ADMISSION_REJECTED",
         "APPEND_CONCURRENCY_CONFLICT",
+        "APPEND_TECHNICAL_FAILURE",
         "COMMIT_OUTCOME_UNRESOLVED",
-        "ADMISSION_NOT_REACHED",
+        "APPEND_ADMISSION_NOT_REACHED",
         "UNKNOWN",
     }
 

@@ -70,14 +70,42 @@ class DecisionReceiptIdentitySource(str, Enum):
 
 
 class EventAdmissionDisposition(str, Enum):
-    """Typed admission fate for an event attempt."""
+    """
+    Typed governance evidence for an event attempt's admission fate.
+
+    Admission fate is distinct from technical status and executes no runtime
+    action. Candidate construction is also distinct from reaching candidate-
+    level append admission: a pre-transaction path may construct a candidate
+    before stream preparation prevents append_if_admitted(...) from being
+    invoked.
+
+    For an idempotency conflict, an accepted event identifies the prior
+    accepted record that proves the conflict; it does not mean the current
+    attempt was accepted. APPEND_TECHNICAL_FAILURE records a known technical
+    append failure with no accepted event, while COMMIT_OUTCOME_UNRESOLVED
+    remains reserved for an ambiguous commit result. A technical status such
+    as LOCK_TIMEOUT does not by itself select APPEND_CONCURRENCY_CONFLICT.
+
+    APPEND_ADMISSION_NOT_REACHED means append_if_admitted(...) was not invoked
+    and no event from the current attempt entered accepted history. Its
+    candidate identity is optional: preferred in-transaction pessimistic
+    preparation rejects before candidate construction, while an explicitly
+    selected non-default or custom composition may construct a candidate
+    before prepare_stream(...) rejects. The disposition does not claim that
+    idempotency, history loading, Compass validation, or stream preparation
+    was skipped.
+    """
 
     ADMITTED_TO_ACCEPTED_HISTORY = "ADMITTED_TO_ACCEPTED_HISTORY"
     MATCHED_EXISTING_ACCEPTED_EVENT = "MATCHED_EXISTING_ACCEPTED_EVENT"
+    IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY = (
+        "IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY"
+    )
     SEMANTIC_ADMISSION_REJECTED = "SEMANTIC_ADMISSION_REJECTED"
     APPEND_CONCURRENCY_CONFLICT = "APPEND_CONCURRENCY_CONFLICT"
+    APPEND_TECHNICAL_FAILURE = "APPEND_TECHNICAL_FAILURE"
     COMMIT_OUTCOME_UNRESOLVED = "COMMIT_OUTCOME_UNRESOLVED"
-    ADMISSION_NOT_REACHED = "ADMISSION_NOT_REACHED"
+    APPEND_ADMISSION_NOT_REACHED = "APPEND_ADMISSION_NOT_REACHED"
     UNKNOWN = "UNKNOWN"
 
 
@@ -147,11 +175,15 @@ class DecisionReceiptCorrelation:
 
 @dataclass(frozen=True)
 class DecisionReceiptAdmissionEvidence:
-    """Typed evidence describing an event's write-side admission fate.
+    """Typed governance evidence describing write-side admission fate.
 
     Event identifiers remain owned by DecisionReceiptCorrelation. This avoids
     duplicating candidate_event_id and accepted_event_id in two contract
     objects and prevents conflicting identity evidence.
+
+    Admission evidence is distinct from technical status, semantic outcome,
+    and runtime action. It records what happened at the admission lifecycle
+    boundary but does not execute recovery, retry, or any other action.
     """
 
     disposition: EventAdmissionDisposition = EventAdmissionDisposition.UNKNOWN
@@ -438,9 +470,23 @@ def _validate_admission_evidence(
             )
         return
 
+    if (
+        disposition
+        == EventAdmissionDisposition.IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY
+    ):
+        # This accepted ID belongs to the prior idempotency record. A current
+        # candidate may exist, but its identity need not match the prior event.
+        if accepted_event_id is None:
+            raise ValueError(
+                "accepted_event_id is required for an idempotency conflict "
+                "with accepted history"
+            )
+        return
+
     if disposition in {
         EventAdmissionDisposition.SEMANTIC_ADMISSION_REJECTED,
         EventAdmissionDisposition.APPEND_CONCURRENCY_CONFLICT,
+        EventAdmissionDisposition.APPEND_TECHNICAL_FAILURE,
         EventAdmissionDisposition.COMMIT_OUTCOME_UNRESOLVED,
     }:
         if candidate_event_id is None:
@@ -454,14 +500,14 @@ def _validate_admission_evidence(
             )
         return
 
-    if disposition == EventAdmissionDisposition.ADMISSION_NOT_REACHED:
-        if candidate_event_id is not None:
-            raise ValueError(
-                "candidate_event_id must be None when admission was not reached"
-            )
+    if disposition == EventAdmissionDisposition.APPEND_ADMISSION_NOT_REACHED:
+        # Candidate construction may precede a rejecting prepare_stream(...)
+        # call, so candidate presence does not prove append_if_admitted(...)
+        # was invoked.
         if accepted_event_id is not None:
             raise ValueError(
-                "accepted_event_id must be None when admission was not reached"
+                "accepted_event_id must be None when append admission was "
+                "not reached"
             )
         return
 
