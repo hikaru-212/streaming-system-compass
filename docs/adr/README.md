@@ -37,6 +37,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0015 | [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) | Accepted | Records why Stage 3.5E uses test-time `SET ROLE` permission probes instead of introducing production-style login identities and role-specific connection pools. |
 | 0016 | [DecisionReceipt Is Governance Evidence, Not Application Logging](0016_decision_receipt_is_governance_evidence.md) | Accepted | Records why Stage 4B introduces DecisionReceipt as durable semantic governance evidence rather than application logging or a generic error table. |
 | 0017 | [Separate Evidence Path, Identity Provenance, and Event Admission Fate in DecisionReceipt](0017_separate_evidence_path_identity_provenance_and_admission_fate.md) | Accepted | Separates receipt evidence path, primary identity provenance, and typed write-side admission fate, including early idempotent replay and candidate / accepted-event invariants. |
+| 0018 | [Producer Receipt Adapters Preserve Evidence but Do Not Evaluate Governance Flags](0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md) | Accepted | Requires producer-specific receipt adapters to preserve typed evidence while dedicated evaluators own governance-flag conclusions. |
 
 ---
 
