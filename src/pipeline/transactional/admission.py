@@ -26,14 +26,22 @@ class AdmissionVerdict(Enum):
 @dataclass(frozen=True)
 class StreamAdmissionResult:
     """
-    Result of the stream-preparation boundary.
+    Stream-level preparation evidence from ConcurrencyGate.prepare_stream(...).
 
-    StreamAdmissionResult answers whether a writer may enter the critical
-    section for one aggregate stream before accepted-history loading,
-    aggregate rehydration, candidate-event creation, and validation.
+    Responsibility:
+    - record the preparation verdict, reason, and aggregate-stream identity
 
-    It does not refer to a candidate event because candidate_event does not
-    exist yet at this phase.
+    Important invariant:
+    - orchestration placement determines when preparation occurs
+    - IN_TRANSACTION may prepare before candidate construction
+    - PRE_TRANSACTION may prepare after candidate construction and an allowing
+      validation decision
+    - this result proves neither candidate existence nor invocation of
+      append_if_admitted(...)
+
+    Explicit non-goals:
+    - it is distinct from candidate-level AdmissionResult
+    - it is not event-append success or transaction-commit evidence
     """
 
     verdict: AdmissionVerdict
