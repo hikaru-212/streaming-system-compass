@@ -206,6 +206,29 @@ def test_default_pre_transaction_create_order_accepts_and_records_idempotency(
     assert count_rows(db_connection, "idempotency_records") == 1
 
 
+def test_default_optimistic_write_side_rejects_autocommit_before_append(
+    db_connection,
+    write_side,
+):
+    db_connection.autocommit = True
+
+    try:
+        with pytest.raises(
+            RuntimeError,
+            match="requires connection.autocommit=False",
+        ):
+            write_side.create_order(
+                request_id="create-request-autocommit",
+                order_id="order-write-side-autocommit",
+                amount=Decimal("100.00"),
+            )
+
+        assert count_rows(db_connection, "order_events") == 0
+        assert count_rows(db_connection, "idempotency_records") == 0
+    finally:
+        db_connection.autocommit = False
+
+
 def test_in_transaction_create_order_accepts_and_records_idempotency(
     db_connection,
 ):

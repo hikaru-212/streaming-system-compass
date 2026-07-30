@@ -19,6 +19,12 @@ validation mode ≠ validation placement
 
 - [PR Breakdown](./pr_breakdown.md)
 
+Current PostgreSQL transaction guards have separate responsibilities:
+`PostgresWriteSideUnitOfWork` rejects autocommit-enabled connections at scope
+entry so event append and idempotency recording cannot silently become
+independent transactions, while the pessimistic admission gate separately
+rejects autocommit to preserve transaction-scoped advisory-lock lifetime.
+
 ## Status
 
 Stage 3.5B is complete at the durable write-side baseline level.

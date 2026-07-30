@@ -10,19 +10,22 @@ class PostgresWriteSideUnitOfWork:
     """
     Transaction boundary for the PostgreSQL-backed write side.
 
-    This unit of work coordinates the durable write-side stores that must
-    participate in the same database transaction:
+    Responsibility:
+    - coordinate PostgresEventStore and PostgresIdempotencyStore through one
+      shared local transaction
 
-    - PostgresEventStore
-    - PostgresIdempotencyStore
+    Invariant:
+    - connection.autocommit must be False when the unit of work is entered
 
-    It does not own domain semantics, Compass validation, command creation,
-    or retry policy.
+    Lifecycle:
+    - a clean exit commits when the unit of work is unfinished
+    - an exceptional exit rolls back when the unit of work is unfinished
+    - an explicit commit or rollback prevents automatic __exit__ finalization
 
-    Its responsibility is physical transaction control:
-
-    - commit all write-side persistence changes together
-    - rollback all write-side persistence changes together
+    Non-goals:
+    - commit-ambiguity reconciliation
+    - duplicate-finish behavior redesign
+    - domain semantics, Compass validation, command creation, or retry policy
     """
 
     def __init__(self, connection: Connection):
@@ -32,6 +35,11 @@ class PostgresWriteSideUnitOfWork:
         self._finished = False
 
     def __enter__(self) -> PostgresWriteSideUnitOfWork:
+        if self.connection.autocommit:
+            raise RuntimeError(
+                "PostgresWriteSideUnitOfWork requires connection.autocommit=False"
+            )
+
         return self
 
     def __exit__(self, exc_type, exc, traceback) -> bool:
