@@ -10,13 +10,15 @@ Accepted
 
 ## Implementation Status
 
-Not implemented yet.
+Implemented for Stage 4B PR4.
 
-The shared `DecisionReceiptFlagState` contract and the PR3 generic mapper
-already support this decision. A later Stage 4B PR4 follow-up must remove the
-current experimental positive flag inference from the PostgreSQL write-side
-adapter. PR5 and future producer-specific adapters must adopt this boundary
-from their first implementation.
+The PostgreSQL write-side producer adapter now preserves typed evidence while
+leaving all four governance flags `NOT_EVALUATED`. PR5 and future
+producer-specific adapters must adopt the same boundary from their first
+implementation.
+
+Dedicated evaluators that may later produce `TRUE` or `FALSE` remain future
+work.
 
 ---
 

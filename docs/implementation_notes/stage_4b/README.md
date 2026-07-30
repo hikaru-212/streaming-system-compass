@@ -34,8 +34,8 @@ PR2 — Complete
 Interlude — Read-Side Canonical Context Protection — Complete
 PR3 — Complete
 Interlude — DecisionReceipt Flag Evaluation State — Complete
-PR4 / PR5 audits — Next
-PR4–PR7 implementation — Planned
+PR4 — Complete
+PR5–PR7 implementation — Planned
 ```
 
 Reported focused PR2 verification:
@@ -357,9 +357,9 @@ and must not be interpreted as `FALSE`.
 No current producer, consumer, invariant, or test justifies
 `NOT_APPLICABLE`.
 
-PR3 remains pass-through only. PR4 and PR5 may later construct only
-producer-supported evaluation states. Stage 4E alone owns retry classification
-and authorization.
+PR3 remains pass-through only. PR4 and PR5 leave producer-created flags `NOT_EVALUATED`.
+Only later explicitly authorized evaluators may produce `TRUE` or `FALSE`.
+Stage 4E alone owns retry classification and authorization.
 
 `DecisionReceiptFlagState` is publicly exported. All four
 `DecisionReceiptFlags` fields use it and default to `NOT_EVALUATED`. Strict
@@ -376,10 +376,13 @@ results are recorded in
 The next work is:
 
 ```text
-PR4 / PR5 read-only audits
+PR5 read-side snapshot DecisionReceipt mapping
 ```
 
-PR4 and PR5 implementation has not started.
+The PR4 producer-specific mapper and focused unit tests are implemented. Under
+ADR 0018, every PR4 governance flag remains `NOT_EVALUATED`; typed producer
+verdicts remain evidence for later authorized evaluators. Runtime invocation
+and durable persistence remain outside PR4. PR5 implementation has not started.
 
 ---
 
@@ -530,6 +533,19 @@ governance evidence
 Stage 4B may record actor or runtime-role evidence when receipt-safe.
 
 It should not treat database permissions alone as governance receipts.
+
+## Write-Side Mapping Reading Guide
+
+- [End-to-end reader guide](write_side_result_to_decision_receipt_end_to_end.md)
+- [Stage 4A → Stage 4B mapping flow](stage_4a_to_stage_4b_write_side_mapping_flow.md)
+- [Type and vocabulary reference](write_side_mapping_type_and_vocabulary_reference.md)
+- Design/audit source notes:
+  [Write-Side Admission Fate Completion](write_side_admission_fate_completion.md) |
+  [Write-Side DecisionReceipt Mapping](write_side_decision_receipt_mapping.md)
+
+The reader guides explain current behavior and code navigation. The
+design/audit notes preserve rationale, inventory, implementation history, and
+closeout evidence; they remain separate documents.
 
 ## Detailed Notes
 

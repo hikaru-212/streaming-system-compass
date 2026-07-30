@@ -2,8 +2,7 @@
 
 ## 1. Purpose
 
-This note is the documentation-first design audit for Stage 4B PR4 and records
-the experimental sandbox prototype mapping:
+This note is the final implementation closeout for the Stage 4B PR4 mapping:
 
 ```text
 PostgresWriteSideResult
@@ -13,10 +12,11 @@ PostgresWriteSideResult
 → DecisionReceipt
 ```
 
-PR4 should be a narrow producer-specific wrapper around the stable PR3 generic
-constructor. It must preserve the Stage 4A semantic tuple, select receipt
+PR4 implements a narrow producer-specific wrapper around the stable PR3 generic
+constructor. It is a result-shape validator and producer-specific typed
+evidence mapper: it must preserve the Stage 4A semantic tuple, select receipt
 inputs from typed write-side lifecycle evidence, and refuse contradictory or
-malformed authority-bearing evidence.
+malformed authority-bearing evidence. It is not a governance-flag evaluator.
 
 PR4 must not make PR3 write-side-aware. It must not derive receipt authority
 from arbitrary `SemanticOutcome.context` or `SemanticOutcome.evidence`.
@@ -86,7 +86,7 @@ validates part of the result shape, maps the result to one technical status,
 pins the semantic boundary to `LAYER_1_WRITE_SIDE`, and constructs the existing
 `SemanticOutcome`.
 
-PR4 should call that adapter without caller-provided context or evidence
+PR4 calls that adapter without caller-provided context or evidence
 overrides. PR4 then prepares typed receipt inputs directly from
 `PostgresWriteSideResult` and its owned nested contracts. The PR3 mapper
 preserves the complete semantic tuple and constructs `DecisionReceipt`.
@@ -173,15 +173,15 @@ The table distinguishes lifecycle variants that share a technical status.
 | authoritative `CONFLICT` after pre-transaction validation | same as above | `REQUEST(request_id)` | request and prior-record order; candidate `CE`; prior unrelated `AE` | `WRITE_SIDE_CORRELATION` | `IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, validation verdict |
 | `VALIDATION_BLOCKED` in transaction | `COMPASS_VALIDATION_BLOCKED` → `BLOCK_REQUIRED` / `SEMANTIC_CONFLICT_DETECTED` | `CANDIDATE_EVENT(CE)` | stream `order_id`; no authoritative request; `CE`; `AE=None` | `CANDIDATE_EVENT_IDENTITY` | `SEMANTIC_ADMISSION_REJECTED` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream verdict, validation action/verdict/mode |
 | `VALIDATION_BLOCKED` before transaction | same as above | `CANDIDATE_EVENT(CE)` | no typed order or request; `CE`; `AE=None` | `CANDIDATE_EVENT_IDENTITY` | `SEMANTIC_ADMISSION_REJECTED` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, validation action/verdict/mode |
-| stream-preparation `STALE_WRITE` before candidate creation | `CONCURRENT_STATE_STALENESS` → `CONCURRENCY_UNCERTAIN` | `ORDER(order_id)` | stream `order_id`; no request, `CE`, or `AE` | `WRITE_SIDE_CORRELATION` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, TRUE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream verdict |
-| stream-preparation `STALE_WRITE` after pre-transaction validation | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; `CE`; no request or `AE` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, TRUE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream and validation verdicts |
-| append-time `STALE_WRITE` | `CONCURRENT_STATE_STALENESS` → `CONCURRENCY_UNCERTAIN` | `CANDIDATE_EVENT(CE)` | stream `order_id`; no authoritative request; `CE`; `AE=None` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_CONCURRENCY_CONFLICT` | `(NE, NE, NE, TRUE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream/validation/append verdicts |
-| stream-preparation `LOCK_TIMEOUT` before candidate creation | `LOCK_TIMEOUT` → `CONCURRENCY_UNCERTAIN` | `ORDER(order_id)` | stream `order_id`; no request, `CE`, or `AE` | `WRITE_SIDE_CORRELATION` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, TRUE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream verdict |
-| stream-preparation `LOCK_TIMEOUT` after pre-transaction validation | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; `CE`; no request or `AE` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, TRUE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream and validation verdicts |
-| append-time `LOCK_TIMEOUT` | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; no authoritative request; `CE`; `AE=None` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_TECHNICAL_FAILURE` | `(NE, NE, NE, TRUE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream/validation/append verdicts |
-| stream-preparation `INFRASTRUCTURE_ERROR` before candidate creation | `WRITE_SIDE_INFRASTRUCTURE_ERROR` → `ESCALATION_REQUIRED` / `REQUIRES_OPERATOR_REVIEW` | `ORDER(order_id)` | stream `order_id`; no request, `CE`, or `AE` | `WRITE_SIDE_CORRELATION` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, TRUE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream verdict |
-| stream-preparation `INFRASTRUCTURE_ERROR` after pre-transaction validation | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; `CE`; no request or `AE` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, TRUE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream and validation verdicts |
-| append-time `INFRASTRUCTURE_ERROR` | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; no authoritative request; `CE`; `AE=None` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_TECHNICAL_FAILURE` | `(NE, NE, TRUE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream/validation/append verdicts |
+| stream-preparation `STALE_WRITE` before candidate creation | `CONCURRENT_STATE_STALENESS` → `CONCURRENCY_UNCERTAIN` | `ORDER(order_id)` | stream `order_id`; no request, `CE`, or `AE` | `WRITE_SIDE_CORRELATION` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream verdict |
+| stream-preparation `STALE_WRITE` after pre-transaction validation | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; `CE`; no request or `AE` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream and validation verdicts |
+| append-time `STALE_WRITE` | `CONCURRENT_STATE_STALENESS` → `CONCURRENCY_UNCERTAIN` | `CANDIDATE_EVENT(CE)` | stream `order_id`; no authoritative request; `CE`; `AE=None` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_CONCURRENCY_CONFLICT` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream/validation/append verdicts |
+| stream-preparation `LOCK_TIMEOUT` before candidate creation | `LOCK_TIMEOUT` → `CONCURRENCY_UNCERTAIN` | `ORDER(order_id)` | stream `order_id`; no request, `CE`, or `AE` | `WRITE_SIDE_CORRELATION` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream verdict |
+| stream-preparation `LOCK_TIMEOUT` after pre-transaction validation | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; `CE`; no request or `AE` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream and validation verdicts |
+| append-time `LOCK_TIMEOUT` | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; no authoritative request; `CE`; `AE=None` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_TECHNICAL_FAILURE` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream/validation/append verdicts |
+| stream-preparation `INFRASTRUCTURE_ERROR` before candidate creation | `WRITE_SIDE_INFRASTRUCTURE_ERROR` → `ESCALATION_REQUIRED` / `REQUIRES_OPERATOR_REVIEW` | `ORDER(order_id)` | stream `order_id`; no request, `CE`, or `AE` | `WRITE_SIDE_CORRELATION` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream verdict |
+| stream-preparation `INFRASTRUCTURE_ERROR` after pre-transaction validation | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; `CE`; no request or `AE` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_ADMISSION_NOT_REACHED` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream and validation verdicts |
+| append-time `INFRASTRUCTURE_ERROR` | same as above | `CANDIDATE_EVENT(CE)` | stream `order_id`; no authoritative request; `CE`; `AE=None` | `CANDIDATE_EVENT_IDENTITY` | `APPEND_TECHNICAL_FAILURE` | `(NE, NE, NE, NE)` | technical status, outcome, idempotency verdict, lifecycle phase, stream/validation/append verdicts |
 | `OCC_CONFLICT_AFTER_VALIDATION` | generic mapping exists, but no current result path emits it | no mapping | no mapping | no mapping | no mapping | no mapping | no mapping |
 | ambiguous commit | no current `PostgresWriteSideResult` producer | no mapping | no mapping | no mapping | do not invent `COMMIT_OUTCOME_UNRESOLVED` | no mapping | no mapping |
 
@@ -363,7 +363,7 @@ WRITE_SIDE_INFRASTRUCTURE_ERROR
 → COMMIT_OUTCOME_UNRESOLVED
 ```
 
-The approved sandbox admission-fate refinement represents all three formerly
+The implemented admission-fate refinement represents all three formerly
 blocked shapes without `UNKNOWN` or omitted evidence:
 
 - `APPEND_ADMISSION_NOT_REACHED` means `append_if_admitted(...)` was not
@@ -378,100 +378,32 @@ blocked shapes without `UNKNOWN` or omitted evidence:
 a genuinely ambiguous commit and carries reconciliation evidence. No such
 producer exists in the current write-side path.
 
-## 9. Flag-state mapping with evidence justification
+## 9. Flag-state mapping
 
-### `fallback_required`
-
-All paths:
-
-```text
-NOT_EVALUATED
-```
-
-The write-side producer does not evaluate an authority fallback requirement.
-No write-side typed verdict completes that proposition.
-
-### `rebuild_required`
-
-All paths:
+[ADR 0018](../../adr/0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md)
+establishes that producer-specific receipt adapters preserve evidence but do
+not evaluate governance flags. Therefore every PR4 result supplies:
 
 ```text
-NOT_EVALUATED
+fallback_required
+rebuild_required
+operator_review_required
+retry_candidate
+→ NOT_EVALUATED
 ```
 
-The write-side producer does not evaluate projection or snapshot rebuild
-requirements. No write-side typed verdict completes that proposition.
+Typed verdicts such as `STALE_WRITE`, `LOCK_TIMEOUT`, and
+`INFRASTRUCTURE_ERROR` remain available as producer evidence. They do not by
+themselves complete a governance proposition. `TRUE` and `FALSE` require an
+authorized later evaluator, and `FALSE` must not be used as a default.
 
-### `operator_review_required`
-
-For a typed stream or append:
-
-```text
-AdmissionVerdict.INFRASTRUCTURE_ERROR
-→ TRUE
-```
-
-The exact completing evidence is the producer-owned infrastructure verdict.
-Stage 4A already maps that verdict to
-`ESCALATION_REQUIRED / REQUIRES_OPERATOR_REVIEW`, and the Stage 4B boundary
-explicitly assigns operator-review evidence to this write-side path.
-
-All other paths:
-
-```text
-NOT_EVALUATED
-```
-
-Success, rejection, replay, conflict, or concurrency status is not itself a
-completed negative operator-review evaluation. PR4 must not use `FALSE` as a
-default.
-
-### `retry_candidate`
-
-For a typed stream or append:
-
-```text
-AdmissionVerdict.STALE_WRITE
-AdmissionVerdict.LOCK_TIMEOUT
-→ TRUE
-```
-
-The exact completing evidence is the producer-owned concurrency verdict: the
-current write attempt did not obtain admission because state was stale or the
-required admission lock was unavailable. This is sufficient only to identify
-the receipt for later Stage 4E retry consideration.
-
-It does not establish:
-
-```text
-intent consistency
-retry class
-retry safety
-retry authorization
-attempt policy
-retry execution
-```
-
-All other paths:
-
-```text
-NOT_EVALUATED
-```
-
-In particular, the semantic code `IDEMPOTENT_REPLAY_ALLOWED` does not by itself
-set this flag. A replay has already been resolved against accepted history, and
-an idempotency conflict requires Stage 4E intent reasoning. Infrastructure
-failure alone also does not complete a retry-candidacy evaluation.
-
-### No proposed `FALSE`
-
-PR4 has no proposed `FALSE` state. The current producer does not expose a
-completed negative evaluation for any of the four propositions. This is not an
-all-false policy; it is preservation of unevaluated evidence.
+`ACCEPTED` is not special-cased to `FALSE`: PR4 runs no flag evaluator.
+Leaving all four fields `NOT_EVALUATED` preserves the distinction between an
+unevaluated proposition and a completed negative conclusion.
 
 ## 10. Evidence-summary vocabulary
 
-PR4 should define one compact producer-owned vocabulary:
+PR4 defines one compact producer-owned vocabulary:
 
 | Key | Value shape | Source |
 |---|---|---|
@@ -485,8 +417,8 @@ PR4 should define one compact producer-owned vocabulary:
 | `validation_mode` | exact `ValidationMode.value` when present | `result.validation_decision.validation_result.validation_mode` |
 | `append_admission_verdict` | exact `AdmissionVerdict.value` when present | `result.admission_result.verdict` |
 
-Absent optional evidence should normally mean the key is omitted. It should
-not be converted into a false assertion.
+Absent optional evidence means the key is omitted rather than converted into a
+false assertion.
 
 The receipt `reason` already preserves the Stage 4A reason. Producer reason
 strings need not be duplicated in `evidence_summary`.
@@ -521,13 +453,13 @@ fields. Arbitrary `SemanticOutcome.context`, `SemanticOutcome.evidence`,
 `ValidationResult.metadata`, `result_type`, validator class names, and caller
 labels are not automatically copied.
 
-The current result carries no actor or cost measurement contract. PR4 should
-therefore use the existing default `DecisionReceiptActor` and
+The current result carries no actor or cost measurement contract. PR4
+therefore uses the existing default `DecisionReceiptActor` and
 `DecisionReceiptCostSummary` rather than fabricate actor or timing evidence.
 
 ## 12. Mapping algorithm
 
-The proposed wrapper algorithm is:
+The implemented wrapper algorithm is:
 
 1. Require native UUID `receipt_id` and `outcome_id`.
 2. Validate that `result.outcome` agrees with its typed idempotency,
@@ -545,7 +477,7 @@ The proposed wrapper algorithm is:
    fail closed on malformed input.
 9. Select admission disposition from the concrete lifecycle evidence, not
    nullable identifiers or semantic wording.
-10. Construct flags using Section 9. Every non-completed evaluation remains
+10. Supply default `DecisionReceiptFlags` so every flag remains
     `NOT_EVALUATED`.
 11. Build only the evidence-summary keys in Section 10.
 12. Pass the semantic outcome and explicitly prepared supporting contracts to
@@ -553,11 +485,11 @@ The proposed wrapper algorithm is:
 13. Let the existing `DecisionReceipt` contract enforce typed cross-field and
     JSON-safety invariants.
 
-PR4 should not accept an arbitrary prebuilt `SemanticOutcome`. The concrete
+PR4 does not accept an arbitrary prebuilt `SemanticOutcome`. The concrete
 `PostgresWriteSideResult` is required so the wrapper retains producer
-ownership of identity, lifecycle, disposition, and flag evidence.
+ownership of identity, lifecycle, disposition, and evidence selection.
 
-## 13. Proposed production file and public function
+## 13. Implemented production file and public function
 
 The narrow production file is:
 
@@ -565,7 +497,7 @@ The narrow production file is:
 src/compass/runtime/write_side_decision_receipt_mapping.py
 ```
 
-The proposed public function is:
+The public function is:
 
 ```python
 def map_postgres_write_side_result_to_decision_receipt(
@@ -577,7 +509,7 @@ def map_postgres_write_side_result_to_decision_receipt(
     ...
 ```
 
-The function should:
+The function:
 
 ```text
 construct the Stage 4A SemanticOutcome through the existing adapter
@@ -586,16 +518,16 @@ call map_semantic_outcome_to_decision_receipt
 ```
 
 No generic selector framework, registry, callback extractor, policy engine,
-retry engine, serializer, persistence adapter, or PR3 modification is needed.
+retry engine, serializer, persistence adapter, or PR3 modification was needed.
 
-An export change is not part of this audit. Any later export decision must not
-modify `src/compass/runtime/__init__.py` in this task.
+The implemented public surface remains the module-level `__all__`; PR4 did not
+modify `src/compass/runtime/__init__.py`.
 
-## 14. Proposed unit-test matrix
+## 14. Implemented unit-test coverage
 
-The prototype unit suite uses canonical UUID strings for all event IDs.
+The unit suite uses canonical UUID strings for all event IDs.
 
-| Test group | Required cases |
+| Test group | Covered cases |
 |---|---|
 | Semantic preservation | all concrete statuses preserve the exact Stage 4A tuple and reason |
 | Evidence source | every concrete result uses `WRITE_SIDE_ADMISSION`, including lock and infrastructure failures |
@@ -604,9 +536,9 @@ The prototype unit suite uses canonical UUID strings for all event IDs.
 | Idempotency conflict | early and post-validation shapes; prior accepted ID kept distinct from current candidate; conflict disposition enforced |
 | Validation blocked | in-transaction order correlation; pre-transaction absence of typed order/request; semantic-rejection disposition |
 | Stale write | pre-candidate stream form; post-validation stream form; append form; only append form maps to append conflict |
-| Lock timeout | pre-candidate stream form; post-validation stream form; append form; retry candidacy remains evidence only |
-| Infrastructure | stream and append forms; operator-review flag true; never commit-outcome unresolved |
-| Flags | all fallback/rebuild states not evaluated; no false defaults; retry candidate true only for typed stale/lock verdicts |
+| Lock timeout | pre-candidate stream form; post-validation stream form; append form; typed verdict remains in evidence |
+| Infrastructure | stream and append forms; typed verdict remains in evidence; never commit-outcome unresolved |
+| Flags | every supported write-side result leaves all four flags `NOT_EVALUATED` |
 | UUID boundary | malformed accepted event, idempotency record event, validation candidate, and append candidate all fail closed |
 | Contradictions | accepted event versus admission IDs; validation versus append candidate; record signature versus accepted event order/request; rejected append carrying accepted ID |
 | Evidence summary | exact compact vocabulary; absent optional keys omitted; no reasons duplicated |
@@ -615,12 +547,12 @@ The prototype unit suite uses canonical UUID strings for all event IDs.
 | Ambiguous commit | no current result maps to `COMMIT_OUTCOME_UNRESOLVED` |
 | Non-goals | no runtime action, strategy, retry authorization, serialization, persistence, or side effect |
 
-Tests should also prove that the wrapper does not mutate write-side state and
-does not generate `receipt_id` or `outcome_id`.
+Tests also prove that the wrapper does not mutate write-side state and does not
+generate `receipt_id` or `outcome_id`.
 
 ## 15. Shared-contract checkpoint
 
-The audit checked whether PR4 can be represented without changing:
+The implementation confirms that PR4 is represented without changing:
 
 ```text
 src/compass/runtime/decision_receipt.py
@@ -631,33 +563,31 @@ src/compass/runtime/semantic_outcome.py
 
 The PR3 mapper, JSON-safe boundary, semantic tuple, subject types, UUID
 correlation fields, evidence source, flag states, and admitted/replay/semantic
-rejection/append-concurrency invariants are sufficient and should not change
-for write-side awareness.
+rejection/append-concurrency invariants were sufficient; PR4 required no
+further shared-contract changes.
 
-The approved experimental sandbox prototype resolves the admission-fate
-representation gaps. `APPEND_ADMISSION_NOT_REACHED` permits an optional
-candidate, and the shared enum supplies
+The implemented admission-fate contracts resolve the representation gaps.
+`APPEND_ADMISSION_NOT_REACHED` permits an optional candidate, and the shared
+enum supplies
 `IDEMPOTENCY_CONFLICT_WITH_ACCEPTED_HISTORY` and
 `APPEND_TECHNICAL_FAILURE` with the cross-field invariants described in
 Section 8.
 
-With that prototype baseline, PR4 can be represented without further changes
-to any shared contract listed above. This is a resolved sandbox checkpoint,
-not a claim that the experimental refinement has completed formal adoption in
-the canonical repository.
+PR4 is represented without further changes to any shared contract listed
+above.
 
 The single primary `identity_source` also cannot encode field-level provenance
 for replay and idempotency conflict. ADR 0017 records this as an accepted
 limitation rather than a PR4 blocker, provided no consumer treats the primary
 source as authority for every field.
 
-## 16. Unresolved human decisions
+## 16. Closeout state
 
-No admission-fate, flag-state, or metadata-shape decision remains unresolved
-inside this experimental prototype. Human review is still required before
-approved files are manually copied into the canonical repository. That review
-does not authorize policy, strategy, retry-governance, serialization, or
-persistence work.
+PR4 producer evaluator ownership is resolved by ADR 0018. PR4 does not evaluate
+governance flags. Admission-fate and metadata-shape decisions remain as
+recorded in this note, and no remaining PR4 mapping decision blocks closeout.
+This boundary does not authorize policy, strategy, retry-governance,
+serialization, persistence, runtime invocation, or PR5 work.
 
 ## 17. Explicit non-goals
 
@@ -691,5 +621,5 @@ idempotency mutation
 write-side orchestration changes
 ```
 
-The proposed wrapper is evidence preparation only. `DecisionReceipt` remains
+The implemented wrapper is evidence preparation only. `DecisionReceipt` remains
 governance evidence, not a runtime action.
