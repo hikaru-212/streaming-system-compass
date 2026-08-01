@@ -27,13 +27,16 @@ class ProjectionEventRecord:
 
 
 class PostgresProjectionEventSource:
-    """
-    PostgreSQL-backed accepted-history event source for projection workers.
+    """PostgreSQL global-position scan retained for lineage-oriented uses.
 
     Responsibility:
     - load accepted events after a global event-log position
     - return events ordered by global_position
-    - preserve the distinction between domain event and storage cursor metadata
+    - preserve the distinction between domain event and storage lineage metadata
+
+    This source is not the repaired order-state worker discovery boundary.
+    Its scalar input proves neither a complete committed-history frontier nor
+    safe restart progress across commit-order inversion.
 
     This source does NOT:
     - run the reducer
@@ -53,6 +56,14 @@ class PostgresProjectionEventSource:
         *,
         limit: int,
     ) -> list[ProjectionEventRecord]:
+        """Return visible rows after a non-negative storage coordinate.
+
+        ``limit`` must be positive. Results are ordered by global position and
+        include that position only as storage lineage. The caller owns the
+        connection transaction. This method must not be used as proof that all
+        lower allocations were visible or as the repaired worker restart
+        cursor.
+        """
         if global_position < 0:
             raise ValueError("global_position must be non-negative")
 
