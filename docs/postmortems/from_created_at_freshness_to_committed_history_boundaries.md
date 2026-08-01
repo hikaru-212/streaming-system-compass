@@ -6,6 +6,14 @@
 
 **Recorded on:** 2026-06-14
 
+## Current Resolution
+
+[ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+selects exact-next per-order projection progress and order-local snapshot tails.
+`global_position` remains lineage and eligible-event scheduling metadata, not a
+complete committed-history frontier. The historical reasoning below is
+preserved to show how the project reached that repair.
+
 ## Summary
 
 This note records a shift in understanding during Stage 3.5D.

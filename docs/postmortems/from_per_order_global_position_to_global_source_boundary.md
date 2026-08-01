@@ -4,6 +4,15 @@
 
 **Recorded on:** 2026-06-14
 
+> **Historical scope and current supersession:** This postmortem records the
+> snapshot-lineage uniqueness correction understood at that time. Global
+> uniqueness identifies one accepted event, but it does not imply transaction
+> commit order or a complete committed-history frontier. [ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+> supersedes use of `global_position` as the repaired worker or snapshot-tail
+> completeness cursor. The examples below remain unchanged as design-evolution
+> history; current projection progress and snapshot tails advance by exact-next
+> order-local sequence.
+
 ## Summary
 
 This note records a schema-boundary correction discovered during **Stage 3.5D PR2 — Projection Snapshot Schema Baseline**.

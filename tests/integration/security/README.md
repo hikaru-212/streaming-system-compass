@@ -49,6 +49,7 @@ These tests cover:
 - `idempotency_records`
 - `order_events_global_position_seq`
 - `projection_states`
+- `projection_order_progress`
 - `projection_checkpoints`
 - `projection_snapshots`
 
@@ -195,7 +196,19 @@ projection_checkpoints
 
 ---
 
-### 6. Projection Snapshot Permission Boundary
+### 6. Projection Order Progress Permission Boundary
+
+These tests verify `projection_order_progress`.
+
+They prove that the projection worker can select, insert, and update repaired
+per-order progress but cannot delete it; snapshot and read-only roles can
+inspect it; and unauthorized roles cannot mutate it. Progress remains derived
+processing evidence, not accepted-history authority. Deletion for a
+human-controlled rebuild is an owner, migration, or administrative operation.
+
+---
+
+### 7. Projection Snapshot Permission Boundary
 
 These tests verify `projection_snapshots`.
 
@@ -229,9 +242,10 @@ These tests prove that the PostgreSQL role / privilege baseline preserves the fo
 3. Only the intended writer role can consume accepted-history global-position sequence values.
 4. Derived projection state remains operationally mutable through the projection worker role.
 5. Projection checkpoint progress remains operationally mutable through the projection worker role.
-6. Projection snapshots remain insert-oriented evidence artifacts through the snapshot worker role.
-7. Read-only observation does not imply mutation permission.
-8. Permission-boundary tests are separate from ordinary storage / mechanism integration tests.
+6. Repaired per-order progress is mutable only through its intended worker boundary.
+7. Projection snapshots remain insert-oriented evidence artifacts through the snapshot worker role.
+8. Read-only observation does not imply mutation permission.
+9. Permission-boundary tests are separate from ordinary storage / mechanism integration tests.
 
 ---
 

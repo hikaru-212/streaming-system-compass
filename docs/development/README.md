@@ -27,7 +27,7 @@ PostgreSQL is used to support:
 
 | Document | Purpose |
 |---|---|
-| [Local PostgreSQL Setup](postgres_local_setup.md) | Explains how to start the local Docker-based PostgreSQL environment, create the development and test databases, apply migrations through the durable-state permission role baseline, and run PostgreSQL integration / security tests. |
+| [Local PostgreSQL Setup](postgres_local_setup.md) | Explains how to start the local Docker-based PostgreSQL environment, create the development and test databases, apply migrations through repaired projection progress, and run PostgreSQL integration / security tests. |
 
 ---
 
@@ -152,7 +152,7 @@ Stage 3.5C PR4 added:
 
 ```text
 order_events.global_position
-= durable accepted-history consumption cursor
+= unique storage lineage and eligible-event scheduling metadata
 ```
 
 Stage 3.5D PR2 adds the durable projection snapshot schema baseline:
@@ -162,13 +162,18 @@ projection_snapshots
 = derived projection snapshot artifacts with source-boundary evidence
 ```
 
-At this stage, the local PostgreSQL setup includes durable accepted history, durable idempotency memory, durable projection state, durable checkpoint progress, global-position accepted-history consumption, durable replay / rebuild validation, projection snapshot schema / store support, and the Stage 3.5E runtime role / permission baseline.
+At this stage, the local PostgreSQL setup includes durable accepted history,
+durable idempotency memory, durable projection state, repaired per-order
+progress, generic legacy checkpoint evidence, exact-next order-local event
+discovery, durable replay / rebuild validation, projection snapshot schema /
+store support, and the Stage 3.5E runtime role / permission baseline.
 
 ---
 
 ## Current Migrations
 
-Through Stage 3.5E, local PostgreSQL setup requires five baseline migrations:
+Through the repaired Stage 3.5C–3.5E baseline, local PostgreSQL setup requires
+six migrations:
 
 ```text
 db/migrations/001_create_write_side_tables.sql
@@ -176,6 +181,7 @@ db/migrations/002_create_read_side_tables.sql
 db/migrations/003_add_order_events_global_position.sql
 db/migrations/004_create_projection_snapshots.sql
 db/migrations/005_create_durable_state_permission_roles.sql
+db/migrations/006_create_projection_order_progress.sql
 ```
 
 The expected migration order is:
@@ -185,7 +191,8 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_s
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
-db/migrations/005_create_durable_state_permission_roles.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/005_create_durable_state_permission_roles.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_projection_order_progress.sql
 ```
 
 Use `DATABASE_URL` instead of `TEST_DATABASE_URL` only when applying migrations to the local development database for manual inspection.

@@ -6,7 +6,23 @@
 
 This note defines the boundary for **Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline**.
 
-Stage 3.5C PR4 introduced the first PostgreSQL-backed projection worker baseline:
+### Current repaired context
+
+[ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+supersedes the historical PR4 global-checkpoint mechanism for the current
+worker. The repaired worker discovers exact-next events by order-local sequence
+and commits projection state with progress scoped to projection definition,
+epoch, and `order_id`. `global_position` remains lineage and deterministic
+eligible-work scheduling metadata, not a complete committed-history frontier.
+Legacy checkpoint rows do not bootstrap repaired progress.
+
+This validator remains an evidence boundary: it compares accepted-history
+replay with derived state and performs no automatic repair, checkpoint advance,
+or progress mutation.
+
+### Historical PR4 context
+
+Stage 3.5C PR4 originally introduced the first PostgreSQL-backed projection worker baseline:
 
 ```text
 order_events
@@ -16,7 +32,9 @@ order_events
 → PostgresCheckpointStore
 ```
 
-PR4 proved that accepted events can be consumed through `GLOBAL_POSITION`, projected through the canonical reducer, and persisted together with checkpoint progress in one read-side transaction.
+PR4 proved the historical `GLOBAL_POSITION` worker flow. ADR 0020 later
+replaced that unsafe completeness cursor after PostgreSQL commit inversion was
+reproduced; the diagram is retained to preserve implementation history.
 
 PR5 answers the next question:
 
@@ -79,8 +97,11 @@ order_events
 projection_states
 = derived runtime view
 
+projection_order_progress
+= repaired exact-next processing progress
+
 projection_checkpoints
-= operational worker progress
+= legacy / generic cursor evidence
 ```
 
 PR5 does not change that relationship.
@@ -95,7 +116,10 @@ Stage 3.5C PR2 made `projection_states` usable through `PostgresProjectionStore`
 
 Stage 3.5C PR3 made `projection_checkpoints` usable through `PostgresCheckpointStore`.
 
-Stage 3.5C PR4 connected accepted history, the canonical reducer, projection state, and checkpoint progress through a PostgreSQL-backed projection worker.
+Stage 3.5C PR4 historically connected accepted history, the canonical reducer,
+projection state, and checkpoint progress through a PostgreSQL-backed
+projection worker. ADR 0020 replaced that worker progress mechanism with
+per-order exact-next progress.
 
 However, PR4 only proved that the worker can process accepted events incrementally.
 
@@ -175,13 +199,22 @@ For single-aggregate replay, accepted events must be replayed in aggregate-local
 ORDER BY sequence ASC
 ```
 
-`GLOBAL_POSITION` is the worker-consumption cursor across accepted history.
+`global_position` is storage lineage and an eligible-event scheduling
+tie-breaker. It is not a complete committed-history frontier for the repaired
+worker.
 
 `sequence` is the causal ordering boundary inside one aggregate stream.
 
 Therefore, PR5 reuses the accepted-history loading path that returns one order's events ordered by `sequence ASC`, such as `PostgresEventStore.load(order_id)`.
 
 This keeps PR5 aligned with the aggregate-local replay rule instead of accidentally replaying one order by a global worker cursor.
+
+The PostgreSQL validator requires its accepted-history and projection-state
+stores to share the exact connection. `validate_order()` requires an idle
+connection and owns one explicit top-level `REPEATABLE READ READ ONLY`
+transaction so the comparison is one database observation. The generic replay
+concept does not claim coherent snapshots across separately injected
+connections.
 
 ---
 
@@ -224,9 +257,12 @@ Rebuild must not mutate accepted history.
 
 Rebuild must not infer new business facts.
 
-Rebuild must not advance a worker checkpoint unless the design explicitly defines that behavior.
+Rebuild must not advance repaired projection progress or a legacy worker
+checkpoint unless a separately approved design explicitly defines that
+behavior.
 
-If checkpoint behavior is included, it must be documented separately because checkpoint progress is operational metadata, not business correctness.
+If progress or checkpoint behavior is included, it must be documented
+separately because both are operational evidence, not business correctness.
 
 ---
 

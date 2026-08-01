@@ -6,6 +6,11 @@ This folder preserves implementation notes for the completed Stage 3.5D snapshot
 
 Stage 3.5D introduced projection snapshot trust boundaries, snapshot storage, snapshot-assisted replay validation, snapshot-assisted state resolution, and the aggregate snapshot deferral decision.
 
+ADR 0020 repairs the projection snapshot tail contract. Current validator and
+resolver tails are scoped to the snapshot `order_id`, begin after
+`source_event_sequence`, and require contiguous order-local sequence.
+`source_global_position` remains lineage rather than tail-completeness proof.
+
 ## Core Boundaries
 
 ```text

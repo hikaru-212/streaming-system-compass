@@ -2,6 +2,32 @@
 
 [← Back to Boundary Notes](README.md)
 
+## Current Repaired Boundary
+
+ADR 0020 supersedes the original Stage 3.5C correctness claim in this note.
+The scalar checkpoint proved only the largest processed visible allocation
+position. It did not prove a complete committed-history frontier because
+`global_position` allocation order is not transaction commit order.
+
+The current order-state worker uses:
+
+```text
+(projection_name = order_state_projection, projection_epoch = 1, order_id)
+→ last applied order-local sequence and event lineage
+```
+
+An event is eligible only when its sequence is exactly next for its own order.
+`global_position` remains a unique coordinate, lineage metadata, and scheduling
+tie-breaker. It is not the worker restart cursor or snapshot-tail completeness
+proof. Existing global checkpoint rows remain pre-repair, non-complete evidence
+and do not bootstrap repaired progress.
+
+The remainder of this note records the historical PR4 decision, not the current
+worker contract. See
+[ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md).
+
+---
+
 ## Purpose
 
 This note defines the Stage 3.5C PR4 boundary for introducing a PostgreSQL-backed projection worker that consumes accepted events from durable history.
