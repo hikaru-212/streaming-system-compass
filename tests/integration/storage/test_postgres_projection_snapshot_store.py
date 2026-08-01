@@ -163,7 +163,7 @@ def test_save_and_load_latest_projection_snapshot(
     assert loaded.created_at is not None
 
 
-def test_load_latest_snapshot_uses_highest_source_global_position(
+def test_load_latest_snapshot_uses_highest_order_local_sequence(
     db_connection: Connection,
     clean_database: None,
 ) -> None:
@@ -172,7 +172,7 @@ def test_load_latest_snapshot_uses_highest_source_global_position(
     older_snapshot = make_snapshot(
         order_id="order-001",
         source_event_sequence=1,
-        source_global_position=10,
+        source_global_position=20,
         state_status="CREATED",
         paid_amount=Decimal("0.00"),
         state_version=1,
@@ -181,7 +181,7 @@ def test_load_latest_snapshot_uses_highest_source_global_position(
     newer_source_snapshot = make_snapshot(
         order_id="order-001",
         source_event_sequence=2,
-        source_global_position=20,
+        source_global_position=10,
         state_status="PAID",
         paid_amount=Decimal("100.00"),
         state_version=2,
@@ -194,7 +194,7 @@ def test_load_latest_snapshot_uses_highest_source_global_position(
     loaded = store.load_latest_snapshot("order-001")
 
     assert loaded is not None
-    assert loaded.source_global_position == 20
+    assert loaded.source_global_position == 10
     assert loaded.source_event_sequence == 2
     assert loaded.state_status == "PAID"
     assert loaded.payload_hash == "sha256:newer"

@@ -32,6 +32,11 @@ class PostgresEventStore:
     def __init__(self, connection: Connection):
         self._connection = connection
 
+    @property
+    def connection(self) -> Connection:
+        """Return the caller-owned connection without transferring ownership."""
+        return self._connection
+
     def append(self, candidate_event: OrderEvent, expected_current_version: int) -> None:
         """
         Append candidate event only if durable store continuity still matches caller expectation.

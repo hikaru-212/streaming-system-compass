@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from psycopg.pq import TransactionStatus
+
 from src.core.order.state import OrderState
 from src.pipeline.projection.reducer import (
     build_empty_projection_state,
@@ -55,22 +57,21 @@ class ReplayValidationResult:
 
 
 class DurableReplayValidator:
-    """
-    Durable replay / rebuild validation baseline.
+    """Compare projection state with accepted replay in one PostgreSQL snapshot.
 
     Responsibility:
-    - load accepted history for one order_id
-    - replay it through the canonical projection reducer
-    - load persisted projection state
-    - compare replay-derived state with persisted projection state
+    - load accepted history for one order;
+    - replay it through the canonical projection reducer;
+    - compare it with persisted projection state.
 
-    This validator does NOT:
-    - mutate accepted history
-    - mutate projection state
-    - advance checkpoint progress
-    - rebuild projection state
-    - classify SemanticOutcome
-    - make runtime recovery decisions
+    Connection and transaction ownership:
+    - both PostgreSQL stores must share the exact same connection;
+    - ``validate_order`` requires an idle connection and owns one explicit
+      top-level repeatable-read, read-only transaction so both reads form one
+      database observation.
+
+    This validator does not mutate durable data, rebuild projection state,
+    classify SemanticOutcome, or choose recovery policy.
     """
 
     def __init__(
@@ -79,10 +80,37 @@ class DurableReplayValidator:
         event_store: PostgresEventStore,
         projection_store: PostgresProjectionStore,
     ) -> None:
+        if event_store.connection is not projection_store.connection:
+            raise ValueError(
+                "event_store and projection_store must share the exact "
+                "validator connection"
+            )
         self.event_store = event_store
         self.projection_store = projection_store
+        self.connection = event_store.connection
 
     def validate_order(self, order_id: str) -> ReplayValidationResult:
+        """Validate one order using one top-level database observation.
+
+        ``order_id`` selects accepted history and persisted projection state.
+        The returned typed result reports match, missing projection, drift, or
+        no accepted history. The shared connection must be idle on entry; this
+        method owns and completes the transaction. It performs no mutation,
+        rebuild, fallback, or runtime-policy decision.
+        """
+        if self.connection.info.transaction_status != TransactionStatus.IDLE:
+            raise RuntimeError(
+                "DurableReplayValidator.validate_order requires an idle "
+                "connection so it can own a top-level transaction"
+            )
+
+        with self.connection.transaction():
+            self.connection.execute(
+                "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY"
+            )
+            return self._validate_order(order_id)
+
+    def _validate_order(self, order_id: str) -> ReplayValidationResult:
         accepted_events = self.event_store.load(order_id)
 
         if not accepted_events:

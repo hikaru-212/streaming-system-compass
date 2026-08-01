@@ -43,57 +43,72 @@ class FakeSnapshotStore:
 class FakeTailEventSource:
     def __init__(self, records: list[ProjectionEventRecord]) -> None:
         self.records = records
-        self.load_after_calls: list[tuple[int, int]] = []
+        self.load_after_calls: list[tuple[str, int, int]] = []
 
-    def load_after(
+    def load_after_sequence(
         self,
-        global_position: int,
+        order_id: str,
+        sequence: int,
         *,
         limit: int,
     ) -> list[ProjectionEventRecord]:
-        self.load_after_calls.append((global_position, limit))
+        self.load_after_calls.append((order_id, sequence, limit))
         return [
             record
             for record in self.records
-            if record.global_position > global_position
+            if record.event.order_id == order_id
+            and record.event.sequence > sequence
         ][:limit]
 
 
 class NonAdvancingTailEventSource:
-    def load_after(
+    def load_after_sequence(
         self,
-        global_position: int,
+        order_id: str,
+        sequence: int,
         *,
         limit: int,
     ) -> list[ProjectionEventRecord]:
-        created_event = make_created_event()
+        created_event = make_created_event(
+            order_id=order_id,
+            sequence=sequence,
+        )
 
         return [
             ProjectionEventRecord(
-                global_position=global_position,
+                global_position=100,
                 event=created_event,
             )
         ]
 
 
 class OutOfOrderTailEventSource:
-    def load_after(
+    def load_after_sequence(
         self,
-        global_position: int,
+        order_id: str,
+        sequence: int,
         *,
         limit: int,
     ) -> list[ProjectionEventRecord]:
-        created_event = make_created_event()
-        paid_event = make_paid_event(previous_event=created_event)
+        later_event = make_created_event(
+            request_id="later-request",
+            order_id=order_id,
+            sequence=sequence + 2,
+        )
+        next_event = make_created_event(
+            request_id="next-request",
+            order_id=order_id,
+            sequence=sequence + 1,
+        )
 
         return [
             ProjectionEventRecord(
-                global_position=global_position + 2,
-                event=paid_event,
+                global_position=102,
+                event=later_event,
             ),
             ProjectionEventRecord(
-                global_position=global_position + 1,
-                event=created_event,
+                global_position=101,
+                event=next_event,
             ),
         ]
 
@@ -483,7 +498,7 @@ def test_resolver_ignores_tail_events_for_other_orders() -> None:
     assert result.resolved_state == make_order_state()
 
 
-def test_resolver_uses_tail_events_after_snapshot_global_position() -> None:
+def test_resolver_uses_order_local_tail_after_snapshot_sequence() -> None:
     created_event = make_created_event()
     paid_event = make_paid_event(previous_event=created_event)
 
@@ -520,7 +535,10 @@ def test_resolver_uses_tail_events_after_snapshot_global_position() -> None:
         result.status
         == ProjectionSnapshotAssistedResolutionStatus.RESOLVED_FROM_SNAPSHOT
     )
-    assert tail_source.load_after_calls == [(10, 25), (11, 25)]
+    assert tail_source.load_after_calls == [
+        ("order-001", 1, 25),
+        ("order-001", 2, 25),
+    ]
     assert result.resolved_state == make_order_state(
         status=OrderStatus.PAID,
         paid_amount=Decimal("100.00"),
@@ -567,7 +585,10 @@ def test_resolver_loads_tail_records_across_pages() -> None:
         paid_amount=Decimal("100.00"),
         version=2,
     )
-    assert tail_source.load_after_calls == [(1, 1), (2, 1)]
+    assert tail_source.load_after_calls == [
+        ("order-001", 1, 1),
+        ("order-001", 2, 1),
+    ]
 
 
 def test_resolver_rejects_snapshot_order_id_mismatch() -> None:
@@ -653,10 +674,10 @@ def test_resolver_reports_tail_contract_violation_when_tail_event_source_does_no
     assert result.snapshot_id == snapshot.snapshot_id
     assert result.source_global_position == snapshot.source_global_position
     assert result.reason is not None
-    assert "non-advancing global_position" in result.reason
+    assert "non-contiguous order-local sequence" in result.reason
 
 
-def test_resolver_reports_tail_contract_violation_when_tail_event_source_returns_out_of_order_positions() -> None:
+def test_resolver_reports_tail_contract_violation_for_local_sequence_gap() -> None:
     snapshot = make_snapshot()
     resolver = ProjectionSnapshotAssistedStateResolver(
         snapshot_store=FakeSnapshotStore([snapshot]),
@@ -678,7 +699,7 @@ def test_resolver_reports_tail_contract_violation_when_tail_event_source_returns
     assert result.snapshot_id == snapshot.snapshot_id
     assert result.source_global_position == snapshot.source_global_position
     assert result.reason is not None
-    assert "non-advancing global_position" in result.reason
+    assert "non-contiguous order-local sequence" in result.reason
 
 
 def test_resolver_returns_tail_replay_failed_when_tail_replay_violates_transition_rule() -> None:
