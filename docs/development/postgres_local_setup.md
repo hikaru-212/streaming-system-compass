@@ -176,7 +176,8 @@ compass_test
 
 ## Run Migrations
 
-Through Stage 3.5E, the local PostgreSQL setup uses five baseline migrations:
+Through the repaired Stage 3.5C–3.5E baseline, the local PostgreSQL setup uses
+six migrations:
 
 ```text
 db/migrations/001_create_write_side_tables.sql
@@ -184,6 +185,7 @@ db/migrations/002_create_read_side_tables.sql
 db/migrations/003_add_order_events_global_position.sql
 db/migrations/004_create_projection_snapshots.sql
 db/migrations/005_create_durable_state_permission_roles.sql
+db/migrations/006_create_projection_order_progress.sql
 ```
 
 Apply them to the development database when you want to inspect tables manually:
@@ -193,7 +195,8 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_t
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
-db/migrations/005_create_durable_state_permission_roles.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/005_create_durable_state_permission_roles.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_projection_order_progress.sql
 ```
 
 Apply them to the test database before running PostgreSQL integration tests:
@@ -203,7 +206,8 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_s
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
-db/migrations/005_create_durable_state_permission_roles.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/005_create_durable_state_permission_roles.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_projection_order_progress.sql
 ```
 
 The CI workflow may also apply migrations automatically by iterating through `db/migrations/*.sql` in filename order:
@@ -243,7 +247,9 @@ The global-position migration adds:
 order_events.global_position
 ```
 
-This column is used by the PostgreSQL-backed projection worker as the durable accepted-history consumption cursor.
+This column remains unique storage lineage and a deterministic scheduling
+tie-breaker among currently eligible events. It is not the repaired worker's
+restart cursor or a complete committed-history frontier.
 
 The projection snapshot migration creates:
 
@@ -264,6 +270,16 @@ compass_readonly
 ```
 
 This migration is required before running `tests/integration/security`.
+
+The repaired projection-progress migration creates:
+
+```text
+projection_order_progress
+```
+
+It records exact-next order-local progress for
+`order_state_projection`, epoch 1, without bootstrapping from legacy global
+checkpoints.
 
 ---
 
@@ -358,6 +374,7 @@ idempotency_records
 projection_states
 projection_checkpoints
 projection_snapshots
+projection_order_progress
 ```
 
 Expected additional event-log column after migration 003:
@@ -371,8 +388,8 @@ To inspect the event-log position and read-side table constraints:
 ```bash
 psql "$TEST_DATABASE_URL" -c "\d order_events"
 psql "$TEST_DATABASE_URL" -c "\d projection_states"
-psql "$TEST_DATABASE_URL" -c "\d projection_checkpoints"
 psql "$TEST_DATABASE_URL" -c "\d projection_snapshots"
+psql "$TEST_DATABASE_URL" -c "\d projection_order_progress"
 ```
 
 Expected projection snapshot constraints include:
@@ -553,12 +570,14 @@ It supports:
 - durable accepted history through `order_events`
 - durable idempotency memory through `idempotency_records`
 - durable projection state schema through `projection_states`
+- repaired per-order progress through `projection_order_progress`
 - durable checkpoint schema through `projection_checkpoints`
 - durable projection snapshot schema through `projection_snapshots`
 - durable projection state persistence through `PostgresProjectionStore`
 - durable checkpoint progress persistence through `PostgresCheckpointStore`
 - projection snapshot persistence through `PostgresProjectionSnapshotStore`
-- global-position accepted-history consumption through `order_events.global_position`
+- exact-next order-local discovery with `global_position` retained as lineage
+  and eligible-event scheduling metadata
 - PostgreSQL-backed projection worker orchestration
 - durable replay / rebuild validation against accepted history
 - projection snapshot-assisted replay validation
@@ -645,9 +664,12 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_s
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/005_create_durable_state_permission_roles.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_projection_order_progress.sql
 
-# 5. Inspect the projection snapshot schema / permission roles if needed
+# 5. Inspect the repaired projection schema / permission roles if needed
 psql "$TEST_DATABASE_URL" -c "\d projection_snapshots"
+psql "$TEST_DATABASE_URL" -c "\d projection_order_progress"
 psql "$TEST_DATABASE_URL" -c "\du compass_*"
 
 # 6. Run tests

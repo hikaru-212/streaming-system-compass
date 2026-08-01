@@ -25,9 +25,9 @@ They also exist to defend the semantic boundaries of the system, including:
 - durable read-side schema constraints
 - PostgreSQL-backed projection state persistence
 - PostgreSQL-backed checkpoint persistence
-- global-position accepted-history consumption
+- exact-next per-order accepted-event discovery
 - PostgreSQL-backed projection worker behavior
-- read-side projection-state / checkpoint atomicity
+- read-side projection-state / per-order-progress atomicity
 - durable replay validation against accepted history
 - `MATCH`, `MISSING_PROJECTION`, `DRIFT`, and `NO_ACCEPTED_HISTORY` replay validation coverage
 - projection snapshot schema and persistence constraints
@@ -432,6 +432,7 @@ psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/004_create_projection_snapshots.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/005_create_durable_state_permission_roles.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/006_create_projection_order_progress.sql
 
 pytest tests/integration/storage -q
 pytest tests/integration/security -q

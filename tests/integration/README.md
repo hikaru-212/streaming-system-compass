@@ -356,7 +356,9 @@ pytest -v --durations=10 --cov=src --cov-report=term-missing --cov-fail-under=80
 
 ## Required Migration Baseline
 
-PostgreSQL-backed integration tests currently assume the write-side, read-side, global-position, and snapshot migrations have been applied to the test database:
+PostgreSQL-backed integration tests currently assume migrations 001–006,
+including the role baseline and repaired projection-progress schema, have been
+applied to the test database:
 
 ```bash
 psql "$TEST_DATABASE_URL" -f db/migrations/001_create_write_side_tables.sql
@@ -364,9 +366,13 @@ psql "$TEST_DATABASE_URL" -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/004_create_projection_snapshots.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/005_create_durable_state_permission_roles.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/006_create_projection_order_progress.sql
 ```
 
-This requirement matters because Stage 3.5D tests depend on `projection_snapshots` and snapshot source-boundary fields, while Stage 3.5E security tests depend on runtime responsibility roles and table-level grants.
+This requirement matters because Stage 3.5D tests depend on
+`projection_snapshots` and snapshot source-boundary fields, while repaired
+Stage 3.5C and Stage 3.5E tests depend on `projection_order_progress`, runtime
+responsibility roles, and table-level grants.
 
 ---
 

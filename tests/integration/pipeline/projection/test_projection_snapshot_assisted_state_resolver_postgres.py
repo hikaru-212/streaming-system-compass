@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from contextlib import closing
 from decimal import Decimal
 from uuid import UUID
 from uuid import uuid4
 
+import pytest
 from psycopg import Connection
 
 from src.core.order.enums import EventType
@@ -14,14 +17,12 @@ from src.core.order.state import OrderState
 from src.pipeline.projection.projection_snapshot_assisted_state_resolver import (
     ProjectionSnapshotAssistedResolutionStatus,
 )
-from src.pipeline.projection.projection_snapshot_assisted_state_resolver import (
-    ProjectionSnapshotAssistedStateResolver,
+from src.pipeline.projection.postgres_snapshot_observation import (
+    PostgresProjectionSnapshotAssistedStateResolver,
+    PostgresProjectionSnapshotReplayValidator,
 )
 from src.pipeline.projection.projection_snapshot_replay_validator import (
     ProjectionSnapshotReplayValidationStatus,
-)
-from src.pipeline.projection.projection_snapshot_replay_validator import (
-    ProjectionSnapshotReplayValidator,
 )
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_projection_event_source import (
@@ -121,22 +122,17 @@ def make_paid_event(
 
 def make_resolver(
     connection: Connection,
-) -> ProjectionSnapshotAssistedStateResolver:
-    return ProjectionSnapshotAssistedStateResolver(
-        snapshot_store=PostgresProjectionSnapshotStore(connection),
-        tail_event_source=PostgresProjectionEventSource(connection),
-        tail_event_limit=1000,
+) -> PostgresProjectionSnapshotAssistedStateResolver:
+    return PostgresProjectionSnapshotAssistedStateResolver(
+        connection,
     )
 
 
 def make_validator(
     connection: Connection,
-) -> ProjectionSnapshotReplayValidator:
-    return ProjectionSnapshotReplayValidator(
-        snapshot_store=PostgresProjectionSnapshotStore(connection),
-        accepted_history_store=PostgresEventStore(connection),
-        tail_event_source=PostgresProjectionEventSource(connection),
-        tail_event_limit=1000,
+) -> PostgresProjectionSnapshotReplayValidator:
+    return PostgresProjectionSnapshotReplayValidator(
+        connection,
     )
 
 
@@ -173,6 +169,25 @@ def find_record_for_event(
     raise AssertionError(f"Projection record not found for event {event.event_id}")
 
 
+def load_global_position(
+    connection: Connection,
+    *,
+    event_id: str,
+) -> int | None:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT global_position
+            FROM order_events
+            WHERE accepted_event_id = %s
+            """,
+            (event_id,),
+        )
+        row = cursor.fetchone()
+
+    return None if row is None else int(row[0])
+
+
 def count_rows(
     connection: Connection,
     table_name: str,
@@ -182,6 +197,149 @@ def count_rows(
         result = cursor.fetchone()
 
     return int(result[0])
+
+
+def test_postgres_snapshot_validator_rejects_outer_transaction(
+    db_connection: Connection,
+    clean_database: None,
+) -> None:
+    validator = make_validator(db_connection)
+
+    db_connection.execute("SELECT 1")
+    with pytest.raises(RuntimeError, match="requires an idle connection"):
+        validator.validate_order("order-001")
+    db_connection.rollback()
+
+
+def test_order_local_snapshot_tails_remain_complete_despite_unrelated_global_position_commit_inversion(
+    db_connection: Connection,
+    db_connection_factory: Callable[[], Connection],
+    clean_database: None,
+) -> None:
+    order_a_created = make_created_event(
+        order_id="snapshot-order-a",
+        request_id="snapshot-order-a-created",
+    )
+    order_a_paid = make_paid_event(
+        previous_event=order_a_created,
+        request_id="snapshot-order-a-paid",
+    )
+    order_b_created = make_created_event(
+        order_id="snapshot-order-b",
+        request_id="snapshot-order-b-created",
+    )
+
+    append_order_events(db_connection, order_a_created)
+    created_record = find_record_for_event(
+        load_projection_tail_records(db_connection),
+        order_a_created,
+    )
+    snapshot = make_snapshot(
+        order_id=order_a_created.order_id,
+        source_event_id=UUID(order_a_created.event_id),
+        source_event_sequence=order_a_created.sequence,
+        source_global_position=created_record.global_position,
+        state_status="CREATED",
+        paid_amount=Decimal("0.00"),
+        state_version=order_a_created.sequence,
+    )
+    PostgresProjectionSnapshotStore(db_connection).save_snapshot(snapshot)
+    db_connection.commit()
+
+    with (
+        closing(db_connection_factory()) as lower_position_connection,
+        closing(db_connection_factory()) as higher_position_connection,
+        closing(db_connection_factory()) as observer_connection,
+    ):
+        lower_position_connection.rollback()
+        higher_position_connection.rollback()
+        observer_connection.rollback()
+
+        PostgresEventStore(lower_position_connection).append(
+            order_a_paid,
+            expected_current_version=1,
+        )
+        position_a_tail = load_global_position(
+            lower_position_connection,
+            event_id=order_a_paid.event_id,
+        )
+        assert position_a_tail is not None
+
+        PostgresEventStore(higher_position_connection).append(
+            order_b_created,
+            expected_current_version=0,
+        )
+        position_b = load_global_position(
+            higher_position_connection,
+            event_id=order_b_created.event_id,
+        )
+        assert position_b is not None
+        assert position_a_tail < position_b
+        higher_position_connection.commit()
+
+        assert (
+            load_global_position(
+                observer_connection,
+                event_id=order_b_created.event_id,
+            )
+            == position_b
+        )
+        assert (
+            load_global_position(
+                observer_connection,
+                event_id=order_a_paid.event_id,
+            )
+            is None
+        )
+        observer_connection.rollback()
+
+        lower_position_connection.commit()
+        assert (
+            load_global_position(
+                observer_connection,
+                event_id=order_a_paid.event_id,
+            )
+            == position_a_tail
+        )
+        observer_connection.rollback()
+
+    # The inversion is fully committed before observation. This proves tail
+    # completeness despite unrelated allocation/commit order, not a concurrent
+    # commit during validator or resolver pagination.
+    db_connection.rollback()
+    validation = make_validator(db_connection).validate_order(
+        order_a_created.order_id
+    )
+    resolution = make_resolver(db_connection).resolve_order(
+        order_a_created.order_id,
+        trusted_snapshot_id=snapshot.snapshot_id,
+    )
+
+    assert validation.status == ProjectionSnapshotReplayValidationStatus.MATCH
+    assert validation.snapshot_assisted_state is not None
+    assert validation.snapshot_assisted_state.status == OrderStatus.PAID
+    assert validation.snapshot_assisted_state.version == 2
+    assert validation.source_global_position == created_record.global_position
+    assert (
+        resolution.status
+        == ProjectionSnapshotAssistedResolutionStatus.RESOLVED_FROM_SNAPSHOT
+    )
+    assert resolution.resolved_state is not None
+    assert resolution.resolved_state.status == OrderStatus.PAID
+    assert resolution.resolved_state.version == 2
+    assert resolution.source_global_position == created_record.global_position
+
+
+def test_postgres_snapshot_resolver_rejects_outer_transaction(
+    db_connection: Connection,
+    clean_database: None,
+) -> None:
+    resolver = make_resolver(db_connection)
+
+    db_connection.execute("SELECT 1")
+    with pytest.raises(RuntimeError, match="requires an idle connection"):
+        resolver.resolve_order("order-001", trusted_snapshot_id=uuid4())
+    db_connection.rollback()
 
 
 def test_postgres_resolver_resolves_persisted_snapshot_with_no_tail(
@@ -281,7 +439,7 @@ def test_postgres_resolver_resolves_persisted_snapshot_with_real_tail_event(
     )
 
 
-def test_postgres_resolver_reads_tail_strictly_after_snapshot_global_position(
+def test_postgres_resolver_reads_same_order_tail_after_snapshot_sequence(
     db_connection: Connection,
     clean_database: None,
 ) -> None:
@@ -401,6 +559,7 @@ def test_postgres_validator_match_result_can_supply_trusted_snapshot_id_for_reso
 
     assert trusted_snapshot_id is not None
 
+    db_connection.commit()
     resolver = make_resolver(db_connection)
 
     resolution_result = resolver.resolve_order(
@@ -437,6 +596,7 @@ def test_postgres_resolver_does_not_mutate_durable_tables(
         ),
     }
 
+    db_connection.commit()
     resolver = make_resolver(db_connection)
 
     result = resolver.resolve_order(

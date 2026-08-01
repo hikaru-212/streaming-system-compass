@@ -77,6 +77,7 @@ def clean_database(db_connection: Connection) -> None:
             """
             TRUNCATE
                 projection_snapshots,
+                projection_order_progress,
                 projection_checkpoints,
                 projection_states,
                 idempotency_records,

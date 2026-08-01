@@ -56,9 +56,10 @@ class ProjectionSnapshotLookupProtocol(Protocol):
 
 
 class ProjectionTailEventSourceProtocol(Protocol):
-    def load_after(
+    def load_after_sequence(
         self,
-        global_position: int,
+        order_id: str,
+        sequence: int,
         *,
         limit: int,
     ) -> list[ProjectionEventRecord]:
@@ -66,19 +67,18 @@ class ProjectionTailEventSourceProtocol(Protocol):
 
 
 class ProjectionSnapshotAssistedStateResolver:
-    """
-    Resolve read-side projection state from an explicitly qualified projection
-    snapshot plus projection tail events.
+    """Resolve state from an explicitly trusted snapshot and its local tail.
 
-    This resolver does NOT:
-    - select the latest persisted snapshot
-    - validate snapshot equivalence against accepted-history authority replay
-    - mutate accepted history
-    - mutate projection state
-    - advance checkpoints
-    - write snapshots
-    - decide fallback / quarantine / rebuild policy
-    - produce SemanticOutcome
+    The tail source is constrained to the requested order and traversed by
+    contiguous event sequence. Snapshot ``source_global_position`` is lineage,
+    not a completeness cursor.
+
+    The generic resolver owns no database connection or transaction.
+    PostgreSQL callers that need one coherent database observation must use the
+    PostgreSQL orchestration boundary.
+
+    This resolver does not establish snapshot trust, compare against accepted
+    authority, mutate durable state, or choose fallback/runtime policy.
     """
 
     def __init__(
@@ -101,6 +101,17 @@ class ProjectionSnapshotAssistedStateResolver:
         *,
         trusted_snapshot_id: UUID | None,
     ) -> ProjectionSnapshotAssistedResolutionResult:
+        """Resolve one order from an explicitly trusted snapshot and local tail.
+
+        ``trusted_snapshot_id`` must identify a compatible snapshot for
+        ``order_id``. The returned typed result describes resolved state or the
+        relevant precondition, compatibility, source-contract, or replay
+        failure. Tail events must be exact-next local sequences for the same
+        order.
+
+        This generic method owns no connection or transaction, does not
+        establish trust, and performs no mutation, fallback, or runtime action.
+        """
         if trusted_snapshot_id is None:
             return ProjectionSnapshotAssistedResolutionResult(
                 order_id=order_id,
@@ -153,7 +164,8 @@ class ProjectionSnapshotAssistedStateResolver:
 
         try:
             tail_records = self._load_all_tail_records(
-                source_global_position=snapshot.source_global_position,
+                order_id=order_id,
+                source_event_sequence=snapshot.source_event_sequence,
             )
         except ValueError as exc:
             return ProjectionSnapshotAssistedResolutionResult(
@@ -167,15 +179,12 @@ class ProjectionSnapshotAssistedStateResolver:
                 reason=str(exc),
             )
 
-        target_tail_events = [
-            record.event
-            for record in tail_records
-            if record.event.order_id == order_id
-        ]
-
         try:
-            for event in target_tail_events:
-                resolved_state = reduce_order_event(resolved_state, event)
+            for record in tail_records:
+                resolved_state = reduce_order_event(
+                    resolved_state,
+                    record.event,
+                )
         except ValueError as exc:
             return ProjectionSnapshotAssistedResolutionResult(
                 order_id=order_id,
@@ -197,33 +206,40 @@ class ProjectionSnapshotAssistedStateResolver:
     def _load_all_tail_records(
         self,
         *,
-        source_global_position: int,
+        order_id: str,
+        source_event_sequence: int,
     ) -> list[ProjectionEventRecord]:
+        """Load a complete contiguous tail for one order by local sequence."""
         records: list[ProjectionEventRecord] = []
-        current_position = source_global_position
+        current_sequence = source_event_sequence
 
         while True:
-            batch = self._tail_event_source.load_after(
-                current_position,
+            batch = self._tail_event_source.load_after_sequence(
+                order_id,
+                current_sequence,
                 limit=self._tail_event_limit,
             )
 
             if not batch:
                 return records
 
-            previous_position = current_position
-
             for record in batch:
-                if record.global_position <= previous_position:
+                expected_sequence = current_sequence + 1
+                if record.event.order_id != order_id:
                     raise ValueError(
-                        "Tail event source returned non-advancing "
-                        "global_position."
+                        "Tail event source returned an event for a different "
+                        "order_id."
                     )
-
-                previous_position = record.global_position
+                if record.event.sequence != expected_sequence:
+                    raise ValueError(
+                        "Tail event source returned a non-contiguous "
+                        "order-local sequence: "
+                        f"expected {expected_sequence}, "
+                        f"got {record.event.sequence}."
+                    )
+                current_sequence = record.event.sequence
 
             records.extend(batch)
-            current_position = previous_position
 
 
 def _validate_snapshot_compatibility(

@@ -26,6 +26,7 @@ The project now has durable baselines for:
 accepted history
 successful idempotency receipts
 projection state
+projection order progress
 projection checkpoints
 projection snapshots
 snapshot-assisted replay validation
@@ -78,6 +79,12 @@ projection_states
 = derived read-side state
 = rebuildable
 = mutable through controlled projection runtime paths
+
+projection_order_progress
+= exact-next per-order processing evidence
+= selectable, insertable, and updatable by the projection worker
+= not deletable by the normal runtime worker
+= observable by snapshot and read-only roles
 
 projection_checkpoints
 = operational progress metadata
@@ -161,7 +168,10 @@ Stage 3.5E builds on this by making accepted-history mutation harder to perform 
 
 ### Stage 3.5C
 
-Stage 3.5C established durable read-side projection state, checkpoints, global-position consumption, projection worker orchestration, and durable replay / rebuild validation.
+Stage 3.5C established durable read-side projection state, projection worker
+orchestration, and replay validation. ADR 0020 repairs the original
+global-position cursor by introducing per-order projection progress while
+retaining generic checkpoint infrastructure.
 
 Stage 3.5E must preserve read-side mutability where appropriate.
 

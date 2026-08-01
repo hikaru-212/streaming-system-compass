@@ -12,6 +12,15 @@ Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
 
 The goal of Stage 3.5D is to add snapshot-assisted replay / rehydration boundaries without treating snapshots as source of truth.
 
+> **Historical implementation note:** The global-position tail sections below
+> describe the implementation at that time. Global-position uniqueness does
+> not imply commit-order completeness. [ADR 0020](../../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+> supersedes that snapshot-tail cursor for the current aggregate-local
+> projection: tail loading stays within one `order_id` and advances after
+> `source_event_sequence` by exact contiguous local sequence;
+> `source_global_position` remains lineage only. Historical examples are
+> preserved to show the design's evolution.
+
 ---
 
 ## Stage Principle

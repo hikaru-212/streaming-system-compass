@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 from psycopg import Connection
@@ -259,4 +260,195 @@ def test_projection_checkpoints_rejects_invalid_cursor_shapes(
                 ),
             )
 
+    db_connection.rollback()
+
+
+def _insert_progress_lineage_event(
+    connection: Connection,
+    *,
+    order_id: str,
+) -> tuple[str, int]:
+    event_id = str(uuid4())
+    request_id = f"request-{uuid4()}"
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO order_events (
+                accepted_event_id,
+                order_id,
+                sequence,
+                event_type,
+                request_id,
+                amount,
+                occurred_at_ms,
+                proof_prev_event_id,
+                proof_prev_version,
+                proof_prev_status
+            )
+            VALUES (%s, %s, 1, 'CREATED', %s, 100.00, 1, NULL, 0, 'INIT')
+            RETURNING global_position
+            """,
+            (event_id, order_id, request_id),
+        )
+        global_position = int(cursor.fetchone()[0])
+    connection.commit()
+    return event_id, global_position
+
+
+def test_projection_order_progress_accepts_valid_initial_lineage(
+    db_connection: Connection,
+    clean_database: None,
+) -> None:
+    order_id = "order-progress-schema"
+    event_id, global_position = _insert_progress_lineage_event(
+        db_connection,
+        order_id=order_id,
+    )
+
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO projection_order_progress (
+                projection_name,
+                projection_epoch,
+                order_id,
+                last_sequence,
+                last_event_id,
+                last_global_position
+            )
+            VALUES ('order_state_projection', 1, %s, 1, %s, %s)
+            """,
+            (order_id, event_id, global_position),
+        )
+    db_connection.commit()
+
+
+@pytest.mark.parametrize(
+    ("projection_name", "projection_epoch", "order_id", "last_sequence"),
+    [
+        ("   ", 1, "order-progress-invalid", 1),
+        ("order_state_projection", 0, "order-progress-invalid", 1),
+        ("order_state_projection", 1, "   ", 1),
+        ("order_state_projection", 1, "order-progress-invalid", 0),
+    ],
+)
+def test_projection_order_progress_rejects_invalid_physical_identity(
+    db_connection: Connection,
+    clean_database: None,
+    projection_name: str,
+    projection_epoch: int,
+    order_id: str,
+    last_sequence: int,
+) -> None:
+    event_order_id = "order-progress-valid-lineage"
+    event_id, global_position = _insert_progress_lineage_event(
+        db_connection,
+        order_id=event_order_id,
+    )
+
+    with pytest.raises(errors.CheckViolation):
+        with db_connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO projection_order_progress (
+                    projection_name,
+                    projection_epoch,
+                    order_id,
+                    last_sequence,
+                    last_event_id,
+                    last_global_position
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    projection_name,
+                    projection_epoch,
+                    order_id,
+                    last_sequence,
+                    event_id,
+                    global_position,
+                ),
+            )
+    db_connection.rollback()
+
+
+def test_projection_order_progress_rejects_mismatched_event_lineage(
+    db_connection: Connection,
+    clean_database: None,
+) -> None:
+    first_event_id, _ = _insert_progress_lineage_event(
+        db_connection,
+        order_id="order-progress-first",
+    )
+    _, second_global_position = _insert_progress_lineage_event(
+        db_connection,
+        order_id="order-progress-second",
+    )
+
+    with pytest.raises(errors.ForeignKeyViolation):
+        with db_connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO projection_order_progress (
+                    projection_name,
+                    projection_epoch,
+                    order_id,
+                    last_sequence,
+                    last_event_id,
+                    last_global_position
+                )
+                VALUES (
+                    'order_state_projection',
+                    1,
+                    'order-progress-first',
+                    1,
+                    %s,
+                    %s
+                )
+                """,
+                (first_event_id, second_global_position),
+            )
+    db_connection.rollback()
+
+
+@pytest.mark.parametrize("next_sequence", [1, 3])
+def test_projection_order_progress_rejects_regression_or_skip(
+    db_connection: Connection,
+    clean_database: None,
+    next_sequence: int,
+) -> None:
+    order_id = "order-progress-exact-next"
+    event_id, global_position = _insert_progress_lineage_event(
+        db_connection,
+        order_id=order_id,
+    )
+    with db_connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO projection_order_progress (
+                projection_name,
+                projection_epoch,
+                order_id,
+                last_sequence,
+                last_event_id,
+                last_global_position
+            )
+            VALUES ('order_state_projection', 1, %s, 1, %s, %s)
+            """,
+            (order_id, event_id, global_position),
+        )
+    db_connection.commit()
+
+    with pytest.raises(errors.CheckViolation):
+        with db_connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE projection_order_progress
+                SET last_sequence = %s
+                WHERE projection_name = 'order_state_projection'
+                  AND projection_epoch = 1
+                  AND order_id = %s
+                """,
+                (next_sequence, order_id),
+            )
     db_connection.rollback()

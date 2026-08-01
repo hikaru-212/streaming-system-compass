@@ -5,11 +5,14 @@
 -- order_events.sequence remains aggregate-local:
 --   (order_id, sequence)
 --
--- order_events.global_position is worker-consumption metadata:
---   a single global ordering point for durable projection workers.
+-- order_events.global_position is a globally unique allocation / storage
+-- coordinate. It provides accepted-event lineage and may be used as a
+-- deterministic scheduling tie-breaker among currently eligible work.
 --
--- This migration intentionally keeps global_position outside the domain event
--- model. It is storage / event-log metadata, not business meaning.
+-- PostgreSQL sequence allocation order is not transaction commit order.
+-- global_position is therefore not a commit-safe completeness cursor and does
+-- not prove that all lower positions are committed or visible. This migration
+-- intentionally keeps it outside domain meaning and cross-order causality.
 
 ALTER TABLE order_events
 ADD COLUMN IF NOT EXISTS global_position BIGINT;

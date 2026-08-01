@@ -14,6 +14,14 @@ The goal of Stage 3.5C was to move the read-side runtime from in-memory stores t
 
 This note is intentionally more detailed than the project roadmap. It preserves PR-level implementation history, boundary decisions, tests, and non-goals that are too detailed for the roadmap.
 
+> **Historical implementation note:** The PR4 sections below describe the
+> global-checkpoint worker designed at that time. Global-position uniqueness
+> does not imply commit-order completeness. [ADR 0020](../../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+> supersedes that mechanism for the repaired worker: progress is exact-next and
+> order-local, while `global_position` remains lineage and deterministic
+> eligible-work scheduling metadata. Historical examples are preserved to show
+> the design's evolution.
+
 ---
 
 ## Stage Principle

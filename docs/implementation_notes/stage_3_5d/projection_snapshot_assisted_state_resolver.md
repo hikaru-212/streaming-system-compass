@@ -1,5 +1,11 @@
 # Projection Snapshot-Assisted State Resolver
 
+> Current repair note: ADR 0020 supersedes the global-position tail cursor
+> described in this historical implementation note. The implemented resolver
+> now loads only the same `order_id` after `source_event_sequence`, orders by
+> local sequence, and fails on non-contiguous local sequence.
+> `source_global_position` remains lineage metadata.
+
 [← Back to Stage 3.5D Notes](README.md)
 
 ## Purpose

@@ -37,6 +37,9 @@ The production code under test includes:
 - `src/storage/postgres_projection_store.py`
 - `src/storage/postgres_checkpoint_store.py`
 - `src/storage/postgres_projection_event_source.py`
+- `src/storage/postgres_projection_eligible_event_source.py`
+- `src/storage/postgres_projection_progress_store.py`
+- `src/storage/postgres_order_event_tail_source.py`
 - `src/storage/order_event_hydration.py`
 - `src/storage/postgres_projection_snapshot_store.py`
 
@@ -45,6 +48,7 @@ The related schema objects include:
 - `order_events`
 - `idempotency_records`
 - `projection_states`
+- `projection_order_progress`
 - `projection_checkpoints`
 - `projection_snapshots`
 
@@ -85,6 +89,7 @@ The current storage integration tests cover:
 - durable event vocabulary constraints
 - durable proof-status constraints
 - `projection_states` schema constraints
+- `projection_order_progress` schema constraints and accepted-event lineage
 - `projection_checkpoints`
 - `projection_snapshots` schema constraints
 - checkpoint `cursor_kind` / `cursor_value` alignment
@@ -103,11 +108,13 @@ The current storage integration tests cover:
 - `PostgresCheckpointStore.clear()` behavior
 - invalid checkpoint cursor shape rejection through the store
 - checkpoint store transaction ownership remains caller-controlled
-- `order_events.global_position` exists as the durable global event-log position
+- `order_events.global_position` exists as unique storage lineage
 - inserted events receive ordered global positions
 - global positions remain unique
 - `PostgresProjectionEventSource.load_after()` returns accepted events ordered by `global_position`
 - projection event records preserve event identity while keeping `global_position` outside `OrderEvent`
+- exact-next per-order discovery does not block on rolled-back global integers
+- per-order progress rejects regression, skips, and mismatched lineage
 - `projection_snapshots` schema constraints
 - projection snapshot valid-row insertion
 - projection snapshot invalid shape rejection through `CHECK` constraints
@@ -122,7 +129,7 @@ The current storage integration tests cover:
   - `UNIQUE(source_global_position)`
 - `PostgresProjectionSnapshotStore.load_latest_snapshot()` missing-snapshot behavior
 - `PostgresProjectionSnapshotStore.save_snapshot()` insert behavior
-- `PostgresProjectionSnapshotStore.load_latest_snapshot()` selection by highest `source_global_position`
+- `PostgresProjectionSnapshotStore.load_latest_snapshot()` selection by highest order-local source sequence
 - projection snapshot Decimal amount round-trip
 - projection snapshot metadata JSON round-trip
 - projection snapshot database-created `created_at` load behavior
@@ -153,6 +160,7 @@ These tests are destructive integration tests.
 They may truncate write-side and read-side persistence tables such as:
 
 - `projection_checkpoints`
+- `projection_order_progress`
 - `projection_snapshots`
 - `projection_states`
 - `idempotency_records`
@@ -269,7 +277,8 @@ This boundary answers:
 
 ### 5. Durable Read-Side Schema Constraint Boundary
 
-These tests verify selected database-side schema constraints for durable read-side state and checkpoint progress.
+These tests verify selected database-side schema constraints for durable
+read-side state, legacy checkpoint evidence, and repaired per-order progress.
 
 They prove:
 
@@ -283,12 +292,15 @@ They prove:
 - empty `worker_name` values are rejected
 - invalid checkpoint cursor kinds are rejected
 - invalid `cursor_kind` / `cursor_value` combinations are rejected
+- repaired progress starts at sequence 1 and advances exactly one local sequence
+- repaired progress retains matching accepted-event lineage
 - physically valid but semantically suspicious projection-state rows are allowed so that future Compass Layer 2 can detect projection drift rather than having PR1 database constraints hide it
 
 This boundary protects the Stage 3.5C PR1 schema claim:
 
 ```text
 projection_states = derived runtime view
+projection_order_progress = exact-next per-order processing evidence
 projection_checkpoints = worker progress metadata
 order_events = accepted-history truth
 ```
@@ -416,19 +428,22 @@ These tests prove that the PostgreSQL-backed storage layer preserves the followi
 10. Idempotency records survive beyond one connection.
 11. Idempotency records cannot reference non-existent accepted events.
 12. Durable schema constraints reject invalid accepted-event vocabulary.
-13. Durable read-side schema constraints reject malformed projection state and checkpoint cursor rows.
+13. Durable read-side schema constraints reject malformed projection state,
+    checkpoint cursor, and per-order progress rows.
 14. Physically valid but semantically suspicious projection rows remain available for future Layer 2 drift detection.
 15. `PostgresProjectionStore` can save, load, upsert, and clear derived projection state.
 16. `projection_states.last_sequence` is intentionally persisted from `OrderState.version` in the current projection model.
 17. `PostgresCheckpointStore` can save, load, upsert, and clear checkpoint progress metadata.
 18. `projection_checkpoints` preserves explicit `cursor_kind` / `cursor_value` progress evidence.
-19. Store methods preserve caller-owned transaction boundaries.
-20. Destructive PostgreSQL tests are isolated from the development database.
-21. `projection_snapshots` can store derived snapshot artifacts with source-boundary evidence.
-22. `source_event_id` is globally unique.
-23. `(order_id, source_event_sequence)` preserves order-local snapshot boundaries.
-24. `source_global_position` is globally unique.
-25. `state_version <= source_event_sequence` is enforced without requiring equality.
+19. Repaired progress retains accepted-event lineage and rejects stale,
+    regressive, or skipped local sequence updates.
+20. Store methods preserve caller-owned transaction boundaries.
+21. Destructive PostgreSQL tests are isolated from the development database.
+22. `projection_snapshots` can store derived snapshot artifacts with source-boundary evidence.
+23. `source_event_id` is globally unique.
+24. `(order_id, source_event_sequence)` preserves order-local snapshot boundaries.
+25. `source_global_position` is globally unique lineage.
+26. `state_version <= source_event_sequence` is enforced without requiring equality.
 
 Together, these tests make the Stage 3.5B, Stage 3.5C, and Stage 3.5D PR2 storage claims executable:
 

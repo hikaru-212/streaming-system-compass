@@ -2,6 +2,11 @@
 
 [← Back to Stage 3.5E](README.md)
 
+> ADR 0020 extends this baseline with `projection_order_progress`.
+> `compass_projection_worker` has SELECT/INSERT/UPDATE but not DELETE;
+> `compass_snapshot_worker` and `compass_readonly` have SELECT; and
+> `compass_app_writer` has no access.
+
 ## Purpose
 
 This note defines the implementation boundary for:

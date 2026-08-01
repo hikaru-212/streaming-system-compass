@@ -42,6 +42,11 @@ class PostgresProjectionSnapshotStore:
     def __init__(self, connection: Connection) -> None:
         self._connection = connection
 
+    @property
+    def connection(self) -> Connection:
+        """Return the caller-owned connection without transferring ownership."""
+        return self._connection
+
     def save_snapshot(self, snapshot: ProjectionSnapshot) -> None:
         inserted = self._insert_snapshot(snapshot)
 
@@ -68,6 +73,14 @@ class PostgresProjectionSnapshotStore:
         )
 
     def load_latest_snapshot(self, order_id: str) -> ProjectionSnapshot | None:
+        """Load the highest local-sequence snapshot for one order.
+
+        ``order_id`` scopes selection to one aggregate. The result is ordered
+        by ``source_event_sequence``; ``source_global_position`` remains
+        lineage and is not used as tail-completeness proof. The caller owns the
+        connection transaction. This store does not establish snapshot trust
+        or select fallback/runtime policy.
+        """
         with self._connection.cursor(row_factory=dict_row) as cursor:
             cursor.execute(
                 """
@@ -89,7 +102,7 @@ class PostgresProjectionSnapshotStore:
                     created_at
                 FROM projection_snapshots
                 WHERE order_id = %s
-                ORDER BY source_global_position DESC
+                ORDER BY source_event_sequence DESC
                 LIMIT 1
                 """,
                 (order_id,),
