@@ -305,7 +305,7 @@ def test_snapshot_replay_tail_source_contract_violation_maps_to_unresolved() -> 
         source_global_position=10,
         snapshot_assisted_state=snapshot_boundary_state,
         authority_state=authority_state,
-        reason="Tail event source returned non-advancing global_position.",
+        reason="Snapshot tail violated the order-local source contract.",
     )
 
     outcome = map_projection_snapshot_replay_validation_result_to_semantic_outcome(
@@ -540,7 +540,9 @@ def test_snapshot_assisted_resolution_tail_source_contract_violation_maps_to_unr
         resolved_state=None,
         snapshot_id=snapshot_id,
         source_global_position=10,
-        reason="Tail event source returned non-advancing global_position.",
+        reason=(
+            "Snapshot-assisted tail violated the order-local source contract."
+        ),
     )
 
     outcome = (

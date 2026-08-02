@@ -276,7 +276,7 @@ def test_tail_event_source_contract_violation_result_preserves_states() -> None:
         source_global_position=10,
         snapshot_assisted_state=snapshot_assisted_state,
         authority_state=authority_state,
-        reason="Tail event source returned non-advancing global_position.",
+        reason="Snapshot tail violated the order-local source contract.",
     )
 
     assert result.is_match is False
@@ -290,7 +290,7 @@ def test_tail_event_source_contract_violation_result_preserves_states() -> None:
     assert result.snapshot_assisted_state == snapshot_assisted_state
     assert result.authority_state == authority_state
     assert result.reason == (
-        "Tail event source returned non-advancing global_position."
+        "Snapshot tail violated the order-local source contract."
     )
 
 

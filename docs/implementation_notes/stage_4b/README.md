@@ -35,7 +35,8 @@ Interlude — Read-Side Canonical Context Protection — Complete
 PR3 — Complete
 Interlude — DecisionReceipt Flag Evaluation State — Complete
 PR4 — Complete
-PR5–PR7 implementation — Planned
+PR5 — Complete
+PR6–PR7 implementation — Planned
 ```
 
 Reported focused PR2 verification:
@@ -373,16 +374,20 @@ not start because `TEST_DATABASE_URL` was unavailable. The exact reviewed
 results are recorded in
 `decision_receipt_flag_evaluation_state.md`.
 
+The PR4 and PR5 producer-specific mappers and focused unit tests are
+implemented. Under ADR 0018, every PR4 and PR5 governance flag remains
+`NOT_EVALUATED`; typed producer results remain evidence for later authorized
+evaluators.
+
+PR5 preserves read-side replay, snapshot-trust, and snapshot-assisted evidence
+without turning point-in-time validation into continuing trust. Runtime
+invocation and durable persistence remain outside PR4 and PR5.
+
 The next work is:
 
 ```text
-PR5 read-side snapshot DecisionReceipt mapping
+PR6 — DecisionReceipt Durable Persistence
 ```
-
-The PR4 producer-specific mapper and focused unit tests are implemented. Under
-ADR 0018, every PR4 governance flag remains `NOT_EVALUATED`; typed producer
-verdicts remain evidence for later authorized evaluators. Runtime invocation
-and durable persistence remain outside PR4. PR5 implementation has not started.
 
 ---
 
@@ -547,6 +552,20 @@ The reader guides explain current behavior and code navigation. The
 design/audit notes preserve rationale, inventory, implementation history, and
 closeout evidence; they remain separate documents.
 
+## Read-Side / Snapshot Mapping Reading Guide
+
+- [End-to-end reader guide](read_side_result_to_decision_receipt_end_to_end.md)
+- [Stage 4A → Stage 4B mapping flow](stage_4a_to_stage_4b_read_side_mapping_flow.md)
+- [Type and vocabulary reference](read_side_mapping_type_and_vocabulary_reference.md)
+- Design/audit source note:
+  [Read-Side / Snapshot DecisionReceipt Mapping](read_side_snapshot_decision_receipt_mapping.md)
+
+The read-side guides distinguish projection execution, durable replay
+validation, snapshot replay validation, and snapshot-assisted resolution. They
+also record the point-in-time evidence boundary, common-mode reducer
+limitation, order-local tail contract, completed fail-closed hardening, and
+deferred semantic-precision issues.
+
 ## Detailed Notes
 
 - [PR Breakdown](pr_breakdown.md)
@@ -555,4 +574,6 @@ closeout evidence; they remain separate documents.
 - [DecisionReceipt Evidence Source Alignment Note](decision_receipt_evidence_source_alignment_note.md)
 - [SemanticOutcome to DecisionReceipt Adapter](semantic_outcome_to_decision_receipt.md)
 - [DecisionReceipt Flag Evaluation State](decision_receipt_flag_evaluation_state.md)
+- [Write-Side DecisionReceipt Mapping](write_side_decision_receipt_mapping.md)
+- [Read-Side / Snapshot DecisionReceipt Mapping](read_side_snapshot_decision_receipt_mapping.md)
 - DecisionReceipt Persistence — to be added in PR6 as `decision_receipt_persistence.md`
