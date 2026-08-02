@@ -260,7 +260,9 @@ def test_tail_event_source_contract_violation_result_can_preserve_snapshot_bound
         ),
         snapshot_id=snapshot_id,
         source_global_position=10,
-        reason="Tail event source returned non-advancing global_position.",
+        reason=(
+            "Snapshot-assisted tail violated the order-local source contract."
+        ),
     )
 
     assert result.is_resolved is False
@@ -272,7 +274,7 @@ def test_tail_event_source_contract_violation_result_can_preserve_snapshot_bound
     assert result.snapshot_id == snapshot_id
     assert result.source_global_position == 10
     assert result.reason == (
-        "Tail event source returned non-advancing global_position."
+        "Snapshot-assisted tail violated the order-local source contract."
     )
 
 
