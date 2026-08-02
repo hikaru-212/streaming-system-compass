@@ -141,6 +141,30 @@ one PR = one coherent semantic delivery unit
 one commit = one smaller boundary-preserving change
 ```
 
+Commit subjects should remain short and consistent with the existing history:
+
+```text
+type(scope): concise change
+```
+
+A longer commit body is optional and should be used selectively when the commit
+introduces or hardens an important runtime contract, identity rule,
+transaction boundary, or fail-closed invariant. Small wording-only, navigation,
+or closeout commits should normally keep a short subject and no extended body.
+
+Recommended pattern:
+
+```text
+small wording / documentation alignment
+→ short subject only
+
+core production contract + focused tests
+→ short subject + explanatory body when useful
+
+closeout documentation
+→ short subject, with body only when the closeout records material deferrals
+```
+
 For example, Stage 4B PR1 may contain:
 
 ```text
@@ -821,8 +845,10 @@ repository suite was attempted, but PostgreSQL integration tests could not
 start because `TEST_DATABASE_URL` was unavailable. The exact reviewed results
 are recorded in `decision_receipt_flag_evaluation_state.md`.
 
-The next work is separate PR4 / PR5 read-only audits. PR4 and PR5
-implementation has not started.
+The PR4 and PR5 producer-specific adapters are now implemented. Their
+completed mappings preserve typed producer evidence, keep all governance flags
+`NOT_EVALUATED`, and remain separate from persistence, trace, policy, strategy,
+and retry work.
 
 ---
 
@@ -842,7 +868,7 @@ PostgresWriteSideResult
 
 ## Status
 
-Planned.
+Complete.
 
 Recommended branch:
 
@@ -850,9 +876,9 @@ Recommended branch:
 feat/stage4b-pr4-write-side-receipt-mapping
 ```
 
-## Scope
+## Completed Scope
 
-PR4 may add:
+PR4 adds:
 
 ```text
 src/compass/runtime/write_side_decision_receipt_mapping.py
@@ -860,7 +886,19 @@ tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py
 docs/implementation_notes/stage_4b/write_side_decision_receipt_mapping.md
 ```
 
-PR4 should carry over Stage 4A PR5 identity hardening:
+PR4 preserves the Stage 4A semantic tuple and selects producer-owned:
+
+```text
+evidence source
+subject
+order / request / candidate / accepted-event correlation
+primary identity provenance
+current-attempt admission disposition
+compact evidence summary
+all-NOT_EVALUATED governance flags
+```
+
+It carries forward the Stage 4A write-side identity hardening:
 
 ```text
 write_side_outcome
@@ -869,6 +907,9 @@ request_id
 candidate_event_id
 accepted_event_id
 ```
+
+PR4 does not implement runtime invocation, persistence, policy, strategy,
+retry authorization, or action execution.
 
 ---
 
@@ -890,7 +931,7 @@ ProjectionSnapshotAssistedResolutionResult
 
 ## Status
 
-Planned.
+Complete.
 
 Recommended branch:
 
@@ -898,9 +939,9 @@ Recommended branch:
 feat/stage4b-pr5-read-side-snapshot-receipt-mapping
 ```
 
-## Scope
+## Completed Scope
 
-PR5 may add:
+PR5 adds:
 
 ```text
 src/compass/runtime/read_side_decision_receipt_mapping.py
@@ -908,12 +949,57 @@ tests/unit/compass/runtime/test_read_side_decision_receipt_mapping.py
 docs/implementation_notes/stage_4b/read_side_snapshot_decision_receipt_mapping.md
 ```
 
+PR5 maps all current statuses from:
+
+```text
+ReplayValidationResult
+ProjectionSnapshotReplayValidationResult
+ProjectionSnapshotAssistedResolutionResult
+```
+
+through the existing Stage 4A adapters and the PR3 generic receipt mapper.
+
+It preserves:
+
+```text
+exact Stage 4A semantic tuples
+producer-specific evidence paths
+ORDER / PROJECTION / SNAPSHOT / RUNTIME subjects
+READ_SIDE_OBSERVATION / SNAPSHOT_LINEAGE correlation provenance
+compact state-presence and snapshot-artifact summaries
+all-NOT_EVALUATED governance flags
+```
+
+Completed fail-closed hardening requires every present state to be an
+`OrderState` for the same `order_id`, and requires a positive
+`source_global_position` only for snapshot statuses reached after successful
+producer boundary or compatibility validation. Invalid-boundary and
+invalid-compatibility results may still preserve zero as rejected evidence.
+
 Important boundary:
 
 ```text
 observed boundary
 ≠
 root cause claim
+```
+
+Deferred semantic precision remains outside PR5:
+
+```text
+NO_ACCEPTED_HISTORY + persisted projection
+NO_ACCEPTED_HISTORY_FOR_ORDER + loaded snapshot lineage
+SNAPSHOT_ASSISTED_DRIFT combining completed inequality and reducer failure
+```
+
+PR5 does not implement runtime invocation, persistence, continuous trust,
+policy, action, retry, trace, or trust continuation.
+
+Focused closeout verification:
+
+```text
+157 focused tests passed
+74 PR5 tests collected
 ```
 
 ---

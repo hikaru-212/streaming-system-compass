@@ -533,11 +533,12 @@ may equal `authority_state` at that point.
 `DecisionReceiptCorrelation` supplies the shared validation for
 `snapshot_id` and `source_global_position`: snapshot identity must be `UUID`,
 and a present source position must be an integer other than `bool` and must be
-non-negative. PR5 passes those typed producer fields through unchanged. The
-current durable snapshot schema requires stored source positions to be
-positive; the producer can nevertheless expose zero on an invalid-boundary or
+non-negative. PR5 copies those typed producer fields without remapping their
+values, while applying a narrower positive-position admission rule to statuses
+that occur only after successful producer boundary or compatibility
+validation. The producer can expose zero on an invalid-boundary or
 invalid-compatibility result, and the receipt contract truthfully preserves
-that non-negative invalid value.
+that rejected non-negative value.
 
 Rejecting an internally contradictory typed result is producer-input
 validation. It does not require or justify a shared receipt-contract change.
@@ -1010,6 +1011,74 @@ The conservative `RUNTIME` subjects remain for tail-source and assisted
 tail-replay failures. They preserve the observed boundary without assigning
 unproved root cause to a snapshot or projection. No shared-contract change is
 required.
+
+### 16.1 Completed fail-closed closeout hardening
+
+#### Present-state admission hardening
+
+Every present state admitted by a PR5 receipt adapter must be an `OrderState`,
+and its `state.order_id` must equal the producer result's `order_id`. This rule
+protects:
+
+```text
+ReplayValidationResult.expected_state
+ReplayValidationResult.persisted_state
+
+ProjectionSnapshotReplayValidationResult.snapshot_assisted_state
+ProjectionSnapshotReplayValidationResult.authority_state
+
+ProjectionSnapshotAssistedResolutionResult.resolved_state
+```
+
+A directly constructable producer result must not create a receipt about order
+A while carrying state evidence for order B or an arbitrary non-state object.
+This is PR5 receipt-admission validation. It does not claim that generic
+producer dataclasses attest producer execution or PostgreSQL orchestration.
+
+#### Status-aware source-position hardening
+
+The following snapshot-replay statuses require
+`source_global_position > 0`:
+
+```text
+MATCH
+TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
+SNAPSHOT_ASSISTED_DRIFT
+```
+
+The following snapshot-assisted resolution statuses have the same requirement:
+
+```text
+RESOLVED_FROM_SNAPSHOT
+TAIL_EVENT_SOURCE_CONTRACT_VIOLATION
+TAIL_REPLAY_FAILED
+```
+
+These branches occur only after successful producer boundary or compatibility
+validation. Zero remains admissible for `INVALID_SNAPSHOT_BOUNDARY` and
+`INVALID_SNAPSHOT_COMPATIBILITY` because those results may preserve the
+rejected zero position as evidence. The shared `DecisionReceiptCorrelation`
+contract still accepts zero; this positive requirement is the narrower
+producer-specific PR5 invariant for post-validation statuses. PR5 does not
+strengthen `NO_ACCEPTED_HISTORY_FOR_ORDER` beyond its current optional-lineage
+producer shape.
+
+### 16.2 Deferred semantic precision
+
+PR5 deliberately leaves these distinctions for later vocabulary review:
+
+```text
+NO_ACCEPTED_HISTORY + persisted projection
+
+NO_ACCEPTED_HISTORY_FOR_ORDER + loaded snapshot lineage
+
+SNAPSHOT_ASSISTED_DRIFT combining completed inequality and reducer failure
+```
+
+The current adapters preserve state-presence and snapshot-lineage evidence for
+future reclassification without introducing new status names. In particular,
+`SNAPSHOT_ASSISTED_DRIFT` may represent either a completed state disagreement
+or assisted reducer failure before a conclusive final comparison.
 
 ## 17. Explicit non-goals
 
