@@ -81,6 +81,10 @@ If you want the shortest entry point into the AI governance framing of Compass, 
 
 If you want exploratory AI governance research notes that are not implementation commitments, see [Research Notes](research/README.md).
 
+If you want non-authoritative records of how repository assumptions, missing
+premises, or responsibility boundaries were derived, see
+[Reasoning Notes](reasoning_notes/README.md).
+
 If you want to understand the core system architecture and implementation sequence, follow the reading order below.
 
 Recommended reading order for the core system:
@@ -104,7 +108,8 @@ Recommended reading order for the core system:
 17. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
 18. [Boundary Notes](boundary_notes/README.md)
 19. [Development Setup](development/README.md)
-20. [Postmortems](postmortems/README.md)
+20. [Reasoning Notes](reasoning_notes/README.md)
+21. [Postmortems](postmortems/README.md)
 
 This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, stage / PR implementation details, module-boundary notes, local development setup, and finally postmortems.
 
@@ -136,6 +141,7 @@ top-level system structure
 → DiagnosticTrace / ResolutionTrace
 → runtime decision policy and action safety
 → boundary clarification
+→ reasoning derivations
 → postmortem lessons
 ```
 
@@ -155,7 +161,8 @@ docs/
 ├── roadmap/                # Implementation sequencing and evolution plans
 ├── semantic_admission/     # AI governance entry point for candidate actions and accepted facts
 ├── research/               # Exploratory research notes and architecture observations
-└── postmortems/            # Design lessons, mistakes, and boundary reflections
+├── reasoning_notes/        # Non-authoritative derivation and inference records
+└── postmortems/            # Concrete engineering episodes and preventive discoveries
 ```
 
 ---
@@ -330,16 +337,45 @@ They should not be read as current Compass implementation scope.
 
 ---
 
-### [postmortems/](postmortems/README.md)
+### [reasoning_notes/](reasoning_notes/README.md)
 
-Reflection documents that preserve design mistakes, confusion points, and lessons learned.
+Non-authoritative, usually source-grounded records whose dominant value is the
+derivation or inference path without one dominant concrete episode that
+actually occurred.
 
 Use these documents when you want to understand:
 
-- why a previous interpretation was confusing
-- what boundary mistake occurred
-- what reusable lesson should be preserved
-- how future implementation should avoid similar mistakes
+- how an assumption was challenged;
+- how a missing premise or responsibility became visible;
+- how multiple states, guarantees, or ownership boundaries were separated;
+- what reusable diagnostic model emerged; or
+- how reasoning contributed to a later test, repair, ADR, or boundary note.
+
+Reasoning notes do not establish current runtime behavior, accepted decisions,
+or implementation commitments. Current source, tests, migrations, accepted
+ADRs, boundary notes, and stage closeouts remain authoritative for those claims.
+Substantial reasoning does not by itself move a concrete engineering,
+architectural, or learning episode out of postmortems.
+
+---
+
+### [postmortems/](postmortems/README.md)
+
+Concrete engineering episodes, including actual incidents and preventive
+discoveries that found and repaired a real unsafe path, failed test,
+inconsistency, missing guarantee, architectural-model error, recurring
+engineering-learning failure, or stage-premise drift.
+
+Use these documents when you want to understand:
+
+- what concrete problem occurred or was discovered;
+- what evidence exposed it;
+- what repair or resolution followed; and
+- what reusable engineering lesson should be preserved.
+
+A postmortem requires one identifiable episode that can be reconstructed
+through context, problem, correction, and lesson. General reusable derivations
+without one dominant concrete episode belong in reasoning notes.
 
 ---
 
@@ -357,7 +393,8 @@ Use these documents when you want to understand:
 | What has already been built and what comes next? | [Roadmaps](roadmap/README.md) |
 | What is the AI governance framing behind candidate actions and accepted facts? | [Semantic Admission](semantic_admission/README.md) |
 | What exploratory ideas are not implementation commitments yet? | [Research Notes](research/README.md) |
-| What mistake or confusion should not be repeated? | [Postmortems](postmortems/README.md) |
+| How was an assumption, missing premise, or responsibility boundary derived? | [Reasoning Notes](reasoning_notes/README.md) |
+| What concrete incident or preventive engineering discovery should not be repeated? | [Postmortems](postmortems/README.md) |
 
 ---
 

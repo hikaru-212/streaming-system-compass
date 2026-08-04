@@ -1,6 +1,6 @@
 # Postmortem: From Local PostgreSQL Setup to Defense-in-Depth Boundaries
 
-[← Back to Postmortems Index](README.md)
+[← Back to Reasoning Notes Index](README.md)
 
 **Recorded on:** 2026-05-22
 

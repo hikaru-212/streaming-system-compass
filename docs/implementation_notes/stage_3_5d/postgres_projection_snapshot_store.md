@@ -244,7 +244,7 @@ The latest usable snapshot is therefore determined by accepted-history progress,
 
 This boundary is recorded in:
 
-- [From `created_at` Freshness to Committed-History Boundaries](../../postmortems/from_created_at_freshness_to_committed_history_boundaries.md)
+- [From `created_at` Freshness to Committed-History Boundaries](../../reasoning_notes/from_created_at_freshness_to_committed_history_boundaries.md)
 
 ---
 

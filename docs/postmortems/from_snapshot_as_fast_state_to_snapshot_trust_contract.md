@@ -5,6 +5,12 @@
 **Recorded on:** 2026-06-05
 Updated for Stage 3.5D: 2026-06-13
 
+## Current Authority
+
+The reasoning below is historical and non-authoritative. The current boundary
+is defined by the [Snapshot Trust Contract Boundary](../boundary_notes/snapshot_trust_contract_boundary.md)
+and [ADR 0013](../adr/0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md).
+
 ## 1. Context
 
 While planning the later stages of the Streaming System + Compass project, I started thinking about snapshot support.

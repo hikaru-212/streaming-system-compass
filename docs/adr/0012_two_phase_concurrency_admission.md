@@ -341,4 +341,4 @@ Commit 7:
 - [ADR 0010: Transaction Atomicity vs Concurrency Admission](0010_transaction_atomicity_vs_concurrency_admission.md)
 - [ADR 0011: Validation Mode vs Validation Placement](0011_validation_mode_vs_validation_placement.md)
 - [PostgreSQL Concurrency Admission Boundary Note](../boundary_notes/postgres_concurrency_admission_boundary.md)
-- [Postmortem: Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)
+- [Reasoning Note: Autocommit, Transaction Boundaries, and Partial-Write Risk](../reasoning_notes/autocommit_boundary_and_partial_write_risk.md)

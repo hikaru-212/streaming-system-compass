@@ -1,6 +1,6 @@
 # Postmortem: Documentation Scope vs Enterprise Design Docs
 
-[← Back to Postmortems Index](README.md)
+[← Back to Reasoning Notes Index](README.md)
 
 **Recorded on:** 2026-05-05
 
