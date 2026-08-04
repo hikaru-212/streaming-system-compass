@@ -76,6 +76,7 @@ def clean_database(db_connection: Connection) -> None:
        cursor.execute(
             """
             TRUNCATE
+                decision_receipts,
                 projection_snapshots,
                 projection_order_progress,
                 projection_checkpoints,

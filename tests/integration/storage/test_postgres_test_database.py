@@ -21,15 +21,24 @@ def test_required_tables_exist(db_connection: Connection):
             SELECT table_name
             FROM information_schema.tables
             WHERE table_schema = 'public'
-              AND table_name IN ('order_events', 'idempotency_records')
+              AND table_name IN (
+                  'decision_receipts',
+                  'idempotency_records',
+                  'order_events'
+              )
             ORDER BY table_name;
             """
         )
         tables = [row[0] for row in cursor.fetchall()]
 
-    assert tables == ["idempotency_records", "order_events"]
+    assert tables == [
+        "decision_receipts",
+        "idempotency_records",
+        "order_events",
+    ]
 
 
 def test_database_starts_empty(db_connection: Connection):
+    assert count_rows(db_connection, "decision_receipts") == 0
     assert count_rows(db_connection, "order_events") == 0
     assert count_rows(db_connection, "idempotency_records") == 0
