@@ -202,6 +202,21 @@ Start with:
 
 ---
 
+## Public Case Studies
+
+These documents use illustrative scenarios to explain Semantic Admission
+principles. They are conceptual case studies, not implementation contracts,
+authority matrices, policy engines, schemas, or runtime commitments.
+
+- [Shared Workflow Is Not Shared Authority](shared_workflow_is_not_shared_authority.md)
+  — shows why agent coordination cannot transfer authority to create accepted
+  facts and why search-time evidence is not commit-time truth.
+- [Model Autonomy Is Not Business Authority](model_autonomy_vs_business_authority.public.md)
+  — separates model-generated proposals, tool capability, institutional
+  authority, progressive autonomy, and admitted business action.
+
+---
+
 ## Glossary Structure
 
 The glossary is grouped into four areas:
