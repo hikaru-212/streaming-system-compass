@@ -176,8 +176,8 @@ compass_test
 
 ## Run Migrations
 
-Through the repaired Stage 3.5C–3.5E baseline, the local PostgreSQL setup uses
-six migrations:
+Through the repaired Stage 3.5C–3.5E baseline and foundational Stage 4B PR6
+schema, the local PostgreSQL setup uses seven migrations:
 
 ```text
 db/migrations/001_create_write_side_tables.sql
@@ -186,6 +186,7 @@ db/migrations/003_add_order_events_global_position.sql
 db/migrations/004_create_projection_snapshots.sql
 db/migrations/005_create_durable_state_permission_roles.sql
 db/migrations/006_create_projection_order_progress.sql
+db/migrations/007_create_decision_receipts.sql
 ```
 
 Apply them to the development database when you want to inspect tables manually:
@@ -197,6 +198,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_gl
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/005_create_durable_state_permission_roles.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_projection_order_progress.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/007_create_decision_receipts.sql
 ```
 
 Apply them to the test database before running PostgreSQL integration tests:
@@ -208,6 +210,7 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_even
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/005_create_durable_state_permission_roles.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_projection_order_progress.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/007_create_decision_receipts.sql
 ```
 
 The CI workflow may also apply migrations automatically by iterating through `db/migrations/*.sql` in filename order:
@@ -280,6 +283,27 @@ projection_order_progress
 It records exact-next order-local progress for
 `order_state_projection`, epoch 1, without bootstrapping from legacy global
 checkpoints.
+
+The foundational DecisionReceipt migration creates:
+
+```text
+decision_receipts
+```
+
+It adds typed semantic columns, JSONB evidence objects, a separate
+materialization envelope, accepted-event lineage, and the initial table grants:
+
+```text
+compass_app_writer = SELECT, INSERT
+compass_readonly = SELECT
+compass_projection_worker = no access
+compass_snapshot_worker = no access
+```
+
+Migration 007 itself is a schema and permission foundation. The repository also
+provides `PostgresDecisionReceiptStore` as a caller-transaction-owned storage
+boundary, but neither the migration nor the store wires runtime receipt
+materialization, scheduling, producer invocation, or reconciliation.
 
 ---
 
@@ -375,6 +399,7 @@ projection_states
 projection_checkpoints
 projection_snapshots
 projection_order_progress
+decision_receipts
 ```
 
 Expected additional event-log column after migration 003:
@@ -390,6 +415,7 @@ psql "$TEST_DATABASE_URL" -c "\d order_events"
 psql "$TEST_DATABASE_URL" -c "\d projection_states"
 psql "$TEST_DATABASE_URL" -c "\d projection_snapshots"
 psql "$TEST_DATABASE_URL" -c "\d projection_order_progress"
+psql "$TEST_DATABASE_URL" -c "\d decision_receipts"
 ```
 
 Expected projection snapshot constraints include:
@@ -573,6 +599,9 @@ It supports:
 - repaired per-order progress through `projection_order_progress`
 - durable checkpoint schema through `projection_checkpoints`
 - durable projection snapshot schema through `projection_snapshots`
+- foundational durable receipt schema through `decision_receipts`
+- caller-transaction-owned DecisionReceipt insert/load through
+  `PostgresDecisionReceiptStore`
 - durable projection state persistence through `PostgresProjectionStore`
 - durable checkpoint progress persistence through `PostgresCheckpointStore`
 - projection snapshot persistence through `PostgresProjectionSnapshotStore`
@@ -594,7 +623,7 @@ It does not include:
 
 - Compass Layer 2 governance objects
 - `SemanticOutcome`
-- `DecisionReceipt`
+- runtime DecisionReceipt materialization or reconciliation
 - `RuntimeDecisionPolicy`
 - production-grade login / session auth
 - production connection-pool role isolation
@@ -666,10 +695,12 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_even
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/005_create_durable_state_permission_roles.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_projection_order_progress.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/007_create_decision_receipts.sql
 
 # 5. Inspect the repaired projection schema / permission roles if needed
 psql "$TEST_DATABASE_URL" -c "\d projection_snapshots"
 psql "$TEST_DATABASE_URL" -c "\d projection_order_progress"
+psql "$TEST_DATABASE_URL" -c "\d decision_receipts"
 psql "$TEST_DATABASE_URL" -c "\du compass_*"
 
 # 6. Run tests

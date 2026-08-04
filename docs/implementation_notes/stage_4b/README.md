@@ -29,14 +29,10 @@ The purpose is to define how selected semantic outcomes become compact, reviewab
 ## Current Status
 
 ```text
-PR1 — Complete
-PR2 — Complete
+PR1–PR6 — Complete
 Interlude — Read-Side Canonical Context Protection — Complete
-PR3 — Complete
 Interlude — DecisionReceipt Flag Evaluation State — Complete
-PR4 — Complete
-PR5 — Complete
-PR6–PR7 implementation — Planned
+PR7 — Planned
 ```
 
 Reported focused PR2 verification:
@@ -381,12 +377,22 @@ evaluators.
 
 PR5 preserves read-side replay, snapshot-trust, and snapshot-assisted evidence
 without turning point-in-time validation into continuing trust. Runtime
-invocation and durable persistence remain outside PR4 and PR5.
+invocation remains outside PR4 and PR5.
+
+## DecisionReceipt Persistence
+
+PR6 adds the explicit serializer v1, persistence-envelope contracts, migration
+007, and caller-transaction-owned PostgreSQL insert/load boundary described in
+[DecisionReceipt Durable Persistence](decision_receipt_persistence.md).
+
+This is the serialization and durable-storage foundation. It does not
+automatically invoke PR4/PR5 producers, persist mapper outputs, schedule
+materialization, scan accepted history, or reconcile missing receipts.
 
 The next work is:
 
 ```text
-PR6 — DecisionReceipt Durable Persistence
+PR7 — Stage 4B Closeout
 ```
 
 ---
@@ -442,9 +448,8 @@ PR6 — DecisionReceipt Durable Persistence
 PR7 — Stage 4B Closeout
 ```
 
-A durable PostgreSQL receipt store should be introduced as Stage 4B PR6 after the receipt shape stabilizes.
-
-Do not introduce a database schema before the receipt boundary and mapping shape are clear.
+The durable PostgreSQL receipt store was introduced in Stage 4B PR6 after the
+receipt boundary and mapping shape stabilized.
 
 ---
 
@@ -461,9 +466,9 @@ RuntimeDecisionPolicy
 StrategySelector
 RetryGovernance
 ActionSafetyGate
-SQL migrations before PR6
-PostgresDecisionReceiptStore before PR6
-durable receipt table before PR6
+automatic receipt materialization
+accepted-history reconciliation
+transactional outbox
 operator review execution
 fallback execution
 rebuild orchestration
@@ -474,12 +479,8 @@ LLM token accounting
 model routing policy
 ```
 
-Within Stage 4B:
-
-```text
-SQL migrations and durable receipt persistence remain deferred to PR6.
-PostgresDecisionReceiptStore remains deferred to PR6.
-```
+PR6 provides persistence infrastructure only. Runtime materialization and
+reconciliation remain deferred.
 
 ---
 
@@ -576,4 +577,5 @@ deferred semantic-precision issues.
 - [DecisionReceipt Flag Evaluation State](decision_receipt_flag_evaluation_state.md)
 - [Write-Side DecisionReceipt Mapping](write_side_decision_receipt_mapping.md)
 - [Read-Side / Snapshot DecisionReceipt Mapping](read_side_snapshot_decision_receipt_mapping.md)
-- DecisionReceipt Persistence — to be added in PR6 as `decision_receipt_persistence.md`
+- [PR6 DecisionReceipt Persistence Design](pr6_decision_receipt_persistence_design.md)
+- [DecisionReceipt Durable Persistence](decision_receipt_persistence.md)

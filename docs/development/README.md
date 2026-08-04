@@ -27,7 +27,7 @@ PostgreSQL is used to support:
 
 | Document | Purpose |
 |---|---|
-| [Local PostgreSQL Setup](postgres_local_setup.md) | Explains how to start the local Docker-based PostgreSQL environment, create the development and test databases, apply migrations through repaired projection progress, and run PostgreSQL integration / security tests. |
+| [Local PostgreSQL Setup](postgres_local_setup.md) | Explains how to start the local Docker-based PostgreSQL environment, create the development and test databases, apply migrations through the foundational DecisionReceipt schema, and run PostgreSQL integration / security tests. |
 
 ---
 
@@ -172,8 +172,8 @@ store support, and the Stage 3.5E runtime role / permission baseline.
 
 ## Current Migrations
 
-Through the repaired Stage 3.5C–3.5E baseline, local PostgreSQL setup requires
-six migrations:
+Through the repaired Stage 3.5C–3.5E baseline and foundational Stage 4B PR6
+schema, local PostgreSQL setup requires seven migrations:
 
 ```text
 db/migrations/001_create_write_side_tables.sql
@@ -182,6 +182,7 @@ db/migrations/003_add_order_events_global_position.sql
 db/migrations/004_create_projection_snapshots.sql
 db/migrations/005_create_durable_state_permission_roles.sql
 db/migrations/006_create_projection_order_progress.sql
+db/migrations/007_create_decision_receipts.sql
 ```
 
 The expected migration order is:
@@ -193,7 +194,11 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_even
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/004_create_projection_snapshots.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/005_create_durable_state_permission_roles.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_projection_order_progress.sql
+psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/007_create_decision_receipts.sql
 ```
+
+Migration 007 adds the typed durable receipt schema and initial table grants.
+It does not add a PostgreSQL receipt store or runtime materialization.
 
 Use `DATABASE_URL` instead of `TEST_DATABASE_URL` only when applying migrations to the local development database for manual inspection.
 

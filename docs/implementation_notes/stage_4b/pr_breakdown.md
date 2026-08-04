@@ -1014,7 +1014,7 @@ PR6 turns the in-code receipt layer into a queryable persistence boundary withou
 
 ## Status
 
-Planned.
+Complete.
 
 Recommended branch:
 
@@ -1022,43 +1022,98 @@ Recommended branch:
 feat/stage4b-pr6-decision-receipt-persistence
 ```
 
-## Scope
+## Completed Scope
 
-PR6 may add:
+PR6 adds:
 
 ```text
-migrations/00x_create_decision_receipts.sql
+db/migrations/007_create_decision_receipts.sql
+src/compass/runtime/decision_receipt_serialization.py
+src/storage/decision_receipt_store.py
 src/storage/postgres_decision_receipt_store.py
+tests/unit/compass/runtime/test_decision_receipt_serialization.py
+tests/unit/storage/test_decision_receipt_store.py
+tests/integration/storage/test_decision_receipt_schema_constraints.py
 tests/integration/storage/test_postgres_decision_receipt_store.py
+tests/integration/security/test_decision_receipt_permissions.py
 docs/implementation_notes/stage_4b/decision_receipt_persistence.md
 ```
 
-PR6 should clarify:
+The completed boundary provides:
+
+```text
+explicit serializer/deserializer version 1
+strict portable JSON shape and signed 64-bit bounds
+typed persistence-envelope and conflict contracts
+explicit typed PostgreSQL columns plus JSONB summary/metadata
+caller-owned transaction control with autocommit disabled
+statement-level INSERTED / ALREADY_PRESENT outcomes
+receipt-ID and admitted-producer conflict classification
+READ COMMITTED concurrency classification
+native stronger-isolation SerializationFailure exposure
+scoped initial runtime-role grants and denied mutations
+exact PR4/PR5 mapper-produced round trips
+```
+
+Transaction ownership remains explicit:
+
+```text
+INSERTED
+= this statement inserted a row in the caller transaction
+
+INSERTED
+≠ caller commit already completed
+
+store commit / rollback
+= never
+
+caller commit / rollback
+= owns durability or removal
+```
+
+Duplicate and producer identity are also narrow:
+
+```text
+same receipt ID + identical versioned payload
+→ ALREADY_PRESENT
+
+same receipt ID + different payload
+→ RECEIPT_ID_CONTENT_CONFLICT
+
+another admitted write-side receipt for the same accepted event
+→ ACCEPTED_PRODUCER_IDENTITY_CONFLICT
+
+non-admitted receipt families sharing accepted-event correlation
+→ allowed
+```
+
+Migration 007 preserves nullable non-negative `source_global_position`,
+including zero, and applies admitted-producer uniqueness only to
+`WRITE_SIDE_ADMISSION` plus `ADMITTED_TO_ACCEPTED_HISTORY`. It grants
+`compass_app_writer` `SELECT, INSERT`, grants `compass_readonly` `SELECT`, and
+gives projection/snapshot workers no access. Normal runtime roles cannot
+`UPDATE` or `DELETE` receipt rows.
+
+The PR4/PR5 compatibility matrix covers write accepted, write validation
+blocked, replay match, replay no history with persisted projection, snapshot
+match with lineage, snapshot no history with lineage and zero position,
+assisted resolved, and assisted tail replay failed. Persistence preserves the
+mapper-produced evidence without deriving flags, action, or PR5-specific
+indexes.
+
+PR6 remains persistence infrastructure rather than runtime orchestration:
 
 ```text
 DecisionReceipt persistence is not generic logging.
 DecisionReceipt persistence is not DiagnosticTrace storage.
 DecisionReceipt persistence is not AttemptLog storage.
 DecisionReceipt persistence is not RuntimeDecisionPolicy storage.
+DecisionReceipt persistence does not reconstruct lost receipts.
+DecisionReceipt persistence does not automatically materialize mapper outputs.
 ```
 
-The persistence shape should follow the Stage 4B evidence boundary:
-
-```text
-stable identity / correlation fields
-→ explicit first-class columns where useful for query and review
-
-flexible summary evidence
-→ JSON-safe evidence_summary / cost_summary / metadata_json
-
-full diagnostic path detail
-→ deferred to DiagnosticTrace / ResolutionTrace, not stored inside decision_receipts
-
-retry attempt sequence
-→ deferred to AttemptLog / RetryGovernance, not stored inside decision_receipts
-```
-
-PR6 may introduce a durable receipt table only after PR2–PR5 stabilize the receipt contract and mapping evidence shape.
+Completed validation and the full deferred boundary are recorded in
+[DecisionReceipt Durable Persistence](decision_receipt_persistence.md).
 
 ---
 

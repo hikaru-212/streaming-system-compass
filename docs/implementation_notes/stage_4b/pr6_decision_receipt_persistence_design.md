@@ -441,6 +441,24 @@ avoiding a false durability acknowledgement.
 A native database error may leave the transaction failed. The caller remains
 responsible for rollback.
 
+The current contract establishes safety and conditional progress:
+
+```text
+owner commits
+→ contender can classify the committed row
+
+owner rolls back
+→ contender can insert
+
+owner connection closes without commit
+→ PostgreSQL rolls back the owner transaction and releases the waiter
+```
+
+It does not establish a bounded wait when the owner remains alive but idle, a
+statement never completes, a pool returns an open transaction incorrectly, or a
+genuine deadlock requires operational intervention. Timeout policy, pool
+hygiene, deadlock handling, and retry orchestration remain outside PR6.
+
 ---
 
 ## Duplicate and Conflict Semantics
@@ -653,6 +671,8 @@ the store never commits or rolls back
 identical duplicates remain idempotent
 content and producer conflicts remain typed
 PR4 and PR5 mapper-produced receipts round-trip exactly
+winner commit, rollback, and connection-close paths preserve the intended
+statement-level conflict semantics
 permissions match the initial role boundary
 runtime materialization remains absent
 ```
@@ -685,6 +705,10 @@ operator-review execution
 PR5-specific query indexes
 projection-worker receipt writes
 snapshot-worker receipt writes
+bounded idle-owner timeout policy
+connection-pool cleanup policy
+deadlock recovery
+automatic retry orchestration
 ```
 
 ---

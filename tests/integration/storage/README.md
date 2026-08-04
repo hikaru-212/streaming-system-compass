@@ -5,7 +5,7 @@
 This directory contains PostgreSQL-backed storage integration tests for **Streaming System + Compass**.
 
 These tests are not general database examples.
-They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended by **Stage 3.5C PR1**, **Stage 3.5C PR2**, **Stage 3.5C PR3**, the storage-side part of **Stage 3.5C PR4**, **Stage 3.5D PR2**, and **Stage 3.5D PR3**.
+They are executable architecture claims for the durable storage boundary established during **Stage 3.5B**, hardened by **Stage 3.5C PR0**, and extended through the foundational **Stage 4B PR6 DecisionReceipt persistence boundary**.
 
 At the current baseline, this directory covers the completed durable write-side storage foundation, the first durable read-side schema checkpoint, the first projection snapshot schema checkpoint, and the first projection snapshot store boundary:
 
@@ -19,6 +19,7 @@ Stage 3.5C PR3 — PostgresCheckpointStore Baseline
 Stage 3.5C PR4 — Global-Position Projection Event Source Baseline
 Stage 3.5D PR2 — Projection Snapshot Schema Baseline
 Stage 3.5D PR3 — PostgresProjectionSnapshotStore Baseline
+Stage 4B PR6 — DecisionReceipt Durable Persistence Foundation
 ```
 
 It also verifies the local PostgreSQL test-database guardrail used by destructive integration tests.
@@ -42,6 +43,7 @@ The production code under test includes:
 - `src/storage/postgres_order_event_tail_source.py`
 - `src/storage/order_event_hydration.py`
 - `src/storage/postgres_projection_snapshot_store.py`
+- `src/storage/postgres_decision_receipt_store.py`
 
 The related schema objects include:
 
@@ -51,6 +53,7 @@ The related schema objects include:
 - `projection_order_progress`
 - `projection_checkpoints`
 - `projection_snapshots`
+- `decision_receipts`
 
 Together, these tests protect the Stage 3.5B storage claim and the Stage 3.5C PR1 read-side schema claim:
 
@@ -92,6 +95,13 @@ The current storage integration tests cover:
 - `projection_order_progress` schema constraints and accepted-event lineage
 - `projection_checkpoints`
 - `projection_snapshots` schema constraints
+- `decision_receipts` typed schema, vocabulary, lineage, and envelope constraints
+- `PostgresDecisionReceiptStore` explicit insert/load and row hydration
+- exact duplicate and conflicting duplicate classification
+- caller-owned transaction, autocommit rejection, rollback, and commit visibility
+- READ COMMITTED concurrency classification and native stronger-isolation failure
+- mapper-produced PR4 and PR5 receipt round-trips
+- sibling security coverage for receipt grants and denied mutations
 - checkpoint `cursor_kind` / `cursor_value` alignment
 - physically valid but semantically suspicious projection-state rows reserved for future Layer 2 drift detection
 - `PostgresProjectionStore.load_state()` missing-state behavior
@@ -159,6 +169,7 @@ These tests are destructive integration tests.
 
 They may truncate write-side and read-side persistence tables such as:
 
+- `decision_receipts`
 - `projection_checkpoints`
 - `projection_order_progress`
 - `projection_snapshots`
@@ -201,6 +212,7 @@ They prove:
 - required write-side tables exist after migration
 - required read-side schema tables exist after migration
 - required projection snapshot schema table exists after migration
+- required DecisionReceipt schema table exists after migration
 - destructive cleanup leaves the test database empty before each test
 
 This boundary answers:
@@ -412,6 +424,36 @@ This boundary answers:
 
 ---
 
+### 9. DecisionReceipt Schema Constraint Boundary
+
+These tests verify the foundational Stage 4B PR6 schema without importing or
+implementing a PostgreSQL receipt store.
+
+They prove that the typed receipt columns, version and vocabulary constraints,
+JSONB object boundaries, admission identity rules, accepted-event foreign key,
+scoped admitted-event producer identity, and persistence-envelope columns are
+enforced by PostgreSQL. They do not prove runtime materialization,
+reconciliation, or caller-transaction orchestration.
+
+---
+
+### 10. DecisionReceipt Store Boundary
+
+These tests verify explicit DecisionReceipt insert/load, persistence-envelope
+hydration, exact versioned-payload duplicate comparison, receipt-ID and admitted
+write-side producer conflicts, caller-owned transactions, autocommit rejection,
+rollback and commit visibility, and documented isolation behavior.
+
+Representative receipts produced by the public PR4 and PR5 mappers round-trip
+without persistence reinterpretation. This storage boundary is not generic
+application logging and does not wire producers, schedule materialization,
+reconcile accepted history, or acknowledge durability before caller commit.
+
+Permission tests remain in `tests/integration/security` and separately prove
+the initial grants and denied update/delete behavior.
+
+---
+
 ## What These Tests Prove
 
 These tests prove that the PostgreSQL-backed storage layer preserves the following claims:
@@ -444,6 +486,10 @@ These tests prove that the PostgreSQL-backed storage layer preserves the followi
 24. `(order_id, source_event_sequence)` preserves order-local snapshot boundaries.
 25. `source_global_position` is globally unique lineage.
 26. `state_version <= source_event_sequence` is enforced without requiring equality.
+27. `decision_receipts` preserves the foundational typed payload and envelope
+    shape without granting receipt rows accepted-history authority.
+28. `PostgresDecisionReceiptStore` preserves exact receipt evidence and
+    statement-level conflict semantics while leaving transactions caller-owned.
 
 Together, these tests make the Stage 3.5B, Stage 3.5C, and Stage 3.5D PR2 storage claims executable:
 
@@ -473,6 +519,7 @@ They do not prove:
 - PostgreSQL-backed durable read-side store behavior
 - PostgreSQL-backed projection worker behavior
 - Compass Layer 2 state-level validation
+- runtime DecisionReceipt materialization or reconciliation
 
 Those belong to other test layers.
 

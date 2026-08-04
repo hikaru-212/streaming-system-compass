@@ -92,6 +92,23 @@ The store:
 A native SQL failure can still put the caller transaction into PostgreSQL's
 failed state. The caller remains responsible for the required rollback.
 
+The tested progress boundary is conditional rather than globally bounded:
+
+```text
+owner commits
+→ waiting contender classifies the committed row
+
+owner rolls back
+→ waiting contender may insert
+
+owner connection closes without commit
+→ PostgreSQL rolls back the owner transaction and releases the waiter
+```
+
+PR6 does not guarantee a bounded wait when an owner remains alive but idle, a
+statement never completes, a connection pool returns an open transaction
+incorrectly, or a genuine deadlock requires operational handling.
+
 ## Duplicate and Conflict Semantics
 
 The completed insert contract is:
@@ -140,8 +157,8 @@ correlation or grant accepted-history authority to receipt rows.
 The current permission baseline is:
 
 ```text
-compass_app_writer       SELECT, INSERT
-compass_readonly         SELECT
+compass_app_writer        SELECT, INSERT
+compass_readonly          SELECT
 compass_projection_worker no access
 compass_snapshot_worker   no access
 ```
@@ -174,7 +191,8 @@ receipts or automatically persist mapper outputs.
 
 Under `READ COMMITTED`, a contender waiting on a uniqueness winner classifies
 an identical duplicate or conflict after the winner commits. If the winner
-rolls back, the contender inserts its own row.
+rolls back or its connection closes without commit, the contender can insert
+its own row after PostgreSQL releases the provisional uniqueness ownership.
 
 Under `REPEATABLE READ` or `SERIALIZABLE`, PostgreSQL may expose native
 `psycopg.errors.SerializationFailure`. PR6 neither classifies nor retries these
@@ -196,23 +214,23 @@ worker writes, or materialization orchestration.
 
 ## Validation
 
-This closeout pass recorded only results supported by current command output:
+The completed PR6 validation covered:
 
-- PR6 unit tests: `168 passed in 0.17s`;
-- focused PR6 PostgreSQL files: `215 tests collected in 0.03s`;
-- nearby storage/security directories: `451 tests collected in 0.05s`;
-- repository collection: `1423 tests collected in 0.60s`.
+- the full repository pytest suite;
+- focused serializer and storage-neutral persistence-contract unit tests;
+- PostgreSQL schema, store, transaction, concurrency, and permission tests;
+- actual PR4 / PR5 mapper-produced receipt round trips;
+- winner commit, winner rollback, and owner connection-close concurrency paths;
+- stronger-isolation failure behavior;
+- direct trailing-whitespace checks; and
+- `git diff --check`.
 
-The user reported that PostgreSQL validation was already complete and directed
-this pass not to rerun it. No PostgreSQL execution transcript is attached to
-this task, so this note does not invent focused or nearby PostgreSQL pass
-counts. Collection counts above are not represented as execution results.
+All requested test suites passed before the PR6 implementation commits were
+prepared.
 
-Final documentation checks:
-
-- `git diff --check`: clean;
-- direct trailing-whitespace scan of every new or modified PR6 file: clean;
-- Stage 4B README and PR-breakdown links to this note: resolve.
+Exact execution counts are intentionally omitted here because the current
+closeout note does not embed the final terminal transcript. Collection counts
+must not be presented as execution pass counts.
 
 ## Non-Goals
 
@@ -226,6 +244,10 @@ PR6 explicitly defers:
 - a transactional outbox;
 - a publication cursor;
 - retry or stronger-isolation retry classification;
+- bounded idle-owner timeout policy;
+- connection-pool cleanup policy;
+- deadlock recovery;
+- automatic retry orchestration;
 - policy;
 - `DiagnosticTrace`;
 - `AttemptLog`;
