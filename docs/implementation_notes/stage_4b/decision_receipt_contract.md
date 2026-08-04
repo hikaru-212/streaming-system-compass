@@ -2,6 +2,12 @@
 
 [← Back to Stage 4B](README.md)
 
+> **PR2 design and validation record:** The contract described here is
+> implemented. The later flag-state Interlude replaced the original boolean
+> default with `TRUE | FALSE | NOT_EVALUATED`; PR3–PR6 then completed mapping,
+> serialization, and persistence. Current behavior is owned by source, accepted
+> ADRs, and the [Stage 4B closeout](stage_4b_closeout.md).
+
 ## Purpose
 
 This note records the Stage 4B PR2 runtime contract for:

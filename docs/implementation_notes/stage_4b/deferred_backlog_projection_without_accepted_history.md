@@ -2,9 +2,11 @@
 
 ## Status
 
-**Deferred — likely near-term Layer 2 vocabulary hardening**
+**Deferred — known post-Stage-4B semantic-hardening issue**
 
-Do not fold this into current PR5 or PR6. Revisit after both are merged and the Stage 4B integration branch is rebaselined.
+PR5 and PR6 are complete. This item is not part of Stage 4B closeout and has no
+assigned Stage 4B.x owner. Revisit it as a narrow later semantic-hardening item
+when a concrete consumer and delivery stage are selected.
 
 ## Problem
 
@@ -125,9 +127,9 @@ persisted_state_present = true
 
 Do not automatically set rebuild, fallback, review, or retry flags.
 
-### Stage 4B.3
+### Later trust-continuation hardening
 
-This condition should stop trust continuation for the affected order and become a strong revalidation/investigation trigger.
+This condition should stop trust continuation for the affected order and become a strong revalidation/investigation trigger when that later boundary is designed.
 
 ### Stage 4C / 4D
 
@@ -161,20 +163,18 @@ A full-table rebuild should not be automatic from one orphan row. A full validat
 
 ## Proposed placement
 
-Handle after PR5 and PR6 merge.
+Handle after Stage 4B closeout under an explicitly selected later hardening owner.
 
 Suggested sequence:
 
 ```text
-1. Merge PR5
-2. Merge PR6
-3. Rebaseline Stage 4B integration branch
-4. Add a Layer 2 vocabulary-hardening note
-5. Add explicit projection-without-authority status
-6. Align Stage 4A semantic mapping
-7. Align DecisionReceipt mapping and tests
-8. Make Stage 4B.3 treat it as a trust-stop / revalidation trigger
-9. Let Stage 4C / 4D decide scan, quarantine, fallback, or rebuild
+1. Select an explicit post-Stage-4B semantic-hardening owner
+2. Add a Layer 2 vocabulary-hardening note
+3. Add explicit projection-without-authority status
+4. Align Stage 4A semantic mapping
+5. Align DecisionReceipt mapping and tests
+6. Treat it as a trust-stop / revalidation trigger
+7. Let later policy / strategy stages decide scan, quarantine, fallback, or rebuild
 ```
 
 Tentative label:
@@ -183,7 +183,7 @@ Tentative label:
 Stage 4B Interlude — Layer 2 orphan-projection vocabulary hardening
 ```
 
-If the work stays limited to semantic correction, keep it narrow. If it expands into scans, checkpoint invalidation, or remediation, move that broader work into Stage 4B.3 / 4C / 4D.
+If the work stays limited to semantic correction, keep it narrow. If it expands into scans, progress invalidation, or remediation, assign that broader work to the appropriate later policy or strategy stage.
 
 ## Likely files
 
@@ -200,7 +200,7 @@ tests/unit/compass/runtime/test_read_side_decision_receipt_mapping.py
 
 docs/implementation_notes/stage_4a/read_side_outcome_mapping.md
 docs/implementation_notes/stage_4b/read_side_snapshot_decision_receipt_mapping.md
-docs/roadmap/stage_4_runtime_semantic_governance_roadmap.md
+docs/roadmap/implementation_roadmap.md
 ```
 
 ## Non-goals
@@ -227,7 +227,7 @@ Its first responsibility is semantic precision:
 2. Should one occurrence also create a projection-definition integrity warning?
 3. Which Stage 4A semantic code should represent derived state without authority?
 4. Should one occurrence require a projection-wide validation scan?
-5. How should Stage 4B.3 suspend or invalidate trust for the affected order?
+5. Which later boundary should suspend or invalidate trust for the affected order?
 6. Should broader scan results produce per-order receipts or an aggregate record?
 7. When should remediation escalate from local cleanup to full rebuild?
 8. How should accepted-history loss be distinguished from unauthorized projection insertion?

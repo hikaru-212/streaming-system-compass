@@ -17,6 +17,8 @@ The completed implementation and validation evidence are recorded separately in:
 decision_receipt_persistence.md
 ```
 
+The final cross-PR summary is [Stage 4B Closeout](stage_4b_closeout.md).
+
 This note answers:
 
 ```text
