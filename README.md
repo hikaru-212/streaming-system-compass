@@ -46,17 +46,51 @@ Stage 4B established durable receipt evidence without automatic materialization 
 
 ### Immediate Engineering Checkpoint
 
-Before Stage 4B.1 begins, the repository may run one narrowly scoped
-PostgreSQL experiment to characterize live-but-idle DecisionReceipt
-transaction-owner cleanup and contender progress. This is independent
-operational evidence gathering, not a new governance stage or a reopening of
-the completed [Stage 4B contracts](docs/implementation_notes/stage_4b/stage_4b_closeout.md).
+A focused Level 1 PostgreSQL experiment has now characterized
+transaction-local idle-owner cleanup for separate `DecisionReceipt`
+governance-persistence transactions.
 
-The experiment does not yet establish a production timeout, retry semantics,
-connection-pool policy, or production operational guarantees. The current
-boundary and its derivation are recorded in the
+The experiment verified:
+
+- server-side rollback of an idle receipt owner;
+- progress by a uniqueness-conflicting receipt materializer;
+- durable preservation of only the successful contender receipt;
+- and the requirement to discard the terminated owner's closed and broken
+  connection.
+
+This is verified mechanism evidence, not implemented production policy.
+
+ADR 0019 already defines the split target materialization model:
+
+```text
+accepted event + idempotency record
+→ commit authoritative business transaction
+→ materialize the accepted-result receipt separately
+→ reconcile a narrower canonical receipt later when required
+
+typed non-ACCEPTED observation
+→ build DecisionReceipt
+→ persist through a separate governance transaction
+→ report receipt persistence separately
+→ preserve the original business result
+```
+
+The owner-liveness experiment strengthens those separate governance
+transactions. It does not reopen the accepted business-transaction boundary.
+
+The repository still has no production receipt transaction owner, production
+timeout value, automatic materialization orchestrator, immediate typed
+non-`ACCEPTED` persistence orchestration, or accepted-history reconciliation
+scheduler.
+
+Stage 4B.1 DiagnosticTrace / ResolutionTrace remains the next formal
+runtime-governance stage.
+
+See the
 [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](docs/boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
-and [From Statement Success to Owner-Liveness](docs/reasoning_notes/from_statement_success_to_owner_liveness.md).
+and the
+[post-Stage 4B owner-liveness implementation note](docs/implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md).
+
 
 ---
 

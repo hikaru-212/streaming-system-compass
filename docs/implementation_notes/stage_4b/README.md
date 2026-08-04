@@ -40,6 +40,15 @@ ResolutionTrace. See the [Stage 4B closeout](stage_4b_closeout.md) for the final
 source map, invariants, validation-evidence map, non-goals, and roadmap
 transition.
 
+A separate post-Stage 4B PostgreSQL follow-up has characterized one
+transaction-local cleanup mechanism for live-but-idle DecisionReceipt owners.
+The mechanism is verified in focused integration tests, but repository-supported
+runtime timeout policy is not implemented. See
+[DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md).
+
+This follow-up does not reopen Stage 4B and does not replace Stage 4B.1 as the
+next formal runtime-governance stage.
+
 Reported focused PR2 verification:
 
 ```text
@@ -403,6 +412,39 @@ Next — Stage 4B.1 DiagnosticTrace / ResolutionTrace
 
 ---
 
+## Post-Stage 4B Transaction-Owner Liveness Follow-up
+
+The repository has now characterized a transaction-local PostgreSQL mechanism
+for the unresolved live-but-idle DecisionReceipt owner case.
+
+Focused integration evidence establishes:
+
+```text
+uncommitted receipt owner
+→ conflicting contender reaches a real Lock wait
+→ transaction-local idle timeout terminates the owner
+→ PostgreSQL rolls back the owner transaction
+→ contender resumes and can commit
+→ terminated owner connection is broken and must be discarded
+```
+
+This evidence does not change production runtime behavior.
+
+The timeout is currently applied only by the integration test. No runtime
+transaction-owner abstraction, production timeout value, configuration owner,
+pool discard policy, semantic mapping, retry authorization, migration, or
+schema change has been approved.
+
+The implementation guide is:
+
+[DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md)
+
+This is a post-Stage 4B PostgreSQL hardening follow-up. It does not reopen the
+completed Stage 4B contract and does not replace Stage 4B.1 as the next formal
+runtime-governance stage.
+
+---
+
 ## Relationship to Future Stage 4 Work
 
 Stage 4B remains narrow.
@@ -587,4 +629,5 @@ deferred semantic-precision issues.
 - [Read-Side / Snapshot DecisionReceipt Mapping](read_side_snapshot_decision_receipt_mapping.md)
 - [PR6 DecisionReceipt Persistence Design](pr6_decision_receipt_persistence_design.md)
 - [DecisionReceipt Durable Persistence](decision_receipt_persistence.md)
+- [DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md)
 - [Deferred Hardening — Projection Without Accepted-History Authority](deferred_backlog_projection_without_accepted_history.md)
