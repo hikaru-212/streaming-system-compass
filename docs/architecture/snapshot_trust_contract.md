@@ -316,11 +316,12 @@ Write collisions should be surfaced explicitly because they indicate non-determi
 
 ---
 
-## Future Relationship to Compass Layer 2
+## Current Relationship to Compass Runtime Evidence
 
-Stage 3.5D does not implement Compass Layer 2.
-
-However, snapshot trust failures are natural future evidence for Layer 2 and structured semantic outcomes.
+Stage 3.5D did not itself implement Compass Layer 2. Stage 4A and Stage 4B now
+map the implemented snapshot replay-validation and snapshot-assisted-resolution
+results into `SemanticOutcome` and `DecisionReceipt` without treating a
+point-in-time result as continuing trust.
 
 Examples:
 
@@ -339,7 +340,9 @@ ACCEPTED_HISTORY_CONTRACT_VIOLATION
 snapshot-tail contract. It would apply only to a separately designed future
 contract that assigns completeness meaning to a global publication order.
 
-Stage 4 may later classify these failures and map them to runtime decisions.
+Later trust-continuation, policy, and strategy stages may consume these
+outcomes and receipts, but no current mapper executes fallback, rebuild, or
+another runtime decision.
 
 ---
 

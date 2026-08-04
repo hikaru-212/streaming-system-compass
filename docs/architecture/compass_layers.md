@@ -6,6 +6,12 @@
 
 This document describes the layered role of Compass in the project.
 
+> **Current status:** Layer 1 admission is implemented. Stage 4A maps bounded
+> write-side, read-side, and snapshot evidence into `SemanticOutcome`; Stage 4B
+> maps selected evidence into strict, optionally persisted `DecisionReceipt`
+> records. Trace, policy, strategy, retry, and action-governance layers remain
+> future work.
+
 Compass is not treated as a single undifferentiated validator.  
 Instead, it grows through multiple semantic layers, each validating a different aspect of system correctness.
 

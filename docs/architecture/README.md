@@ -12,6 +12,12 @@ Use these documents to understand how the system is structured, why each
 subsystem exists, and where a local design resembles—but does not reproduce—a
 broader infrastructure pattern.
 
+For the current Stage 4B route, read [High-Level Architecture](high_level_architecture.md),
+[Projection Pipeline](projection_pipeline.md), [Snapshot Trust Contract](snapshot_trust_contract.md),
+then the [Stage 4B closeout](../implementation_notes/stage_4b/stage_4b_closeout.md).
+The older Stage 3 and initial global-checkpoint passages remain historical
+design context; ADR 0020 owns current projection completeness.
+
 ---
 
 ## Architecture Document Index
