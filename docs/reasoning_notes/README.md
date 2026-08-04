@@ -150,6 +150,7 @@ a public case study explains how people reasoned about its example.
 | [From Projection Concerns to Event Truth](from_projection_concerns_to_event_truth.md) | Event Truth / Source of Truth | Traces the architectural derivation from projection concerns to accepted-history entry. |
 | [From Replay / Rebuild Validation to Layer 2 Governance](from_replay_rebuild_validation_to_layer2_governance.md) | Replay / Layer 2 Boundary | Separates correctness evidence from later semantic interpretation and governance. |
 | [From Runtime Behavior to Durable Evidence](from_runtime_behavior_to_durable_evidence.md) | Runtime Evidence / Observability | Derives why transient behavior is not durable evidence unless deliberately preserved. |
+| [From Statement Success to Owner-Liveness](from_statement_success_to_owner_liveness.md) | PostgreSQL Persistence / Transaction Liveness | Derives the missing owner-resolution premise from statement success, caller-owned transaction completion, and invisible uncommitted state. |
 
 ---
 

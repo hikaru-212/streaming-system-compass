@@ -40,7 +40,7 @@ or reconciled into receipts.
 | Flag Evaluation State Interlude | `TRUE`, `FALSE`, and `NOT_EVALUATED`; no producer evaluation authority | [Flag Evaluation State](decision_receipt_flag_evaluation_state.md), [ADR 0018](../../adr/0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md) |
 | PR4 | PostgreSQL write-side result mapping and admission fate | [Write-Side DecisionReceipt Mapping](write_side_decision_receipt_mapping.md) |
 | PR5 | Read-side replay, snapshot-trust, and snapshot-assisted mapping | [Read-Side / Snapshot Mapping](read_side_snapshot_decision_receipt_mapping.md) |
-| PR6 | Serializer v1, persistence envelopes, migration, PostgreSQL store | [Persistence Design](pr6_decision_receipt_persistence_design.md), [Durable Persistence](decision_receipt_persistence.md) |
+| PR6 | Serializer v1, persistence envelopes, migration, PostgreSQL store | [Persistence Design](pr6_decision_receipt_persistence_design.md), [Durable Persistence](decision_receipt_persistence.md), [PostgreSQL Transaction Safety and Liveness Boundary](../../boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md) |
 | PR7 | Documentation ownership, current-state alignment, non-goals, transition | This closeout note |
 
 ## 4. Production Source Map
