@@ -36,6 +36,7 @@ The purpose of this module is to provide storage boundaries for:
 - per-order projection progress
 - projection checkpoints / offsets
 - projection snapshots
+- decision receipts
 
 This layer exists so that domain logic and runtime orchestration do not need to directly depend on concrete persistence details.
 
@@ -53,6 +54,7 @@ This module is responsible for:
 - checkpoint / offset persistence
 - projection snapshot persistence
 - PostgreSQL-backed persistence implementations where the current stage requires durability
+- caller-transaction-owned DecisionReceipt insert and load contracts
 
 Typical submodules or files include:
 
@@ -71,6 +73,8 @@ Typical submodules or files include:
 - `checkpoint_store.py`
 - `postgres_checkpoint_store.py`
 - `postgres_projection_snapshot_store.py`
+- `decision_receipt_store.py`
+- `postgres_decision_receipt_store.py`
 
 ---
 
@@ -142,6 +146,20 @@ It is the boundary that preserves and restores semantic artifacts across time.
 ---
 
 ## Main Storage Boundaries
+
+### `decision_receipt_store.py`
+
+Defines storage-neutral persistence envelopes, insertion outcomes, conflict
+categories, and materialization provenance. Callers pass strict serialized
+receipt data; this boundary does not map producer results or evaluate
+governance.
+
+### `postgres_decision_receipt_store.py`
+
+Persists and loads version-1 DecisionReceipt envelopes through a caller-owned
+PostgreSQL connection and transaction. It does not commit, roll back,
+automatically materialize mapper output, scan accepted history, or reconcile
+missing receipts.
 
 ### `event_store.py`
 
@@ -371,7 +389,7 @@ inside one read-side transaction boundary.
 
 ## Current Implementation Scope
 
-At the current stage, after Stage 3.5D completion, this module supports write-side persistence, read-side persistence, and projection snapshot persistence boundaries.
+At the current stage, after Stage 4B completion, this module supports write-side persistence, read-side persistence, projection snapshot persistence, and explicit DecisionReceipt persistence boundaries.
 
 Write-side storage currently includes:
 
@@ -398,6 +416,11 @@ Read-side storage currently includes:
 Snapshot-related storage currently includes:
 
 - `postgres_projection_snapshot_store.py` — projection snapshot persistence for derived read-side state compression
+
+DecisionReceipt storage currently includes:
+
+- `decision_receipt_store.py` — storage-neutral persistence envelopes and conflict contracts
+- `postgres_decision_receipt_store.py` — caller-transaction-owned PostgreSQL insert and load behavior
 
 The current durable write-side progress is:
 
@@ -513,7 +536,9 @@ As the read-side path that depends on projection-state and exact-next
 per-order progress persistence boundaries. Generic checkpoint infrastructure
 remains available for other consumers.
 
-Stage 3.5C PR2 makes `projection_states` usable through a Python storage boundary, but it does not yet connect that store to a PostgreSQL-backed projection worker.
+Stage 3.5C PR2 historically made `projection_states` usable through a Python
+storage boundary. The current repaired worker connects that state store to
+exact-next per-order progress under ADR 0020.
 
 ---
 
@@ -568,12 +593,13 @@ At the current stage, the main storage-related invariants include:
 - projection snapshots must remain derived state compression, not accepted-history authority
 - projection snapshot duplicate writes must distinguish benign idempotent writes from inconsistent evidence collisions
 - write-side and read-side persistence semantics must remain mutually consistent
+- database role boundaries prevent runtime roles from casually updating or deleting accepted history
+- DecisionReceipt serialization and persistence must preserve exact versioned semantic evidence and caller-owned transaction boundaries
 
 Later invariants will include:
 
-- database role boundaries should prevent runtime code from casually updating or deleting accepted history
 - append-only hardening should protect `order_events` without freezing mutable derived read-side tables
-- future validation receipts may harden snapshot runtime trust without turning snapshot rows into authority
+- future governance may consume validation receipts without turning snapshot rows into authority
 
 ---
 
@@ -587,19 +613,25 @@ If reading this module from scratch, the recommended order is:
 4. `postgres_idempotency_store.py`
 5. `projection_store.py`
 6. `postgres_projection_store.py`
-7. `checkpoint_store.py`
-8. `postgres_checkpoint_store.py`
-9. `postgres_projection_event_source.py`
-10. `postgres_projection_snapshot_store.py`
+7. `projection_progress_store.py`
+8. `postgres_projection_progress_store.py`
+9. `postgres_projection_eligible_event_source.py`
+10. `checkpoint_store.py`
+11. `postgres_checkpoint_store.py`
+12. `postgres_projection_event_source.py`
+13. `postgres_projection_snapshot_store.py`
+14. `decision_receipt_store.py`
+15. `postgres_decision_receipt_store.py`
 
 This reflects the current project evolution:
 
 - transactional persistence first
 - durable read-side projection state second
-- durable checkpoint progress next
-- worker orchestration after both durable stores exist
+- durable per-order progress and worker orchestration
+- legacy checkpoint infrastructure retained for generic consumers
 - replay validation after durable worker semantics exist
 - snapshot persistence and snapshot-assisted replay after accepted-history authority is clear
+- DecisionReceipt persistence after the semantic contract and producer mappings stabilize
 
 ---
 
@@ -610,4 +642,7 @@ It defines where semantic truth and runtime progress are persisted, recovered, a
 
 If the core is the system's semantic source, storage is the memory boundary that preserves that source across time.
 
-After Stage 3.5D, storage also preserves projection snapshot artifacts for replay efficiency. Those artifacts are useful only because accepted history remains the authority path that can validate or reject them.
+After Stage 4B, storage also preserves projection snapshot artifacts for replay
+efficiency and versioned DecisionReceipt governance evidence. Snapshot artifacts
+remain subordinate to accepted history, and receipt persistence remains an
+explicit caller-owned operation rather than automatic materialization.

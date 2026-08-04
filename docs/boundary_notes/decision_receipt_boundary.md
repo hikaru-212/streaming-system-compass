@@ -2,6 +2,10 @@
 
 [← Back to Boundary Notes](README.md)
 
+> **Authority:** This is the current canonical cross-stage `DecisionReceipt`
+> boundary. PR-specific implementation notes preserve delivery history and do
+> not override this note, the accepted ADRs, or current source contracts.
+
 ## Purpose
 
 This note defines the conceptual boundary for Stage 4B `DecisionReceipt`.
@@ -273,17 +277,20 @@ RuntimeDecisionPolicy
 = decision rule over evidence
 ```
 
-A receipt may preserve:
+A receipt may preserve completed tri-state evaluations such as:
 
 ```text
-operator_review_required = true
-fallback_required = true
-rebuild_required = true
-retry_candidate = true
+operator_review_required = TRUE | FALSE | NOT_EVALUATED
+fallback_required = TRUE | FALSE | NOT_EVALUATED
+rebuild_required = TRUE | FALSE | NOT_EVALUATED
+retry_candidate = TRUE | FALSE | NOT_EVALUATED
 ```
 
 but Stage 4B does not execute operator review, fallback, rebuild, quarantine, retry, or strategy selection.
 Those belong to later runtime policy and strategy layers.
+
+Current producer adapters leave every flag `NOT_EVALUATED`. Only a later
+authorized evaluator may assert `TRUE` or `FALSE`.
 
 In particular:
 
@@ -586,9 +593,8 @@ Field-level identity provenance should be introduced only when future adapters, 
 
 ## Durable Persistence Boundary
 
-Stage 4B should eventually persist receipts as durable governance records.
-
-However, persistence should not be introduced before the receipt contract and mapping shape are clear.
+Stage 4B PR6 implements the durable persistence foundation after the receipt
+contract and mapping shape stabilized.
 
 The durable table should store receipt-level evidence, not every log, trace, retry attempt, or policy decision.
 
@@ -609,6 +615,11 @@ retry attempt sequences
 ```
 
 This keeps the persistence layer aligned with the receipt boundary instead of becoming a generic observability table.
+
+The foundation is explicitly invoked by callers. Stage 4B does not
+automatically materialize mapper outputs, scan accepted history, reconcile
+missing receipts, publish receipts through an outbox, or own a publication
+cursor.
 
 ---
 

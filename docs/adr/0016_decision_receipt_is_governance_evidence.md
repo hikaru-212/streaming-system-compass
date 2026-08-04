@@ -10,15 +10,12 @@ Accepted
 
 ## Implementation Status
 
-Accepted as the Stage 4B runtime-evidence boundary decision.
+Implemented through Stage 4B PR1–PR6. Those delivery units established the
+`DecisionReceipt` boundary and runtime contract, generic and producer-specific
+mapping, strict serializer v1, storage-neutral persistence contracts, migration
+007, and PostgreSQL persistence. Stage 4B PR7 closes the documentation record.
 
-Stage 4A introduced `SemanticOutcome` as the structured semantic interpretation of technical runtime evidence.
-
-Stage 4B will introduce `DecisionReceipt` as the durable, compact, reviewable evidence record derived from selected `SemanticOutcome` values.
-
-This ADR is not yet fully implemented.
-
-The expected implementation path is:
+The implemented path is:
 
 ```text
 Stage 4A
@@ -34,16 +31,20 @@ SemanticOutcome
 Related implementation notes:
 
 - [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
-- Stage 4B implementation notes, once created under `../implementation_notes/stage_4b/`
+- [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
+- [Stage 4B Closeout](../implementation_notes/stage_4b/stage_4b_closeout.md)
 
-This ADR should be implemented by Stage 4B PRs that define:
+The completed Stage 4B foundation includes:
 
 - the `DecisionReceipt` boundary
 - the `DecisionReceipt` runtime contract
 - `SemanticOutcome` to `DecisionReceipt` mapping
 - write-side receipt mapping
 - read-side / snapshot receipt mapping
-- optional durable receipt storage after the receipt contract stabilizes
+- strict serialization and durable receipt storage after the receipt contract stabilized
+
+Automatic receipt materialization, accepted-history reconciliation, runtime
+policy, diagnostic or resolution traces, and action execution remain deferred.
 
 ---
 

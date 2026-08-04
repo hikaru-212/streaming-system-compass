@@ -1,6 +1,12 @@
-# DecisionReceipt Boundary
+# Stage 4B PR1 — DecisionReceipt Boundary Design Record
 
 [← Back to Stage 4B](README.md)
+
+> **Historical PR1 design record:** Current canonical behavior is owned by
+> [`docs/boundary_notes/decision_receipt_boundary.md`](../../boundary_notes/decision_receipt_boundary.md).
+> ADRs 0017–0019 and current source supersede stale implementation details in
+> this record. The original checkpoints and reasoning below are preserved as
+> delivery history.
 
 ## Purpose
 

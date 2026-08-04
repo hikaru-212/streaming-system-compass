@@ -2,6 +2,11 @@
 
 [← Back to Stage 4B](README.md)
 
+> **PR3 design and validation record:** The generic mapper is implemented. The
+> flag-state Interlude and PR4–PR6 are also complete. Omitted flags now mean all
+> four propositions are `NOT_EVALUATED`; persistence remains a separate,
+> explicitly invoked boundary rather than a responsibility of this mapper.
+
 ## Purpose
 
 This note defines the Stage 4B PR3 implementation contract for:

@@ -41,8 +41,10 @@ This module is responsible for:
 - keeping reducer logic deterministic
 - coordinating worker execution
 - tracking worker progress through checkpoints
+- tracking current durable completeness through exact-next per-order progress
 - supporting replay / rebuild through the same projection semantics
 - orchestrating PostgreSQL-backed projection state and checkpoint persistence
+- orchestrating PostgreSQL-backed projection state and per-order progress persistence
 
 ---
 
@@ -313,10 +315,8 @@ Repair, rebuild, and recovery policy belong to later stages.
 
 The current projection pipeline does not implement:
 
-- durable replay / rebuild validation
-- Snapshot Trust Contract
 - Compass Layer 2 projection-drift validation
-- structured `SemanticOutcome`
+- automatic repair or rebuild from `SemanticOutcome` / `DecisionReceipt`
 - runtime decision policy
 - out-of-order buffering
 - DLQ
@@ -337,29 +337,18 @@ Stage 3.5C PR2 — PostgresProjectionStore ✅
 Stage 3.5C PR3 — PostgresCheckpointStore ✅
 Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
 Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
+ADR 0020 Repair — Per-Order Projection Progress and Order-Local Snapshot Tails ✅
 ```
 
 ---
 
 ## Next Step
 
-The next projection-related milestone is:
-
-```text
-Stage 3.5C PR5 — Durable Replay / Rebuild Validation
-```
-
-That work should prove:
-
-```text
-accepted history replay
-=
-durable projection state
-```
-
-or produce explicit evidence when they differ.
-
-It should not turn projection state into the source of truth.
+The current correctness model uses `projection_order_progress` and remains
+limited to one active worker for the supported projection definition and
+epoch. Multi-worker leasing, coordination, and production recovery policy are
+deferred. Projection state and snapshots remain derived; accepted history
+remains authoritative.
 
 ---
 

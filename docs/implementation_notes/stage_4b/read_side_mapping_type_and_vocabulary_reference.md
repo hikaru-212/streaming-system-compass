@@ -4,7 +4,7 @@ This is a quick source-grounded lookup for the Stage 3.5C projection and replay 
 
 ## Reading guide
 
-For the full lifecycle, read [PostgreSQL Read-Side Result to DecisionReceipt: End-to-End Flow](read_side_result_to_decision_receipt_end_to_end.md). For mapper ownership, read [Stage 4A to Stage 4B: Read-Side Mapping Flow](stage_4a_to_stage_4b_read_side_mapping_flow.md). The Traditional Chinese version is [Read-Side Mapping Type 與 Vocabulary Reference](read_side_mapping_type_and_vocabulary_reference.zh.md).
+For the full lifecycle, read [PostgreSQL Read-Side Result to DecisionReceipt: End-to-End Flow](read_side_result_to_decision_receipt_end_to_end.md). For mapper ownership, read [Stage 4A to Stage 4B: Read-Side Mapping Flow](stage_4a_to_stage_4b_read_side_mapping_flow.md).
 
 ## 1. Type dependency diagram
 
@@ -156,7 +156,7 @@ Recommended source-reading order:
 | Semantic outcome vs `DecisionReceipt` | Outcome is semantic classification; receipt adds compact evidence ownership/identity but still no action. |
 | `NOT_EVALUATED` vs `FALSE` | The former records no completed evaluation; the latter is a completed negative proposition. |
 | Technical failure vs runtime action | Status and semantic classification preserve evidence; later authorized layers choose action. |
-| Point-in-time validation vs trust continuation | Current validators observe one boundary; provisional Stage 4B.3 would govern qualified advancement and is not implemented. |
+| Point-in-time validation vs trust continuation | Current validators observe one boundary; later trust-continuation governance has no assigned Stage 4B.x owner and is not implemented. |
 | Canonical replay consistency vs intended correctness | Shared reducer equality can match despite a common-mode reducer defect; intended domain correctness needs a separate contract. |
 
 ## 7. Current gaps and reserved/deferred vocabulary
@@ -167,7 +167,7 @@ Recommended source-reading order:
 - `NO_ACCEPTED_HISTORY` with persisted state has no separate production status; vocabulary hardening is deferred.
 - `NO_ACCEPTED_HISTORY_FOR_ORDER` with loaded snapshot lineage has no separate orphan/unsupported-snapshot status; the parallel integrity vocabulary is deferred.
 - `SNAPSHOT_ASSISTED_DRIFT` does not currently require unequal states; later vocabulary review may decide whether the name or producer classification should become narrower.
-- Continuous projection trust, trust leases, invalidation, revalidation, and Stage 4B.3 trust continuation are deferred.
+- Continuous projection trust, trust leases, invalidation, revalidation, and trust continuation are deferred post-Stage-4B work.
 - Diagnostic traces, runtime policy, action, fallback, rebuild, quarantine, and retry governance are future responsibilities.
 - `src/pipeline/projection/README.md` contains stale wording that says durable replay validation and structured Layer 2 `SemanticOutcome` do not exist; current source supersedes that claim, but this guide does not edit the README.
 - The shared enums reserve members unused by PR5; their existence does not authorize PR5 to select them.

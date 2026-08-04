@@ -207,7 +207,7 @@ PR6 — DecisionReceipt Durable Persistence
 PR7 — Stage 4B Closeout
 ```
 
-After PR7, Stage 4B should provide a stable DecisionReceipt evidence layer for later DiagnosticTrace, Measurement Matrix, Policy Contract, RuntimeDecisionPolicy, StrategySelector, and RetryGovernance work.
+After PR7, Stage 4B provides a stable DecisionReceipt evidence layer for later DiagnosticTrace, Measurement Matrix, Policy Contract, RuntimeDecisionPolicy, StrategySelector, and RetryGovernance work.
 
 ---
 
@@ -241,7 +241,7 @@ docs/boundary_notes/decision_receipt_boundary.md
 docs/implementation_notes/README.md
 docs/implementation_notes/stage_4b/README.md
 docs/implementation_notes/stage_4b/pr_breakdown.md
-docs/implementation_notes/stage_4b/decision_receipt_boundary.md
+docs/implementation_notes/stage_4b/pr1_decision_receipt_boundary_design.md
 ```
 
 PR1 clarifies:
@@ -1127,7 +1127,7 @@ PR7 confirms that Stage 4B has a coherent DecisionReceipt runtime evidence layer
 
 ## Status
 
-Planned.
+Complete.
 
 Recommended branch:
 
@@ -1137,13 +1137,13 @@ feat/stage4b-pr7-closeout
 
 ## Scope
 
-PR7 may add:
+PR7 adds:
 
 ```text
 docs/implementation_notes/stage_4b/stage_4b_closeout.md
 ```
 
-Closeout should confirm:
+Closeout confirms:
 
 ```text
 DecisionReceipt boundary
@@ -1155,4 +1155,6 @@ DecisionReceipt durable persistence
 Stage 4B closeout notes
 ```
 
-Closeout should also confirm that detailed traces, measurement matrix, domain policy contract, runtime decisions, strategy selection, and retry governance remain deferred to later Stage 4 follow-up stages.
+Closeout also confirms that detailed traces, measurement matrix, domain policy contract, runtime decisions, strategy selection, and retry governance remain deferred to later Stage 4 follow-up stages. The next stage is Stage 4B.1.
+
+See [Stage 4B Closeout](stage_4b_closeout.md).

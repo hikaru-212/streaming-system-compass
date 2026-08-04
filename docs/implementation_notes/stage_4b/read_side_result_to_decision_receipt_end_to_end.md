@@ -1,12 +1,12 @@
 # PostgreSQL Read-Side Result to DecisionReceipt: End-to-End Flow
 
-This guide follows the current Stage 3.5C projection and replay-validation code, Stage 3.5D snapshot paths, Stage 4A semantic adapters, and the unmerged Stage 4B PR5 receipt adapters. It is a reader guide, not a new source of authority.
+This guide follows the current Stage 3.5C projection and replay-validation code, Stage 3.5D snapshot paths, Stage 4A semantic adapters, and the completed Stage 4B PR5 receipt adapters. It is a reader guide, not a new source of authority.
 
 Primary sources: `src/pipeline/projection/postgres_worker.py`, `src/pipeline/projection/replay_validator.py`, `src/pipeline/projection/projection_snapshot_replay_validator.py`, `src/pipeline/projection/projection_snapshot_assisted_state_resolver.py`, `src/compass/runtime/read_side_outcome_mapping.py`, and `src/compass/runtime/read_side_decision_receipt_mapping.py`.
 
 ## Reading guide
 
-For mapping ownership after a typed result exists, read [Stage 4A to Stage 4B: Read-Side Mapping Flow](stage_4a_to_stage_4b_read_side_mapping_flow.md). For quick type, enum, and confusion-pair lookup, read the [Read-Side Mapping Type and Vocabulary Reference](read_side_mapping_type_and_vocabulary_reference.md). The Traditional Chinese version is [PostgreSQL Read-Side Result 到 DecisionReceipt：端到端流程](read_side_result_to_decision_receipt_end_to_end.zh.md).
+For mapping ownership after a typed result exists, read [Stage 4A to Stage 4B: Read-Side Mapping Flow](stage_4a_to_stage_4b_read_side_mapping_flow.md). For quick type, enum, and confusion-pair lookup, read the [Read-Side Mapping Type and Vocabulary Reference](read_side_mapping_type_and_vocabulary_reference.md).
 
 ## 1. Executive overview
 
@@ -340,7 +340,7 @@ Current source provides composable worker, validator, resolver, semantic-mapper,
 - `PostgresProjectionWorkerResult` Stage 4A/PR5 mapping;
 - continuous projection or snapshot trust;
 - a trust lease, automatic expiry, invalidation, or revalidation;
-- Stage 4B.3 trust continuation (the roadmap section is provisional only);
+- post-Stage-4B trust continuation (no delivery stage is assigned);
 - runtime action, policy, strategy, fallback, rebuild, quarantine, or retry;
 - diagnostic-trace persistence;
 - PR5 receipt serialization or persistence.
@@ -350,4 +350,3 @@ Current source provides composable worker, validator, resolver, semantic-mapper,
 Future vocabulary hardening may distinguish `NO_ACCEPTED_HISTORY` with persisted projection state from the case where both history and projection are absent. The snapshot path has a parallel concern: `NO_ACCEPTED_HISTORY_FOR_ORDER` may retain loaded snapshot lineage, which can represent a snapshot artifact without current authority support. This guide records both concerns without defining new production statuses.
 
 The existing `src/pipeline/projection/README.md` contains stale lines claiming durable replay validation and structured Layer 2 `SemanticOutcome` do not exist. Current source takes precedence; this guide does not modify that README.
-

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This directory records the implementation plan and boundary decisions for:
+This directory records the design, implementation, validation, and closeout history for:
 
 ```text
 Stage 4B — DecisionReceipt / Runtime Evidence Record
@@ -12,7 +12,7 @@ Stage 4B — DecisionReceipt / Runtime Evidence Record
 
 Stage 4A completed the `SemanticOutcome` core.
 
-Stage 4B begins the next step:
+Stage 4B completed the next step:
 
 ```text
 technical runtime evidence
@@ -32,8 +32,13 @@ The purpose is to define how selected semantic outcomes become compact, reviewab
 PR1–PR6 — Complete
 Interlude — Read-Side Canonical Context Protection — Complete
 Interlude — DecisionReceipt Flag Evaluation State — Complete
-PR7 — Planned
+PR7 — Complete
 ```
+
+Stage 4B is complete. The next stage is Stage 4B.1 — DiagnosticTrace /
+ResolutionTrace. See the [Stage 4B closeout](stage_4b_closeout.md) for the final
+source map, invariants, validation-evidence map, non-goals, and roadmap
+transition.
 
 Reported focused PR2 verification:
 
@@ -389,10 +394,11 @@ This is the serialization and durable-storage foundation. It does not
 automatically invoke PR4/PR5 producers, persist mapper outputs, schedule
 materialization, scan accepted history, or reconcile missing receipts.
 
-The next work is:
+The completed closeout transition is:
 
 ```text
-PR7 — Stage 4B Closeout
+PR7 — Stage 4B Closeout — Complete
+Next — Stage 4B.1 DiagnosticTrace / ResolutionTrace
 ```
 
 ---
@@ -434,7 +440,7 @@ It should preserve clear extension points so those layers can consume receipt ev
 
 ## Current PR Sequence
 
-Stage 4B is expected to proceed through:
+Stage 4B proceeded through:
 
 ```text
 PR1 — DecisionReceipt / Runtime Evidence Boundary
@@ -569,8 +575,10 @@ deferred semantic-precision issues.
 
 ## Detailed Notes
 
+- [Stage 4B Closeout](stage_4b_closeout.md)
 - [PR Breakdown](pr_breakdown.md)
-- [DecisionReceipt Boundary](decision_receipt_boundary.md)
+- [Canonical DecisionReceipt Boundary](../../boundary_notes/decision_receipt_boundary.md)
+- [PR1 DecisionReceipt Boundary Design Record](pr1_decision_receipt_boundary_design.md)
 - [DecisionReceipt Runtime Contract](decision_receipt_contract.md)
 - [DecisionReceipt Evidence Source Alignment Note](decision_receipt_evidence_source_alignment_note.md)
 - [SemanticOutcome to DecisionReceipt Adapter](semantic_outcome_to_decision_receipt.md)
@@ -579,3 +587,4 @@ deferred semantic-precision issues.
 - [Read-Side / Snapshot DecisionReceipt Mapping](read_side_snapshot_decision_receipt_mapping.md)
 - [PR6 DecisionReceipt Persistence Design](pr6_decision_receipt_persistence_design.md)
 - [DecisionReceipt Durable Persistence](decision_receipt_persistence.md)
+- [Deferred Hardening — Projection Without Accepted-History Authority](deferred_backlog_projection_without_accepted_history.md)

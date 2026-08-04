@@ -10,12 +10,12 @@ Accepted
 
 ## Implementation Status
 
-Implemented for Stage 4B PR4.
+Implemented for Stage 4B PR4 and PR5.
 
-The PostgreSQL write-side producer adapter now preserves typed evidence while
-leaving all four governance flags `NOT_EVALUATED`. PR5 and future
-producer-specific adapters must adopt the same boundary from their first
-implementation.
+The PostgreSQL write-side adapter and all read-side / snapshot producer
+adapters preserve typed evidence while leaving all four governance flags
+`NOT_EVALUATED`. Stage 4B PR6 serializes and persists those tri-state values
+without evaluating them.
 
 Dedicated evaluators that may later produce `TRUE` or `FALSE` remain future
 work.
@@ -354,17 +354,10 @@ ownership. This decision neither modifies nor depends on ADR 0019.
 
 ## Implementation Implications
 
-A later PR4 follow-up will:
-
-- remove positive flag inference from the write-side adapter;
-- leave all four flags `NOT_EVALUATED`;
-- update affected PR4 tests;
-- update the PR4 design note and reader guides.
-
-Those implementation changes are not part of this ADR task.
-
-PR5 and future producer-specific adapters must begin with all four flags
-`NOT_EVALUATED`. A dedicated evaluator may later supply completed states
+The completed PR4 follow-up removed positive flag inference from the write-side
+adapter and aligned its tests and documentation. PR5 began with all four flags
+`NOT_EVALUATED`, and PR6 preserves the values unchanged through serialization
+and persistence. A dedicated evaluator may later supply completed states
 through an explicitly defined boundary.
 
 ---

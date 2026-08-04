@@ -6,7 +6,7 @@ Primary sources: `src/compass/runtime/read_side_outcome_mapping.py`, `src/compas
 
 ## Reading guide
 
-For the complete producer lifecycle, read [PostgreSQL Read-Side Result to DecisionReceipt: End-to-End Flow](read_side_result_to_decision_receipt_end_to_end.md). For quick type and enum lookup, read the [Read-Side Mapping Type and Vocabulary Reference](read_side_mapping_type_and_vocabulary_reference.md). The Traditional Chinese version is [Stage 4A 到 Stage 4B：Read-Side Mapping Flow](stage_4a_to_stage_4b_read_side_mapping_flow.zh.md).
+For the complete producer lifecycle, read [PostgreSQL Read-Side Result to DecisionReceipt: End-to-End Flow](read_side_result_to_decision_receipt_end_to_end.md). For quick type and enum lookup, read the [Read-Side Mapping Type and Vocabulary Reference](read_side_mapping_type_and_vocabulary_reference.md).
 
 ## 1. Scope and three-layer model
 
@@ -302,7 +302,7 @@ retry_candidate = NOT_EVALUATED
 - `source_global_position` is snapshot lineage only; order-local tail correctness uses unexposed `source_event_sequence`.
 - PR5 does not map `PostgresProjectionWorkerResult`.
 - PR5 provides no production invocation, scheduler, continuous validation, trust continuation, runtime action, policy, retry, serialization, or persistence.
-- Stage 4B.3 trust continuation remains a provisional roadmap plan, not production.
+- Trust continuation remains unassigned post-Stage-4B work, not production.
 
 ## 10. Source and test anchors
 
