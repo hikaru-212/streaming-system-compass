@@ -37,8 +37,9 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0015 | [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) | Accepted | Records why Stage 3.5E uses test-time `SET ROLE` permission probes instead of introducing production-style login identities and role-specific connection pools. |
 | 0016 | [DecisionReceipt Is Governance Evidence, Not Application Logging](0016_decision_receipt_is_governance_evidence.md) | Accepted | Records why Stage 4B introduces DecisionReceipt as durable semantic governance evidence rather than application logging or a generic error table. |
 | 0017 | [Separate Evidence Path, Identity Provenance, and Event Admission Fate in DecisionReceipt](0017_separate_evidence_path_identity_provenance_and_admission_fate.md) | Accepted | Separates receipt evidence path, primary identity provenance, and typed write-side admission fate, including early idempotent replay and candidate / accepted-event invariants. |
-| 0018 | [Producer Receipt Adapters Preserve Evidence but Do Not Evaluate Governance Flags](0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md) | Accepted | Requires producer-specific receipt adapters to preserve typed evidence while dedicated evaluators own governance-flag conclusions. |
-| 0020 | [Per-Order Projection Progress and Order-Local Snapshot Tails](0020_per_order_projection_progress_and_order_local_snapshot_tails.md) | Accepted | Replaces unsafe global checkpoint completeness assumptions with repaired per-order progress and order-local snapshot tails. |
+| 0018 | [Producer Receipt Adapters Preserve Evidence but Do Not Evaluate Governance Flags](0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md) | Accepted | Separates producer evidence preservation from governance-flag evaluation and keeps `TRUE`, `FALSE`, and `NOT_EVALUATED` distinct. |
+| 0019 | [Separate Accepted-Result Receipt Reconstruction from Immediate Typed-Observation Evidence Persistence](0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md) | Accepted | Separates reconstructible accepted-result receipts from non-reconstructible failed-attempt and observation evidence, records implemented foundational persistence, and defers reconciliation orchestration. |
+| 0020 | [Per-Order Projection Progress and Order-Local Snapshot Tails](0020_per_order_projection_progress_and_order_local_snapshot_tails.md) | Accepted | Uses per-order progress and order-local snapshot tails because global-position gaps do not prove missing order history. |
 
 ---
 
@@ -72,6 +73,9 @@ Recommended order:
 16. [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) — explains why Stage 3.5E validates effective database privileges through test-time `SET ROLE` probes instead of simulating production login identity topology.
 17. [DecisionReceipt Is Governance Evidence, Not Application Logging](0016_decision_receipt_is_governance_evidence.md) — explains why Stage 4B persists selected semantic outcomes as durable governance evidence instead of treating them as ordinary application logs, error logs, diagnostic traces, or retry attempt records.
 18. [Separate Evidence Path, Identity Provenance, and Event Admission Fate in DecisionReceipt](0017_separate_evidence_path_identity_provenance_and_admission_fate.md) — refines the Stage 4B receipt contract by separating evidence-path ownership, primary correlation provenance, and typed event-admission fate, including early idempotent replay and cross-field identity invariants.
+19. [Producer Receipt Adapters Preserve Evidence but Do Not Evaluate Governance Flags](0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md) — explains why producer adapters preserve typed evidence while `TRUE`, `FALSE`, and `NOT_EVALUATED` remain distinct and absence of evaluation is not false.
+20. [Separate Accepted-Result Receipt Reconstruction from Immediate Typed-Observation Evidence Persistence](0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md) — explains why accepted-result reconstruction and non-reconstructible failed-attempt or observation persistence require separate paths, with foundational persistence implemented and reconciliation orchestration deferred.
+21. [Per-Order Projection Progress and Order-Local Snapshot Tails](0020_per_order_projection_progress_and_order_local_snapshot_tails.md) — explains why aggregate-local progress and snapshot tails use order-local sequence instead of treating global-position gaps as missing order history.
 
 ---
 
@@ -112,6 +116,12 @@ ADR 0015 is related to Stage 3.5E database role and permission hardening. It rec
 ADR 0016 is related to Stage 4B DecisionReceipt / runtime evidence design. It records why selected `SemanticOutcome` values should become compact, durable, reviewable governance evidence, while ordinary logs, detailed diagnostic traces, retry attempt logs, runtime policy decisions, and execution strategies remain separate boundaries.
 
 ADR 0017 refines the Stage 4B DecisionReceipt runtime contract established after ADR 0016. It records why evidence path, primary identity provenance, and event admission fate must remain separate; why nullable candidate / accepted event identifiers cannot safely encode admission meaning by themselves; why early idempotent replay may reference an accepted event without a newly constructed candidate; and why field-level identity provenance remains deferred until future adapters, persistence, audit, or policy consumers require it.
+
+ADR 0018 keeps producer-specific receipt adapters responsible for typed evidence rather than governance-flag evaluation. It preserves `TRUE`, `FALSE`, and `NOT_EVALUATED` as distinct states so absence of evaluation is not interpreted as false.
+
+ADR 0019 separates reconstructible accepted-result receipts from failed-attempt and typed-observation evidence that accepted history cannot reconstruct. Foundational persistence contracts are implemented, while materialization and reconciliation orchestration remain deferred.
+
+ADR 0020 records why the order-state projection uses per-order progress and order-local snapshot tails. Global positions remain unique lineage and scheduling coordinates, but gaps do not prove missing order history or global committed-history completeness.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -183,6 +193,9 @@ Recommended pattern:
 0015_permission_probing_with_set_role.md
 0016_decision_receipt_is_governance_evidence.md
 0017_separate_evidence_path_identity_provenance_and_admission_fate.md
+0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md
+0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md
+0020_per_order_projection_progress_and_order_local_snapshot_tails.md
 ```
 
 Evolution or supporting notes may be kept as separate files:

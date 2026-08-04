@@ -46,6 +46,7 @@ def connection() -> Iterator[Connection[object]]:
         conn.execute(
             """
             TRUNCATE
+                decision_receipts,
                 projection_snapshots,
                 projection_order_progress,
                 projection_checkpoints,
@@ -65,6 +66,7 @@ def connection() -> Iterator[Connection[object]]:
         conn.execute(
             """
             TRUNCATE
+                decision_receipts,
                 projection_snapshots,
                 projection_order_progress,
                 projection_checkpoints,

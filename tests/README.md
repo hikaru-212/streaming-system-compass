@@ -433,6 +433,7 @@ psql "$TEST_DATABASE_URL" -f db/migrations/003_add_order_events_global_position.
 psql "$TEST_DATABASE_URL" -f db/migrations/004_create_projection_snapshots.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/005_create_durable_state_permission_roles.sql
 psql "$TEST_DATABASE_URL" -f db/migrations/006_create_projection_order_progress.sql
+psql "$TEST_DATABASE_URL" -f db/migrations/007_create_decision_receipts.sql
 
 pytest tests/integration/storage -q
 pytest tests/integration/security -q
