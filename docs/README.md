@@ -73,9 +73,35 @@ and [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md).
 
 ---
 
+## Current Engineering Checkpoint
+
+Stage 4B is complete, and Stage 4B.1 DiagnosticTrace / ResolutionTrace remains
+the next runtime-governance stage. Before it begins, the repository may run one
+independent PostgreSQL characterization experiment for a live-but-idle
+DecisionReceipt transaction owner and a blocked uniqueness contender.
+
+The experiment is not implemented and does not select a timeout value, reopen
+Stage 4B contracts, authorize retry, or establish runtime, connection-pool, or
+production policy. See the current specialized
+[DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
+and the non-authoritative derivation in
+[From Statement Success to Owner-Liveness](reasoning_notes/from_statement_success_to_owner_liveness.md).
+
+This abnormal-path transaction-liveness question remains separate from
+capacity-pressure work such as rate limiting, queues, bounded concurrency, and
+backpressure, which remains deferred.
+
+---
+
 ## How to Read These Docs
 
 Different readers may enter the documentation from different angles.
+
+For high-level public orientation, start with the non-authoritative
+[Overview](overview/README.md).
+
+For non-authoritative reading paths and cross-topic indexes, use
+[Documentation Navigation](navigation/README.md).
 
 If you want the shortest entry point into the AI governance framing of Compass, start with [Semantic Admission](semantic_admission/README.md).
 
@@ -151,6 +177,8 @@ top-level system structure
 
 ```text
 docs/
+├── overview/               # High-level public, non-authoritative orientation
+├── navigation/             # Non-authoritative reading paths and topic indexes
 ├── philosophy/             # Design philosophy and mental models
 ├── architecture/           # Subsystem-level architecture notes
 ├── adr/                    # Architecture Decision Records
@@ -168,6 +196,23 @@ docs/
 ---
 
 ## Directory Purposes
+
+### [overview/](overview/README.md)
+
+High-level public orientation to the project's purpose and broad architecture.
+Overview documents help readers enter the project, but source, tests,
+migrations, accepted ADRs, current boundary notes, and stage closeouts govern
+exact implementation truth.
+
+---
+
+### [navigation/](navigation/README.md)
+
+Non-authoritative reading paths and cross-topic indexes. Navigation routes
+readers across the existing document categories without changing the authority
+or ownership of the linked documents.
+
+---
 
 ### [philosophy/](philosophy/README.md)
 

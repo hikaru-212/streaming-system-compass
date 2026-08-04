@@ -44,6 +44,20 @@ The next implementation focus is:
 
 Stage 4B established durable receipt evidence without automatic materialization or reconciliation. Stage 4B.1 begins the later trace boundary; measurement evidence, policy, strategy selection, retry governance, and action safety remain subsequent stages.
 
+### Immediate Engineering Checkpoint
+
+Before Stage 4B.1 begins, the repository may run one narrowly scoped
+PostgreSQL experiment to characterize live-but-idle DecisionReceipt
+transaction-owner cleanup and contender progress. This is independent
+operational evidence gathering, not a new governance stage or a reopening of
+the completed [Stage 4B contracts](docs/implementation_notes/stage_4b/stage_4b_closeout.md).
+
+The experiment does not yet establish a production timeout, retry semantics,
+connection-pool policy, or production operational guarantees. The current
+boundary and its derivation are recorded in the
+[DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](docs/boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
+and [From Statement Success to Owner-Liveness](docs/reasoning_notes/from_statement_success_to_owner_liveness.md).
+
 ---
 
 ## Guide for Reviewers
