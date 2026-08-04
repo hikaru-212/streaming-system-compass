@@ -29,19 +29,20 @@ The project currently has:
 - a completed Stage 3.5A decimal / money hardening step before durable persistence
 - a completed Stage 3.5B durable write-side baseline, including PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and validation placement strategy
 - Stage 3.5C PR0 durable order-event vocabulary hardening, including uppercase `event_type` vocabulary, `proof_prev_status` database constraint, and stream-position unique-constraint rename
-- a completed Stage 3.5C durable read-side baseline, including PostgreSQL-backed projection state, checkpoint progress, global-position projection worker orchestration, and durable replay / rebuild validation
+- a completed Stage 3.5C durable read-side baseline, later repaired under ADR 0020 to use PostgreSQL-backed exact-next per-order projection progress, with durable replay / rebuild validation
 - a completed Stage 3.5D snapshot trust / replay-efficiency baseline, including projection snapshot schema, store, replay validator, snapshot-assisted state resolver, and aggregate snapshot trust deferral
 - a completed Stage 3.5E durable history and permission hardening baseline, including database role / privilege boundaries, accepted-history mutation hardening tests, derived-state mutation permission tests, and a minimal actor metadata boundary
 - a completed Stage 4A SemanticOutcome core, including runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping
-- executable tests defending write-side, read-side, durable replay, snapshot trust, durable permission-boundary, and Stage 4A runtime semantic-outcome semantics
+- a completed Stage 4B DecisionReceipt foundation, including the typed contract, generic and producer mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
+- executable tests defending write-side, read-side, durable replay, snapshot trust, durable permission-boundary, Stage 4A runtime semantic-outcome, and Stage 4B receipt semantics
 
-Stage 4A is now complete at the SemanticOutcome core level.
+Stage 4A and Stage 4B PR1–PR7 are complete.
 
-The current implementation focus is:
+The next implementation focus is:
 
-- **Stage 4B — DecisionReceipt / DiagnosticTrace**
+- **Stage 4B.1 — DiagnosticTrace / ResolutionTrace**
 
-Stage 4B continues the roadmap from structured semantic outcomes toward durable decision receipts, diagnostic traces, measurement evidence, runtime decision policy, strategy selection, retry governance, and later action safety.
+Stage 4B established durable receipt evidence without automatic materialization or reconciliation. Stage 4B.1 begins the later trace boundary; measurement evidence, policy, strategy selection, retry governance, and action safety remain subsequent stages.
 
 ---
 
@@ -90,7 +91,7 @@ If you want to understand how the repository thinks rather than only what it imp
   Stage 3.5B establishes PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and configurable validation placement.
 
 - **Durable read-side baseline**  
-  Stage 3.5C establishes PostgreSQL-backed projection state, checkpoint progress, global-position worker orchestration, and durable replay / rebuild validation against accepted history.
+  Stage 3.5C established PostgreSQL-backed projection state and replay validation; ADR 0020 repairs projection completeness to use exact-next per-order progress while retaining global position as lineage and scheduling evidence.
 
 - **Snapshot trust / replay-efficiency baseline**  
   Stage 3.5D establishes projection snapshot schema, snapshot storage, snapshot-assisted replay validation, snapshot-assisted state resolution, and aggregate snapshot trust deferral.
@@ -101,8 +102,8 @@ If you want to understand how the repository thinks rather than only what it imp
 - **Stage 4A SemanticOutcome core is complete**  
   Stage 4A completed the transition from technical validation evidence into structured `SemanticOutcome` mapping for read-side, snapshot, and write-side admission outcomes.
 
-- **Stage 4B DecisionReceipt / DiagnosticTrace is now the active branch direction**  
-  Stage 4B should preserve semantic outcomes and evidence in durable receipts and traces before policy, strategy selection, and retry governance are introduced.
+- **Stage 4B DecisionReceipt is complete**
+  Stage 4B preserves selected semantic outcomes as strict, durable governance evidence through explicit mapping, serialization, and persistence boundaries. Diagnostic traces begin in Stage 4B.1.
 
 - **Documentation as architecture memory**  
   ADRs, boundary notes, postmortems, and philosophy notes are used to preserve why the system is shaped this way.
@@ -148,6 +149,9 @@ flowchart TD
     E --> F[Projection Pipeline]
     F --> H[Derived Runtime State]
     H --> I[Compass Layer 2<br/>Runtime State Validation]
+    I --> J[SemanticOutcome]
+    J --> K[DecisionReceipt]
+    K -. Explicit caller-owned persistence .-> L[(decision_receipts)]
 ```
 
 This architecture separates:
@@ -156,6 +160,9 @@ This architecture separates:
 - **accepted immutable history**, where admitted events become the durable source of truth
 - **read-side derivation**, where projection interprets accepted history into runtime state
 - **runtime verification**, where Compass later validates whether projected state remains semantically correct
+- **runtime evidence preservation**, where technical evidence becomes `SemanticOutcome`, then a `DecisionReceipt`, and only an explicit caller invokes persistence
+
+The diagram does not imply automatic mapper-to-store wiring. Stage 4B does not automatically materialize receipts or reconcile accepted history.
 
 ---
 
@@ -235,6 +242,8 @@ They test whether the correctness mechanisms inside `src/` survive adversarial r
 - Configurable validation placement through `IN_TRANSACTION` and `PRE_TRANSACTION`
 - Durable order-event vocabulary hardening through uppercase `event_type` values, `proof_prev_status` CHECK constraints, and explicit stream-position constraint naming
 - Projection snapshot trust as derived compression, validated and resolved without making snapshots authoritative
+- Per-order projection completeness through `projection_order_progress`; `global_position` remains lineage and scheduling evidence
+- Stage 4B `SemanticOutcome → DecisionReceipt` mapping, strict serializer v1, storage-neutral receipt persistence contracts, and PostgreSQL receipt storage
 - Clear separation between domain legality, transition truth, admission continuity, retry safety, validation placement, read-side derivation, and snapshot trust
 
 ---
@@ -316,6 +325,9 @@ Key documentation areas:
 - [Boundary Notes](docs/boundary_notes/README.md) — module ownership and responsibility boundaries
 - [Roadmaps](docs/roadmap/README.md) — implementation sequencing and system evolution
 - [Postmortems](docs/postmortems/README.md) — design lessons and boundary reflections
+- [Stage 4B Implementation Notes](docs/implementation_notes/stage_4b/README.md) — completed PR1–PR7 delivery records
+- [Stage 4B Closeout](docs/implementation_notes/stage_4b/stage_4b_closeout.md) — final contracts, invariants, non-goals, and transition
+- Stage 4B and projection-progress decisions: [ADR 0016](docs/adr/0016_decision_receipt_is_governance_evidence.md), [ADR 0017](docs/adr/0017_separate_evidence_path_identity_provenance_and_admission_fate.md), [ADR 0018](docs/adr/0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md), [ADR 0019](docs/adr/0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md), and [ADR 0020](docs/adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
 
 ### Design Philosophy
 
@@ -413,7 +425,7 @@ Everything else grows around this core:
 - two-phase concurrency admission and validation placement strategy
 - Stage 3.5C durable read-side schema, stores, worker orchestration, and replay validation completed
 - durable projection state and checkpoint state
-- global-position projection worker orchestration
+- exact-next per-order projection progress under ADR 0020
 - persistence-backed replay / rebuild validation
 - Stage 3.5D snapshot trust, replay-efficiency, and persistence optimization completed
 - pre-Stage 3.5E documentation alignment completed
@@ -491,6 +503,11 @@ Current baseline completed:
   - PostgreSQL-backed projection worker orchestration
   - durable replay / rebuild validation against accepted history
   - PostgreSQL schema, storage, worker, and replay-validation tests
+- ADR 0020 current projection-progress repair:
+  - current worker completeness uses `projection_order_progress`
+  - event eligibility is exact-next per order
+  - `global_position` is lineage and scheduling evidence, not a scalar completeness cursor
+  - `projection_checkpoints` and `PostgresCheckpointStore` remain historical / legacy baseline artifacts rather than the current worker progress model
 - Stage 3.5D snapshot trust / replay-efficiency baseline:
   - snapshot trust contract boundary
   - durable projection snapshot schema
@@ -507,22 +524,23 @@ Current boundary of completion:
 - read-side projection baseline exists in deterministic in-memory form
 - exact-money semantics are stabilized before deeper durable persistence work
 - durable accepted-history vocabulary has been hardened before read-side persistence depends on stored events
-- durable read-side projection state, checkpoint progress, global-position worker orchestration, and replay / rebuild validation are established through Stage 3.5C
+- durable read-side projection state and replay / rebuild validation are established through Stage 3.5C, with current completeness repaired to exact-next per-order progress under ADR 0020
 - Stage 3.5D snapshot trust, persistence optimization, and replay efficiency is complete at the read-side projection snapshot baseline level
 - write-side aggregate snapshot schema/store and snapshot-assisted write-side rehydration are intentionally deferred
 - Stage 3.5E durable history and permission hardening is complete
 - Stage 4A SemanticOutcome core is complete
+- Stage 4B PR1–PR7 DecisionReceipt boundary, contract, mapping, serialization, and persistence foundation is complete
 
-Current implementation focus:
+Next implementation focus:
 
-- Stage 4B — DecisionReceipt / DiagnosticTrace
+- Stage 4B.1 — DiagnosticTrace / ResolutionTrace
 
 Stage 4A closeout is complete at the runtime semantic interpretation level.
 
 Next implementation milestones:
 
-- Stage 4B DecisionReceipt / DiagnosticTrace: durable runtime evidence records, diagnostic traces, evidence shape, and correlation boundaries
-- Stage 4C+ runtime decision policy, StrategySelector, and retry governance
+- Stage 4B.1 DiagnosticTrace / ResolutionTrace
+- Stage 4B.2 measurement evidence, Stage 4B.5 domain policy, and Stage 4C+ runtime decision policy, StrategySelector, and retry governance
 - Stage 5 dual-dimension governance demo / action safety
 
 ---
@@ -548,9 +566,9 @@ The repository remains intentionally conservative:
 - documentation defines semantic intent and ownership boundaries
 - `src/` implements runtime logic
 - `tests/` make selected invariants and failure paths executable
-- the current Stage 3 baseline remains intentionally minimal and in-memory
+- the original Stage 3 in-memory baseline remains available as historical executable context alongside the durable repaired worker
 - Stage 3.5A has hardened exact-money semantics before persistence expands
-- later phases will extend this baseline from Stage 4B receipt / trace work toward runtime decision policy, Stage 5 action safety, and production / agent-facing hardening
+- later phases will extend the completed Stage 4B receipt foundation through traces, measurement, runtime decision policy, Stage 5 action safety, and production / agent-facing hardening
 
 ---
 

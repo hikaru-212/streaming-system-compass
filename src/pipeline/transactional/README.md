@@ -202,21 +202,23 @@ PostgresWriteSideUnitOfWork
 + PostgresWriteSideConfig
 ```
 
-The default behavior remains:
+The default behavior is:
 
 ```text
 ValidationMode.STRICT
-ValidationPlacement.IN_TRANSACTION
+ValidationPlacement.PRE_TRANSACTION
 PostgresOptimisticAdmissionGate
 ```
 
-It also supports a minimal `PRE_TRANSACTION` validation path guarded by an authoritative in-transaction idempotency re-check and append-time admission.
+`IN_TRANSACTION` remains available through explicit configuration.
+The default `PRE_TRANSACTION` path remains guarded by an authoritative
+in-transaction idempotency re-check and append-time admission.
 
 ---
 
 ## In-Transaction Write-Side Flow
 
-The default durable write-side flow is:
+The explicitly selected `IN_TRANSACTION` durable write-side flow is:
 
 ```text
 BEGIN
@@ -267,7 +269,8 @@ must commit or roll back together.
 
 ## Pre-Transaction Validation Flow
 
-The `PRE_TRANSACTION` path intentionally separates CPU-side validation from the final write transaction.
+The default `PRE_TRANSACTION` path intentionally separates CPU-side validation
+from the final write transaction.
 
 It performs:
 
@@ -335,7 +338,8 @@ IN_TRANSACTION
 PRE_TRANSACTION
 ```
 
-`IN_TRANSACTION` remains the default.
+`PRE_TRANSACTION` is the default. `IN_TRANSACTION` remains an explicitly
+selectable placement.
 
 ---
 

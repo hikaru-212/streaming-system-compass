@@ -30,11 +30,28 @@ PR5 — Durable Replay / Rebuild Validation Baseline
 
 This note should now be read as the foundational read-side persistence boundary that the later PR2–PR5 work completed and preserved.
 
+### Current repair supersession
+
+[ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+supersedes the historical PR4 use of a global checkpoint as the order-state
+worker's completeness and restart cursor. The repaired worker records
+exact-next progress for each projection definition, epoch, and `order_id`, and
+commits that progress with projection state in one transaction.
+`global_position` remains globally unique lineage and deterministic scheduling
+metadata among eligible work; it is not commit order, cross-order causal order,
+or a complete committed-history frontier. Legacy checkpoints remain generic,
+historical progress evidence only.
+
+`no_event` means only that no currently visible accepted event is eligible as
+the exact next event for this projection definition and epoch. It is not proof
+that the worker is globally caught up or that another transaction cannot later
+commit an eligible event.
+
 ---
 
 ## Core Boundary
 
-The durable read-side has three different concepts that must remain separate.
+The durable read-side has four different concepts that must remain separate.
 
 ```text
 order_events
@@ -43,13 +60,17 @@ order_events
 projection_states
 = derived runtime view
 
+projection_order_progress
+= repaired exact-next progress per projection definition, epoch, and order
+
 projection_checkpoints
-= worker progress metadata
+= legacy / generic cursor evidence
 ```
 
 Only `order_events` is the accepted-history truth source.
 
-`projection_states` and `projection_checkpoints` are durable read-side support tables.
+`projection_states`, `projection_order_progress`, and
+`projection_checkpoints` are durable read-side support tables.
 
 They are allowed to be rebuilt, reset, or corrected from accepted history.
 
@@ -83,7 +104,7 @@ If there is disagreement, accepted history wins.
 
 ---
 
-## Boundary 2: Projection State vs Checkpoint State
+## Boundary 2: Projection State vs Progress Evidence
 
 ### `projection_states`
 
@@ -105,15 +126,32 @@ It means:
 
 > this order's derived state has processed accepted history up to this aggregate-local sequence.
 
+### `projection_order_progress`
+
+Repaired progress records the last accepted order-local sequence durably
+applied to the current order-state projection definition and epoch.
+
+Eligibility is exact-next:
+
+```text
+event.sequence = COALESCE(progress.last_sequence, 0) + 1
+```
+
+Projection state and matching progress must commit or roll back together on
+the same PostgreSQL connection. Progress for one order cannot advance another
+order.
+
 ### `projection_checkpoints`
 
-Checkpoint state is worker-level progress metadata.
+Checkpoint state remains generic worker-level cursor metadata.
 
-It records where a worker stopped while scanning accepted history.
+It historically recorded where the PR4 worker stopped while scanning accepted
+history.
 
 It is not per-order business state.
 
-It must not use aggregate-local `sequence` as if it were a global cursor.
+The repaired order-state worker neither reads nor advances it for correctness
+or restart.
 
 ---
 
@@ -141,9 +179,12 @@ This is correct for aggregate replay.
 
 It is not a global event-log offset.
 
-A background projection worker needs a cursor over the whole accepted-history stream, not only one order stream.
+A hypothetical globally ordered projection would need a separately proven,
+commit-safe cursor over the accepted-history stream. The implemented
+order-state projection is aggregate-local and does not require that order.
 
-Therefore, this PR1 boundary rule is required:
+Therefore, this historical PR1 boundary rule remains valid for a worker-wide
+scalar checkpoint:
 
 > `projection_checkpoints` must not store `last_processed_sequence` as the worker checkpoint.
 
@@ -235,7 +276,7 @@ It also allows the future worker to choose among several strategies.
 
 ---
 
-## Candidate Cursor Strategies
+## Historical PR1 Candidate Cursor Strategies
 
 ### 1. `APPENDED_AT`
 
@@ -291,7 +332,7 @@ It is intentionally outside Stage 3.5C PR1.
 
 ---
 
-## Preferred Future Direction
+## Historical PR1 Preferred Future Direction
 
 The preferred future direction is likely `GLOBAL_POSITION`.
 
@@ -325,11 +366,12 @@ No read-side table should override it.
 
 If corrupted or stale, it should be rebuilt from accepted history through the canonical reducer.
 
-### Rule 3: Checkpoint state is operational
+### Rule 3: Progress evidence is operational
 
-`projection_checkpoints` is worker progress metadata.
+`projection_order_progress` is repaired worker progress evidence.
+`projection_checkpoints` is legacy / generic cursor evidence.
 
-It is not business correctness.
+Neither is business correctness.
 
 ### Rule 4: Local sequence is not global cursor
 
@@ -339,19 +381,22 @@ It must not be used as a worker-wide checkpoint offset.
 
 ### Rule 5: Reducer remains canonical
 
-PostgreSQL storage should persist derived state and checkpoint progress.
+PostgreSQL storage should persist derived state and per-order projection progress.
 
 It should not introduce a second projection algorithm.
 
 The canonical projection reducer remains the source of derived-state logic.
 
-### Rule 6: Worker cursor strategy is explicit after PR4
+### Rule 6: Repaired progress strategy is explicit after ADR 0020
 
 PR1 defined a cursor-compatible checkpoint schema.
 
-PR4 later chose `GLOBAL_POSITION` as the first durable event-log scanning strategy for the PostgreSQL-backed projection worker.
+PR4 historically chose `GLOBAL_POSITION` as the first durable event-log
+scanning strategy for the PostgreSQL-backed projection worker.
 
-This preserves the original PR1 boundary: checkpoint progress is a worker cursor, not aggregate-local business state.
+ADR 0020 supersedes that mechanism for the current worker. Per-order progress
+advances by exact-next local sequence, while `global_position` is lineage and
+an eligible-work scheduling tie-breaker only.
 
 ---
 
@@ -363,9 +408,9 @@ Python continues to own:
 - projection-state derivation
 - worker orchestration
 - replay / rebuild flow
-- checkpoint update semantics
+- exact-next projection-progress update semantics
 - future Layer 2 comparison logic
-- final interpretation of cursor strategy
+- final interpretation of any generic cursor strategy
 
 ---
 
@@ -374,6 +419,7 @@ Python continues to own:
 PostgreSQL should own:
 
 - durable storage of projection state
+- durable storage and constraints for per-order projection progress
 - durable storage of worker checkpoint state
 - minimum valid row shape
 - exact numeric representation
@@ -514,4 +560,6 @@ The most important read-side persistence boundary is:
 
 The most important checkpoint boundary is:
 
-> A worker checkpoint is a global scan cursor, not an aggregate-local sequence.
+> A legacy checkpoint is generic cursor evidence, not a complete
+> committed-history frontier. The repaired worker resumes from exact-next
+> progress scoped to projection definition, epoch, and order.

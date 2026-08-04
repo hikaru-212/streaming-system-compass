@@ -34,6 +34,7 @@ Postmortems help preserve:
 - cases where protocol-level correctness must be distinguished from production wiring proof
 - cases where generic validation intuition must be corrected by authority-based semantic reasoning
 - cases where weak row-count assertions must be replaced by exact evidence assertions
+- cases where a correctly reasoned architectural warning remains unenforced until it becomes an executable invariant
 
 ---
 
@@ -56,11 +57,13 @@ Postmortems help preserve:
 | [from_replay_rebuild_validation_to_layer2_governance](from_replay_rebuild_validation_to_layer2_governance.md) | Replay / Layer 2 Boundary | Clarifies why Stage 3.5C PR5 replay / rebuild validation is the durable correctness substrate for derived state, while Compass Layer 2 remains the later semantic governance and runtime decision layer. |
 | [from_per_order_global_position_to_global_source_boundary](from_per_order_global_position_to_global_source_boundary.md) | Snapshot Schema / Source Boundary | Records the PR2 correction from per-order global-position uniqueness to true global accepted-history boundary uniqueness. |
 | [from_created_at_freshness_to_committed_history_boundaries](from_created_at_freshness_to_committed_history_boundaries.md) | Snapshot Freshness / Event-Log Cursor Semantics | Explains why projection snapshots should be ordered by accepted-history lineage instead of row creation time, and why `global_position` must be defined against commit, visibility, rollback, and recovery boundaries. |
+| [from_architectural_warning_to_executable_invariant](from_architectural_warning_to_executable_invariant.md) | Verification Workflow / Concurrency Invariants | Compares a schema defect that was immediately found and repaired with a correctly predicted commit-visibility risk that remained active until a deterministic multi-connection PostgreSQL test converted the warning into an executable invariant. |
 | [from_protocol_satisfaction_to_production_wiring_proof](from_protocol_satisfaction_to_production_wiring_proof.md) | Production Wiring / AI-Assisted Implementation | Explains why protocol-satisfying unit tests do not prove that a production adapter exists or that the real PostgreSQL assembly path works. |
 | [from_generic_validation_to_authority_based_reasoning](from_generic_validation_to_authority_based_reasoning.md) | Snapshot Trust / Authority-Based Validation | Records the PR4 correction from generic input-validation ordering to authority-first reasoning: accepted history must exist before snapshot trust can be evaluated. |
 | [stage_3_5d_local_correctness_global_premise_drift](stage_3_5d_local_correctness_global_premise_drift.md) | Stage Scope / AI-Assisted Engineering | Records the Stage 3.5D correction where locally coherent snapshot PRs remained technically valid, but the stage-level premise had to be re-audited after distinguishing write-side aggregate admission risk from read-side derived-state evidence. |
 | [from_row_count_assertions_to_evidence_assertions](from_row_count_assertions_to_evidence_assertions.md) | Testing / Assertion Fidelity | Records the Stage 3.5E PR4 near miss where exact evidence assertions exposed a PostgreSQL UUID return-type mismatch that row-count-only assertions would have hidden. |
 | [airflow_failure_and_boundary_thinking](airflow_failure_and_boundary_thinking.md) | Debugging / Boundary Thinking | Records how an early Airflow debugging failure exposed the cost of operating a system without first identifying the boundary responsible for the failure. |
+| [stage_4b_semantic_level_mismatch_in_ai_assisted_runtime_contract](stage_4b_semantic_level_mismatch_in_ai_assisted_runtime_contract.md) | Runtime Contract / AI-Assisted Engineering | Records the Stage 4B PR2 correction where a locally strong `DecisionReceipt` contract mixed evidence-source paths with operation/status vocabulary, and preserves the rule that AI-generated contracts require semantic-level admission review. |
 
 ---
 
@@ -125,6 +128,17 @@ The postmortem [From `created_at` Freshness to Committed-History Boundaries](fro
 - The postmortem records the distinction between allocation-order cursors and committed-history cursors.
 - It also separates temporary visibility gaps, permanent allocation gaps, and visible poison events, so later worker / validator design can avoid mixing gap recovery with DLQ handling.
 - This supports future snapshot trust validation, projection worker hardening, and distributed event-log design by making cursor semantics explicit instead of assuming that a monotonic number automatically equals committed history.
+
+---
+
+
+The postmortem [From Architectural Warning to Executable Invariant](from_architectural_warning_to_executable_invariant.md) relates the two Stage 3.5D source-boundary postmortems to the later Stage 3.5C cursor repair:
+
+- [From Per-Order Global Position to Global Source Boundary](from_per_order_global_position_to_global_source_boundary.md) records a concrete schema contradiction that was found and repaired immediately.
+- [From `created_at` Freshness to Committed-History Boundaries](from_created_at_freshness_to_committed_history_boundaries.md) correctly predicted allocation/commit visibility risk but did not yet prove that the current worker suffered the failure.
+- The later multi-connection PostgreSQL characterization test demonstrated that the warning was already an active correctness defect.
+- [ADR 0020 — Per-Order Projection Progress and Order-Local Snapshot Tails](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md) records the repaired production contract.
+- The postmortem preserves the workflow lesson that architectural warnings must become tracked proof obligations, executable invariants, or explicit accepted risks.
 
 ---
 

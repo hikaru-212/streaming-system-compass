@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+import pytest
 from psycopg import Connection
 
 from src.core.order.enums import EventType, OrderStatus
@@ -101,6 +102,35 @@ def make_validator(
         event_store=PostgresEventStore(connection),
         projection_store=PostgresProjectionStore(connection),
     )
+
+
+def test_validator_rejects_stores_on_different_connections(
+    db_connection: Connection,
+    db_connection_factory,
+    clean_database: None,
+) -> None:
+    other_connection = db_connection_factory()
+    other_connection.rollback()
+    try:
+        with pytest.raises(ValueError, match="must share the exact"):
+            DurableReplayValidator(
+                event_store=PostgresEventStore(db_connection),
+                projection_store=PostgresProjectionStore(other_connection),
+            )
+    finally:
+        other_connection.close()
+
+
+def test_validate_order_rejects_outer_transaction(
+    db_connection: Connection,
+    clean_database: None,
+) -> None:
+    validator = make_validator(db_connection)
+
+    db_connection.execute("SELECT 1")
+    with pytest.raises(RuntimeError, match="requires an idle connection"):
+        validator.validate_order("order-001")
+    db_connection.rollback()
 
 
 def test_validate_order_returns_match_when_projection_matches_replay(
@@ -275,6 +305,7 @@ def test_validate_order_does_not_mutate_accepted_history(
     db_connection.commit()
 
     before_history = event_store.load("order-001")
+    db_connection.rollback()
 
     result = validator.validate_order("order-001")
 
@@ -315,6 +346,7 @@ def test_validate_order_does_not_advance_checkpoint_progress(
     db_connection.commit()
 
     before_checkpoint = checkpoint_store.load_checkpoint(WORKER_NAME)
+    db_connection.rollback()
 
     result = validator.validate_order("order-001")
 
@@ -444,4 +476,3 @@ def test_validate_order_decimal_round_trip_does_not_create_false_drift(
     assert result.expected_state.total_amount == Decimal("100")
     assert result.persisted_state.total_amount == Decimal("100.00")
     assert result.expected_state == result.persisted_state
-    

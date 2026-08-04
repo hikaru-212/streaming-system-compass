@@ -12,13 +12,13 @@ Use roadmap documents to understand:
 * what depends on what
 * which features are intentionally deferred
 * how the project moves from durable truth toward runtime governance
-* how the project has completed Stage 4A and is entering Stage 4B DecisionReceipt / DiagnosticTrace work
+* how the project has completed Stage 4B and is entering Stage 4B.1 DiagnosticTrace / ResolutionTrace work
 
 ---
 
 ## Completed Baseline
 
-The project has completed the baseline sequence up to Stage 4A:
+The project has completed the baseline sequence through Stage 4B:
 
 * Stage 1 — Transactional Semantic Core
 * Stage 2 — Compass Layer 1 Write-side Validation
@@ -29,6 +29,7 @@ The project has completed the baseline sequence up to Stage 4A:
 * Stage 3.5D — Snapshot Trust Contract / Replay Efficiency
 * Stage 3.5E — Durable History and Permission Hardening
 * Stage 4A — SemanticOutcome Core
+* Stage 4B — DecisionReceipt / Runtime Evidence Record
 
 Detailed sequencing remains in [Implementation Roadmap](implementation_roadmap.md).
 
@@ -39,8 +40,12 @@ Completed implementation details from Stage 3.5B onward are preserved in [Implem
 * [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 * [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 * [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
+* [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
 
-Stage 4A has completed the SemanticOutcome core needed before Stage 4B receipt and trace work.
+Stage 4B PR1–PR7 completed the DecisionReceipt boundary, contract, generic and
+producer mapping, strict serializer, storage-neutral persistence contracts,
+and PostgreSQL persistence foundation. Automatic materialization and
+reconciliation remain deferred.
 
 ---
 
@@ -73,17 +78,18 @@ The deferred architecture backlog should be read after the main roadmaps. It doe
 Current implementation focus:
 
 ```text
-Stage 4B — DecisionReceipt / DiagnosticTrace
+Stage 4B.1 — DiagnosticTrace / ResolutionTrace
 ```
 
-Stage 4A is complete at the SemanticOutcome core level. It established runtime semantic outcome vocabulary, generic technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
-
-Stage 4B now starts from a cleaner semantic foundation:
+Stage 4B is complete. It starts later work from a stable evidence foundation:
 
 - raw technical status has a stable SemanticOutcome interpretation layer
 - read-side / snapshot observations preserve their observation boundaries
 - write-side admission outcomes preserve Layer 1 boundary semantics
-- identity evidence hardening is recorded before durable receipts and traces
+- identity evidence hardening is preserved in durable receipt contracts
+- producer-created flags remain `NOT_EVALUATED`
+- serializer v1 and explicit caller-owned persistence are implemented
+- traces remain separate and begin in Stage 4B.1
 
 ---
 
@@ -103,7 +109,8 @@ semantic truth
 → snapshot trust qualification / replay efficiency
 → minimal actor / permission boundary
 → SemanticOutcome core
-→ DecisionReceipt / DiagnosticTrace
+→ DecisionReceipt
+→ DiagnosticTrace / ResolutionTrace
 → action safety demo
 → later production and agent-facing hardening
 ```
@@ -150,10 +157,10 @@ Those belong to later stages.
 
 ## Stage 4 Public Subsequence
 
-Stage 4 is expected to proceed through:
+Stage 4 proceeds through:
 
-* Stage 4A — SemanticOutcome Core
-* Stage 4B — DecisionReceipt / Runtime Evidence Record
+* Stage 4A — SemanticOutcome Core — complete
+* Stage 4B — DecisionReceipt / Runtime Evidence Record — complete
 * Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 * Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
 * Stage 4B.5 — Order Domain Policy Contract v0

@@ -11,9 +11,19 @@ A minimal Stage 3 baseline projection runtime now exists, but it is still intent
 
 This document exists to clarify that distinction and to define the next implementation path toward a more durable and verified projection runtime.
 
+> **Current implementation supersession:** The Stage 3 in-memory evolution
+> below is historical architecture context. The current PostgreSQL projection
+> reads per-order eligible events from `order_events`, persists derived state in
+> `projection_states`, and atomically advances `projection_order_progress`.
+> ADR 0020 makes exact-next order-local sequence the completeness model.
+> `global_position` remains lineage and deterministic scheduling evidence, not
+> a scalar completeness cursor. The runtime supports one active worker for the
+> current projection definition and epoch; multi-worker coordination remains
+> deferred.
+
 ---
 
-## Current Situation
+## Historical Stage 3 Situation
 
 The projection layer now has a minimal executable runtime baseline.
 
@@ -78,7 +88,7 @@ That earlier form is still important as historical context, but it is no longer 
 
 ---
 
-### Current Baseline: Stage 3 Projection Runtime
+### Historical Baseline: Stage 3 Projection Runtime
 
 The current baseline is built around the following implemented steps.
 
@@ -130,7 +140,7 @@ This baseline establishes:
 
 ---
 
-### Next Target: Persistent Projection Runtime Baseline
+### Historical Next Target: Persistent Projection Runtime Baseline
 
 After the in-memory Stage 3 baseline, the next projection target is not DLQ or buffering first.
 
@@ -159,7 +169,7 @@ Expected additions include:
 
 ---
 
-## Main Components of the Current Stage 3 Baseline
+## Main Components of the Historical Stage 3 Baseline
 
 The current runtime baseline includes:
 
@@ -224,7 +234,7 @@ This keeps the projection layer stable and focused.
 
 ---
 
-## Current Baseline Scope
+## Historical Stage 3 Baseline Scope
 
 The current Stage 3 projection runtime intentionally does **not yet** include:
 

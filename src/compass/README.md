@@ -4,6 +4,12 @@
 
 This module defines the semantic validation and later governance logic of the system.
 
+> **Current status:** Layer 1 remains the accepted-history admission guard.
+> Stage 4A `SemanticOutcome` and Stage 4B `DecisionReceipt` contracts, generic
+> and producer mapping, and strict serialization are implemented under
+> `src.compass.runtime`. Stage 4B.1 traces and later policy, strategy, and retry
+> governance remain deferred.
+
 If `src/core/` defines meaning, and `src/pipeline/` executes meaning, then `src/compass/` exists to check whether that meaning remains semantically trustworthy under runtime conditions.
 
 ---
@@ -85,7 +91,7 @@ This reflects the broader project principle:
 
 ## Current Project Boundary
 
-At the current stage, Compass is strongest in **Layer 1 / transition truth validation**.
+Compass remains strongest in **Layer 1 / transition truth validation**, and it now also has implemented Stage 4A / Stage 4B runtime evidence contracts.
 
 This means the repository already has an implemented baseline for:
 
@@ -100,11 +106,13 @@ What is **not yet** implemented:
 - full state-level Compass Layer 2 runtime validation
 - checkpoint semantic verification as a concrete runtime subsystem
 - richer governance behavior such as warning, quarantine, audit workflow, or evidence-driven policy actions
+- automatic receipt materialization or accepted-history reconciliation
+- `DiagnosticTrace` / `ResolutionTrace`
 
 So Compass should currently be read as:
 
-- **implemented at Layer 1 baseline**
-- **planned at Layer 2 and governance layers**
+- **implemented at Layer 1 baseline and Stage 4A / Stage 4B evidence-contract layers**
+- **planned for trace, policy, strategy, retry, and action-governance layers**
 
 ---
 
@@ -227,32 +235,10 @@ In that sense:
 
 ## Current Focus and Next Step
 
-The implemented Compass focus is currently:
-
-1. transition truth validation
-2. later state-level validation
-3. later policy and governance behavior
-
-The next step is **not** to jump directly into governance.
-
-The nearer path is:
-
-- strengthen the Stage 3 runtime through persistent storage evolution
-- then build more meaningful Layer 2 / state-level validation on top of that stronger runtime baseline
-
-This order is intentional.
-
-The system should first decide:
-
-- what counts as a trustworthy event
-
-then strengthen:
-
-- how runtime state is persisted and replayed
-
-before it attempts to decide:
-
-- how richer semantic governance should behave
+The implemented Compass path now includes transition truth, durable runtime
+evidence producers, `SemanticOutcome`, and `DecisionReceipt`. The next step is
+Stage 4B.1 `DiagnosticTrace` / `ResolutionTrace`, followed by measurement,
+policy, strategy, retry, and action-governance layers in roadmap order.
 
 ---
 
@@ -279,8 +265,8 @@ This evolution matches the broader direction of the project.
 Compass is best understood as a layered semantic defense system.
 
 - Layer 1 protects event truth
-- Layer 2 will protect runtime state correctness
+- Layer 2 evidence is mapped into SemanticOutcome and DecisionReceipt contracts
 - later policy / evidence layers will govern system response to semantic violations
 
-At the current stage, only the first layer is implemented as a concrete baseline.
-The later layers remain intentionally deferred.
+At the current stage, execution policy remains deferred even though the
+semantic-outcome and receipt-evidence foundations are implemented.

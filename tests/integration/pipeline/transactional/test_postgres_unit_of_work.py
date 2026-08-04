@@ -77,6 +77,33 @@ def test_explicit_rollback_discards_event_and_idempotency_record(db_connection):
     assert count_rows(db_connection, "idempotency_records") == 0
 
 
+def test_enter_rejects_autocommit_before_writing_event_or_idempotency_record(
+    db_connection,
+):
+    event = make_created_event(order_id="order-uow-autocommit")
+    signature = make_request_signature(
+        request_id=event.request_id,
+        command_type=CommandType.CREATE,
+        order_id=event.order_id,
+        amount=event.amount,
+    )
+    db_connection.autocommit = True
+
+    try:
+        with pytest.raises(
+            RuntimeError,
+            match="requires connection.autocommit=False",
+        ):
+            with PostgresWriteSideUnitOfWork(db_connection) as uow:
+                uow.event_store.append(event, expected_current_version=0)
+                uow.idempotency_store.record(signature, event)
+
+        assert count_rows(db_connection, "order_events") == 0
+        assert count_rows(db_connection, "idempotency_records") == 0
+    finally:
+        db_connection.autocommit = False
+
+
 def test_idempotency_failure_rolls_back_appended_event(db_connection):
     created_event, original_signature = persist_successful_create(db_connection)
 

@@ -32,26 +32,32 @@ Related source files:
 
 - `src/compass/transition/runtime.py`
 - `src/compass/transition/types.py`
-- `src/pipeline/postgres_transactional_write_side.py`
-- `src/pipeline/postgres_write_side_config.py`
-- `src/storage/postgres_optimistic_admission_gate.py`
-- `src/storage/postgres_pessimistic_admission_gate.py`
+- `src/pipeline/transactional/postgres_write_side.py`
+- `src/pipeline/transactional/postgres_write_side_config.py`
+- `src/pipeline/transactional/postgres_admission.py`
 
 Related tests:
 
-- `tests/integration/pipeline/test_postgres_transactional_write_side.py`
-- `tests/integration/storage/test_postgres_admission_gate.py`
+- `tests/unit/pipeline/transactional/test_postgres_write_side_config.py`
+- `tests/integration/pipeline/transactional/test_postgres_write_side.py`
+- `tests/integration/pipeline/transactional/test_postgres_optimistic_admission.py`
+- `tests/integration/pipeline/transactional/test_postgres_pessimistic_admission.py`
 
 This ADR is accepted because the project now supports validation placement as an explicit write-side configuration boundary at the Stage 3.5B baseline level.
 
-The accepted baseline intentionally supports only two meaningful placement / admission combinations:
+For write paths that perform material Compass semantic validation,
+the accepted Stage 3.5B baseline defines two preferred
+placement / admission combinations:
 
 ```text
-PRE_TRANSACTION + OPTIMISTIC admission
-IN_TRANSACTION  + PESSIMISTIC admission
+PRE_TRANSACTION + OPTIMISTIC
+IN_TRANSACTION  + PESSIMISTIC
 ```
 
-The other two theoretical combinations are documented below as rejected or non-preferred compositions because they combine the cost profile of one strategy with the protection model of the other.
+Other combinations remain technically valid, but they are not the
+preferred baseline for non-trivial semantic validation because their
+validation cost, transaction duration, and concurrency protection
+do not reinforce one another as cleanly.
 
 ---
 
@@ -155,14 +161,16 @@ ConcurrencyAdmission
 = whether a writer may occupy the next accepted-history position
 ```
 
-The accepted Stage 3.5B baseline supports only two meaningful composition patterns:
+For write paths that perform material Compass semantic validation, the
+accepted Stage 3.5B baseline defines two preferred composition patterns:
 
 ```text
 1. PRE_TRANSACTION + OPTIMISTIC admission
 2. IN_TRANSACTION  + PESSIMISTIC admission
 ```
 
-These are not arbitrary pairings.
+These are preferred pairings, not the only technically coherent
+compositions.
 
 They follow from the timing of validation, version observation, transaction duration, and lock ownership.
 
@@ -335,19 +343,30 @@ The lock protects the stream critical section.
 
 The append-time check protects accepted-history continuity.
 
+Append-time version and continuity checking remains required in both preferred
+strategies.
+
+Under optimistic admission, append-time version checking is the primary
+competing-writer arbitration mechanism.
+
+Under pessimistic admission, the stream lock is the primary writer coordination
+mechanism, while append-time version checking remains the final
+accepted-history continuity guard.
+
 ---
 
-## Rejected / Non-Preferred Strategy Combinations
+## Non-Preferred Strategy Combinations
 
-The following combinations are not part of the accepted Stage 3.5B baseline.
+The following combinations are not the preferred Stage 3.5B baseline for
+material Compass semantic validation.
 
-They are not impossible in the abstract, but they are rejected as default compositions for this project because their cost and protection models do not align.
+They remain technically valid and constructable. Their validation cost and
+protection models do not align as cleanly for non-trivial Compass semantic
+validation.
 
 ---
 
-### Rejected Combination A: `IN_TRANSACTION + OPTIMISTIC`
-
-At first glance, this looks safe because validation runs inside a transaction.
+### Non-Preferred Combination A: `IN_TRANSACTION + OPTIMISTIC`
 
 However, optimistic admission does not acquire a stream lock before expensive validation work.
 
@@ -367,6 +386,19 @@ BEGIN
 The problem is not that this is logically invalid.
 
 The problem is that it combines the long transaction cost of in-transaction validation with the late-rejection behavior of optimistic admission.
+
+In general transactional systems, `IN_TRANSACTION + OPTIMISTIC` is coherent
+and commonly reasonable when there is no independent semantic-validation
+layer, validation is disabled or very cheap, only ordinary domain checks run,
+or the composition is intentionally selected for benchmarking or baseline
+comparison. Ordinary systems using in-transaction validation with OCC are not
+inherently incorrect.
+
+The Compass-specific concern is narrower: material semantic validation runs
+inside an open database transaction without pessimistic stream protection and
+may still lose at late append-time OCC. That can waste Compass validation work,
+extend transaction duration, and occupy database connection and snapshot
+resources without protecting the semantic work from a competing writer.
 
 If validation is expensive, the system may hold a database transaction open while doing semantic work, only to discover at the final append-time admission step that the stream version has already changed.
 
@@ -396,7 +428,7 @@ Use `IN_TRANSACTION + PESSIMISTIC` if the goal is to protect validation work und
 
 ---
 
-### Rejected Combination B: `PRE_TRANSACTION + PESSIMISTIC`
+### Non-Preferred Combination B: `PRE_TRANSACTION + PESSIMISTIC`
 
 This combination is also misaligned.
 
@@ -517,17 +549,21 @@ validation placement
 concurrency admission
 ```
 
-But separation does not mean every combination is equally useful.
+But separation does not mean every combination is equally well aligned for
+material Compass semantic validation.
 
-The accepted baseline keeps only the combinations where placement timing and admission timing reinforce each other.
+The preferred baseline emphasizes the combinations where placement timing and
+admission timing reinforce each other.
 
 ---
 
-### 3. In-transaction validation is only worth the cost when the stream is protected
+### 3. Material in-transaction Compass validation is best protected by a stream lock
 
 In-transaction validation can be appropriate for irreversible operations, payments, settlement, core ledger transitions, high-value state mutations, or high-risk DAG checkpoints.
 
-But if the system chooses in-transaction validation, it should also choose an admission strategy that protects the expensive validation section.
+For material Compass semantic validation, the preferred baseline pairs
+in-transaction placement with an admission strategy that protects the
+expensive validation section.
 
 That is why the accepted high-defense pairing is:
 
@@ -536,6 +572,10 @@ IN_TRANSACTION + PESSIMISTIC
 ```
 
 Without early stream protection, in-transaction validation risks spending expensive validation time inside an open database transaction and then losing at append-time OCC.
+
+This preference does not prohibit `IN_TRANSACTION + OPTIMISTIC`, especially
+when validation is absent, cheap, limited to ordinary domain checks, or used
+for an intentional benchmark.
 
 ---
 
@@ -594,7 +634,8 @@ This preserves Compass as a semantic governance mechanism while allowing perform
 
 - Clarifies the difference between validation strength and validation placement.
 - Keeps validation placement separate from transaction atomicity and concurrency admission.
-- Prevents the project from treating every placement / admission combination as equally meaningful.
+- Distinguishes the preferred Compass pairings from technically valid
+  alternative compositions.
 - Preserves `PRE_TRANSACTION + OPTIMISTIC` as the short-transaction, high-throughput baseline.
 - Preserves `IN_TRANSACTION + PESSIMISTIC` as the high-defense, serialized-stream baseline.
 - Explains why `IN_TRANSACTION + OPTIMISTIC` wastes validation work inside a transaction under stale-write rejection.
@@ -656,27 +697,46 @@ ValidationPlacement.IN_TRANSACTION
 ValidationPlacement.PRE_TRANSACTION
 ```
 
-Accepted baseline examples:
+Current API examples:
 
 ```python
-PostgresWriteSideConfig(
-    validation_mode=ValidationMode.STRICT,
-    validation_placement=ValidationPlacement.PRE_TRANSACTION,
-    admission_strategy=AdmissionStrategy.OPTIMISTIC,
+write_side = PostgresTransactionalWriteSide(
+    connection=connection,
+    validation_runtime=validation_runtime,
+    config=PostgresWriteSideConfig(
+        validation_mode=ValidationMode.STRICT,
+        validation_placement=ValidationPlacement.PRE_TRANSACTION,
+    ),
 )
 ```
 
-and:
+Omitting `admission_gate_factory` uses the current default
+`PostgresOptimisticAdmissionGate`.
+
+The preferred in-transaction pessimistic baseline uses the same placement
+configuration plus an explicit admission-gate factory:
 
 ```python
-PostgresWriteSideConfig(
-    validation_mode=ValidationMode.STRICT,
-    validation_placement=ValidationPlacement.IN_TRANSACTION,
-    admission_strategy=AdmissionStrategy.PESSIMISTIC,
+def pessimistic_gate_factory(uow):
+    return PostgresPessimisticAdmissionGate(
+        connection=uow.connection,
+        event_store=uow.event_store,
+    )
+
+
+write_side = PostgresTransactionalWriteSide(
+    connection=connection,
+    validation_runtime=validation_runtime,
+    admission_gate_factory=pessimistic_gate_factory,
+    config=PostgresWriteSideConfig(
+        validation_mode=ValidationMode.STRICT,
+        validation_placement=ValidationPlacement.IN_TRANSACTION,
+    ),
 )
 ```
 
-The project should avoid presenting the rejected combinations as normal supported configurations.
+The project should describe the other combinations as technically valid but
+non-preferred for material Compass semantic validation.
 
 ---
 
@@ -749,7 +809,8 @@ placement
 
 can be configured based on risk, reversibility, latency budget, and consistency requirements.
 
-However, only two placement / admission combinations are accepted as the Stage 3.5B baseline:
+For write paths that perform material Compass semantic validation, two
+placement / admission combinations are preferred as the Stage 3.5B baseline:
 
 ```text
 PRE_TRANSACTION + OPTIMISTIC
@@ -760,4 +821,6 @@ The first optimizes for short transactions and accepts late stale-write rejectio
 
 The second optimizes for protected validation under a stream lock and accepts longer transaction / lock duration.
 
-The durable write-side should support both without rewriting the core storage, idempotency, validation, and admission boundaries.
+Other combinations remain technically valid. The durable write-side should
+support explicit composition without rewriting the core storage, idempotency,
+validation, and admission boundaries.

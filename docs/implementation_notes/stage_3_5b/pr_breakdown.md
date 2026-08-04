@@ -524,11 +524,11 @@ Without validation placement strategy, Stage 4 timing or evidence tables would o
 
 - define `ValidationPlacement`
 - keep `ValidationMode` separate from `ValidationPlacement`
-- preserve `IN_TRANSACTION` as the default validation placement
+- use `PRE_TRANSACTION` as the default validation placement
 - support a minimal `PRE_TRANSACTION` validation + append-time admission path
 - introduce `PostgresWriteSideConfig` / `ValidationPlacement` as the configuration boundary
 - ensure stale pre-validated candidates cannot enter accepted history
-- preserve `IN_TRANSACTION` as the default behavior
+- retain `IN_TRANSACTION` as an explicit behavior
 - keep `append_if_admitted(...)` as the final accepted-history mutation boundary
 - clean up implicit read transactions before CPU-side `PRE_TRANSACTION` validation
 - enable latency and safety comparison without duplicating storage logic
@@ -538,7 +538,7 @@ Without validation placement strategy, Stage 4 timing or evidence tables would o
 ```python
 PostgresWriteSideConfig(
     validation_mode=ValidationMode.STRICT,
-    validation_placement=ValidationPlacement.IN_TRANSACTION,
+    validation_placement=ValidationPlacement.PRE_TRANSACTION,
     admission_strategy=AdmissionStrategy.OPTIMISTIC,
 )
 ```

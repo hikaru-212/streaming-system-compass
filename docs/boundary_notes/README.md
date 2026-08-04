@@ -49,7 +49,7 @@ Boundary notes are especially useful when asking questions such as:
 - Why does Compass validation not replace persistence admission?
 - Why is projection split into reducer and worker rather than one mixed component?
 - Why does transactional consistency not mean boundary merge?
-- Why does a projection worker need a global cursor instead of aggregate-local sequence?
+- Why does the current order-state projection use per-order exact-next progress while retaining global position only as lineage and scheduling evidence?
 - Why does replay validation compare against projection state without making projection state the source of truth?
 - Why should accepted history be harder to mutate than derived runtime state?
 - Why do runtime database roles require a separate permission-test layer instead of replacing ordinary integration tests?
@@ -105,6 +105,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
 - [Minimal Actor Metadata Boundary](minimal_actor_metadata_boundary.md)
 - [Runtime SemanticOutcome Boundary](runtime_semantic_outcome_boundary.md)
+- [DecisionReceipt Boundary — current canonical cross-stage boundary](decision_receipt_boundary.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
 
@@ -117,7 +118,10 @@ Two projection-related notes are intentionally preserved:
 - **Projection Module Boundary** describes the external role of projection as a whole.
 - **Projection Runtime Boundary** describes the internal Stage 3 boundary between reducer, worker, projection store, and checkpoint store.
 
-The global-position projection worker note extends the projection runtime boundary for Stage 3.5C PR4. It clarifies why a durable PostgreSQL-backed projection worker needs a global event-log cursor instead of using aggregate-local `order_events.sequence`.
+The global-position projection worker note preserves the historical Stage
+3.5C PR4 boundary. ADR 0020 supersedes its scalar-cursor completeness claim:
+the current order-state worker uses exact-next per-order progress, while
+`global_position` remains lineage and scheduling evidence.
 
 The durable replay / rebuild validation note extends the projection boundary for Stage 3.5C PR5. It clarifies how accepted history should be replayed through the canonical reducer and compared with durable projection state without turning projection state into the source of truth or prematurely introducing Compass Layer 2.
 
@@ -136,6 +140,11 @@ The layered testing strategy note extends the permission boundary into the test 
 The minimal actor metadata boundary note extends Stage 3.5E toward Stage 4. It clarifies why database roles, producer metadata such as `created_by`, and future governance decision evidence should not be collapsed into the same concept.
 
 The runtime SemanticOutcome boundary note starts Stage 4A. It clarifies why raw technical runtime status should not be treated as semantic outcome, why semantic outcome should not make runtime decisions, and why fast-path failure should not be collapsed into semantic drift.
+
+The DecisionReceipt boundary note is the current canonical cross-stage owner.
+It clarifies why selected `SemanticOutcome` evidence may become durable
+governance evidence without turning receipts into application logs, diagnostic
+traces, runtime decisions, strategy selection, or retry governance.
 
 ---
 
@@ -162,10 +171,11 @@ A practical reading order is:
 17. [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
 18. [Minimal Actor Metadata Boundary](minimal_actor_metadata_boundary.md)
 19. [Runtime SemanticOutcome Boundary](runtime_semantic_outcome_boundary.md)
-20. [Compass Layer Boundary](compass_layer_boundary.md)
-21. [Persistence Boundary](persistence_boundary.md)
-22. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
-23. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+20. [DecisionReceipt Boundary](decision_receipt_boundary.md)
+21. [Compass Layer Boundary](compass_layer_boundary.md)
+22. [Persistence Boundary](persistence_boundary.md)
+23. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+24. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 
@@ -188,6 +198,7 @@ This roughly follows the intended semantic development order of the project:
 - define testing layers for mechanism tests, permission-boundary tests, and future governance-flow tests
 - define minimal actor metadata before Stage 4 decision receipts
 - define runtime semantic outcomes before receipts, policies, strategies, and retry governance
+- define durable governance receipts before diagnostic traces, runtime policies, strategies, and retry governance
 - define semantic validation layers
 - define durable-world persistence discipline
 - define read-side persistence semantics
@@ -220,6 +231,7 @@ These notes should be read together with:
 - [Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
 - [Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
 - [Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md)
+- [DecisionReceipt Is Governance Evidence, Not Application Logging](../adr/0016_decision_receipt_is_governance_evidence.md)
 
 A good rule of thumb is:
 

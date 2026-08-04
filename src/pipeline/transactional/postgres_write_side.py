@@ -48,6 +48,7 @@ CandidateEventBuilder = Callable[[OrderAggregate], OrderEvent]
 def _default_admission_gate_factory(
     uow: PostgresWriteSideUnitOfWork,
 ) -> ConcurrencyGate:
+    """Build the default optimistic append-admission gate."""
     return PostgresOptimisticAdmissionGate(uow.event_store)
 
 
@@ -86,12 +87,13 @@ class PostgresTransactionalWriteSide:
 
     PR6 makes validation placement explicit.
 
-    Default behavior remains:
+    Default behavior is:
 
     - ValidationMode.STRICT
-    - ValidationPlacement.IN_TRANSACTION
+    - ValidationPlacement.PRE_TRANSACTION
+    - PostgresOptimisticAdmissionGate
 
-    PRE_TRANSACTION is now supported as a separate orchestration path.
+    IN_TRANSACTION remains available through explicit configuration.
     """
 
     def __init__(

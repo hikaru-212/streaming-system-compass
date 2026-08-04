@@ -6,6 +6,12 @@
 
 This document describes the transactional core of the system.
 
+> **Current status:** The original semantic boundaries remain authoritative,
+> and the write side now has durable PostgreSQL persistence, two-phase
+> admission, permission hardening, Stage 4A `SemanticOutcome` mapping, and
+> Stage 4B write-side `DecisionReceipt` mapping. Receipt persistence is an
+> explicit caller-owned boundary; it is not automatic write-side wiring.
+
 The transactional core is the first major implementation milestone of the project.  
 It is the part of the system responsible for producing semantically valid domain events and preserving a deterministic accepted history.
 

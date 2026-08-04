@@ -6,6 +6,21 @@
 
 Accepted
 
+## Current Tail-Mechanism Supersession
+
+ADR 0013 remains accepted for snapshot runtime eligibility, snapshot
+qualification, validation-receipt, compatibility, and authority decisions.
+[ADR 0020](0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+supersedes only its original snapshot-tail resumption mechanism and related
+global-position completeness assumption.
+
+The current aggregate-local projection resumes a snapshot tail within the same
+`order_id` after `snapshot.source_event_sequence`, ordered by ascending
+order-local sequence. `snapshot.source_global_position` remains snapshot
+lineage and must not be interpreted as a complete committed-history frontier.
+The broader snapshot trust and validation-receipt decisions in this ADR remain
+in force.
+
 ---
 
 ## Implementation Status
@@ -375,7 +390,7 @@ Conceptually:
 ```text
 explicitly qualified projection snapshot
 → hydrate snapshot state
-→ load tail events after snapshot.source_global_position
+→ load same-order tail events after snapshot.source_event_sequence
 → replay tail events through canonical reducer
 → resolved projection state
 ```
@@ -398,7 +413,7 @@ The first implementation may use conservative local compatibility checks such as
 - snapshot belongs to the requested order
 - state_version must satisfy the current reducer contract
 - snapshot payload must hydrate into the current projection state model
-- tail event source must satisfy cursor-ordering contract
+- tail event source must satisfy exact contiguous order-local sequence
 ```
 
 If these checks reject the snapshot:
@@ -804,8 +819,8 @@ PR4.5 may include:
 - snapshot-id based loading, if needed
 - local compatibility checks
 - snapshot state hydration
-- tail event loading after snapshot.source_global_position
-- tail cursor contract checks
+- same-order tail event loading after snapshot.source_event_sequence
+- exact contiguous order-local sequence checks
 - canonical reducer tail replay
 - PostgreSQL integration proof for resolver wiring
 ```

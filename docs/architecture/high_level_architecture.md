@@ -8,6 +8,13 @@ This document describes the top-level structure of the Streaming System + Compas
 
 The goal is not to explain every implementation detail, but to define the major layers of the system and how they relate to one another.
 
+> **Current status after Stage 4B:** The repository has durable PostgreSQL
+> write-side and read-side baselines, exact-next per-order projection progress
+> under ADR 0020, read-side snapshot trust, `SemanticOutcome`, and an explicit
+> `DecisionReceipt` serialization and persistence foundation. Snapshots remain
+> derived evidence, and receipt materialization is not automatic. Stage 4B.1
+> is next.
+
 ---
 
 ## System Goal
@@ -77,7 +84,8 @@ This is where the system answers:
 - how accepted history is appended and loaded
 - how idempotency records are stored
 - how projection state is persisted
-- how checkpoints / offsets are tracked
+- how per-order projection progress and legacy checkpoints are tracked
+- how versioned DecisionReceipt envelopes are persisted
 
 Storage preserves semantic artifacts but does not define their meaning.
 
@@ -111,8 +119,10 @@ This is where the system answers:
 
 Compass is the semantic checking layer of the system.
 
-At the current baseline, the implemented focus is still the write-side transition-truth layer.  
-The later state-level/runtime verification layer remains part of the intended evolution.
+At the current baseline, write-side transition truth remains the enforcement
+layer. Stage 4A and Stage 4B also implement semantic outcome and receipt
+evidence contracts for write-side, read-side, and snapshot producers. Policy,
+strategy, retry, and action execution remain later layers.
 
 ---
 
@@ -143,8 +153,11 @@ At a high level, the system evolves in this order:
 3. define how commands flow through the transactional pipeline
 4. define how Compass validates event truth before persistence
 5. define projection and read-side runtime execution
-6. later validate projected/runtime state semantics
-7. pressure the whole system using chaos scenarios
+6. map bounded technical evidence into `SemanticOutcome`
+7. preserve selected evidence in `DecisionReceipt`
+8. explicitly persist receipts when caller orchestration chooses to do so
+9. later apply trace, policy, strategy, retry, and action-governance layers
+10. pressure the whole system using chaos scenarios
 
 This sequencing reflects the design philosophy of the project:
 

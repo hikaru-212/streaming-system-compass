@@ -5,7 +5,9 @@
 This directory contains PostgreSQL-backed permission-boundary integration tests for **Streaming System + Compass**.
 
 These tests are not general security examples.
-They are executable architecture claims for the durable history and permission boundary completed during **Stage 3.5E**.
+They are executable architecture claims for the durable history and permission
+boundary established during **Stage 3.5E** and extended by foundational
+**Stage 4B PR6** receipt grants.
 
 At the current baseline, this directory covers:
 
@@ -13,6 +15,7 @@ At the current baseline, this directory covers:
 Stage 3.5E PR3 — Accepted-History Mutation Hardening Tests
 Stage 3.5E PR4 — Derived-State Mutation Permission Tests
 Stage 3.5E PR5 — Minimal Actor Metadata Boundary
+Stage 4B PR6 — DecisionReceipt Initial Permission Boundary
 ```
 
 ---
@@ -49,10 +52,12 @@ These tests cover:
 - `idempotency_records`
 - `order_events_global_position_seq`
 - `projection_states`
+- `projection_order_progress`
 - `projection_checkpoints`
 - `projection_snapshots`
+- `decision_receipts`
 
-They verify both sides of the Stage 3.5E boundary:
+They verify the Stage 3.5E boundary and the foundational PR6 extension:
 
 ```text
 PR3
@@ -60,6 +65,9 @@ PR3
 
 PR4
 = derived-state controlled mutation and snapshot evidence protection
+
+PR6
+= insert-oriented DecisionReceipt evidence with narrowly scoped readers
 ```
 
 ---
@@ -195,7 +203,19 @@ projection_checkpoints
 
 ---
 
-### 6. Projection Snapshot Permission Boundary
+### 6. Projection Order Progress Permission Boundary
+
+These tests verify `projection_order_progress`.
+
+They prove that the projection worker can select, insert, and update repaired
+per-order progress but cannot delete it; snapshot and read-only roles can
+inspect it; and unauthorized roles cannot mutate it. Progress remains derived
+processing evidence, not accepted-history authority. Deletion for a
+human-controlled rebuild is an owner, migration, or administrative operation.
+
+---
+
+### 7. Projection Snapshot Permission Boundary
 
 These tests verify `projection_snapshots`.
 
@@ -220,6 +240,16 @@ Trust still depends on accepted history, lineage, payload evidence, validation, 
 
 ---
 
+### 8. DecisionReceipt Permission Boundary
+
+These tests verify that `compass_app_writer` can select and insert foundational
+receipt evidence, while `compass_readonly` can select it. Neither role may
+update or delete receipt rows. Projection and snapshot workers receive no
+initial access. These grants establish a storage permission boundary only; they
+do not implement receipt materialization or reconciliation.
+
+---
+
 ## What These Tests Prove
 
 These tests prove that the PostgreSQL role / privilege baseline preserves the following claims:
@@ -229,9 +259,13 @@ These tests prove that the PostgreSQL role / privilege baseline preserves the fo
 3. Only the intended writer role can consume accepted-history global-position sequence values.
 4. Derived projection state remains operationally mutable through the projection worker role.
 5. Projection checkpoint progress remains operationally mutable through the projection worker role.
-6. Projection snapshots remain insert-oriented evidence artifacts through the snapshot worker role.
-7. Read-only observation does not imply mutation permission.
-8. Permission-boundary tests are separate from ordinary storage / mechanism integration tests.
+6. Repaired per-order progress is mutable only through its intended worker boundary.
+7. Projection snapshots remain insert-oriented evidence artifacts through the snapshot worker role.
+8. Read-only observation does not imply mutation permission.
+9. Permission-boundary tests are separate from ordinary storage / mechanism integration tests.
+10. DecisionReceipt rows are insert-oriented evidence: the application writer
+    can select and insert, read-only can select, and the other normal runtime
+    roles cannot update or delete them.
 
 ---
 
@@ -250,7 +284,8 @@ These tests do not prove:
 - chaos / concurrency survival
 - Compass Layer 2 governance decisions
 - `SemanticOutcome`
-- `DecisionReceipt`
+- DecisionReceipt semantic correctness, serialization, storage API, or runtime
+  materialization
 - `RuntimeDecisionPolicy`
 - `StrategySelector`
 - `RetryGovernance`
@@ -273,10 +308,11 @@ These tests require:
 TEST_DATABASE_URL
 ```
 
-and the Stage 3.5E PostgreSQL migrations, including:
+and the Stage 3.5E plus foundational Stage 4B PostgreSQL migrations, including:
 
 ```text
 db/migrations/005_create_durable_state_permission_roles.sql
+db/migrations/007_create_decision_receipts.sql
 ```
 
 ---
@@ -303,6 +339,9 @@ Both are needed, but they prove different things.
 
 ## Summary
 
-Stage 3.5E completes the minimum durable-history permission hardening layer before Stage 4 runtime semantic governance.
+Stage 3.5E establishes the minimum durable-history permission hardening layer,
+and foundational Stage 4B PR6 extends it to durable receipt evidence.
 
-The tests in this directory prove that accepted history, successful idempotency receipts, derived state, checkpoints, and snapshots do not share the same mutation authority.
+The tests in this directory prove that accepted history, successful idempotency
+receipts, DecisionReceipt evidence, derived state, checkpoints, and snapshots
+do not share the same mutation authority.

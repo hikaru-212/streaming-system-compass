@@ -22,10 +22,10 @@ Pure naming preference, style cleanup, or already-completed implementation work 
 
 Completed Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
 
-Current focus:
+Current focus after Stage 4B closeout:
 
 ```text
-Stage 4B — DecisionReceipt / DiagnosticTrace
+Stage 4B.1 — DiagnosticTrace / ResolutionTrace
 ```
 
 Completed implementation details now live under:
@@ -35,16 +35,17 @@ Completed implementation details now live under:
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 - [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
+- [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
 
-This backlog should now be used only for concerns intentionally deferred beyond the completed durable write-side, durable read-side, read-side snapshot trust, durable permission, and Stage 4A SemanticOutcome baselines.
+This backlog should now be used only for concerns intentionally deferred beyond the completed durable write-side, durable read-side, read-side snapshot trust, durable permission, Stage 4A SemanticOutcome, and Stage 4B DecisionReceipt baselines.
 
 ---
 
 ## Status Legend
 
 ```text
-Stage 4B / evidence design
-→ should wait for DecisionReceipt, DiagnosticTrace, runtime evidence, or governance work
+Stage 4B.1 / trace design
+→ should wait for DiagnosticTrace or ResolutionTrace work
 
 Stage 4E / retry classification
 → should wait for DecisionReceipt / request-attempt evidence design
@@ -89,14 +90,16 @@ one active process per worker_name
 The current read-side boundary is:
 
 ```text
-accepted history
-→ global-position event source
+accepted history + per-order progress
+→ exact-next eligible event source
 → canonical reducer
 → projection state
-→ checkpoint progress
+→ per-order progress
 ```
 
-with projection state and checkpoint progress persisted atomically.
+with projection state and per-order progress persisted atomically. Under ADR
+0020, `global_position` remains lineage and scheduling evidence rather than a
+completeness cursor.
 
 Adding worker leasing or checkpoint row locking would expand the baseline from deterministic durable read-side semantics into runtime coordination hardening.
 
@@ -128,7 +131,7 @@ This future work should preserve the current invariant:
 ```text
 projection state
 +
-checkpoint progress
+per-order progress
 ```
 
 must remain atomic.
@@ -272,7 +275,7 @@ Stage 4 / domain policy contract
 After:
 
 ```text
-Stage 4B — Structured Semantic Outcome / Error Model v1
+Stage 4A — SemanticOutcome Core (complete)
 ```
 
 and before hardening:
@@ -695,6 +698,129 @@ When test runtime, CI cost, or local development friction becomes a meaningful b
 
 ---
 
+## 10A. Class-Based Test Organization after Stage 4 Governance Boundaries Stabilize
+
+### Current Decision
+
+Do not perform broad class-based test reorganization as part of the completed
+Stage 4B closeout.
+
+Stage 4 Interlude PR0 already completed the intended pre-Stage-4B test helper consolidation. That cleanup moved stable repeated builders and small PostgreSQL helpers into `tests/shared/` while preserving:
+
+```text
+same test names
+same assertions
+same behavior
+less duplicated setup
+```
+
+Class-based grouping is deferred test-maintainability work because Stage 4B.1,
+Stage 4B.2, Stage 4B.5, Stage 4C, Stage 4D, and Stage 4E may still reshape the
+runtime governance test surface.
+
+### Why Not Now
+
+Class grouping can improve readability after the semantic boundaries are stable, but doing it too early may hide the evolving distinctions between:
+
+```text
+DecisionReceipt construction
+DecisionReceipt evidence extraction
+DiagnosticTrace lineage
+Measurement / cost evidence
+RuntimeDecisionPolicy
+StrategySelector
+RetryGovernance
+```
+
+The current priority is to preserve the explicit Stage 4B test evidence while
+later governance contracts are still emerging.
+
+The project should not reorganize tests around classes merely for aesthetic grouping.
+
+### Future Work
+
+As Stage 4B.1, Stage 4B.2, Stage 4B.5, Stage 4C, Stage 4D, and Stage 4E
+boundaries become concrete, revisit class-based organization when a specific
+high-density test surface has stable semantic responsibilities and a real
+maintainability need.
+
+Potential future grouping examples:
+
+```text
+TestDecisionReceiptConstruction
+TestDecisionReceiptEvidence
+TestDecisionReceiptIdentityLineage
+TestDiagnosticTraceLineage
+TestRuntimeDecisionPolicy
+TestStrategySelection
+TestRetryGovernance
+TestPostgresWriteSideCreateFlow
+TestPostgresWriteSideReplayAndConflict
+```
+
+Existing transition validator tests already provide a useful reference style because they group by semantic failure class, for example:
+
+```text
+TestPredecessorMismatchCases
+TestPrevStatusMismatchCases
+TestPrevVersionMismatchCases
+TestStaleCandidateCases
+```
+
+Future class grouping should follow the same principle:
+
+```text
+semantic responsibility first
+not visual grouping for its own sake
+```
+
+### Guardrails
+
+Future class-based cleanup should preserve:
+
+```text
+same test intent
+same assertions
+same behavior
+explicit semantic evidence
+explicit identity lineage
+explicit boundary conditions
+```
+
+It should not introduce:
+
+```text
+scenario DSL
+opaque broad fixtures
+hidden semantic setup
+hidden transaction or lock behavior
+hidden identity contradiction setup
+production-readiness behavior
+```
+
+### Current Classification
+
+```text
+Later evaluation / post-Stage-4 governance test organization
+```
+
+### Suggested Timing
+
+Revisit after at least one of the following is true:
+
+```text
+a high-density Stage 4B.1, Stage 4B.2, Stage 4B.5, Stage 4C, Stage 4D,
+or Stage 4E test surface has stable semantic responsibilities and concrete
+maintainability pressure
+public-release test readability review begins
+```
+
+Do not treat this as a Stage 4B deliverable. It remains optional later
+maintainability work, and any grouping should continue to follow semantic
+responsibilities rather than visual uniformity.
+
+---
+
 ## 11. Aggregate Snapshot Schema / Store and Write-Side Rehydration
 
 ### Current Decision
@@ -912,6 +1038,34 @@ Stage 5+ / later governance hardening
 ### Suggested Timing
 
 After Stage 5 dual-dimension governance makes semantic correctness and operational freshness explicit.
+
+---
+
+## Capacity Pressure Evidence Checkpoint
+
+### Current Decision
+
+Do not introduce a capacity mechanism or a new semantic status now.
+
+Concurrency control protects correctness under shared-state contention.
+Capacity controls protect availability and resource usage under load. Locks
+and optimistic concurrency control are therefore not rate limiting.
+
+### Future Evidence and Mechanisms
+
+A future design should follow observed baseline, load, stress, soak, and fault
+evidence. Possible mechanisms include rate limiting, bounded concurrency,
+queues, per-key admission, and backpressure.
+
+Overload must not be mapped directly to semantic invalidity. Capacity pressure
+is operational evidence that later governance may interpret; it is not proof
+that the underlying domain action is semantically invalid.
+
+### Current Classification
+
+```text
+Later production hardening
+```
 
 ---
 

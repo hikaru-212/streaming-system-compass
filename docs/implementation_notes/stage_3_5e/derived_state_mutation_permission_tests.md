@@ -2,6 +2,10 @@
 
 [← Back to Stage 3.5E](README.md)
 
+> ADR 0020 adds permission probes for `projection_order_progress`: intended
+> worker select/insert/update, runtime DELETE rejection, unauthorized mutation
+> rejection, and read-only audit inspection.
+
 ## Purpose
 
 This note records the implementation result for:

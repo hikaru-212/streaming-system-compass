@@ -9,14 +9,15 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the completion of Stage 4A:
+This version reflects the project position after the completion of Stage 4B:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
 - Stage 3.5D snapshot trust / replay-efficiency implementation details have been moved to implementation notes.
 - Stage 3.5E durable history and permission hardening is complete.
 - Stage 4A SemanticOutcome core is complete.
-- Stage 4B DecisionReceipt / DiagnosticTrace is now the next implementation stage.
+- Stage 4B DecisionReceipt PR1–PR7 is complete.
+- Stage 4B.1 DiagnosticTrace / ResolutionTrace is now the next implementation stage.
 - Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
@@ -47,7 +48,7 @@ This means:
 - Stage 3.5E is complete as the durable history and permission hardening baseline.
 - Write-side aggregate snapshot implementation is explicitly deferred.
 - Stage 4A is complete as the SemanticOutcome core.
-- Stage 4B is the next implementation stage.
+- Stage 4B is complete as the DecisionReceipt evidence and persistence foundation.
 
 Detailed completed-stage execution records now live under:
 
@@ -56,14 +57,15 @@ Detailed completed-stage execution records now live under:
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 - [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
+- [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
 
 The current major focus is:
 
-- **Stage 4B — DecisionReceipt / DiagnosticTrace**
+- **Stage 4B.1 — DiagnosticTrace / ResolutionTrace**
 
-After Stage 4A, the project can now proceed toward:
+After Stage 4B, the project can now proceed toward:
 
-- Stage 4B DecisionReceipt / DiagnosticTrace: durable runtime evidence records, diagnostic traces, evidence shape, and correlation boundaries
+- Stage 4B.1 DiagnosticTrace / ResolutionTrace
 - Stage 5 dual-dimension governance demo / action safety
 - Stage 5+ production and agent-facing hardening
 
@@ -232,7 +234,7 @@ Detailed PR-level execution records are maintained in:
 
 ## Goal
 
-Move the read-side runtime from in-memory stores toward durable PostgreSQL-backed projection state, checkpoint progress, global-position consumption, and replay / rebuild validation.
+Move the read-side runtime from in-memory stores toward durable PostgreSQL-backed projection state, progress tracking, accepted-history consumption, and replay / rebuild validation.
 
 ## Why
 
@@ -264,14 +266,27 @@ Stage 3.5C established:
 - `ProjectionEventRecord`
 - `PostgresProjectionWorker`
 - projection state + checkpoint progress atomic persistence
-- `GLOBAL_POSITION` checkpoint cursor
+- historical `GLOBAL_POSITION` checkpoint cursor, later superseded for completeness by ADR 0020 per-order progress
 - durable replay / rebuild validation
+
+Those bullets preserve the original Stage 3.5C delivery history. The current
+correctness model is repaired by ADR 0020:
+
+```text
+order_events + projection_order_progress
+→ exact-next per-order eligible event
+→ projection state + per-order progress committed atomically
+```
+
+`global_position` remains lineage and deterministic scheduling evidence, not a
+projection-completeness cursor.
 
 The important semantic boundaries from this stage are:
 
 ```text
 projection state = derived read model
-checkpoint = operational progress metadata
+per-order progress = current completeness evidence
+checkpoint = legacy / generic operational progress metadata
 accepted-history replay = authority path
 ```
 
@@ -671,7 +686,7 @@ Stage 4A does not implement:
 
 ### Goal
 
-Stage 4B is the next implementation stage.
+Status: Completed through PR7.
 
 It records the semantic outcome and the evidence used to produce it.
 
@@ -687,6 +702,12 @@ A receipt should preserve summary-level runtime evidence:
 A receipt is not a full diagnostic trace table.
 
 It should make runtime semantic decisions reviewable without turning every internal detail into permanent business history.
+
+The completed foundation includes the typed contract, generic and producer
+mapping, tri-state unevaluated producer flags, strict serializer v1,
+storage-neutral persistence envelopes, migration 007, and caller-owned
+PostgreSQL insert/load behavior. It does not automatically materialize mapper
+outputs or reconcile accepted history.
 
 ---
 

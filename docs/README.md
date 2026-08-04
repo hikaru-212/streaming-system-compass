@@ -25,7 +25,8 @@ It now also serves as the reference frame for an executable baseline covering:
 - aggregate snapshot trust deferral decision
 - Stage 3.5E durable history / permission hardening and minimal actor metadata boundary
 - Stage 4A SemanticOutcome core as completed runtime semantic interpretation work
-- Stage 4B DecisionReceipt / DiagnosticTrace as the next roadmap entry point
+- Stage 4B DecisionReceipt PR1–PR7 as a completed runtime-evidence and persistence foundation
+- Stage 4B.1 DiagnosticTrace / ResolutionTrace as the next roadmap entry point
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -51,20 +52,24 @@ The repository currently has an implemented baseline for:
 - PostgreSQL-backed two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - executable tests across unit, integration, semantic-case, adversarial-baseline, Stage 3 projection-baseline, storage integration, transactional PostgreSQL-backed write-side, and admission-boundary layers
-- Stage 3.5C durable read-side baseline, including durable order-event vocabulary hardening, read-side schema, `PostgresProjectionStore`, `PostgresCheckpointStore`, global-position projection worker orchestration, and durable replay / rebuild validation
+- Stage 3.5C durable read-side baseline, including durable order-event vocabulary hardening, read-side schema, `PostgresProjectionStore`, historical checkpoint infrastructure, ADR 0020 per-order progress repair, and durable replay / rebuild validation
 - Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral
+- Stage 4A `SemanticOutcome` and Stage 4B `DecisionReceipt` mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
 
 The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **Stage 3.5C — Durable Read-Side Baseline**, **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**, and **Stage 3.5E — Durable History and Permission Hardening**.
 
 Stage 3.5E is now complete at the minimal actor / permission boundary level.
 
-The current focus is now:
+The next focus is now:
 
-- Stage 4B DecisionReceipt / DiagnosticTrace
-- durable `DecisionReceipt` / runtime evidence records
-- runtime decision policy, strategy selection, and retry governance
+- Stage 4B.1 DiagnosticTrace / ResolutionTrace
+- later measurement, policy, strategy selection, and retry governance in roadmap order
 
-Stage 4A completes the first Compass Layer 2 semantic interpretation boundary. It provides the `SemanticOutcome` foundation that Stage 4B receipt and trace work can build on.
+Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
+Stage 4B preserves selected evidence through explicit mapping, serialization,
+and persistence boundaries without automatic materialization or reconciliation.
+See the [Stage 4B implementation index](implementation_notes/stage_4b/README.md)
+and [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md).
 
 ---
 
@@ -96,9 +101,10 @@ Recommended reading order for the core system:
 14. [Implementation Roadmap](roadmap/implementation_roadmap.md)
 15. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
 16. [Implementation Notes](implementation_notes/README.md)
-17. [Boundary Notes](boundary_notes/README.md)
-18. [Development Setup](development/README.md)
-19. [Postmortems](postmortems/README.md)
+17. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
+18. [Boundary Notes](boundary_notes/README.md)
+19. [Development Setup](development/README.md)
+20. [Postmortems](postmortems/README.md)
 
 This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, stage / PR implementation details, module-boundary notes, local development setup, and finally postmortems.
 
@@ -126,7 +132,8 @@ top-level system structure
 → pre-Stage 3.5E documentation alignment
 → completed minimal actor / permission boundary
 → completed SemanticOutcome core
-→ DecisionReceipt / DiagnosticTrace
+→ completed DecisionReceipt foundation
+→ DiagnosticTrace / ResolutionTrace
 → runtime decision policy and action safety
 → boundary clarification
 → postmortem lessons
