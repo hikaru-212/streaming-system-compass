@@ -13,6 +13,22 @@
 
 **Context:** Stage 4B PR6 — DecisionReceipt PostgreSQL persistence
 
+## Status
+
+```text
+Stage 4B
+= complete
+
+Level 1 owner-liveness mechanism
+= experimentally verified
+
+production owner-liveness policy
+= not implemented
+
+Stage 4B.1 DiagnosticTrace / ResolutionTrace
+= next formal runtime-governance stage
+```
+
 ## Summary
 
 Stage 4B PR6 introduced PostgreSQL persistence for `DecisionReceipt`. This note
@@ -54,9 +70,13 @@ The PR6 integration tests establish conditional progress in tested
 - rolls back;
 - or loses its database connection.
 
-It does not implement a production policy for an owner session that remains
-alive but idle indefinitely, nor for bounded contender wait, statement
-execution, connection-pool cleanup, or deadlock retry.
+A post-Stage 4B Level 1 experiment additionally verifies one physical cleanup
+mechanism for a live-but-idle owner: a transaction-local
+`idle_in_transaction_session_timeout` can terminate that owner, roll back its
+transaction, and release a uniqueness-conflicting contender. This evidence
+does not implement a production owner-liveness policy or timeout value, nor
+does it establish bounded contender wait, statement execution,
+connection-pool cleanup, or deadlock retry.
 
 The governing rule is:
 
@@ -331,20 +351,23 @@ owner reaches a recognized completion path
 → contender resumes
 ```
 
-### Bounded abnormal-path liveness
+### Repository-supported bounded abnormal-path liveness
 
 Bounded abnormal-path liveness would require the owner to resolve within an
-explicit time bound.
+explicit production time bound.
 
-The repository does not implement that guarantee. No universal owner timeout
-or waiter timeout exists in this scope. The finite waits used by test helpers
-are test-harness failure bounds, not runtime policy.
+The Level 1 experiment verifies that one transaction-local timeout can resolve
+one tested live-but-idle owner schedule. The repository does not apply that
+mechanism through a production transaction owner, and it does not implement a
+general runtime guarantee. No production owner timeout or waiter timeout
+exists in this scope. The finite waits used by test helpers are test-harness
+failure bounds, not runtime policy.
 
 The repository does not establish:
 
 ```text
-owner remains alive but idle indefinitely
-→ owner is eventually terminated
+every production DecisionReceipt transaction
+→ receives a configured owner timeout
 
 contender waits too long
 → contender receives a bounded lock timeout
@@ -369,9 +392,10 @@ protecting B from waiting forever
 ≠ cleaning up A
 ```
 
-The mechanisms below are external PostgreSQL context for possible future work.
-None is currently selected, configured, or guaranteed by the repository's
-`DecisionReceipt` persistence scope.
+The mechanisms below are PostgreSQL context for possible future production
+work. None is currently selected, configured, or guaranteed by the
+repository's production `DecisionReceipt` persistence scope. The Level 1 test
+configuration described below is scoped to experiment evidence only.
 
 ### `lock_timeout`
 
@@ -387,7 +411,7 @@ It does not commit, roll back, or terminate A.
 
 ### `idle_in_transaction_session_timeout`
 
-This could be considered in future work for a session that:
+This setting applies to a session that:
 
 ```text
 has an open transaction
@@ -396,9 +420,12 @@ sends no further statements
 does not commit or roll back
 ```
 
-As external PostgreSQL behavior, a configured timeout can terminate the idle
-session and cause its open transaction to be rolled back. The current
-repository does not configure or test this mechanism.
+The Level 1 experiment now verifies that, when explicitly applied
+transaction-locally, this timeout can terminate the idle owner session, roll
+back its open transaction, and release a conflicting receipt contender. The
+repository does not apply it through a production runtime path or establish a
+production timeout value. See the
+[post-Stage 4B owner-liveness implementation note](../implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md).
 
 ### `statement_timeout`
 
@@ -474,6 +501,81 @@ commits
 becomes visible through a third connection
 ```
 
+### Transaction-local idle-owner cleanup — Level 1
+
+The focused live PostgreSQL experiment verifies:
+
+- transaction-local timeout scope;
+- restoration of the previous session value after rollback;
+- observation of a uniqueness-conflicting contender in a real PostgreSQL
+  `Lock` wait;
+- termination of the live-but-idle owner backend;
+- server-side rollback of the owner's uncommitted receipt transaction;
+- contender resumption with statement-level `INSERTED`;
+- successful contender commit;
+- fresh-connection verification that only the contender receipt is durable;
+- `psycopg.errors.IdleInTransactionSessionTimeout`;
+- SQLSTATE `25P03`;
+- owner transaction status `TransactionStatus.UNKNOWN`;
+- `connection.closed == True`;
+- `connection.broken == True`.
+
+The focused result was:
+
+```text
+2 passed
+48 deselected
+```
+
+The test-only timeout value is evidence-fixture configuration. It is not a
+production recommendation.
+
+The terminated owner connection is unusable and must be discarded rather than
+rolled back or returned for reuse.
+
+This experiment verifies a physical PostgreSQL cleanup mechanism. It does not
+establish repository-supported runtime policy or a production operational
+guarantee.
+
+ADR 0019 already defines the split target materialization model:
+
+```text
+accepted result
+→ authoritative business transaction commits first
+→ accepted-result DecisionReceipt is materialized separately
+→ a missing accepted receipt may later be reconstructed from accepted history
+
+typed non-ACCEPTED observation
+→ DecisionReceipt is persisted through a separate governance transaction
+→ receipt persistence is reported separately
+→ original business result remains unchanged
+```
+
+The Level 1 experiment characterizes owner cleanup for those separate
+governance-persistence transactions, including future:
+
+- accepted live-result materialization;
+- typed non-`ACCEPTED` observation persistence;
+- accepted-history reconciliation.
+
+It does not reopen or replace ADR 0019's accepted materialization boundary.
+
+The repository still has no:
+
+- automatic receipt-materialization orchestrator;
+- production receipt transaction owner;
+- configured production timeout policy;
+- immediate typed non-`ACCEPTED` persistence orchestration;
+- accepted-history reconciliation scheduler;
+- reconstruction-version owner;
+- connection-pool discard integration.
+
+The rollback also preserves the self-recording limitation:
+
+```text
+receipt transaction rolls back
+→ that same transaction cannot durably record its own timeout failure
+```
 ### Stronger isolation
 
 Under the tested `REPEATABLE READ` and `SERIALIZABLE` schedules, PostgreSQL can
@@ -497,25 +599,77 @@ After concurrent admitted-producer conflict:
 
 ## 9. What Remains Deferred
 
-The following are not PR6 foundational-store guarantees:
+The following remain deferred beyond the PR6 foundational store and the
+completed Level 1 mechanism experiment.
 
+### Production owner-liveness policy
+
+- production ownership and calibration of
+  `idle_in_transaction_session_timeout`;
 - production `lock_timeout` ownership and value;
 - `statement_timeout`;
-- `idle_in_transaction_session_timeout`;
 - future whole-transaction timeout policy;
-- receipt transaction-owning service;
-- exception-safe Receipt + RetryIntent atomicity;
-- connection-pool rollback/reset;
+- role-wide or database-wide timeout configuration;
 - blocker monitoring and administrative termination;
-- genuine circular deadlock tests;
-- retry policy for deadlock, serialization failure, lock timeout, and ambiguous connection loss;
-- transactional outbox or retry dispatcher.
+- connection-pool rollback, reset, and broken-connection discard;
+- genuine circular-deadlock tests;
+- deadlock-recovery policy.
 
-These require separately scoped transaction-liveness and operational-hardening
-work.
+### ADR 0019 materialization orchestration
 
----
+ADR 0019 already defines the split target model. The following implementation
+work remains deferred:
 
+- a production receipt transaction-owning component;
+- accepted live-result materialization orchestration;
+- immediate typed non-`ACCEPTED` observation persistence orchestration;
+- accepted-history missing-receipt discovery;
+- accepted-history reconciliation scheduling;
+- canonical reconstruction-version ownership;
+- deterministic reconciliation identity generation;
+- runtime bootstrap and composition;
+- reporting receipt-persistence outcomes separately from business outcomes.
+
+These are implementation and orchestration gaps. They are not an unresolved
+same-transaction-versus-separate-transaction architecture decision.
+
+### Failure evidence and later governance
+
+- retry policy for deadlock, serialization failure, lock timeout, and ambiguous
+  connection loss;
+- retry candidacy or authorization for idle-owner termination;
+- `SemanticOutcome` interpretation of transaction-owner failure;
+- `DiagnosticTrace` or `AttemptLog` recording;
+- durable evidence for an unsuccessful receipt-persistence attempt;
+- commit-ambiguity reconciliation;
+- exception-safe future Receipt + RetryIntent coordination.
+
+### Delivery and operational hardening
+
+- transactional outbox;
+- governance publication workflow;
+- retry dispatcher;
+- production monitoring and alerting;
+- deployment configuration;
+- operational recovery runbooks;
+- load, soak, and chaos evidence.
+
+### Contracts that remain unchanged
+
+The Level 1 experiment does not require changes to:
+
+- `SemanticOutcome`;
+- `DecisionReceipt`;
+- DecisionReceipt flags;
+- strict serializer v1;
+- persistence-envelope contracts;
+- migration 007;
+- the `decision_receipts` schema;
+- accepted-history authority;
+- ADR 0019's split materialization model.
+
+These deferred concerns require separately scoped implementation,
+transaction-liveness, materialization, and operational-hardening work.
 ## 10. Review Checklist
 
 For any caller-owned PostgreSQL transaction, ask:
@@ -550,7 +704,10 @@ waiter timeout
 does not clean up the owner
 
 connection-loss cleanup
-does not cover a live idle session
+alone does not cover a live idle session
+
+experimentally verified transaction-local cleanup
+does not create production runtime policy
 ```
 
 A trustworthy transaction design must assign separate owners to:

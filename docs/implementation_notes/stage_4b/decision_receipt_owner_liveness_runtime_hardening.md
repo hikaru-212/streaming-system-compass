@@ -108,6 +108,116 @@ does not yet establish a supported production policy.
 
 ---
 
+## ADR 0019 Materialization Boundary
+
+ADR 0019 already defines the target split materialization model.
+
+This follow-up does not reopen the question of whether accepted business facts
+and complete `DecisionReceipt` rows must commit in one transaction.
+
+### Accepted results
+
+For an admitted accepted result:
+
+```text
+accepted event
++
+idempotency record
+```
+
+remain the authoritative business facts.
+
+They commit atomically in the existing business transaction.
+
+The complete `DecisionReceipt` is not a precondition for that commit.
+
+The target flow is:
+
+```text
+commit authoritative business transaction
+→ build the live accepted-result DecisionReceipt
+→ attempt receipt persistence through a separate governance transaction
+```
+
+If the immediate receipt is absent later:
+
+```text
+accepted history
+→ detect missing accepted receipt
+→ reconstruct a narrower versioned canonical receipt
+→ persist through reconciliation
+```
+
+### Typed non-ACCEPTED observations
+
+For typed non-`ACCEPTED` observations such as:
+
+- `REPLAY`;
+- `CONFLICT`;
+- `VALIDATION_BLOCKED`;
+- stream-level `ADMISSION_REJECTED`;
+- append-level `ADMISSION_REJECTED`;
+
+the target flow is:
+
+```text
+typed runtime observation
+→ SemanticOutcome
+→ DecisionReceipt
+→ separate governance transaction
+→ report receipt-persistence outcome separately
+→ preserve the original business result
+```
+
+These observations do not gain authority merely because a related accepted
+event exists.
+
+### Owner-liveness relationship
+
+The Level 1 owner-liveness experiment applies to the separate governance
+transactions defined by ADR 0019.
+
+It protects future:
+
+- accepted live-result receipt materialization;
+- typed non-`ACCEPTED` observation persistence;
+- accepted-history receipt reconciliation.
+
+It does not apply the receipt timeout to the authoritative accepted-event and
+idempotency transaction.
+
+The relationship is:
+
+```text
+ADR 0019
+= selects the split materialization and authority model
+
+owner-liveness hardening
+= bounds abnormal-path cleanup inside separate governance transactions
+
+future transaction owner
+= implements connection, transaction, timeout, commit, rollback, and discard
+
+later governance
+= interprets failure and decides policy or retry
+```
+
+Therefore:
+
+```text
+idle-owner hardening
+≠ reopening accepted-event atomicity
+
+idle-owner hardening
+≠ coupling receipt availability to business availability
+
+idle-owner hardening
+= resilience for separate governance persistence
+```
+
+
+---
+
 ## Verified Level 1 Evidence
 
 The experiment in:
@@ -730,18 +840,26 @@ This follow-up does not currently implement:
 
 Before production code is authorized, decide:
 
-1. Whether the repository should adopt a supported receipt-specific
-   transaction owner.
-2. Which module owns the timeout configuration.
-3. Whether configuration is mandatory and whether a default exists.
-4. Which production call site invokes the owner.
-5. Whether the owner returns raw psycopg failures or a neutral technical result.
-6. How broken connections are discarded without assuming a pool.
-7. Whether future pooling changes the owner contract.
-8. Which layer may interpret the failure semantically.
-9. Which layer may durably record the failed attempt.
-10. Whether Level 2 implementation should occur before or after Stage 4B.1.
-
+1. Which production component owns ADR 0019's separate governance transaction.
+2. Whether that component owns a purpose-specific connection factory or
+   receives an existing connection.
+3. Where the timeout configuration is declared and validated.
+4. Whether the repository provides a production default.
+5. How commit-confirmed receipt materialization is represented separately from
+   statement-level `DecisionReceiptInsertResult`.
+6. How commit-time connection loss represents unknown durability.
+7. How ordinary rollback differs from broken-connection discard.
+8. Which runtime call sites invoke:
+   - accepted live-result materialization;
+   - typed non-`ACCEPTED` persistence;
+   - accepted-history reconciliation.
+9. Which later layer may interpret the technical failure semantically.
+10. Which later layer may durably preserve unsuccessful materialization
+    attempts.
+11. Whether transaction-owner infrastructure should be implemented before all
+    automatic materialization call sites exist.
+12. Whether Stage 4B.1 proceeds before, after, or in parallel with this
+    infrastructure work.
 ---
 
 ## Completion Criteria
@@ -749,27 +867,38 @@ Before production code is authorized, decide:
 This follow-up is complete only when the repository can truthfully claim:
 
 ```text
-a supported DecisionReceipt transaction owner
+a supported DecisionReceipt governance-transaction owner
 applies an approved transaction-local liveness policy
-and owns commit / rollback / broken-connection discard
+and owns commit, rollback, and broken-connection discard
 ```
 
-and when executable tests prove:
+and executable tests prove:
 
 ```text
-normal completion
-→ durable receipt
+normal receipt materialization
+→ governance transaction commits
+→ commit-confirmed result is returned
 
-ordinary failure
-→ rollback and recoverable connection lifecycle
+ordinary receipt failure
+→ governance transaction rolls back
+→ live connection is left in a known clean state or closed
 
 idle-owner termination
-→ server rollback
-→ contender progress
-→ broken connection discarded
+→ PostgreSQL rolls back the governance transaction
+→ conflicting materializer can progress
+→ broken connection is discarded
 ```
 
-Until then, the correct repository statement remains:
+The implementation must preserve ADR 0019:
+
+```text
+accepted business transaction
+≠
+receipt governance transaction
+```
+
+Until production orchestration exists, the correct repository statement
+remains:
 
 ```text
 transaction-local owner cleanup mechanism characterized
