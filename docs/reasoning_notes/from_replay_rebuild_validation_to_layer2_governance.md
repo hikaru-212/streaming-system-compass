@@ -1,6 +1,6 @@
 # From Replay / Rebuild Validation to Layer 2 Governance
 
-[← Back to Postmortems](README.md)
+[← Back to Reasoning Notes Index](README.md)
 
 ## Context
 

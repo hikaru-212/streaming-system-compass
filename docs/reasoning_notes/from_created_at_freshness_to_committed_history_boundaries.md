@@ -2,7 +2,7 @@
 
 *Why projection snapshots should trust accepted-history lineage, not row creation time or naive sequence allocation.*
 
-[← Back to Postmortems Index](README.md)
+[← Back to Reasoning Notes Index](README.md)
 
 **Recorded on:** 2026-06-14
 

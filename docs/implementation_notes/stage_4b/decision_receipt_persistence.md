@@ -19,6 +19,11 @@ materialization evidence in a separate envelope. The store does not map
 producer results, reinterpret receipt meaning, or orchestrate when receipts are
 created.
 
+Current interpretation of statement success, caller-owned transaction
+completion, uniqueness contention, safety, conditional progress, and bounded
+liveness non-guarantees belongs to the
+[DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](../../boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md).
+
 ## Serialization Boundary
 
 `decision_receipt_serialization.py` owns one fixed portable format:

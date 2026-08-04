@@ -105,7 +105,9 @@ This folder currently includes notes for the most important module and cross-cut
 - [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
 - [Minimal Actor Metadata Boundary](minimal_actor_metadata_boundary.md)
 - [Runtime SemanticOutcome Boundary](runtime_semantic_outcome_boundary.md)
+- [SemanticOutcome vs JSON Boundary](semantic_outcome_vs_json_public_boundary_note.md)
 - [DecisionReceipt Boundary — current canonical cross-stage boundary](decision_receipt_boundary.md)
+- [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
 
 These were prioritized because they directly affect the main implementation stages of the project.
 
@@ -141,10 +143,20 @@ The minimal actor metadata boundary note extends Stage 3.5E toward Stage 4. It c
 
 The runtime SemanticOutcome boundary note starts Stage 4A. It clarifies why raw technical runtime status should not be treated as semantic outcome, why semantic outcome should not make runtime decisions, and why fast-path failure should not be collapsed into semantic drift.
 
+The SemanticOutcome-versus-JSON note separates semantic meaning, durable
+governance evidence, and serialization format without treating an internal
+JSON envelope as external API authority.
+
 The DecisionReceipt boundary note is the current canonical cross-stage owner.
 It clarifies why selected `SemanticOutcome` evidence may become durable
 governance evidence without turning receipts into application logs, diagnostic
 traces, runtime decisions, strategy selection, or retry governance.
+
+The DecisionReceipt PostgreSQL transaction safety and liveness note is a
+specialized current boundary beneath that canonical owner. It separates
+statement success, caller-owned transaction completion, committed visibility,
+safety, and tested conditional progress. It does not establish bounded
+liveness, timeout policy, connection-pool cleanup, or deadlock recovery.
 
 ---
 
@@ -171,11 +183,13 @@ A practical reading order is:
 17. [Layered Testing Strategy for Permission Boundaries and Runtime Governance](layered_testing_strategy_for_permission_and_governance.md)
 18. [Minimal Actor Metadata Boundary](minimal_actor_metadata_boundary.md)
 19. [Runtime SemanticOutcome Boundary](runtime_semantic_outcome_boundary.md)
-20. [DecisionReceipt Boundary](decision_receipt_boundary.md)
-21. [Compass Layer Boundary](compass_layer_boundary.md)
-22. [Persistence Boundary](persistence_boundary.md)
-23. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
-24. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
+20. [SemanticOutcome vs JSON Boundary](semantic_outcome_vs_json_public_boundary_note.md)
+21. [DecisionReceipt Boundary](decision_receipt_boundary.md)
+22. [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
+23. [Compass Layer Boundary](compass_layer_boundary.md)
+24. [Persistence Boundary](persistence_boundary.md)
+25. [Read-Side Persistence Boundary](read_side_persistence_boundary.md)
+26. [Stage 3.5B Write-Side Schema Translation Note](stage3.5B_write_side_schema_translation_note.md)
 
 This roughly follows the intended semantic development order of the project:
 

@@ -1,6 +1,6 @@
 # Postmortem: From Git Local–Remote Drift to Database Immutability Boundaries
 
-[← Back to Postmortems Index](README.md)
+[← Back to Reasoning Notes Index](README.md)
 
 **Recorded on:** 2026-05-16
 

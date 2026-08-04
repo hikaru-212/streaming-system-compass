@@ -87,8 +87,8 @@ not the uniqueness scope of `global_position`.
 
 This decision has an earlier reasoning lineage.
 
-The postmortem
-[From `created_at` Freshness to Committed-History Boundaries](../postmortems/from_created_at_freshness_to_committed_history_boundaries.md),
+The reasoning note
+[From `created_at` Freshness to Committed-History Boundaries](../reasoning_notes/from_created_at_freshness_to_committed_history_boundaries.md),
 recorded during Stage 3.5D, had already distinguished:
 
 - PostgreSQL sequence allocation order from transaction commit order;

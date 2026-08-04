@@ -1,8 +1,14 @@
 # Postmortem: From Runtime Behavior to Durable Evidence
 
-[← Back to Postmortems Index](README.md)
+[← Back to Reasoning Notes Index](README.md)
 
 **Recorded on:** 2026-05-22
+
+## Current Authority
+
+The reasoning below is historical and non-authoritative. Current durable
+runtime-evidence ownership is defined by the [DecisionReceipt Boundary](../boundary_notes/decision_receipt_boundary.md)
+and the [Stage 4B closeout](../implementation_notes/stage_4b/stage_4b_closeout.md).
 
 ## Summary
 

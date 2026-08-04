@@ -637,7 +637,7 @@ The common rule remains:
 
 - [ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
   records the accepted repository decision.
-- [From `created_at` Freshness to Committed-History Boundaries](../postmortems/from_created_at_freshness_to_committed_history_boundaries.md)
+- [From `created_at` Freshness to Committed-History Boundaries](../reasoning_notes/from_created_at_freshness_to_committed_history_boundaries.md)
   records the earlier distinction between allocation, commit, visibility,
   rollback gaps, and global ordering cost.
 - [From Per-Order Global Position to Global Source Boundary](../postmortems/from_per_order_global_position_to_global_source_boundary.md)

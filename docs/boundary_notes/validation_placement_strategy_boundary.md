@@ -367,4 +367,4 @@ while allowing orchestration placement to vary.
 - [ADR 0010: Separate Transaction Atomicity from Concurrency Admission](../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
 - [ADR 0011: Separate Validation Mode from Validation Placement Strategy](../adr/0011_validation_mode_vs_validation_placement.md)
 - [ADR 0012: Two-Phase Concurrency Admission for PostgreSQL Write-Side](../adr/0012_two_phase_concurrency_admission.md)
-- [Autocommit, Transaction Boundaries, and Partial-Write Risk](../postmortems/autocommit_boundary_and_partial_write_risk.md)
+- [Autocommit, Transaction Boundaries, and Partial-Write Risk](../reasoning_notes/autocommit_boundary_and_partial_write_risk.md)

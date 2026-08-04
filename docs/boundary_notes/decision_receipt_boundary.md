@@ -6,6 +6,11 @@
 > boundary. PR-specific implementation notes preserve delivery history and do
 > not override this note, the accepted ADRs, or current source contracts.
 
+The specialized current boundary for caller-owned PostgreSQL transaction
+safety, conditional progress, and explicit liveness non-guarantees is the
+[DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](decision_receipt_postgres_transaction_safety_and_liveness_boundary.md).
+That specialized note does not replace this cross-stage owner.
+
 ## Purpose
 
 This note defines the conceptual boundary for Stage 4B `DecisionReceipt`.

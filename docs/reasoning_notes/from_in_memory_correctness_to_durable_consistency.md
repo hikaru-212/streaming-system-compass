@@ -1,6 +1,6 @@
 # Postmortem: From In-Memory Correctness to Durable Consistency
 
-[← Back to Postmortems Index](README.md)
+[← Back to Reasoning Notes Index](README.md)
 
 **Recorded on:** 2026-05-10
 
