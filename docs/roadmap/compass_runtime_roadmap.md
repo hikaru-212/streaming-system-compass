@@ -19,6 +19,7 @@ For completed stage execution notes, see:
 - [Stage 3.5D Implementation Notes](../implementation_notes/stage_3_5d/)
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 - [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
+- [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
 
 This document focuses on a narrower question:
 
@@ -112,15 +113,18 @@ candidate event
 → append accepted event + record idempotency in one transaction
 ```
 
-Stage 3.5C established the durable read-side target:
+Stage 3.5C established the durable read-side target, and ADR 0020 repaired its completeness boundary:
 
 ```text
-accepted history
-→ global-position projection event source
+accepted history + per-order progress
+→ exact-next eligible event source
 → canonical reducer
 → durable projection state
-→ durable checkpoint progress
+→ durable per-order progress
 ```
+
+`global_position` remains lineage and deterministic scheduling evidence, not a
+global completeness cursor.
 
 Stage 3.5D added the snapshot trust / replay-efficiency substrate:
 
@@ -140,14 +144,17 @@ accepted history permission hardening
 → cleaner Stage 4 receipt / governance foundation
 ```
 
-Stage 4A then adds the first Compass Layer 2 semantic interpretation boundary:
+Stage 4A then added the first Compass Layer 2 semantic interpretation boundary:
 
 ```text
 technical runtime evidence
 → SemanticOutcome
 ```
 
-The next Compass runtime step is Stage 4B, where semantic outcomes and their evidence become durable receipts and traces.
+Stage 4B then completed the DecisionReceipt contract, mappings, strict
+serialization, and explicit PostgreSQL persistence foundation. The next
+Compass runtime step is Stage 4B.1, where detailed diagnostic and resolution
+traces remain separate from receipts.
 
 ---
 
@@ -157,13 +164,18 @@ Compass does not yet make runtime governance decisions for derived state.
 
 The system can now preserve durable accepted history, persist derived read-side state, compare persisted projection state against accepted-history replay, validate snapshot-assisted replay, and resolve read-side state from an externally qualified snapshot id.
 
-Stage 4A has made these results semantically interpretable, but Compass has not yet become a full state-level governance layer.
+Stage 4A made these results semantically interpretable, and Stage 4B made
+selected evidence durable and reviewable, but Compass has not yet become a
+full state-level governance layer.
 
 That means the next question is no longer only whether drift or snapshot mismatch can be detected. The next question is:
 
 > If derived-state drift, snapshot mismatch, or runtime trust failure is detected, what does it mean, and what should the runtime do?
 
-That interpretation began in Stage 4A through `SemanticOutcome` mapping. The next boundary is Stage 4B receipt / trace persistence, followed by later runtime decision policy and Stage 5 action safety work.
+That interpretation began in Stage 4A through `SemanticOutcome` mapping and
+continued through the completed Stage 4B receipt foundation. The next boundary
+is Stage 4B.1 trace design, followed by later runtime decision policy and Stage
+5 action safety work.
 
 ---
 
@@ -335,7 +347,7 @@ Detailed PR-level execution history lives in:
 
 ## Compass-Relevant Outcomes
 
-Stage 3.5C gives Compass:
+Stage 3.5C originally gave Compass:
 
 - durable projection state schema
 - durable checkpoint state schema
@@ -345,6 +357,11 @@ Stage 3.5C gives Compass:
 - PostgreSQL-backed projection worker orchestration
 - projection-state and checkpoint-progress atomic persistence
 - durable replay / rebuild validation
+
+ADR 0020 supersedes the scalar completeness model for the current order-state
+projection. The repaired worker discovers exact-next events from accepted
+history plus `projection_order_progress` and commits state with per-order
+progress atomically. Global position is lineage and scheduling evidence only.
 
 ## Runtime Meaning
 
