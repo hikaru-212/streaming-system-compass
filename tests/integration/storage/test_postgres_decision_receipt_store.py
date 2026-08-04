@@ -1,10 +1,11 @@
+# pyright: reportIndexIssue=false
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
 from queue import Empty, Queue
 from threading import Event, Thread
-from time import monotonic
+from time import monotonic, sleep
 from uuid import UUID, uuid4
 
 import pytest
@@ -12,6 +13,7 @@ from psycopg import Connection, IsolationLevel
 from psycopg.errors import (
     CheckViolation,
     ForeignKeyViolation,
+    IdleInTransactionSessionTimeout,
     InFailedSqlTransaction,
     SerializationFailure,
 )
@@ -82,6 +84,8 @@ from tests.unit.compass.runtime.test_write_side_decision_receipt_mapping import 
 
 
 INT64_MAX = 2**63 - 1
+TEST_ONLY_IDLE_OWNER_TIMEOUT = "3s"
+IDLE_OWNER_OUTER_TIMEOUT_SECONDS = 15.0
 
 
 def make_minimal_receipt(**overrides: object) -> DecisionReceipt:
@@ -358,6 +362,10 @@ def wait_for_backend_lock(
     last_wait_state: tuple[object, object] | None = None
 
     while monotonic() < deadline:
+        # PostgreSQL statistics observations may remain transaction-cached,
+        # so each polling iteration must explicitly refresh the snapshot.
+        observer.execute("SELECT pg_stat_clear_snapshot()")
+
         row = observer.execute(
             """
             SELECT wait_event_type, wait_event
@@ -381,6 +389,59 @@ def wait_for_backend_lock(
     )
 
 
+def _apply_transaction_local_idle_owner_timeout(
+    connection: Connection[object],
+) -> None:
+    row = connection.execute(
+        """
+        SELECT set_config(
+            'idle_in_transaction_session_timeout',
+            %s,
+            true
+        )
+        """,
+        (TEST_ONLY_IDLE_OWNER_TIMEOUT,),
+    ).fetchone()
+    assert row is not None
+    assert isinstance(row, tuple)
+    assert row[0] == TEST_ONLY_IDLE_OWNER_TIMEOUT
+
+
+def _wait_for_backend_absence(
+    observer: Connection[object],
+    *,
+    backend_pid: int,
+    timeout_seconds: float = 5.0,
+) -> None:
+    deadline = monotonic() + timeout_seconds
+    last_backend_state: tuple[object, object, object] | None = None
+
+    while monotonic() < deadline:
+        observer.execute("SELECT pg_stat_clear_snapshot()")
+
+        row = observer.execute(
+            """
+            SELECT state, wait_event_type, wait_event
+            FROM pg_stat_activity
+            WHERE pid = %s
+            """,
+            (backend_pid,),
+        ).fetchone()
+
+        if row is None:
+            return
+
+        assert isinstance(row, tuple)
+        last_backend_state = (row[0], row[1], row[2])
+        sleep(0.01)
+
+    raise AssertionError(
+        f"backend {backend_pid} remained in pg_stat_activity after "
+        f"{timeout_seconds:.1f} seconds; "
+        f"last state was {last_backend_state}"
+    )
+
+
 def await_concurrent_outcome(
     thread: Thread,
     finished: Event,
@@ -395,6 +456,169 @@ def await_concurrent_outcome(
         return outcome.get_nowait()
     except Empty as exc:
         raise AssertionError("concurrent insert produced no outcome") from exc
+
+
+def test_idle_in_transaction_timeout_can_be_scoped_to_one_transaction(
+    db_connection_factory: Callable[[], Connection[object]],
+) -> None:
+    connection = db_connection_factory()
+    try:
+        connection.rollback()
+        initial_row = connection.execute(
+            "SHOW idle_in_transaction_session_timeout"
+        ).fetchone()
+        assert initial_row is not None
+        assert isinstance(initial_row, tuple)
+        initial_value = initial_row[0]
+
+        _apply_transaction_local_idle_owner_timeout(connection)
+        local_row = connection.execute(
+            "SHOW idle_in_transaction_session_timeout"
+        ).fetchone()
+        assert local_row is not None
+        assert isinstance(local_row, tuple)
+        assert local_row[0] == TEST_ONLY_IDLE_OWNER_TIMEOUT
+
+        connection.rollback()
+        assert connection.info.transaction_status is TransactionStatus.IDLE
+        restored_row = connection.execute(
+            "SHOW idle_in_transaction_session_timeout"
+        ).fetchone()
+        assert restored_row is not None
+        assert isinstance(restored_row, tuple)
+        assert restored_row[0] == initial_value
+    finally:
+        if not connection.closed:
+            connection.rollback()
+        connection.close()
+
+
+def test_idle_owner_timeout_rolls_back_and_releases_conflicting_receipt_insert(
+    db_connection: Connection[object],
+    db_connection_factory: Callable[[], Connection[object]],
+    clean_database: None,
+) -> None:
+    accepted_event_id = insert_accepted_event(db_connection)
+    db_connection.commit()
+
+    owner_receipt = make_admitted_receipt(accepted_event_id)
+    contender_receipt = replace(
+        owner_receipt,
+        receipt_id=uuid4(),
+        outcome_id=uuid4(),
+        metadata={"transaction_owner": "contender"},
+    )
+    owner_connection = db_connection_factory()
+    contender_connection: Connection[object] | None = None
+    thread: Thread | None = None
+    finished: Event | None = None
+
+    try:
+        owner_connection.rollback()
+        owner_connection.isolation_level = IsolationLevel.READ_COMMITTED
+        owner_backend_pid = owner_connection.info.backend_pid
+        owner_result = PostgresDecisionReceiptStore(owner_connection).insert(
+            owner_receipt,
+            materialization_provenance=(
+                DecisionReceiptMaterializationProvenance.LIVE_RESULT
+            ),
+        )
+        assert owner_result.status is DecisionReceiptInsertStatus.INSERTED
+
+        # The owner must remain uncommitted so its speculative unique-index
+        # entry can block the competing admitted-producer identity.
+        contender_connection = db_connection_factory()
+        contender_connection.rollback()
+        contender_connection.isolation_level = IsolationLevel.READ_COMMITTED
+        contender_backend_pid = contender_connection.info.backend_pid
+        thread, finished, outcome = start_concurrent_insert(
+            contender_connection,
+            contender_receipt,
+        )
+
+        # Observing PostgreSQL's Lock wait distinguishes real database
+        # blocking from a worker that is merely slow or unscheduled.
+        wait_for_backend_lock(
+            db_connection,
+            backend_pid=contender_backend_pid,
+            finished=finished,
+        )
+        assert not finished.is_set()
+
+        # Activate the local timeout only after proving the contender is
+        # blocked, so the owner receives the complete test-only idle window.
+        _apply_transaction_local_idle_owner_timeout(owner_connection)
+
+        # No further owner work is sent. Server-side session termination rolls
+        # back its open transaction and releases the uniqueness contender.
+        observed = await_concurrent_outcome(
+            thread,
+            finished,
+            outcome,
+            timeout_seconds=IDLE_OWNER_OUTER_TIMEOUT_SECONDS,
+        )
+        assert isinstance(observed, DecisionReceiptInsertResult)
+        assert observed.status is DecisionReceiptInsertStatus.INSERTED
+        assert observed.record.receipt == contender_receipt
+
+        _wait_for_backend_absence(
+            db_connection,
+            backend_pid=owner_backend_pid,
+        )
+
+        contender_connection.commit()
+
+        # A fresh transaction proves durable state without reusing either
+        # participant's prior transaction snapshot.
+        with db_connection_factory() as verification_connection:
+            verification_store = PostgresDecisionReceiptStore(
+                verification_connection
+            )
+            assert (
+                verification_store.load_by_receipt_id(
+                    owner_receipt.receipt_id
+                )
+                is None
+            )
+            assert (
+                verification_store.load_by_receipt_id(
+                    contender_receipt.receipt_id
+                )
+                == observed.record
+            )
+            assert (
+                verification_store
+                .load_admitted_write_side_materialization_by_accepted_event_id(
+                    accepted_event_id,
+                )
+                == observed.record
+            )
+            assert count_receipts(verification_connection) == 1
+
+        with pytest.raises(IdleInTransactionSessionTimeout) as raised:
+            owner_connection.execute("SELECT 1")
+
+        assert raised.value.sqlstate == "25P03"
+        assert owner_connection.info.transaction_status is (
+            TransactionStatus.UNKNOWN
+        )
+        assert owner_connection.closed
+        assert owner_connection.broken
+        # The server-terminated owner is broken rather than a connection that
+        # can be rolled back and returned for reuse; cleanup must discard it.
+    finally:
+        if thread is not None:
+            if thread.is_alive():
+                owner_connection.close()
+                assert finished is not None
+                assert finished.wait(IDLE_OWNER_OUTER_TIMEOUT_SECONDS)
+            thread.join(timeout=1.0)
+            assert not thread.is_alive()
+        if contender_connection is not None:
+            if not contender_connection.closed:
+                contender_connection.rollback()
+            contender_connection.close()
+        owner_connection.close()
 
 
 def test_insert_minimal_runtime_receipt_returns_statement_level_inserted(
@@ -763,6 +987,7 @@ def test_same_receipt_id_with_different_json_scalar_types_is_conflict(
         DecisionReceiptConflictCategory.RECEIPT_ID_CONTENT_CONFLICT
     )
     loaded = store.load_by_receipt_id(original.receipt_id)
+    assert loaded is not None
     assert loaded == first.record
     assert loaded.receipt == original
 
