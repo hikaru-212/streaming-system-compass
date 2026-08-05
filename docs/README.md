@@ -76,15 +76,25 @@ and [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md).
 ## Current Engineering Checkpoint
 
 Stage 4B is complete, and Stage 4B.1 DiagnosticTrace / ResolutionTrace remains
-the next runtime-governance stage. Before it begins, the repository may run one
-independent PostgreSQL characterization experiment for a live-but-idle
+the next runtime-governance stage. The repository has completed an independent
+PostgreSQL Level 1 characterization experiment for a live-but-idle
 DecisionReceipt transaction owner and a blocked uniqueness contender.
 
-The experiment is not implemented and does not select a timeout value, reopen
-Stage 4B contracts, authorize retry, or establish runtime, connection-pool, or
-production policy. See the current specialized
+The transaction-local mechanism is experimentally verified: PostgreSQL
+terminates and rolls back the idle owner transaction, releases the blocked
+contender, permits contender progress, and leaves durable state verifiable from
+a fresh connection. The terminated owner connection is closed, broken, and
+unusable.
+
+This evidence proves the physical cleanup mechanism only. The approved
+production transaction-owner contract is now defined in the current specialized
 [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
-and the non-authoritative derivation in
+and the
+[DecisionReceipt Transaction-Owner Liveness Hardening implementation note](implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md),
+but the production owner, production timeout configuration and duration,
+automatic materialization, and reconciliation remain unimplemented. The
+experiment does not reopen Stage 4B contracts or authorize retry. See also the
+non-authoritative derivation in
 [From Statement Success to Owner-Liveness](reasoning_notes/from_statement_success_to_owner_liveness.md).
 
 This abnormal-path transaction-liveness question remains separate from

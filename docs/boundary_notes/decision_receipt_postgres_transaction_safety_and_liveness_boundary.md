@@ -22,8 +22,14 @@ Stage 4B
 Level 1 owner-liveness mechanism
 = experimentally verified
 
-production owner-liveness policy
+production transaction-owner contract
+= defined, not implemented
+
+production owner-liveness runtime
 = not implemented
+
+production timeout value
+= not selected
 
 Stage 4B.1 DiagnosticTrace / ResolutionTrace
 = next formal runtime-governance stage
@@ -74,8 +80,10 @@ A post-Stage 4B Level 1 experiment additionally verifies one physical cleanup
 mechanism for a live-but-idle owner: a transaction-local
 `idle_in_transaction_session_timeout` can terminate that owner, roll back its
 transaction, and release a uniqueness-conflicting contender. This evidence
-does not implement a production owner-liveness policy or timeout value, nor
-does it establish bounded contender wait, statement execution,
+does not itself implement a production owner-liveness runtime or timeout value.
+The approved first-version transaction-owner contract is recorded below, but
+its implementation remains future work. Neither the experiment nor the
+contract establishes bounded contender wait, statement execution,
 connection-pool cleanup, or deadlock retry.
 
 The governing rule is:
@@ -351,17 +359,26 @@ owner reaches a recognized completion path
 → contender resumes
 ```
 
-### Repository-supported bounded abnormal-path liveness
+### Repository-supported bounded live-but-idle abnormal-path cleanup
 
-Bounded abnormal-path liveness would require the owner to resolve within an
-explicit production time bound.
+Bounded live-but-idle abnormal-path cleanup means:
+
+```text
+an owner becomes idle in an open transaction
+→ the owner is forced to resolve within the configured idle bound
+```
 
 The Level 1 experiment verifies that one transaction-local timeout can resolve
 one tested live-but-idle owner schedule. The repository does not apply that
 mechanism through a production transaction owner, and it does not implement a
-general runtime guarantee. No production owner timeout or waiter timeout
-exists in this scope. The finite waits used by test helpers are test-harness
-failure bounds, not runtime policy.
+general runtime guarantee. The mechanism does not bound connection acquisition,
+actively executing statements, total transaction wall-clock duration,
+contender lock wait, commit invocation or response, deadlock resolution, or the
+complete transaction lifecycle. The owner still owns that complete lifecycle
+as a responsibility boundary.
+
+No production owner timeout or waiter timeout exists in this scope. The finite
+waits used by test helpers are test-harness failure bounds, not runtime policy.
 
 The repository does not establish:
 
@@ -383,7 +400,7 @@ Those are separate operational contracts.
 
 ---
 
-## 7. Possible Future Waiter and Owner Protections
+## 7. Waiter Protections and Approved Owner Direction
 
 A crucial distinction is:
 
@@ -392,10 +409,13 @@ protecting B from waiting forever
 ≠ cleaning up A
 ```
 
-The mechanisms below are PostgreSQL context for possible future production
-work. None is currently selected, configured, or guaranteed by the
-repository's production `DecisionReceipt` persistence scope. The Level 1 test
-configuration described below is scoped to experiment evidence only.
+The mechanisms below separate possible future waiter protections from the
+approved first-version owner direction. No waiter timeout is selected,
+configured, or guaranteed by the repository's production `DecisionReceipt`
+persistence scope. Transaction-local `idle_in_transaction_session_timeout` is
+the approved owner mechanism, but no production owner, configuration wiring, or
+duration is implemented. The Level 1 test configuration remains experiment
+evidence only.
 
 ### `lock_timeout`
 
@@ -423,8 +443,9 @@ does not commit or roll back
 The Level 1 experiment now verifies that, when explicitly applied
 transaction-locally, this timeout can terminate the idle owner session, roll
 back its open transaction, and release a conflicting receipt contender. The
-repository does not apply it through a production runtime path or establish a
-production timeout value. See the
+first production owner will apply the value transaction-locally, but the
+repository does not yet provide that runtime path or establish a production
+timeout value. See the
 [post-Stage 4B owner-liveness implementation note](../implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md).
 
 ### `statement_timeout`
@@ -432,26 +453,27 @@ production timeout value. See the
 If configured in future work, this could bound an actively executing
 statement. It is not current runtime policy.
 
-### Transaction-owner code
+### Approved transaction-owner direction
 
-The primary defense should still be application-owned completion:
+The approved future owner is:
 
-```python
-try:
-    perform_database_work()
-    connection.commit()
-except Exception:
-    connection.rollback()
-    raise
+```text
+PostgresDecisionReceiptTransactionOwner
+→ src/storage/postgres_decision_receipt_transaction_owner.py
 ```
 
-or an equivalent transaction context manager.
+It will own one dedicated governance connection and one governance transaction
+with transaction-local idle-owner protection. The public owner API will accept
+an already-complete `DecisionReceipt` plus the required storage-envelope
+provenance; it will not accept an arbitrary caller-owned PostgreSQL connection.
 
-Possible future timeouts would be operational safety nets, not replacements
-for correct transaction ownership.
+Application-owned commit, rollback, and connection cleanup remain the primary
+defense. The transaction-local timeout is an owner safety net, not a substitute
+for correct completion.
 
-The current scope also has no general connection-pool reset or discard policy.
-Pool cleanup and deadlock handling remain later operational responsibilities.
+The first version has no connection-pool lease contract. Healthy pool release
+versus broken-connection invalidation remains a separate future design, as do
+waiter timeout and deadlock handling.
 
 ---
 
@@ -597,21 +619,299 @@ After concurrent admitted-producer conflict:
 
 ---
 
-## 9. What Remains Deferred
+## 9. Approved Production Transaction-Owner Contract
 
-The following remain deferred beyond the PR6 foundational store and the
-completed Level 1 mechanism experiment.
+This section defines the first-version production contract before
+implementation. It does not claim that the owner or any automatic caller now
+exists.
 
-### Production owner-liveness policy
+### Identity, placement, and input
 
-- production ownership and calibration of
-  `idle_in_transaction_session_timeout`;
+The approved responsibility-oriented identity is:
+
+```text
+class responsibility
+= PostgresDecisionReceiptTransactionOwner
+
+future module
+= src/storage/postgres_decision_receipt_transaction_owner.py
+```
+
+The owner persists an already-complete `DecisionReceipt` together with the
+required storage-envelope provenance, including
+`DecisionReceiptMaterializationProvenance`.
+
+It does not construct or semantically map the receipt. Its name does not imply
+ownership of:
+
+- `SemanticOutcome` mapping;
+- `DecisionReceipt` construction;
+- receipt or outcome identity allocation;
+- materialization scheduling;
+- reconciliation discovery;
+- retry or policy;
+- `DiagnosticTrace`;
+- `AttemptLog`;
+- accepted-event transaction ownership.
+
+### Dedicated connection ownership
+
+The first production version uses a purpose-specific dedicated connection
+factory. The public owner API must not accept an arbitrary caller-owned
+PostgreSQL connection.
+
+The owner owns the complete lifecycle:
+
+```text
+acquire dedicated governance connection
+→ use it for one governance transaction
+  with transaction-local idle-owner protection
+→ commit or roll back
+→ close or discard
+```
+
+This structurally prevents accidental reuse of the accepted-event business
+transaction connection.
+
+The first version does not support or define connection-pool lease semantics.
+Healthy pool release versus invalidation remains a separate future design; no
+pool abstraction is part of this contract.
+
+### Mandatory timeout configuration
+
+The first-version application-level configuration shape is conceptually:
+
+```text
+idle_in_transaction_session_timeout_ms: int
+```
+
+The value is:
+
+- explicit and mandatory;
+- expressed only in milliseconds at the application boundary;
+- greater than zero;
+- validated before connection acquisition;
+- invalid when it is a boolean, even though Python booleans are integers;
+- applied through transaction-local PostgreSQL configuration.
+
+There is no production default, and zero or an explicitly disabled value is not
+part of the first-version owner-liveness contract. The test-only `3s` value is
+not a production recommendation. This contract does not select a production
+duration or hard-code an application-side PostgreSQL maximum without repository
+evidence.
+
+Role-wide, database-wide, migration-level, and persistent session settings are
+not permitted. If PostgreSQL rejects the value while the owner applies the
+transaction-local setting, the owner fails closed before receipt insertion.
+
+### Transaction ordering and entry invariants
+
+The approved order is:
+
+```text
+validate configuration
+→ acquire a dedicated PostgreSQL connection
+→ require autocommit=False
+→ require clean TransactionStatus.IDLE
+→ apply transaction-local idle_in_transaction_session_timeout
+→ call statement-only PostgresDecisionReceiptStore.insert(...)
+→ attempt commit
+→ classify a commit-aware technical outcome
+→ close or discard the connection
+```
+
+The contract does not require a new explicit `BEGIN` abstraction. The first
+transaction-local PostgreSQL statement may open the top-level transaction under
+normal psycopg behavior. The entry invariant is a clean `IDLE` connection owned
+exclusively by the governance transaction owner.
+
+### Statement-only store boundary
+
+`PostgresDecisionReceiptStore` remains statement-only, and
+`DecisionReceiptInsertResult` remains statement-level evidence.
+
+```text
+INSERTED
+≠ committed
+
+ALREADY_PRESENT
+≠ owner transaction completed
+```
+
+The store does not:
+
+- acquire connections;
+- set timeout values;
+- commit;
+- roll back;
+- discard broken connections;
+- report durable completion;
+- authorize retry.
+
+The transaction owner adds the outer lifecycle contract without weakening or
+redefining the existing store result.
+
+### Commit-aware outer technical result
+
+The future outer result must carry at least these meanings:
+
+```text
+durability
+= COMMITTED | NOT_COMMITTED | UNKNOWN
+
+statement_result
+= DecisionReceiptInsertResult | none
+
+failure category
+= stable technical category | none
+
+typed conflict evidence
+= preserved DecisionReceiptConflictError evidence | none
+
+rollback disposition
+= NOT_REQUIRED | CONFIRMED | FAILED | NOT_POSSIBLE
+
+connection disposition
+= CLOSED | DISCARDED | CLEANUP_FAILED
+```
+
+Connection disposition applies when a connection was acquired. A generic
+failure category must not erase existing safe typed conflict category or
+evidence. Exact Python symbol and field names may be finalized during
+implementation review, but these meanings must not be weakened.
+
+Expected operational PostgreSQL and connection outcomes are typed technical
+evidence. Constructor, configuration, and programmer-invariant violations may
+remain exceptions. SQLSTATE may be retained as technical diagnostic metadata
+when available, but it does not become semantic or retry authority.
+
+No outer result may infer:
+
+- semantic invalidity;
+- retry candidacy;
+- retry authorization;
+- business-command failure.
+
+### Conservative durability rules
+
+Acknowledged commit establishes:
+
+```text
+commit acknowledgement received
+→ COMMITTED
+```
+
+A later close or cleanup failure adds cleanup evidence but does not overwrite
+an established `COMMITTED` result.
+
+When commit has not been invoked:
+
+```text
+known pre-commit failure
+→ NOT_COMMITTED
+```
+
+This includes connection-acquisition failure, transaction-local configuration
+failure, INSERT or lookup failure, typed `DecisionReceiptConflictError`,
+ordinary pre-commit exception, rollback failure, and the experimentally
+characterized `IdleInTransactionSessionTimeout` when their phase is known.
+Rollback failure forces discard and adds cleanup evidence, but it does not
+create commit ambiguity when no commit request was sent.
+
+Once commit invocation begins:
+
+```text
+commit did not return acknowledged success
+→ UNKNOWN
+```
+
+The first version conservatively classifies every commit-phase exception,
+connection loss, and response ambiguity as `UNKNOWN`. It does not classify a
+commit exception as confirmed non-commit without a later executable contract
+that supplies authoritative evidence.
+
+For `UNKNOWN`, the owner must not claim that rollback proves non-commit. It
+discards the connection, preserves technical evidence, and leaves later
+resolution to reconciliation or another authorized evidence layer.
+
+### Conflict and timeout termination
+
+The owner may catch the existing typed `DecisionReceiptConflictError` to:
+
+```text
+preserve typed conflict evidence
+→ roll back the governance transaction
+→ report NOT_COMMITTED
+→ close or discard according to connection health
+```
+
+Conflict does not imply semantic invalidity, retry candidacy, retry
+authorization, or business-command failure. The existing conflict contract
+remains unchanged.
+
+An identical duplicate that returns `ALREADY_PRESENT` is not a conflict.
+`DecisionReceiptConflictError` represents the supported conflicting-content or
+producer-identity path, and the outer result must preserve its existing safe
+typed evidence separately from any generic failure category.
+
+For the experimentally characterized timeout:
+
+```text
+IdleInTransactionSessionTimeout
+→ PostgreSQL terminates and rolls back the owner transaction
+→ blocked contender may progress
+→ owner connection is closed, broken, and unusable
+→ durability = NOT_COMMITTED
+→ rollback disposition = NOT_POSSIBLE
+→ connection disposition = DISCARDED
+```
+
+The owner must not attempt client rollback as though it could repair or reuse
+that terminated connection. The failed transaction cannot durably write a
+receipt describing its own termination.
+
+### First-version non-goals
+
+The approved transaction-owner infrastructure does not include:
+
+- connection pooling;
+- production caller wiring;
+- accepted live-result orchestration;
+- typed non-`ACCEPTED` orchestration;
+- accepted-history reconciliation;
+- retry policy or retry execution;
+- `SemanticOutcome` mapping;
+- `DecisionReceipt` construction;
+- receipt identity allocation;
+- `DiagnosticTrace` creation;
+- `AttemptLog` creation;
+- metrics infrastructure;
+- durable self-recording of owner failure;
+- schema or migration changes;
+- production timeout-value selection.
+
+Accepted live materialization, typed non-`ACCEPTED` persistence, and
+accepted-history reconciliation may all use this owner later. It owns only
+their final separately owned governance-persistence transaction.
+
+---
+
+## 10. What Remains Deferred
+
+The following remain deferred beyond the PR6 foundational store, the completed
+Level 1 mechanism experiment, and the approved production contract.
+
+### Production owner implementation and operational policy
+
+- implementation and production composition of the approved
+  `PostgresDecisionReceiptTransactionOwner`;
+- production sourcing and calibration of
+  `idle_in_transaction_session_timeout_ms`;
 - production `lock_timeout` ownership and value;
 - `statement_timeout`;
 - future whole-transaction timeout policy;
-- role-wide or database-wide timeout configuration;
 - blocker monitoring and administrative termination;
-- connection-pool rollback, reset, and broken-connection discard;
+- connection-pool lease, healthy release, and invalidation semantics;
 - genuine circular-deadlock tests;
 - deadlock-recovery policy.
 
@@ -620,7 +920,7 @@ completed Level 1 mechanism experiment.
 ADR 0019 already defines the split target model. The following implementation
 work remains deferred:
 
-- a production receipt transaction-owning component;
+- production implementation of the approved receipt transaction owner;
 - accepted live-result materialization orchestration;
 - immediate typed non-`ACCEPTED` observation persistence orchestration;
 - accepted-history missing-receipt discovery;
@@ -656,7 +956,8 @@ same-transaction-versus-separate-transaction architecture decision.
 
 ### Contracts that remain unchanged
 
-The Level 1 experiment does not require changes to:
+The Level 1 experiment and approved transaction-owner contract do not require
+changes to:
 
 - `SemanticOutcome`;
 - `DecisionReceipt`;
@@ -670,7 +971,8 @@ The Level 1 experiment does not require changes to:
 
 These deferred concerns require separately scoped implementation,
 transaction-liveness, materialization, and operational-hardening work.
-## 10. Review Checklist
+
+## 11. Review Checklist
 
 For any caller-owned PostgreSQL transaction, ask:
 
@@ -689,7 +991,7 @@ For any caller-owned PostgreSQL transaction, ask:
 
 ---
 
-## 11. Final Rule
+## 12. Final Rule
 
 The final boundary is:
 
@@ -708,6 +1010,9 @@ alone does not cover a live idle session
 
 experimentally verified transaction-local cleanup
 does not create production runtime policy
+
+documented production transaction-owner contract
+does not prove production implementation
 ```
 
 A trustworthy transaction design must assign separate owners to:
