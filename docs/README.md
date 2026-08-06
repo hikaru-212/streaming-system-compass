@@ -26,7 +26,7 @@ It now also serves as the reference frame for an executable baseline covering:
 - Stage 3.5E durable history / permission hardening and minimal actor metadata boundary
 - Stage 4A SemanticOutcome core as completed runtime semantic interpretation work
 - Stage 4B DecisionReceipt PR1–PR7 as a completed runtime-evidence and persistence foundation
-- Stage 4B.1 DiagnosticTrace / ResolutionTrace as the next roadmap entry point
+- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md) as the current formal development stage, with implementation not started
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -60,9 +60,9 @@ The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **S
 
 Stage 3.5E is now complete at the minimal actor / permission boundary level.
 
-The next focus is now:
+The current formal development focus is:
 
-- Stage 4B.1 DiagnosticTrace / ResolutionTrace
+- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md)
 - later measurement, policy, strategy selection, and retry governance in roadmap order
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
@@ -75,8 +75,9 @@ and [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md).
 
 ## Current Engineering Checkpoint
 
-Stage 4B is complete, and Stage 4B.1 DiagnosticTrace / ResolutionTrace remains
-the next runtime-governance stage. The repository has completed an independent
+Stage 4B is complete, and Stage 4B.1 DiagnosticTrace / ResolutionTrace is the
+current formal development stage; implementation has not started. The repository
+has completed an independent
 PostgreSQL Level 1 characterization experiment for a live-but-idle
 DecisionReceipt transaction owner and a blocked uniqueness contender.
 
@@ -86,15 +87,19 @@ contender, permits contender progress, and leaves durable state verifiable from
 a fresh connection. The terminated owner connection is closed, broken, and
 unusable.
 
-This evidence proves the physical cleanup mechanism only. The approved
-production transaction-owner contract is now defined in the current specialized
-[DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
-and the
-[DecisionReceipt Transaction-Owner Liveness Hardening implementation note](implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md),
-but the production owner, production timeout configuration and duration,
-automatic materialization, and reconciliation remain unimplemented. The
-experiment does not reopen Stage 4B contracts or authorize retry. See also the
-non-authoritative derivation in
+This evidence originally proved the physical cleanup mechanism only. The
+resulting `PostgresDecisionReceiptTransactionOwner` component is now implemented,
+tested, and merged under the current specialized
+[DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md).
+The historical design chronology remains in the
+[DecisionReceipt Transaction-Owner Liveness Hardening implementation note](implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md).
+
+The component owns one already-complete receipt's separate governance
+transaction. Production timeout calibration and configuration ownership,
+automatic materialization, runtime bootstrap wiring, connection-pool
+integration, and reconciliation remain unimplemented. The owner does not reopen
+Stage 4B contracts or authorize retry. See also the non-authoritative derivation
+in
 [From Statement Success to Owner-Liveness](reasoning_notes/from_statement_success_to_owner_liveness.md).
 
 This abnormal-path transaction-liveness question remains separate from

@@ -35,19 +35,23 @@ Interlude — DecisionReceipt Flag Evaluation State — Complete
 PR7 — Complete
 ```
 
-Stage 4B is complete. The next stage is Stage 4B.1 — DiagnosticTrace /
-ResolutionTrace. See the [Stage 4B closeout](stage_4b_closeout.md) for the final
+Stage 4B is complete. [Stage 4B.1 — DiagnosticTrace / ResolutionTrace](../stage_4b_1/README.md)
+is the current formal development stage; implementation has not started. See the
+[Stage 4B closeout](stage_4b_closeout.md) for the final
 source map, invariants, validation-evidence map, non-goals, and roadmap
 transition.
 
-A separate post-Stage 4B PostgreSQL follow-up has characterized one
-transaction-local cleanup mechanism for live-but-idle DecisionReceipt owners.
-The mechanism is verified in focused integration tests, but repository-supported
-runtime timeout policy is not implemented. See
+A separate post-Stage 4B PostgreSQL follow-up first characterized one
+transaction-local cleanup mechanism for live-but-idle DecisionReceipt owners and
+then produced the implemented, tested, and merged
+`PostgresDecisionReceiptTransactionOwner`. The component owns one separate
+governance transaction for an already-complete receipt. Automatic callers,
+production timeout calibration, connection-pool integration, and runtime policy
+remain unimplemented. See
 [DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md).
 
-This follow-up does not reopen Stage 4B and does not replace Stage 4B.1 as the
-next formal runtime-governance stage.
+This follow-up does not reopen Stage 4B or change the current Stage 4B.1
+development boundary.
 
 Reported focused PR2 verification:
 
@@ -407,7 +411,8 @@ The completed closeout transition is:
 
 ```text
 PR7 — Stage 4B Closeout — Complete
-Next — Stage 4B.1 DiagnosticTrace / ResolutionTrace
+Current formal development stage — Stage 4B.1 DiagnosticTrace / ResolutionTrace
+Implementation — Not started
 ```
 
 ---
@@ -428,20 +433,23 @@ uncommitted receipt owner
 → terminated owner connection is broken and must be discarded
 ```
 
-This evidence does not change production runtime behavior.
+This evidence later grounded the implemented
+`PostgresDecisionReceiptTransactionOwner`, which applies its required timeout
+transaction-locally, owns commit or rollback, and closes or discards its
+dedicated connection.
 
-The timeout is currently applied only by the integration test. No runtime
-transaction-owner abstraction, production timeout value, configuration owner,
-pool discard policy, semantic mapping, retry authorization, migration, or
-schema change has been approved.
+The component is not an automatic production caller. No production timeout
+duration or configuration owner, connection-pool integration, automatic
+semantic mapping or materialization, retry authorization, migration, or schema
+change is introduced by the owner.
 
 The implementation guide is:
 
 [DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md)
 
 This is a post-Stage 4B PostgreSQL hardening follow-up. It does not reopen the
-completed Stage 4B contract and does not replace Stage 4B.1 as the next formal
-runtime-governance stage.
+completed Stage 4B contract or change the current Stage 4B.1 development
+boundary.
 
 ---
 
