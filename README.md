@@ -38,11 +38,11 @@ The project currently has:
 
 Stage 4A and Stage 4B PR1–PR7 are complete.
 
-The next implementation focus is:
+The current formal development focus is:
 
-- **Stage 4B.1 — DiagnosticTrace / ResolutionTrace**
+- **[Stage 4B.1 — DiagnosticTrace / ResolutionTrace](docs/implementation_notes/stage_4b_1/README.md)**
 
-Stage 4B established durable receipt evidence without automatic materialization or reconciliation. Stage 4B.1 begins the later trace boundary; measurement evidence, policy, strategy selection, retry governance, and action safety remain subsequent stages.
+Stage 4B established durable receipt evidence without automatic materialization or reconciliation. Stage 4B.1 now defines the trace boundary through documentation and contract planning; implementation has not started. Measurement evidence, policy, strategy selection, retry governance, and action safety remain subsequent stages.
 
 ### Immediate Engineering Checkpoint
 
@@ -78,13 +78,20 @@ typed non-ACCEPTED observation
 The owner-liveness experiment strengthens those separate governance
 transactions. It does not reopen the accepted business-transaction boundary.
 
-The repository still has no production receipt transaction owner, production
-timeout value, automatic materialization orchestrator, immediate typed
-non-`ACCEPTED` persistence orchestration, or accepted-history reconciliation
-scheduler.
+The repository now includes the implemented and tested
+`PostgresDecisionReceiptTransactionOwner`. It accepts an already-complete
+`DecisionReceipt` and owns one separate PostgreSQL governance transaction,
+including its dedicated connection, transaction-local timeout, commit or
+rollback, and final connection close or discard.
 
-Stage 4B.1 DiagnosticTrace / ResolutionTrace remains the next formal
-runtime-governance stage.
+The repository still has no calibrated production timeout value, automatic
+materialization orchestrator, immediate typed non-`ACCEPTED` persistence
+orchestration, accepted-history reconciliation scheduler, or production
+connection-pool integration. The transaction-owner component does not construct
+receipts or automatically wire those deferred paths.
+
+Stage 4B.1 DiagnosticTrace / ResolutionTrace is the current formal development
+stage; implementation has not started.
 
 See the
 [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](docs/boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
