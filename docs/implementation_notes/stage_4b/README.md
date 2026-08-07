@@ -36,7 +36,9 @@ PR7 — Complete
 ```
 
 Stage 4B is complete. [Stage 4B.1 — DiagnosticTrace / ResolutionTrace](../stage_4b_1/README.md)
-is the current formal development stage; implementation has not started. See the
+is the current formal development stage; PR1 and PR2 are complete, PR3 is
+complete and documentation-only, and remaining implementation review is
+write-side and source-audit-dependent. See the
 [Stage 4B closeout](stage_4b_closeout.md) for the final
 source map, invariants, validation-evidence map, non-goals, and roadmap
 transition.
@@ -412,7 +414,10 @@ The completed closeout transition is:
 ```text
 PR7 — Stage 4B Closeout — Complete
 Current formal development stage — Stage 4B.1 DiagnosticTrace / ResolutionTrace
-Implementation — Not started
+Stage 4B.1 PR1 — Complete
+Stage 4B.1 PR2 — Complete
+Stage 4B.1 PR3 — Complete / Documentation only
+Remaining implementation — Write-side and source-audit-dependent
 ```
 
 ---

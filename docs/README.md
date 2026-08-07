@@ -20,13 +20,13 @@ It now also serves as the reference frame for an executable baseline covering:
 - PostgreSQL-backed two-phase concurrency admission
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - Stage 3.5C durable read-side baseline
-- Stage 3.5D snapshot trust contract and read-side replay-efficiency baseline
+- Stage 3.5D snapshot trust contract and optional read-side reconstruction baseline for the current Order workload
 - projection snapshot schema, store, replay validator, and snapshot-assisted state resolver
 - aggregate snapshot trust deferral decision
 - Stage 3.5E durable history / permission hardening and minimal actor metadata boundary
 - Stage 4A SemanticOutcome core as completed runtime semantic interpretation work
 - Stage 4B DecisionReceipt PR1–PR7 as a completed runtime-evidence and persistence foundation
-- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md) as the current formal development stage, with implementation not started
+- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md) as the current formal development stage, with PR1 and PR2 complete, PR3 complete and documentation-only, and remaining implementation focused on source-grounded write-side DiagnosticTrace review
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -53,7 +53,7 @@ The repository currently has an implemented baseline for:
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - executable tests across unit, integration, semantic-case, adversarial-baseline, Stage 3 projection-baseline, storage integration, transactional PostgreSQL-backed write-side, and admission-boundary layers
 - Stage 3.5C durable read-side baseline, including durable order-event vocabulary hardening, read-side schema, `PostgresProjectionStore`, historical checkpoint infrastructure, ADR 0020 per-order progress repair, and durable replay / rebuild validation
-- Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral
+- Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral; ADR 0021 now classifies projection snapshots as optional for the current Order workload
 - Stage 4A `SemanticOutcome` and Stage 4B `DecisionReceipt` mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
 
 The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **Stage 3.5C — Durable Read-Side Baseline**, **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**, and **Stage 3.5E — Durable History and Permission Hardening**.
@@ -76,8 +76,12 @@ and [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md).
 ## Current Engineering Checkpoint
 
 Stage 4B is complete, and Stage 4B.1 DiagnosticTrace / ResolutionTrace is the
-current formal development stage; implementation has not started. The repository
-has completed an independent
+current formal development stage. PR1 completed the boundary, PR2 completed the
+immutable snapshot-assisted trace contract, and the complete documentation-only
+PR3 defers snapshot traced-resolver integration, records projection-worker trace
+as a current-stage `DO NOT ADD`, and makes source-grounded write-side
+DiagnosticTrace review the remaining implementation focus. The repository has
+completed an independent
 PostgreSQL Level 1 characterization experiment for a live-but-idle
 DecisionReceipt transaction owner and a blocked uniqueness contender.
 
