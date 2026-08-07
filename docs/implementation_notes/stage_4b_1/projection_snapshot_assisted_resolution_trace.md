@@ -9,17 +9,21 @@ Stage 4B.1
 = current formal development stage
 
 this note
-= source-grounded documentation and contract planning
+= source-grounded PR1 boundary and final PR2 contract record
 
 ProjectionSnapshotAssistedResolutionTrace
-= not implemented
+= implemented in PR2
+
+ProjectionSnapshotAssistedResolutionExecution
+= implemented in PR2
 
 resolve_order_with_trace(...)
-= not implemented
+= not implemented; remains PR3 work
 ```
 
-This note defines the planning boundary for later Stage 4B.1 PRs. It does not
-freeze a final dataclass, add a trace API, or change current resolver behavior.
+This note preserves the PR1 planning boundary and records the final PR2 immutable
+contract. It does not add a traced resolver API or change current resolver
+behavior.
 
 ## 1. Purpose
 
@@ -172,18 +176,63 @@ The initial trace is producer-specific and in memory:
 ProjectionSnapshotAssistedResolutionTrace
 ```
 
-Subject to explicit PR2 contract approval, it may preserve bounded scalar
-evidence such as:
+PR2 implements the immutable contract in:
 
-- terminal execution stage;
-- snapshot `source_event_sequence`;
-- last validated tail event sequence;
-- last successfully replayed tail event sequence;
-- source-validation expected sequence;
-- replay expected sequence only when separately justified by the replay stage;
-- observed event sequence;
-- observed order ID;
-- observed accepted event ID.
+```text
+src/pipeline/projection/
+  projection_snapshot_assisted_resolution_trace.py
+```
+
+The final terminal-stage vocabulary is:
+
+```text
+SNAPSHOT_PRECONDITION
+SNAPSHOT_LOOKUP
+SNAPSHOT_COMPATIBILITY
+SNAPSHOT_HYDRATION
+TAIL_SOURCE
+TAIL_REPLAY
+COMPLETED
+```
+
+The final trace fields are:
+
+```text
+terminal_stage
+snapshot_source_event_sequence
+last_validated_tail_event_sequence
+last_successfully_replayed_tail_event_sequence
+source_expected_event_sequence
+observed_event_sequence
+observed_order_id
+observed_event_id
+```
+
+All sequence and observed-identity fields are optional bounded scalars. Their
+presence is constrained by terminal stage:
+
+- precondition, lookup, and conservative compatibility traces contain no
+  validated snapshot base or tail evidence;
+- hydration and later stages require the validated snapshot base;
+- `TAIL_SOURCE` requires the expected source sequence, may preserve validation
+  progress, has no replay progress, and carries either a complete observed-event
+  triplet or no observed event;
+- `TAIL_REPLAY` requires complete validation progress and a complete observed
+  event triplet, while successfully replayed progress may be null or a shorter
+  prefix;
+- `COMPLETED` contains no failure-only expected or observed evidence and has
+  either null tail progress or equal validation and replay progress.
+
+The immutable execution envelope contains exactly:
+
+```text
+ProjectionSnapshotAssistedResolutionExecution
+  result: ProjectionSnapshotAssistedResolutionResult
+  trace: ProjectionSnapshotAssistedResolutionTrace
+```
+
+It validates only the source-grounded result-status/terminal-stage relationship.
+It does not reinterpret or reconstruct the existing primary result.
 
 The event-identity representation is:
 
@@ -197,8 +246,12 @@ event identity. The trace must not parse or convert the string event identity
 into `UUID`; doing so could add validation and exception behavior that the
 resolver does not currently own.
 
-This list is provisional. PR1 defines evidence ownership and safety, not the
-final dataclass field set or enum vocabulary.
+PR2 deliberately omits `replay_expected_event_sequence`: after complete source
+validation, the replay boundary and observed event sequence already carry that
+relationship without duplicating evidence. PR2 also omits compatibility-failure
+kind, `source_global_position`, requested order identity, primary-result status
+and reason, snapshot identity, resolved state, and every persistence or policy
+field.
 
 ## 7. Progress Semantics
 
@@ -225,9 +278,9 @@ not started. On a replay failure, the complete tail is already validated while
 replay progress identifies only the successfully reduced prefix.
 
 Validation progress and replay progress must not be collapsed into one field.
-Source-validation expected sequence and replay expected sequence must also
-remain separately owned if PR2 includes both; a generic expected-sequence field
-must not hide which stage produced it.
+`source_expected_event_sequence` remains owned by `TAIL_SOURCE`. PR2 omits a
+replay-expected field rather than introducing a generic expected-sequence field
+that could hide which stage produced it.
 
 ## 8. Global-Position Boundary
 
@@ -279,12 +332,12 @@ existing primary-result reason
 → is not parsed to infer stage, kind, identity, or progress
 ```
 
-Any later compatibility kind or terminal-stage enum must come from structured
-control flow, not from reason or exception-string parsing.
+Any later compatibility kind or extension to the terminal-stage enum must come
+from structured control flow, not from reason or exception-string parsing.
 
-## 10. Provisional API Direction
+## 10. Final PR2 Contract and Provisional Traced API Direction
 
-Later PRs may introduce:
+PR2 implements:
 
 ```text
 ProjectionSnapshotAssistedResolutionTrace
@@ -292,13 +345,17 @@ ProjectionSnapshotAssistedResolutionTrace
 ProjectionSnapshotAssistedResolutionExecution
   result
   trace
+```
 
+PR3 may introduce:
+
+```text
 resolve_order_with_trace(...)
 ```
 
-This is direction rather than an implemented or frozen API. PR2 owns review of
-the immutable trace contract. PR3 may add the parallel traced resolver API only
-after PR2 is accepted.
+The immutable trace and execution-envelope field sets are the final PR2
+contract. The parallel traced resolver API remains direction rather than an
+implemented API and belongs to PR3 only after PR2 is accepted.
 
 The existing:
 
