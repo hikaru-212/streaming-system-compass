@@ -16,6 +16,7 @@ For project-wide sequencing, see:
 - [Stage 3.5E — Durable History and Permission Hardening](./stage_3_5e/)
 - [Stage 4A — SemanticOutcome Core](./stage_4a/)
 - [Stage 4B — DecisionReceipt / Runtime Evidence Record](./stage_4b/)
+- [Stage 4B.1 — DiagnosticTrace / ResolutionTrace](./stage_4b_1/)
 
 ## Current Position
 

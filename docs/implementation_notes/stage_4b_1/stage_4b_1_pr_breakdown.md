@@ -34,8 +34,9 @@ The first concrete read-side slice is:
 ProjectionSnapshotAssistedResolutionTrace
 ```
 
-A second write-side slice is planned after the snapshot-assisted slice is
-complete.
+A write-side slice remains the implementation focus after the bounded
+snapshot-assisted contract completed in PR2. Further snapshot-specific runtime
+integration is deferred after the PR3 necessity revalidation.
 
 The write-side slice is intentionally provisional until a source-grounded audit
 confirms the exact current write-side execution stages and safe evidence.
@@ -122,11 +123,13 @@ tail replay progress
 This makes it a useful first DiagnosticTrace case without requiring mutation,
 retry governance, or runtime policy.
 
-Normal projection-worker tracing is not a current Stage 4B.1 priority.
+Projection-worker tracing was separately source-audited and is not planned for
+current Stage 4B.1. Its normal `no_event` and `applied` exits already have result
+artifacts. The non-duplicative evidence exists mainly on propagating exception
+paths, where exposing partial progress would require a new exception wrapper,
+sink, callback, or persistence transport that this stage does not authorize.
 
-A normal projection trace may be considered later only if a concrete debugging,
-governance, or runtime consumer requires evidence that is not already available
-from current projection-worker results and validation artifacts.
+Do not add projection-worker `DiagnosticTrace` merely for symmetry.
 
 ---
 
@@ -253,18 +256,18 @@ requires it.
 
 ---
 
-## Current Proposed Stage 4B.1 PR Sequence
+## Current Stage 4B.1 PR Sequence
 
 ```text
 PR1 — DiagnosticTrace / ResolutionTrace Boundary
 PR2 — Snapshot-Assisted Resolution Trace Contract
-PR3 — Snapshot-Assisted Traced Resolver API
+PR3 — Snapshot Necessity Revalidation and Stage 4B.1 Reprioritization
 
-PR4 — Write-Side DiagnosticTrace Audit / Boundary
-PR5 — Write-Side DiagnosticTrace Contract
-PR6 — Write-Side Traced Execution Integration
+Original PR3 — Snapshot-Assisted Traced Resolver API
+Projection Worker DiagnosticTrace — source-audited decision
 
-PR7 — Stage 4B.1 Closeout
+PR4+ — Write-Side DiagnosticTrace; exact decomposition remains source-grounded
+Stage 4B.1 Closeout
 ```
 
 Status:
@@ -274,30 +277,39 @@ PR1
 = COMPLETE
 
 PR2
-= CURRENT IMPLEMENTATION; pending review / commit / merge
+= COMPLETE
 
 PR3
+= COMPLETE / DOCUMENTATION ONLY
+
+Original PR3
+= SUPERSEDED BEFORE IMPLEMENTATION
+= deferred until a concrete snapshot runtime consumer or workload justifies it
+
+Projection Worker DiagnosticTrace
+= AUDITED
+= DO NOT ADD in current Stage 4B.1
+
+PR4+
+= PROVISIONAL; exact decomposition depends on the dedicated write-side source audit
+
+Stage 4B.1 Closeout
 = PLANNED
-
-PR4–PR6
-= PROVISIONAL; exact decomposition depends on the write-side source audit
-
-PR7
-= PLANNED CLOSEOUT
 ```
 
-The PR4–PR6 numbering is not yet implementation authority.
+The PR4+ numbering is not implementation authority.
 
-After the write-side audit, PR4–PR6 may be collapsed, split, or renamed if the
+After the write-side audit, later work may be collapsed, split, or renamed if the
 source proves that a smaller decomposition is safer.
 
 The stable sequencing rule is:
 
 ```text
-finish snapshot-assisted slice
-→ review write-side audit
-→ freeze write-side PR decomposition
-→ implement bounded write-side trace
+preserve the completed snapshot-assisted trace contract as a bounded reference
+→ defer snapshot traced-resolver integration
+→ retain the projection-worker DO NOT ADD decision
+→ review the dedicated write-side audit
+→ implement only justified bounded write-side trace scope
 → Stage 4B.1 closeout
 ```
 
@@ -403,7 +415,7 @@ production contract.
 
 ## Status
 
-Current implementation complete; pending human review, commit, and merge.
+Complete and merged before PR3.
 
 ## Branch
 
@@ -513,129 +525,70 @@ retry
 
 ---
 
-# PR3 — Snapshot-Assisted Traced Resolver API
+# PR3 — Snapshot Necessity Revalidation and Stage 4B.1 Reprioritization
 
 ## Goal
 
-Connect the existing snapshot-assisted resolver execution to the immutable PR2
-trace contract while preserving the existing resolver API and observable
-behavior.
+Record the complete snapshot-necessity revalidation, accept the current snapshot
+stance, stop further snapshot-specific Stage 4B.1 runtime expansion after PR2,
+and redirect remaining implementation review toward the write side.
 
 ## Status
 
-Planned.
+Complete / documentation only.
 
-## Recommended Branch
-
-```text
-feat/stage4b1-pr3-traced-resolver-api
-```
-
-## Intended Scope
-
-PR3 may introduce:
+## Branch
 
 ```text
-resolve_order_with_trace(...)
+docs/stage4b1-pr3-snapshot-necessity-revalidation
 ```
 
-returning:
+## Scope
+
+PR3 records:
 
 ```text
-ProjectionSnapshotAssistedResolutionExecution
-  result
-  trace
+Snapshot Trust Contract
+= valid and reusable
+
+projection snapshots for the current Order workload
+= optional derived reconstruction / trust-reference infrastructure
+
+snapshot-assisted trace contract
+= complete in PR2 and retained as a bounded reference case
+
+snapshot traced-resolver integration
+= deferred before implementation
+
+projection-worker DiagnosticTrace
+= audited / DO NOT ADD in current Stage 4B.1
+
+remaining Stage 4B.1 implementation focus
+= write-side DiagnosticTrace, subject to dedicated source audit
 ```
 
-PR3 may perform the smallest internal refactor required to retain structured
-execution evidence that current code discards.
+This PR does not modify production code, resolver execution, tests, migrations,
+dependencies, persistence, `DecisionReceipt`, or `AttemptLog`.
 
-Candidate evidence collection includes:
+## Superseded Original PR3 Plan
+
+The original development sequence assigned PR3 to:
 
 ```text
-validated snapshot base
-last validated tail sequence
-last successfully replayed tail sequence
-source expected sequence
-observed failing event sequence
-observed order_id
-observed accepted event_id
-terminal stage
+Snapshot-Assisted Traced Resolver API
+→ resolve_order_with_trace(...)
+→ ProjectionSnapshotAssistedResolutionExecution
 ```
 
-## Required Compatibility
+That plan was revalidated and superseded before implementation. No current
+operational snapshot consumer requires the API, and the current shallow Order
+workload does not justify additional snapshot-specific runtime integration.
 
-The existing:
-
-```text
-resolve_order(...)
-```
-
-must remain unchanged in:
-
-```text
-arguments
-return type
-result values
-status values
-reason text
-state-presence rules
-call ordering
-pagination behavior
-exception propagation
-```
-
-Complete tail validation must still finish before replay begins.
-
-Currently propagating unexpected exceptions must continue to propagate.
-
-PR3 must not add generic exception capture merely to guarantee trace production.
-
-## Required Validation
-
-Focused tests should prove:
-
-```text
-resolve_order(...)
-result
-==
-resolve_order_with_trace(...).result
-```
-
-for all existing typed result exits.
-
-Tests should also prove:
-
-```text
-source failure
-→ validation progress may exist
-→ replay progress is absent
-
-replay failure
-→ complete validation progress exists
-→ replay progress may be a shorter prefix
-
-successful no-tail resolution
-→ snapshot base exists
-→ tail progress remains absent
-```
-
-## Non-goals
-
-PR3 does not implement:
-
-```text
-write-side trace
-normal projection trace
-trace persistence
-DecisionReceipt linkage
-measurement
-fallback
-policy
-strategy
-retry
-AttemptLog
-```
+The plan is deferred rather than erased. A concrete future snapshot consumer,
+materially deeper aggregate-local history, measured reconstruction cost, or
+explicit recovery requirement may justify reopening it. Until then, PR2 is the
+final bounded snapshot trace contract, and existing resolver behavior remains
+unchanged.
 
 ---
 
@@ -936,11 +889,18 @@ The final numbering may move if the provisional write-side sequence is changed.
 Closeout should explicitly answer:
 
 ```text
-Did snapshot-assisted resolution gain a safe bounded execution trace?
+Did snapshot-assisted resolution retain a safe bounded immutable trace contract?
+
+Was snapshot traced-resolver integration explicitly deferred with its workload
+and consumer rationale?
 
 Did the existing primary resolver API remain behaviorally unchanged?
 
-Was a useful write-side trace implemented?
+Was a useful write-side trace implemented to the scope justified by source audit,
+or explicitly deferred if the audit did not justify one?
+
+Was projection-worker trace left unimplemented under its recorded DO NOT ADD
+decision?
 
 Can PRE_TRANSACTION + OCC and IN_TRANSACTION + pessimistic execution be
 explained without mixing in retry or policy?
@@ -960,14 +920,15 @@ Stage 4B.1 may close when:
 
 ```text
 the snapshot-assisted trace contract is implemented
-the snapshot-assisted traced execution path is implemented and tested
+the snapshot-assisted trace contract is tested
+snapshot traced resolver integration is explicitly deferred with rationale
 existing resolver behavior remains unchanged
+projection-worker trace has an audited, recorded DO NOT ADD decision
 the write-side trace audit has a recorded decision
-any approved write-side trace slice is implemented and tested
+write-side trace is implemented only to the source-justified scope, or explicitly deferred
 single-execution vs AttemptLog boundaries are explicit
 unsafe exception / SQL / payload evidence remains excluded
 DecisionReceipt remains compact and separate
-normal projection tracing is explicitly deferred unless newly required
 documentation and branch status are aligned
 ```
 
@@ -1036,35 +997,44 @@ first Stage 4B.1 trace producer is snapshot-assisted resolution.
 
 ---
 
-## Ordinary Projection Trace Deferral
+## Projection-Worker DiagnosticTrace Decision
 
-Normal projection-worker tracing is not required for the initial Stage 4B.1
-completion.
+Projection-worker `DiagnosticTrace` was source-audited and is not planned for
+current Stage 4B.1.
 
 Reason:
 
 ```text
-snapshot-assisted resolution
-= a concrete multi-stage read-side fast path with meaningful partial progress
+no_event
+= no currently visible exact-next eligible event
 
-write-side execution
-= an authoritative multi-stage path with correctness and concurrency boundaries
+applied
+= one event successfully completed through transaction exit
 ```
 
-Together these two producers are sufficient to test whether DiagnosticTrace is
-a meaningful independent runtime responsibility.
+Those normal exits already have result artifacts. The genuinely non-duplicative
+trace value exists mainly when execution selected an event and made partial
+progress before an exception propagated without returning an artifact.
 
-A projection-worker trace may be added later if a concrete consumer needs
-evidence beyond:
+Guaranteeing trace delivery on those paths would require a new transport such as:
 
 ```text
-current projection-worker result
-durable replay validation
-snapshot trust validation
-DecisionReceipt
+exception wrapper
+sink or callback
+persistence mechanism
 ```
 
-Do not add it merely for symmetry.
+Stage 4B.1 does not authorize that transport merely to guarantee a trace.
+Therefore:
+
+```text
+Projection Worker DiagnosticTrace
+= AUDITED
+= DO NOT ADD in current Stage 4B.1
+```
+
+Do not add it merely for symmetry. `global_position` remains lineage and
+deterministic scheduling evidence, not projection completeness.
 
 ---
 
@@ -1098,15 +1068,16 @@ None of these replaces the others.
 
 ## Current Next Step
 
-Current development sequence:
+Current remaining development sequence:
 
 ```text
-1. review / commit / merge PR2
-2. implement PR3 snapshot-assisted traced resolver API
-3. review the parallel write-side source audit
-4. finalize PR4–PR6 decomposition from source evidence
-5. implement only the approved bounded write-side trace scope
-6. run Stage 4B.1 closeout
+1. preserve PR2 as the final bounded snapshot trace contract
+2. keep snapshot traced-resolver integration deferred
+3. retain the projection-worker DO NOT ADD decision
+4. review the dedicated write-side source audit
+5. finalize PR4+ decomposition from source evidence
+6. implement only the approved bounded write-side trace scope
+7. run Stage 4B.1 closeout
 ```
 
 Do not start Stage 4B.2 implementation until the write-side trace audit and

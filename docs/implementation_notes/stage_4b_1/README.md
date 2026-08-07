@@ -8,23 +8,41 @@
 Stage 4B.1
 = DiagnosticTrace / ResolutionTrace
 
-first source-grounded slice
+bounded reference slice
 = ProjectionSnapshotAssistedResolutionTrace
 
 current status
-= documentation and contract planning only
+= PR3 complete / documentation only
 
-implementation
-= not yet present
+implemented
+= PR2 immutable snapshot-assisted trace contract
+
+snapshot traced resolver integration
+= deferred before implementation
+
+remaining implementation focus
+= source-grounded write-side DiagnosticTrace
 ```
 
 Stage 4A and Stage 4B PR1–PR7 are complete. The separately delivered
 `PostgresDecisionReceiptTransactionOwner` is implemented, tested, and merged,
 but automatic receipt construction and materialization remain deferred.
 
-Stage 4B.1 is the current formal development stage. This directory defines the
-planning boundary for later implementation PRs; it does not claim that a trace
-contract or traced resolver API exists.
+Stage 4B.1 is the current formal development stage. PR1 completed its boundary
+documentation, and PR2 implemented the immutable producer-specific trace and
+execution-envelope contract. No traced resolver API exists.
+
+The original snapshot-assisted traced-resolver PR3 was revalidated and
+superseded before implementation. No current operational snapshot consumer
+requires that API, so the PR2 contract remains a bounded reference case rather
+than a reason for further snapshot-specific runtime expansion.
+
+Projection-worker `DiagnosticTrace` was also source-audited and is not planned
+for current Stage 4B.1. Its normal exits already have result artifacts, while
+failure-path partial progress would require a new trace-on-exception transport
+that this stage does not authorize. The remaining implementation focus is the
+write side, subject to its dedicated source-grounded audit; no write-side trace
+is complete yet.
 
 ## Purpose
 
@@ -40,23 +58,25 @@ The first source-grounded slice is the snapshot-assisted resolver because its
 current source already distinguishes snapshot preparation, complete tail-source
 validation, and tail replay.
 
-## Current Planning Note
+## Current Notes
 
 - [Projection Snapshot-Assisted Resolution Trace](projection_snapshot_assisted_resolution_trace.md)
+- [Stage 4B.1 PR Breakdown](stage_4b_1_pr_breakdown.md)
 
-The note is grounded in the current resolver, its focused unit tests, and the
-existing read-side semantic-outcome and DecisionReceipt adapters. Provisional
-names or fields in that note require explicit PR2 approval before they become a
-production contract.
+The snapshot note is grounded in the current resolver, its focused unit tests,
+and the existing read-side semantic-outcome and `DecisionReceipt` adapters. It
+preserves the PR1 boundary and the final PR2 immutable contract while recording
+the later runtime-integration deferral.
 
 ## Intended PR Sequence
 
 ```text
 feat/stage4b1-diagnostic-resolution-trace
-├── PR1 documentation and boundary
-├── PR2 immutable trace contract
-├── PR3 parallel traced resolver API
-└── later PR only if source-grounded need appears
+├── PR1 documentation and boundary — complete
+├── PR2 immutable snapshot-assisted trace contract — complete
+├── original PR3 snapshot-assisted traced resolver API — superseded before implementation
+├── PR3 snapshot necessity revalidation and reprioritization — complete / documentation only
+└── PR4+ write-side DiagnosticTrace — exact scope remains source-grounded
 ```
 
 Every Stage 4B.1 PR branch targets:
@@ -73,7 +93,8 @@ feat/stage4-runtime-semantic-governance
 
 ## Boundary
 
-The initial slice is producer-specific and in memory. Stage 4B.1 PR1 does not
-implement production code, tests, persistence, serialization, migrations,
-`DecisionReceipt` linkage, `AttemptLog`, retry, fallback, policy, strategy,
-measurement, cost evidence, observability deployment, or runtime action.
+The snapshot-assisted slice is producer-specific and in memory. Stage 4B.1 does
+not make snapshot runtime integration mandatory and does not add trace
+persistence, serialization, migrations, `DecisionReceipt` linkage, `AttemptLog`,
+retry, fallback, policy, strategy, measurement, cost evidence, observability
+deployment, or runtime action.

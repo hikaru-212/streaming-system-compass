@@ -18,7 +18,7 @@ ProjectionSnapshotAssistedResolutionExecution
 = implemented in PR2
 
 resolve_order_with_trace(...)
-= not implemented; remains PR3 work
+= not implemented; deferred after snapshot-necessity revalidation
 ```
 
 This note preserves the PR1 planning boundary and records the final PR2 immutable
@@ -124,7 +124,7 @@ Unexpected exceptions currently propagate. In particular, snapshot lookup has
 no result-producing exception catch, and hydration, tail loading, source
 validation, and replay catch only their current `ValueError` boundaries.
 
-Later traced execution must preserve that behavior:
+Any future traced execution must preserve that behavior:
 
 ```text
 currently propagating exception
@@ -132,7 +132,7 @@ currently propagating exception
 → no guaranteed trace execution result
 ```
 
-The first traced API must not use generic exception capture to guarantee a
+Any future traced API must not use generic exception capture to guarantee a
 trace.
 
 ## 5. Primary Result Ownership
@@ -335,7 +335,7 @@ existing primary-result reason
 Any later compatibility kind or extension to the terminal-stage enum must come
 from structured control flow, not from reason or exception-string parsing.
 
-## 10. Final PR2 Contract and Provisional Traced API Direction
+## 10. Final PR2 Contract and Deferred Traced API Direction
 
 PR2 implements:
 
@@ -347,15 +347,19 @@ ProjectionSnapshotAssistedResolutionExecution
   trace
 ```
 
-PR3 may introduce:
+The original PR3 plan would have introduced:
 
 ```text
 resolve_order_with_trace(...)
 ```
 
-The immutable trace and execution-envelope field sets are the final PR2
-contract. The parallel traced resolver API remains direction rather than an
-implemented API and belongs to PR3 only after PR2 is accepted.
+The immutable trace and execution-envelope field sets are the final PR2 bounded
+snapshot trace contract. After snapshot-necessity revalidation, the parallel
+traced resolver API is deferred before implementation: no current operational
+snapshot consumer requires it, and the current Order workload does not justify
+further snapshot-specific runtime integration. The contract remains useful as a
+producer-specific reference case because snapshot base, tail-source validation
+progress, and successfully replayed tail progress are genuinely distinct.
 
 The existing:
 
@@ -375,18 +379,20 @@ must remain unchanged in:
 - pagination behavior;
 - exception propagation.
 
-A later shared internal execution path is acceptable only if focused tests prove
-this observable equivalence. The traced API must not replay incrementally while
-pages are still loading or introduce a second divergent resolution algorithm.
+If a concrete future snapshot consumer or workload reopens runtime integration,
+a shared internal execution path is acceptable only if focused tests prove this
+observable equivalence. Any traced API must not replay incrementally while pages
+are still loading or introduce a second divergent resolution algorithm.
 
 ## 11. Branch and PR Sequence
 
 ```text
 feat/stage4b1-diagnostic-resolution-trace
-├── PR1 documentation and boundary
-├── PR2 immutable trace contract
-├── PR3 parallel traced resolver API
-└── later PR only if source-grounded need appears
+├── PR1 documentation and boundary — complete
+├── PR2 immutable snapshot-assisted trace contract — complete
+├── original PR3 parallel traced resolver API — superseded before implementation
+├── PR3 snapshot necessity revalidation and Stage 4B.1 reprioritization — docs only
+└── PR4+ write-side DiagnosticTrace — exact scope remains source-grounded
 ```
 
 Every PR branch targets:
