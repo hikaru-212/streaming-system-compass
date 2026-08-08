@@ -12,16 +12,19 @@ bounded reference slice
 = ProjectionSnapshotAssistedResolutionTrace
 
 current status
-= PR3 complete / documentation only
+= PR4 complete / write-side execution characterization
 
 implemented
 = PR2 immutable snapshot-assisted trace contract
 
+write-side characterization
+= complete / 10 focused PostgreSQL scenarios
+
 snapshot traced resolver integration
 = deferred before implementation
 
-remaining implementation focus
-= source-grounded write-side DiagnosticTrace
+next implementation focus
+= PR5 write-side DiagnosticTrace contract
 ```
 
 Stage 4A and Stage 4B PR1–PR7 are complete. The separately delivered
@@ -40,9 +43,15 @@ than a reason for further snapshot-specific runtime expansion.
 Projection-worker `DiagnosticTrace` was also source-audited and is not planned
 for current Stage 4B.1. Its normal exits already have result artifacts, while
 failure-path partial progress would require a new trace-on-exception transport
-that this stage does not authorize. The remaining implementation focus is the
-write side, subject to its dedicated source-grounded audit; no write-side trace
-is complete yet.
+that this stage does not authorize.
+
+The write-side source audit and formal PR4 execution characterization are now
+complete. PR4 established the current PRE_TRANSACTION + OCC and
+IN_TRANSACTION + pessimistic topologies, their mixed-strategy correctness
+handoffs, and the transaction-local boundary between append success and durable
+commit. It did not add a production trace contract. PR5 is the next stage and
+must freeze only the smallest immutable write-side DiagnosticTrace vocabulary
+justified by that evidence.
 
 ## Purpose
 
@@ -61,12 +70,17 @@ validation, and tail replay.
 ## Current Notes
 
 - [Projection Snapshot-Assisted Resolution Trace](projection_snapshot_assisted_resolution_trace.md)
+- [Write-Side Execution Characterization](write_side_execution_characterization.md)
 - [Stage 4B.1 PR Breakdown](stage_4b_1_pr_breakdown.md)
 
 The snapshot note is grounded in the current resolver, its focused unit tests,
 and the existing read-side semantic-outcome and `DecisionReceipt` adapters. It
 preserves the PR1 boundary and the final PR2 immutable contract while recording
 the later runtime-integration deferral.
+
+The write-side characterization note records the PR4 source-grounded execution
+model and executable evidence without turning test-only checkpoints, database
+wait states, or concurrency mechanics into public DiagnosticTrace vocabulary.
 
 ## Intended PR Sequence
 
@@ -76,7 +90,10 @@ feat/stage4b1-diagnostic-resolution-trace
 ├── PR2 immutable snapshot-assisted trace contract — complete
 ├── original PR3 snapshot-assisted traced resolver API — superseded before implementation
 ├── PR3 snapshot necessity revalidation and reprioritization — complete / documentation only
-└── PR4+ write-side DiagnosticTrace — exact scope remains source-grounded
+├── PR4 write-side execution characterization — complete
+├── PR5 write-side DiagnosticTrace contract — next
+├── PR6 write-side traced execution integration — provisional
+└── PR7 Stage 4B.1 closeout — planned
 ```
 
 Every Stage 4B.1 PR branch targets:

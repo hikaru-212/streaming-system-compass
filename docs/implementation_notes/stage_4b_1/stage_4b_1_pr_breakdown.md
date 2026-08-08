@@ -38,8 +38,11 @@ A write-side slice remains the implementation focus after the bounded
 snapshot-assisted contract completed in PR2. Further snapshot-specific runtime
 integration is deferred after the PR3 necessity revalidation.
 
-The write-side slice is intentionally provisional until a source-grounded audit
-confirms the exact current write-side execution stages and safe evidence.
+The dedicated write-side source audit and formal PR4 execution characterization
+are complete. They established a bounded, source-grounded execution model for
+PRE_TRANSACTION + OCC and IN_TRANSACTION + pessimistic locking, including
+mixed-strategy handoffs and uncommitted stream-position arbitration. PR5 may now
+freeze only the smallest immutable trace vocabulary justified by that evidence.
 
 ---
 
@@ -266,8 +269,10 @@ PR3 — Snapshot Necessity Revalidation and Stage 4B.1 Reprioritization
 Original PR3 — Snapshot-Assisted Traced Resolver API
 Projection Worker DiagnosticTrace — source-audited decision
 
-PR4+ — Write-Side DiagnosticTrace; exact decomposition remains source-grounded
-Stage 4B.1 Closeout
+PR4 — Write-Side Execution Characterization
+PR5 — Write-Side DiagnosticTrace Contract
+PR6 — Write-Side Traced Execution Integration
+PR7 — Stage 4B.1 Closeout
 ```
 
 Status:
@@ -290,17 +295,24 @@ Projection Worker DiagnosticTrace
 = AUDITED
 = DO NOT ADD in current Stage 4B.1
 
-PR4+
-= PROVISIONAL; exact decomposition depends on the dedicated write-side source audit
+PR4
+= COMPLETE
+= write-side execution characterization
 
-Stage 4B.1 Closeout
+PR5
+= NEXT
+= immutable write-side DiagnosticTrace contract
+
+PR6
+= PROVISIONAL; depends on PR5
+
+PR7
 = PLANNED
 ```
 
-The PR4+ numbering is not implementation authority.
-
-After the write-side audit, later work may be collapsed, split, or renamed if the
-source proves that a smaller decomposition is safer.
+The earlier PR4 audit / boundary plan was refined after the parallel read-only
+write-side source audit completed. The formal PR4 therefore became executable
+write-side execution characterization rather than another audit-only document.
 
 The stable sequencing rule is:
 
@@ -308,8 +320,9 @@ The stable sequencing rule is:
 preserve the completed snapshot-assisted trace contract as a bounded reference
 → defer snapshot traced-resolver integration
 → retain the projection-worker DO NOT ADD decision
-→ review the dedicated write-side audit
-→ implement only justified bounded write-side trace scope
+→ preserve PR4 write-side execution characterization as the evidence baseline
+→ freeze the smallest justified write-side trace contract in PR5
+→ integrate traced execution only after PR5
 → Stage 4B.1 closeout
 ```
 
@@ -592,134 +605,256 @@ unchanged.
 
 ---
 
-# PR4 — Write-Side DiagnosticTrace Audit / Boundary
+# PR4 — Write-Side Execution Characterization
 
 ## Goal
 
-Determine the smallest useful producer-specific write-side DiagnosticTrace
-boundary from current source before adding write-side trace code.
+Establish executable evidence for the current PostgreSQL write-side execution
+topology before freezing a public write-side DiagnosticTrace contract.
+
+PR4 does not add production trace code. It turns the completed source audit into
+a bounded, falsifiable execution model that PR5 can safely use.
 
 ## Status
 
-Provisional.
+Complete.
 
-A parallel read-only worktree audit may be used before this PR is frozen.
-
-## Provisional Branch
+## Branch
 
 ```text
-docs/stage4b1-pr4-write-side-trace-boundary
+feat/stage4b1-pr4-write-side-execution-characterization
 ```
 
-The final branch name should be chosen after the audit.
+## Completed Scope
 
-## Required Audit Scope
-
-Reconstruct separately:
+PR4 adds:
 
 ```text
-PRE_TRANSACTION + OCC
+docs/implementation_notes/stage_4b_1/
+  write_side_execution_characterization.md
+
+tests/integration/pipeline/transactional/
+  test_postgres_write_side_execution_characterization.py
 ```
 
-and:
+The formal characterization contains 10 focused PostgreSQL scenarios.
+
+### Strategy-local topology
 
 ```text
-IN_TRANSACTION + pessimistic locking
+1. PRE validation BLOCK before business UOW / admission
+2. PRE authoritative REPLAY after preliminary MISS
+3. PRE append-time OCC conflict without reload or retry
+4. IN+pessimistic ACCEPTED path in bounded order
+5. IN+pessimistic lock non-acquisition
+6. IN+pessimistic validation BLOCK before append
 ```
 
-The audit must identify:
+### Mixed-strategy handoffs
 
 ```text
-actual execution stages
-typed terminal outcomes
-safe structured local evidence
-evidence already owned by current results
-evidence already owned by SemanticOutcome / DecisionReceipt
-single-attempt boundary
-currently propagating exceptions
-transaction / commit ownership
+7. IN+pessimistic crosses authoritative idempotency/history/validation,
+   PRE+optimistic commits before IN append,
+   IN remains MISS and terminates as STALE_WRITE / ADMISSION_REJECTED
+
+8. PRE+optimistic completes preliminary work before business UOW,
+   IN+pessimistic commits the same request,
+   PRE authoritative idempotency returns REPLAY before optimistic preparation
 ```
 
-The audit must determine whether both strategies can share one bounded
-write-side trace vocabulary.
+These scenarios prove that valid writer compositions can coexist per instance
+and that the pessimistic advisory lock is cooperative rather than global.
+Correctness can hand off from idempotency to append-time stream arbitration
+depending on when competing authority becomes durable.
 
-## Candidate Questions
-
-The audit should answer:
+### Uncommitted stream-position arbitration
 
 ```text
-When does validation happen?
+9. owner append succeeds but remains uncommitted,
+   contender cannot see the row through ordinary READ_COMMITTED history,
+   contender reaches the same-position INSERT and waits,
+   owner COMMIT makes contender resume as STALE_WRITE / ADMISSION_REJECTED
 
-When does the business transaction begin?
-
-When is authority re-read?
-
-When is OCC checked?
-
-When is a pessimistic lock acquired?
-
-When is admission reached?
-
-When is append reached?
-
-When is idempotency persisted?
-
-When is commit attempted / acknowledged?
-
-Which progress is currently lost from the primary result?
+10. same uncommitted-position arrangement,
+    owner ROLLBACK releases the physical position,
+    contender proceeds and becomes the only durable accepted writer
 ```
 
-These are audit questions, not frozen public stages.
-
-## AttemptLog Boundary
-
-A write-side DiagnosticTrace owns one execution only.
-
-It must not include:
+These scenarios establish:
 
 ```text
-previous_attempt_id
-retry number
-retry authorization
-max attempts
-backoff
-next strategy
-cross-attempt intent consistency
+append statement success
+≠ durable accepted authority
+
+MVCC invisibility
+≠ absence of physical uniqueness arbitration
+
+commit / rollback
+= determines which transaction may become durable authority
 ```
 
-Those belong to Stage 4E.
+The blocking cases use separate PostgreSQL connections, explicit
+`READ_COMMITTED`, deterministic thread / event synchronization, and observed
+PostgreSQL lock-wait state. Elapsed time is used only as a bounded test-runner
+safety limit, not as proof of the race.
 
-## Stage 4B.2 Relationship
+## Source-Grounded Findings
 
-The PR4 audit should identify which execution boundaries later make cost
-measurement meaningful.
+PR4 confirms the following current topology.
 
-It may identify candidate measurement points such as:
+### PRE_TRANSACTION + OCC
 
 ```text
-validation duration
-transaction duration
-lock wait
-append duration
-wasted validation before OCC conflict
+preliminary idempotency
+→ preliminary history
+→ candidate / validation
+→ business UOW
+→ authoritative idempotency
+→ optimistic preparation
+→ append-time OCC / continuity arbitration
+→ idempotency persistence
+→ clean commit
 ```
 
-but it must not implement measurement.
+### IN_TRANSACTION + pessimistic locking
 
-## Stop Condition
+```text
+business UOW
+→ authoritative idempotency
+→ pessimistic stream preparation
+→ protected history
+→ candidate / validation
+→ append-time continuity arbitration
+→ idempotency persistence
+→ clean commit
+```
 
-Do not proceed to a write-side trace contract if the audit finds that a useful
-trace would merely duplicate:
+The two compositions may be constructed simultaneously on separate connections.
+The current production bootstrap does not compose them together, but no global
+strategy registry or singleton makes them mutually exclusive.
+
+## Evidence Ownership
+
+PR4 confirms that current primary artifacts already own terminal meaning:
 
 ```text
 PostgresWriteSideResult
 SemanticOutcome
 DecisionReceipt
-existing transaction lifecycle evidence
 ```
 
-or would require mixing in retry, policy, persistence, or unsafe exception
-detail.
+The remaining DiagnosticTrace value is execution topology and bounded progress,
+not result duplication.
+
+PR4 also preserves:
+
+```text
+one create_order(...) / pay_order(...) call
+= one Stage 4B.1 execution
+
+later invocation / retry relationship
+= Stage 4E AttemptLog
+```
+
+## Commit / Durability Boundary
+
+A successful append means the event INSERT succeeded inside the current
+transaction. It does not mean the event is durable.
+
+Normal `ACCEPTED` delivery reaches the caller only after clean UOW commit
+returns. An event inserted before commit can still disappear on rollback.
+
+PR4 therefore does not introduce a public `COMMITTED`, `NOT_COMMITTED`, or
+`UNKNOWN` trace state. Commit ambiguity remains outside this characterization.
+
+## Deferred Hardening — Concurrent Idempotency MISS→Record Arbitration
+
+PR4 also records, but does not absorb, a separate source-supported request
+identity race:
+
+```text
+same request_id
++ different order streams
+
+writer A authoritative idempotency = MISS
+writer B authoritative idempotency = MISS
+
+A event append succeeds transaction-locally
+B event append succeeds transaction-locally
+
+both later attempt:
+INSERT idempotency_records(request_id=...)
+```
+
+There is currently no request-level lock between idempotency `check()` and
+`record()`. The `idempotency_records.request_id` primary key is therefore the
+final physical arbiter once both writers have already observed `MISS`.
+
+The losing `record()` may surface a raw PostgreSQL `UniqueViolation`; current
+write-side code does not reclassify that path into typed `REPLAY` or `CONFLICT`.
+Exceptional UOW rollback removes the loser's already-inserted event, so durable
+state can remain consistent even though failure delivery is not yet a stable
+idempotency semantic.
+
+This is intentionally deferred because resolving it may require a semantic
+contract decision rather than additional PR4 topology evidence.
+
+```text
+concurrent idempotency check→record TOCTOU
+= source-supported
+= exact two-connection characterization absent
+= separate hardening gap
+= not part of current PR4 acceptance
+```
+
+## Stage 4B.2 Relationship
+
+PR4 identifies meaningful later measurement boundaries such as:
+
+```text
+validation duration
+business-transaction duration
+pessimistic lock-acquisition call duration
+append / OCC arbitration duration
+idempotency-persistence duration
+wasted validation before OCC conflict
+```
+
+It does not implement measurement and does not rank PRE versus IN performance.
+
+## PR5 Handoff
+
+PR4 justifies proceeding to a bounded write-side trace contract.
+
+PR5 must still independently decide which characterized checkpoints deserve
+stable public vocabulary. It must not freeze every test-only checkpoint, SQL
+wait state, or database-internal detail.
+
+The first explicit PR5 re-review remains whether:
+
+```text
+CLEAN_COMMIT_RETURNED
+```
+
+adds non-duplicative trace evidence beyond normal successful primary-result
+delivery.
+
+## Non-goals
+
+PR4 does not implement:
+
+```text
+production DiagnosticTrace dataclasses
+traced write-side APIs
+trace persistence
+DecisionReceipt persistence changes
+retry / AttemptLog
+policy / strategy selection
+measurement / benchmarking
+commit-ambiguity reconciliation
+generic cross-producer DiagnosticTrace
+concurrent idempotency semantic redesign
+```
 
 ---
 
@@ -732,9 +867,13 @@ producer-specific contract for one write-side execution.
 
 ## Status
 
-Provisional; depends on PR4.
+Next.
 
-## Provisional Branch
+PR4 has completed the source-grounded execution characterization. PR5 may now
+freeze the smallest immutable producer-specific trace contract justified by
+that evidence.
+
+## Branch
 
 ```text
 feat/stage4b1-pr5-write-side-trace-contract
@@ -777,7 +916,7 @@ safe bounded identities already present in current execution
 
 This list is conceptual only.
 
-PR4 audit results must determine the final vocabulary.
+PR4 characterization results are the evidence baseline for the final vocabulary.
 
 ## Required Boundary
 
@@ -924,7 +1063,7 @@ the snapshot-assisted trace contract is tested
 snapshot traced resolver integration is explicitly deferred with rationale
 existing resolver behavior remains unchanged
 projection-worker trace has an audited, recorded DO NOT ADD decision
-the write-side trace audit has a recorded decision
+the write-side execution characterization is complete and recorded
 write-side trace is implemented only to the source-justified scope, or explicitly deferred
 single-execution vs AttemptLog boundaries are explicit
 unsafe exception / SQL / payload evidence remains excluded
@@ -1074,11 +1213,16 @@ Current remaining development sequence:
 1. preserve PR2 as the final bounded snapshot trace contract
 2. keep snapshot traced-resolver integration deferred
 3. retain the projection-worker DO NOT ADD decision
-4. review the dedicated write-side source audit
-5. finalize PR4+ decomposition from source evidence
-6. implement only the approved bounded write-side trace scope
-7. run Stage 4B.1 closeout
+4. preserve PR4 write-side execution characterization as the evidence baseline
+5. implement PR5 immutable write-side DiagnosticTrace contract
+6. re-review CLEAN_COMMIT_RETURNED before freezing the PR5 checkpoint vocabulary
+7. adapt PR6 traced execution integration only after PR5 is accepted
+8. run Stage 4B.1 closeout
 ```
 
-Do not start Stage 4B.2 implementation until the write-side trace audit and
-Stage 4B.1 write-side scope decision have been reviewed.
+The concurrent idempotency `check → record` TOCTOU remains a separate hardening
+gap and must not be pulled into PR5 merely because PR4 exposed it.
+
+Do not start Stage 4B.2 implementation until the PR5/PR6 write-side trace scope
+and Stage 4B.1 closeout are complete.
+
