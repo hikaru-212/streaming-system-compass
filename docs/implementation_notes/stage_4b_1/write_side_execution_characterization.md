@@ -6,22 +6,25 @@
 
 ```text
 this note
-= source-grounded prerequisite characterization
+= accepted PR4 source-grounded characterization
 
 production write-side trace contract
-= not designed or implemented
+= defined later by PR5; not owned by this note
 
 characterization scenarios
-= ten focused PostgreSQL integration scenarios defined
+= ten focused PostgreSQL integration scenarios complete
 
-characterization tests
-= final ten-scenario executable validation pending
+focused executable characterization
+= complete
+
+PR5 relationship
+= accepted execution-topology evidence baseline
 ```
 
-This note characterizes the current PostgreSQL write-side execution topology
-before any producer-specific trace contract is designed. It is not a public
-trace vocabulary, does not authorize a traced API, and does not change current
-write-side behavior.
+This note preserves the PR4 characterization of the current PostgreSQL
+write-side execution topology established before the producer-specific PR5
+contract. It is not a public trace vocabulary, does not authorize a traced API,
+and does not change current write-side behavior.
 
 ## 1. Purpose
 
@@ -40,9 +43,9 @@ ordered bounded execution checkpoints
 producer-specific terminal checkpoint
 ```
 
-This characterization asks which of those distinctions are grounded in current
-source and executable tests. It deliberately does not decide the future PR5
-contract.
+This characterization established which of those distinctions are grounded in
+current source and executable tests. It deliberately did not decide the later
+PR5 contract.
 
 ## 2. Source-Grounded Baseline
 
@@ -287,9 +290,9 @@ The current normal results do not directly preserve:
 This is the evidence gap currently strong enough to justify a narrow
 producer-specific trace slice and bounded write-side characterization.
 
-## 9. Proposed Characterization Scenarios
+## 9. Characterization Scenarios
 
-The focused integration characterization will cover:
+The focused integration characterization covers:
 
 1. PRE validation BLOCK before business-UOW, concurrency, or append reach.
 2. PRE authoritative REPLAY after preliminary MISS, history observation,
@@ -450,7 +453,7 @@ different owner.
 
 ## 12. PR5-Safe Conceptual Vocabulary
 
-The future PR5 contract may consider a smaller subset of concepts such as:
+PR4 identified a smaller subset of concepts for later PR5 consideration:
 
 ```text
 observed validation placement
@@ -460,10 +463,10 @@ ordered bounded checkpoint progress
 producer-specific terminal checkpoint
 ```
 
-These are characterization concepts, not frozen names or fields. A future
-contract should prefer fewer semantically stable checkpoints and should not
-turn every internal method call, database wait, or transaction-internal state
-into public vocabulary.
+These were characterization concepts, not frozen names or fields. PR5
+subsequently selected fewer semantically stable checkpoints and did not turn
+every internal method call, database wait, or transaction-internal state into
+public vocabulary.
 
 No stable `PRE_OCC`, `IN_PESSIMISTIC`, or other strategy enum is introduced
 here. Concrete compositions may be named in tests and documentation without
@@ -500,9 +503,9 @@ must explicitly define the measurement vocabulary.
 - The production write side does not enforce transaction isolation. The
   uncommitted-position characterization intentionally fixes `READ_COMMITTED`
   rather than claiming identical behavior for stronger isolation.
-- The future PR5 contract may omit checkpoints that are only useful for
-  exceptional paths if the first traced API preserves current no-result
-  exception behavior.
+- PR5 did not add checkpoints whose useful delivery would require changing
+  current no-result exception behavior. Any future exception-path trace
+  delivery still requires a separate error-contract decision.
 
 ## 15. Stop Conditions
 
@@ -523,10 +526,9 @@ Stop for human review if characterization or later contract work would require:
 
 ## 16. Characterization Evidence
 
-Final PR4 acceptance requires the complete ten-scenario characterization suite
-to execute successfully against the current production baseline. This document
-intentionally leaves that evidence pending until scenarios 9 and 10 have run
-together with the existing eight scenarios.
+The complete ten-scenario characterization suite executed successfully against
+the current production baseline. PR4 is complete and accepted as the execution
+topology evidence baseline used by PR5.
 
 The concurrency proof for scenarios 9 and 10 must be deterministic:
 

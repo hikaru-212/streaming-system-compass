@@ -35,14 +35,17 @@ ProjectionSnapshotAssistedResolutionTrace
 ```
 
 A write-side slice remains the implementation focus after the bounded
-snapshot-assisted contract completed in PR2. Further snapshot-specific runtime
-integration is deferred after the PR3 necessity revalidation.
+snapshot-assisted contract completed in PR2. PR4 characterization and the PR5
+immutable contract are complete; PR6 traced execution integration is next.
+Further snapshot-specific runtime integration remains deferred after the PR3
+necessity revalidation.
 
 The dedicated write-side source audit and formal PR4 execution characterization
 are complete. They established a bounded, source-grounded execution model for
 PRE_TRANSACTION + OCC and IN_TRANSACTION + pessimistic locking, including
-mixed-strategy handoffs and uncommitted stream-position arbitration. PR5 may now
-freeze only the smallest immutable trace vocabulary justified by that evidence.
+mixed-strategy handoffs and uncommitted stream-position arbitration. PR5 used
+that evidence to freeze the smallest immutable trace vocabulary justified by
+the current producer topology.
 
 ---
 
@@ -136,10 +139,10 @@ Do not add projection-worker `DiagnosticTrace` merely for symmetry.
 
 ---
 
-## Why a Write-Side Slice Is Planned
+## Why Stage 4B.1 Includes a Write-Side Slice
 
-Stage 4B.1 should not stop at snapshot tracing if the current write-side source
-supports a bounded, useful single-execution trace.
+Stage 4B.1 does not stop at snapshot tracing because the current write-side
+source supports a bounded, useful single-execution trace.
 
 The write side contains materially different execution paths, especially:
 
@@ -153,7 +156,8 @@ and:
 IN_TRANSACTION + pessimistic locking
 ```
 
-A write-side DiagnosticTrace may preserve execution-stage evidence such as:
+Before PR4 characterization and the PR5 freeze, candidate execution-stage
+evidence included:
 
 ```text
 validation boundary
@@ -165,10 +169,10 @@ commit boundary
 terminal stage
 ```
 
-These names are conceptual only.
+These names were conceptual inputs rather than the final PR5 vocabulary.
 
-The final write-side vocabulary must be source-grounded and must not be frozen
-until the dedicated write-side audit is reviewed.
+The final write-side vocabulary is source-grounded in the completed PR4 audit
+and characterization and is frozen by the accepted PR5 contract.
 
 The write-side trace is important because later Stage 4B.2 cost evidence is
 primarily intended to compare write-side correctness-preserving strategies,
@@ -300,11 +304,12 @@ PR4
 = write-side execution characterization
 
 PR5
-= NEXT
+= COMPLETE
 = immutable write-side DiagnosticTrace contract
 
 PR6
-= PROVISIONAL; depends on PR5
+= NEXT
+= write-side traced execution integration
 
 PR7
 = PLANNED
@@ -321,8 +326,8 @@ preserve the completed snapshot-assisted trace contract as a bounded reference
 → defer snapshot traced-resolver integration
 → retain the projection-worker DO NOT ADD decision
 → preserve PR4 write-side execution characterization as the evidence baseline
-→ freeze the smallest justified write-side trace contract in PR5
-→ integrate traced execution only after PR5
+→ preserve the completed PR5 immutable write-side trace contract
+→ integrate traced execution in PR6
 → Stage 4B.1 closeout
 ```
 
@@ -822,22 +827,23 @@ wasted validation before OCC conflict
 
 It does not implement measurement and does not rank PRE versus IN performance.
 
-## PR5 Handoff
+## PR5 Handoff and Accepted Decision
 
-PR4 justifies proceeding to a bounded write-side trace contract.
+PR4 justified proceeding to a bounded write-side trace contract.
 
-PR5 must still independently decide which characterized checkpoints deserve
-stable public vocabulary. It must not freeze every test-only checkpoint, SQL
-wait state, or database-internal detail.
+PR5 independently selected the stable producer-topology checkpoints. It did not
+freeze every test-only checkpoint, SQL wait state, or database-internal detail.
 
-The first explicit PR5 re-review remains whether:
+The PR5 re-review concluded:
 
 ```text
 CLEAN_COMMIT_RETURNED
+= intentionally omitted
 ```
 
-adds non-duplicative trace evidence beyond normal successful primary-result
-delivery.
+Clean committed producer completion is already owned by normal successful
+primary-result delivery. DiagnosticTrace owns the bounded topology traversed
+before that delivery and does not duplicate commit evidence.
 
 ## Non-goals
 
@@ -862,16 +868,15 @@ concurrent idempotency semantic redesign
 
 ## Goal
 
-If PR4 confirms a useful bounded write-side trace, define the smallest immutable
-producer-specific contract for one write-side execution.
+Define the smallest immutable producer-specific contract for one write-side
+execution.
 
 ## Status
 
-Next.
+Complete.
 
-PR4 has completed the source-grounded execution characterization. PR5 may now
-freeze the smallest immutable producer-specific trace contract justified by
-that evidence.
+PR5 implements and tests the immutable producer-specific write-side
+DiagnosticTrace contract justified by the accepted PR4 evidence.
 
 ## Branch
 
@@ -879,59 +884,133 @@ that evidence.
 feat/stage4b1-pr5-write-side-trace-contract
 ```
 
-## Intended Direction
+## Completed Scope
 
-Prefer one contract that can represent both:
+PR5 adds:
 
 ```text
-PRE_TRANSACTION + OCC
+src/pipeline/transactional/
+  postgres_write_side_execution_trace.py
 
-IN_TRANSACTION + pessimistic locking
+tests/unit/pipeline/transactional/
+  test_postgres_write_side_execution_trace.py
+
+docs/implementation_notes/stage_4b_1/
+  write_side_execution_trace_contract.md
 ```
 
-only if the shared vocabulary remains semantically clean.
-
-Do not create a large union of mostly meaningless optional fields merely to
-force both strategies into one dataclass.
-
-If current source proves that the two paths require separate contracts, stop
-for human review before implementation.
-
-## Candidate Responsibility
-
-A future contract may preserve bounded evidence such as:
+The production contract is:
 
 ```text
-terminal execution stage
-validation reached / completed
-business transaction reached
-concurrency boundary reached
-lock reached / acquired when applicable
-authority revalidation reached
-admission reached
-append reached / completed
-commit reached / acknowledged
-safe bounded identities already present in current execution
+PostgresWriteSideExecutionCheckpoint
+
+PostgresWriteSideExecutionTrace
+= immutable
+= producer-specific
+= in memory only
 ```
 
-This list is conceptual only.
-
-PR4 characterization results are the evidence baseline for the final vocabulary.
-
-## Required Boundary
-
-The write-side trace must not become:
+`PostgresWriteSideExecutionTrace` stores exactly:
 
 ```text
-business transaction result replacement
-DecisionReceipt duplicate
-transaction log
-SQL log
-retry log
+validation_placement
+checkpoints
+```
+
+and derives:
+
+```text
+terminal_checkpoint = checkpoints[-1]
+```
+
+The exact checkpoint vocabulary is:
+
+```text
+PRELIMINARY_IDEMPOTENCY_CHECK_RETURNED
+ACCEPTED_HISTORY_OBSERVED
+VALIDATION_RETURNED
+BUSINESS_UOW_REACHED
+AUTHORITATIVE_IDEMPOTENCY_CHECK_RETURNED
+CONCURRENCY_PREPARATION_RETURNED
+APPEND_ADMISSION_RETURNED
+IDEMPOTENCY_PERSISTENCE_RETURNED
+```
+
+Every valid trace contains a non-empty exact prefix of the canonical sequence
+for its actual `ValidationPlacement`.
+
+### PRE_TRANSACTION Canonical Sequence
+
+```text
+PRELIMINARY_IDEMPOTENCY_CHECK_RETURNED
+→ ACCEPTED_HISTORY_OBSERVED
+→ VALIDATION_RETURNED
+→ BUSINESS_UOW_REACHED
+→ AUTHORITATIVE_IDEMPOTENCY_CHECK_RETURNED
+→ CONCURRENCY_PREPARATION_RETURNED
+→ APPEND_ADMISSION_RETURNED
+→ IDEMPOTENCY_PERSISTENCE_RETURNED
+```
+
+### IN_TRANSACTION Canonical Sequence
+
+```text
+BUSINESS_UOW_REACHED
+→ AUTHORITATIVE_IDEMPOTENCY_CHECK_RETURNED
+→ CONCURRENCY_PREPARATION_RETURNED
+→ ACCEPTED_HISTORY_OBSERVED
+→ VALIDATION_RETURNED
+→ APPEND_ADMISSION_RETURNED
+→ IDEMPOTENCY_PERSISTENCE_RETURNED
+```
+
+## Commit Evidence Ownership
+
+`CLEAN_COMMIT_RETURNED` is intentionally omitted. DiagnosticTrace owns bounded
+execution topology, while successful primary-result delivery owns clean
+committed producer completion.
+
+`IDEMPOTENCY_PERSISTENCE_RETURNED` means only that
+`PostgresIdempotencyStore.record(...)` returned normally inside the current
+business transaction. It does not establish transaction commit, durable
+idempotency authority, cross-transaction visibility, or successful
+primary-result delivery.
+
+For accepted execution, clean commit finality is established by successful
+primary-result delivery. The trace establishes only the bounded execution
+topology that preceded that delivery; commit finality does not follow from
+`IDEMPOTENCY_PERSISTENCE_RETURNED` itself.
+
+## Validation
+
+Focused pure unit validation:
+
+```text
+./.venv/bin/python -m pytest -q \
+  tests/unit/pipeline/transactional/test_postgres_write_side_execution_trace.py
+
+40 passed
+```
+
+PR5 unit validation requires no PostgreSQL, Docker, or `TEST_DATABASE_URL`.
+
+## Non-goals
+
+PR5 does not add:
+
+```text
+traced write-side API
+production checkpoint instrumentation
+result + trace envelope
+result / trace coherence
+retry
 AttemptLog
-policy output
-strategy output
-measurement object
+strategy selection
+measurement
+trace persistence
+DecisionReceipt changes
+exception-carried trace
+commit-ambiguity redesign
 ```
 
 ---
@@ -940,12 +1019,12 @@ measurement object
 
 ## Goal
 
-If PR5 is approved, connect the current write-side execution path to the
-write-side trace contract without changing authoritative write semantics.
+Connect the current write-side execution path to the accepted PR5 trace contract
+without changing authoritative write semantics.
 
 ## Status
 
-Provisional; depends on PR4 and PR5.
+Next.
 
 ## Provisional Branch
 
@@ -964,6 +1043,18 @@ one bounded write-side DiagnosticTrace
 ```
 
 The exact API shape is not frozen by this breakdown.
+
+PR6 owns:
+
+```text
+create_order_with_trace(...) / pay_order_with_trace(...)
+  if still justified by implementation review
+production checkpoint instrumentation
+PostgresWriteSideResult + PostgresWriteSideExecutionTrace composition
+result / trace coherence
+post-commit trace or envelope construction failure semantics
+traced-delivery behavior
+```
 
 ## Required Preservation
 
@@ -1021,7 +1112,7 @@ Planned.
 docs/stage4b1-pr7-closeout
 ```
 
-The final numbering may move if the provisional write-side sequence is changed.
+The final numbering may move if the remaining Stage 4B.1 scope changes.
 
 ## Closeout Questions
 
@@ -1210,14 +1301,11 @@ None of these replaces the others.
 Current remaining development sequence:
 
 ```text
-1. preserve PR2 as the final bounded snapshot trace contract
-2. keep snapshot traced-resolver integration deferred
-3. retain the projection-worker DO NOT ADD decision
-4. preserve PR4 write-side execution characterization as the evidence baseline
-5. implement PR5 immutable write-side DiagnosticTrace contract
-6. re-review CLEAN_COMMIT_RETURNED before freezing the PR5 checkpoint vocabulary
-7. adapt PR6 traced execution integration only after PR5 is accepted
-8. run Stage 4B.1 closeout
+PR5 accepted and complete
+→ adapt and implement PR6 traced execution integration
+→ review PR6 behavioral equivalence, result / trace coherence,
+  and post-commit delivery semantics
+→ Stage 4B.1 closeout
 ```
 
 The concurrent idempotency `check → record` TOCTOU remains a separate hardening
@@ -1225,4 +1313,3 @@ gap and must not be pulled into PR5 merely because PR4 exposed it.
 
 Do not start Stage 4B.2 implementation until the PR5/PR6 write-side trace scope
 and Stage 4B.1 closeout are complete.
-
