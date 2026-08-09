@@ -22,10 +22,11 @@ The purpose of `src/` is to hold the executable system boundaries for:
 
 This is the implementation center of the repository.
 
-Current status: Stage 4A and Stage 4B PR1–PR7 are complete. The source tree now
-includes `SemanticOutcome`, `DecisionReceipt`, generic and producer-specific
-receipt mapping, strict serializer v1, and explicit receipt persistence
-boundaries. Stage 4B.1 is next.
+Current status: Stage 4A, Stage 4B PR1–PR7, and Stage 4B.1 PR1–PR7 are complete.
+The source tree now includes `SemanticOutcome`, `DecisionReceipt`, generic and
+producer-specific receipt mapping, strict serializer v1, explicit receipt
+persistence boundaries, producer-specific trace contracts, and PostgreSQL
+write-side Result + Trace execution. Stage 4B.2 is next.
 
 ---
 
@@ -216,7 +217,7 @@ Another useful way to think about it is:
 
 ## Current Baseline
 
-At the current stage, after Stage 4B completion, `src/` contains an executable baseline across:
+At the current stage, after Stage 4B.1 completion, `src/` contains an executable baseline across:
 
 - transactional write-side semantics
 - accepted-history persistence and replay
@@ -233,6 +234,8 @@ At the current stage, after Stage 4B completion, `src/` contains an executable b
 - PostgreSQL-backed per-order projection worker correctness under ADR 0020
 - durable replay / rebuild validation against accepted history
 - Stage 3.5D projection snapshot schema and store baseline
+- immutable snapshot-assisted resolution trace and execution-envelope contracts
+- producer-specific PostgreSQL write-side trace and Result + Trace execution
 - Stage 3.5D projection snapshot-assisted replay validation
 - Stage 3.5D projection snapshot-assisted state resolution
 - explicit aggregate snapshot trust deferral
@@ -357,11 +360,13 @@ This separation is especially important because the project is concerned with co
 
 ## What `src/` Does Not Yet Fully Solve
 
-After the completed Stage 4B receipt foundation, the source tree does **not yet** fully solve:
+After the completed Stage 4B.1 trace stage, the source tree does **not yet** fully solve:
 
 - state-level Compass Layer 2 validation as a general runtime subsystem
 - automatic DecisionReceipt materialization or accepted-history reconciliation
-- `DiagnosticTrace` / `ResolutionTrace`
+- a repository-wide generic `DiagnosticTrace` abstraction
+- snapshot traced-resolver runtime integration or projection-worker trace delivery
+- trace persistence or cross-process same-execution provenance
 - runtime decision policy
 - action safety
 - advanced runtime concerns such as DLQ, buffering, watermarking, worker leasing, checkpoint row locking, or multi-worker coordination
@@ -432,4 +437,8 @@ If the top-level README explains what the project is about, `src/` shows how tha
 
 That partition is the main reason the project can evolve without collapsing its own boundaries.
 
-After Stage 4B, the source tree has durable write-side, repaired per-order read-side progress, snapshot-assisted read-side replay / resolution, SemanticOutcome, and explicit DecisionReceipt persistence baselines. The next implementation stage is Stage 4B.1.
+After Stage 4B.1, the source tree has durable write-side, repaired per-order
+read-side progress, snapshot-assisted read-side replay / resolution,
+`SemanticOutcome`, explicit `DecisionReceipt` persistence, producer-specific
+trace contracts, and PostgreSQL Result + Trace execution baselines. The next
+implementation stage is Stage 4B.2.

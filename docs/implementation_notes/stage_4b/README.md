@@ -36,12 +36,14 @@ PR7 — Complete
 ```
 
 Stage 4B is complete. [Stage 4B.1 — DiagnosticTrace / ResolutionTrace](../stage_4b_1/README.md)
-is the current formal development stage; PR1 and PR2 are complete, PR3 is
-complete and documentation-only, and remaining implementation review is
-write-side and source-audit-dependent. See the
+is also complete through PR7, including the immutable snapshot-assisted trace
+contract and PostgreSQL write-side Result + Trace integration. Snapshot traced
+resolver runtime integration remains intentionally deferred. See the
 [Stage 4B closeout](stage_4b_closeout.md) for the final
 source map, invariants, validation-evidence map, non-goals, and roadmap
-transition.
+transition, and the
+[Stage 4B.1 closeout](../stage_4b_1/stage_4b_1_closeout.md) for the completed
+trace-stage authority and Stage 4B.2 handoff.
 
 A separate post-Stage 4B PostgreSQL follow-up first characterized one
 transaction-local cleanup mechanism for live-but-idle DecisionReceipt owners and
@@ -52,8 +54,7 @@ production timeout calibration, connection-pool integration, and runtime policy
 remain unimplemented. See
 [DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md).
 
-This follow-up does not reopen Stage 4B or change the current Stage 4B.1
-development boundary.
+This follow-up does not reopen Stage 4B or the completed Stage 4B.1 boundary.
 
 Reported focused PR2 verification:
 
@@ -413,11 +414,8 @@ The completed closeout transition is:
 
 ```text
 PR7 — Stage 4B Closeout — Complete
-Current formal development stage — Stage 4B.1 DiagnosticTrace / ResolutionTrace
-Stage 4B.1 PR1 — Complete
-Stage 4B.1 PR2 — Complete
-Stage 4B.1 PR3 — Complete / Documentation only
-Remaining implementation — Write-side and source-audit-dependent
+Stage 4B.1 PR1–PR7 — Complete
+Current formal development stage — Stage 4B.2 Measurement / Cost Evidence
 ```
 
 ---
@@ -453,8 +451,7 @@ The implementation guide is:
 [DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md)
 
 This is a post-Stage 4B PostgreSQL hardening follow-up. It does not reopen the
-completed Stage 4B contract or change the current Stage 4B.1 development
-boundary.
+completed Stage 4B contract or the completed Stage 4B.1 boundary.
 
 ---
 

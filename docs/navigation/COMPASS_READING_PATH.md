@@ -6,7 +6,7 @@ Agent-generated actions are candidates, not accepted facts. Tool permission, val
 
 Compass places semantic validation and concurrency admission between a proposal and durable mutation. A candidate becomes an accepted fact only through admission into accepted history under the relevant domain, semantic, and concurrency boundaries. Identifier existence alone does not grant that status.
 
-The surrounding artifacts have narrower responsibilities. Accepted history preserves admitted facts. Projection state is derived read state. Per-order projection progress records current completeness; `global_position` remains lineage and scheduling evidence. A snapshot is derived fast-path evidence. An idempotency record preserves a request-to-accepted-result relation. `SemanticOutcome` interprets bounded technical evidence. `DecisionReceipt` preserves selected governance evidence through explicit mapping, serialization, and caller-owned persistence boundaries. `DiagnosticTrace` / `ResolutionTrace` remain the unimplemented next runtime stage.
+The surrounding artifacts have narrower responsibilities. Accepted history preserves admitted facts. Projection state is derived read state. Per-order projection progress records current completeness; `global_position` remains lineage and scheduling evidence. A snapshot is derived fast-path evidence. An idempotency record preserves a request-to-accepted-result relation. `SemanticOutcome` interprets bounded technical evidence. `DecisionReceipt` preserves selected governance evidence through explicit mapping, serialization, and caller-owned persistence boundaries. Producer-specific `DiagnosticTrace` / `ResolutionTrace` contracts preserve bounded one-execution topology without becoming primary results, receipts, retry authority, or measurement evidence.
 
 These artifacts must not impersonate one another. In particular, semantic meaning is not yet policy, retry permission, strategy, or executable action.
 
@@ -56,8 +56,12 @@ This is the shortest complete conceptual arc: **problem → executable authority
 | 12 | [SemanticOutcome to DecisionReceipt](../implementation_notes/stage_4b/semantic_outcome_to_decision_receipt.md) | Completed Stage 4B mapping record | Follow explicit generic construction without producer execution or persistence. |
 | 13 | [DecisionReceipt Durable Persistence](../implementation_notes/stage_4b/decision_receipt_persistence.md) | Completed Stage 4B persistence record | Separate strict serialization and storage-neutral envelopes from caller-owned PostgreSQL transaction completion. |
 | 14 | [Stage 4B Closeout](../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Confirm the complete mapping, tri-state flag, serializer-v1, persistence, and explicit non-goal baseline. |
+| 15 | [ADR 0022 — Traced Write-Side Execution Fails Closed](../adr/0022_traced_write_side_execution_fails_closed_before_business_commit.md) | Accepted producer-specific decision | Understand why the current PostgreSQL traced APIs synchronously construct valid Result + Trace before clean business-UOW exit. |
+| 16 | [Stage 4B.1 Closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Confirm completed producer-specific traces, intentional non-integrations, and the Stage 4B.2 handoff. |
 
-Stage 4B is complete, but mapping does not automatically materialize or persist a receipt. `DiagnosticTrace` / `ResolutionTrace` remain Stage 4B.1; policy, strategy, retry, action authorization, and execution remain later work.
+Stage 4B and Stage 4B.1 are complete, but mapping does not automatically
+materialize or persist a receipt. Stage 4B.2 measurement evidence is next;
+policy, strategy, retry, action authorization, and execution remain later work.
 
 ## 6. Choose by Professional Background
 
@@ -103,7 +107,8 @@ Stage 4B is complete, but mapping does not automatically materialize or persist 
 | 4 | [Stage 4A Closeout](../implementation_notes/stage_4a/stage_4a_closeout.md) | Confirm the completed scope and explicit deferrals. |
 | 5 | [Drift Validation Cost Boundary](../implementation_notes/stage_4a/drift_validation_cost_boundary.md) | Keep descriptive cost evidence separate from policy and strategy. |
 | 6 | [DecisionReceipt Boundary](../boundary_notes/decision_receipt_boundary.md) | Continue into the completed Stage 4B governance-evidence contract. |
-| 7 | [Stage 4B Closeout](../implementation_notes/stage_4b/stage_4b_closeout.md) | Confirm generic and producer mapping, tri-state flags, strict serializer v1, explicit persistence, and deferred Stage 4B.1 trace work. |
+| 7 | [Stage 4B Closeout](../implementation_notes/stage_4b/stage_4b_closeout.md) | Confirm generic and producer mapping, tri-state flags, strict serializer v1, explicit persistence, and the historical Stage 4B.1 transition. |
+| 8 | [Stage 4B.1 Closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Confirm the trace/result boundary, completed producer slices, and deferred consumer/provenance questions. |
 
 ## 7. Current Implementation Maturity
 
@@ -117,7 +122,8 @@ Completion below means the repository's bounded baseline, not production complet
 | Durable permission baseline | Completed | Not complete IAM, business authorization, or emergency repair governance. |
 | Stage 4A `SemanticOutcome` | Completed | Interprets evidence; does not execute policy, strategy, retry, or action. |
 | Stage 4B `DecisionReceipt` | Completed | Generic and producer mapping, tri-state flags, strict serializer v1, storage-neutral contracts, and explicit caller-owned PostgreSQL persistence exist; automatic materialization does not. |
-| Stage 4B.1 `DiagnosticTrace` / `ResolutionTrace` | Next; not implemented | Detailed execution and resolution lineage must not be projected backward into Stage 4B. |
+| Stage 4B.1 `DiagnosticTrace` / `ResolutionTrace` | Completed | Producer-specific contracts exist and PostgreSQL write-side tracing is integrated; snapshot runtime integration, projection-worker tracing, persistence, and a generic abstraction remain deferred. |
+| Stage 4B.2 measurement / cost evidence | Next | Must remain distinct from Stage 4B.1 execution topology and later policy. |
 | Policy / strategy / retry / action authorization and execution | Future | Must not be projected backward into current runtime behavior. |
 
 ## 8. What Not to Assume

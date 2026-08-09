@@ -184,13 +184,22 @@ Stage 3.5D completed the Read-side projection-snapshot baseline and the explicit
 
 ## Stage 4A / Stage 4B Snapshot Mapping
 
-Stage 4A maps bounded snapshot-trust and snapshot-assisted evidence into typed `SemanticOutcome`. Stage 4B maps those producer results into `DecisionReceipt`, preserves tri-state governance flags as `NOT_EVALUATED`, and supports strict serialization and explicit caller-owned persistence. These mappings do not grant continuing snapshot trust, automatically materialize receipts, select fallback, rebuild state, or authorize action. `DiagnosticTrace` / `ResolutionTrace` remain Stage 4B.1 and are not implemented.
+Stage 4A maps bounded snapshot-trust and snapshot-assisted evidence into typed
+`SemanticOutcome`. Stage 4B maps those producer results into `DecisionReceipt`,
+preserves tri-state governance flags as `NOT_EVALUATED`, and supports strict
+serialization and explicit caller-owned persistence. These mappings do not
+grant continuing snapshot trust, automatically materialize receipts, select
+fallback, rebuild state, or authorize action. Stage 4B.1 retains an immutable
+snapshot-assisted resolution trace contract, but its parallel traced-resolver
+runtime API remains intentionally deferred.
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|
 | [Read-side Outcome Mapping](../../implementation_notes/stage_4a/read_side_outcome_mapping.md) | Implementation boundary | Start here | Defines the completed snapshot-trust and assisted-resolution `SemanticOutcome` adapters. | Stage 4A complete. |
 | [Read-side / Snapshot DecisionReceipt Mapping](../../implementation_notes/stage_4b/read_side_snapshot_decision_receipt_mapping.md) | Implementation boundary | Core | Defines completed producer-specific receipt construction and evidence checks. | Stage 4B complete; mapping performs no persistence or policy evaluation. |
-| [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Core | Confirms the current receipt mapping, serialization, persistence, and non-goal baseline. | Stage 4B.1 trace work is next. |
+| [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Core | Confirms the current receipt mapping, serialization, persistence, and non-goal baseline. | Its Stage 4B.1 transition is historical. |
+| [Stage 4B.1 Snapshot Trace](../../implementation_notes/stage_4b_1/projection_snapshot_assisted_resolution_trace.md) | Implementation boundary | Core | Defines the retained immutable snapshot-assisted resolution trace and its necessity revalidation. | Contract implemented; parallel traced-resolver runtime integration deferred. |
+| [Stage 4B.1 Closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Core | Records the final snapshot trace disposition and future reopen conditions. | Stage 4B.1 complete; Stage 4B.2 next. |
 
 ## Aggregate Snapshot Deferral
 

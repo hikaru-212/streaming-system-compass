@@ -6,7 +6,7 @@
 
 This is topic-based navigation for the completed Stage 4A `SemanticOutcome` core. Existing `docs/` folders remain the source of each document's role and chronology. A document appears under multiple topics only when it makes a substantial contribution to each.
 
-Technical evidence is not semantic meaning. `SemanticOutcome` describes the semantic meaning of bounded evidence but does not authorize action. Stage 4A completed the typed interpretation boundary. Stage 4B then completed the `DecisionReceipt` contract, generic and producer mappings, tri-state flags, strict serializer v1, storage-neutral persistence contracts, and explicit caller-owned PostgreSQL persistence. Mapping remains explicit rather than automatic. `DiagnosticTrace` / `ResolutionTrace` remain the unimplemented Stage 4B.1 boundary; policy, strategy, retry, and action remain later work.
+Technical evidence is not semantic meaning. `SemanticOutcome` describes the semantic meaning of bounded evidence but does not authorize action. Stage 4A completed the typed interpretation boundary. Stage 4B then completed the `DecisionReceipt` contract, generic and producer mappings, tri-state flags, strict serializer v1, storage-neutral persistence contracts, and explicit caller-owned PostgreSQL persistence. Mapping remains explicit rather than automatic. Stage 4B.1 completed bounded producer-specific `DiagnosticTrace` / `ResolutionTrace` contracts and PostgreSQL write-side Result + Trace integration while preserving their separation from semantic meaning. Measurement, policy, strategy, retry, and action remain later work.
 
 This index does not override Stage 4A contracts or establish semantic, runtime-policy, retry, strategy, receipt, trace, or public-serialization authority.
 
@@ -192,7 +192,10 @@ Stage 4A may preserve retry-relevant meaning such as idempotent replay classific
 
 Stage 4A produces semantic meaning. Completed Stage 4B can explicitly map that meaning into a typed `DecisionReceipt`, preserve producer-specific evidence, serialize the receipt through strict serializer v1, and persist it through an explicit caller-owned storage operation. `SemanticOutcome`, `DecisionReceipt`, the serialized JSON envelope, and the persisted row remain separate responsibilities. `outcome_id` is not a receipt identity.
 
-No mapper automatically invokes the store or reconciles accepted history into receipts. Stage 4B.1 `DiagnosticTrace` / `ResolutionTrace` remains unimplemented, as do policy, retry governance, strategy selection, and action execution.
+No mapper automatically invokes the store or reconciles accepted history into
+receipts. Stage 4B.1 producer-specific traces do not add that orchestration or
+compose automatically with `SemanticOutcome`; policy, retry governance,
+strategy selection, and action execution also remain unimplemented.
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|
@@ -202,6 +205,7 @@ No mapper automatically invokes the store or reconciles accepted history into re
 | [SemanticOutcome to DecisionReceipt](../../implementation_notes/stage_4b/semantic_outcome_to_decision_receipt.md) | Implementation boundary | Core | Defines explicit generic construction without producer execution or persistence. | Completed Stage 4B mapping. |
 | [DecisionReceipt Durable Persistence](../../implementation_notes/stage_4b/decision_receipt_persistence.md) | Implementation boundary | Deep dive | Defines strict serialization, persistence envelopes, and caller-owned PostgreSQL persistence. | No automatic materialization or transaction completion. |
 | [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Core | Records final Stage 4B completion and the Stage 4B.1 transition. | Current completion authority. |
+| [Stage 4B.1 Closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Core | Separates primary Result, `SemanticOutcome`, `DecisionReceipt`, and producer-specific trace responsibilities. | Defers `SemanticOutcome + Trace` composition to a concrete Stage 4C consumer review. |
 
 ## Mapping Stability and Extension Boundaries
 
@@ -233,7 +237,14 @@ Order-scoped projection validation, Snapshot Trust authority comparison, and glo
 
 Stage 4A completed the `SemanticOutcome` core and its generic, Read-side, Snapshot, and Write-side mapping baseline.
 
-Stage 4B completes `DecisionReceipt`, its generic and producer mappings, tri-state flags, strict serializer v1, storage-neutral persistence contracts, and explicit caller-owned PostgreSQL persistence. It does not implement automatic materialization, accepted-history reconciliation, `DiagnosticTrace` / `ResolutionTrace`, runtime policy, strategy selection, retry governance, attempt logging, fallback execution, rebuild, quarantine, operator-review execution, or action safety.
+Stage 4B completes `DecisionReceipt`, its generic and producer mappings,
+tri-state flags, strict serializer v1, storage-neutral persistence contracts,
+and explicit caller-owned PostgreSQL persistence. Stage 4B itself did not
+implement automatic materialization, accepted-history reconciliation, runtime
+policy, strategy selection, retry governance, attempt logging, fallback
+execution, rebuild, quarantine, operator-review execution, or action safety.
+Stage 4B.1 later completed bounded producer-specific trace contracts without
+changing those Stage 4B non-goals.
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|
@@ -242,7 +253,8 @@ Stage 4B completes `DecisionReceipt`, its generic and producer mappings, tri-sta
 | [Runtime SemanticOutcome boundary](../../boundary_notes/runtime_semantic_outcome_boundary.md) | Boundary note | Core | Defines the narrow semantic-meaning responsibility. | Does not authorize later actions. |
 | [Read-side outcome mapping](../../implementation_notes/stage_4a/read_side_outcome_mapping.md) | Implementation boundary | Core | Defines the completed Read-side/Snapshot adapter baseline. | Ordinary worker freshness remains outside scope. |
 | [Write-side admission outcome mapping](../../implementation_notes/stage_4a/write_side_admission_outcome_mapping.md) | Implementation boundary | Core | Defines the completed Write-side adapter baseline. | Domain rejection and later receipt policy remain outside the explicit mapping. |
-| [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Start here | Records the completed receipt boundary, mappings, serialization, persistence, and explicit non-goals. | Stage 4B is complete; Stage 4B.1 is next. |
+| [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Start here | Records the completed receipt boundary, mappings, serialization, persistence, and explicit non-goals. | Stage 4B is complete; its Stage 4B.1 transition is historical. |
+| [Stage 4B.1 Closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Start here | Records the completed trace/result boundary and later consumer handoffs. | Stage 4B.1 is complete; Stage 4B.2 is next. |
 
 ## Implementation History and Design Evolution
 
@@ -258,7 +270,9 @@ Stage 4B completes `DecisionReceipt`, its generic and producer mappings, tri-sta
 
 - Domain rejection has no separate explicit Stage 4A mapping in the reviewed batch.
 - The strict serializer v1 remains separate from semantic meaning and does not create an indefinite external API compatibility promise.
-- `DiagnosticTrace` / `ResolutionTrace` identity and lineage remain Stage 4B.1 work.
+- Same-execution provenance beyond the trusted producer construction path is
+  deferred to a concrete Stage 4C consumer review; no execution or attempt
+  identity is frozen by Stage 4B.1.
 - Idempotency conflict may later require more precise intent/fingerprint vocabulary.
 - Mapping versioning, deprecation, and backward-compatibility rules remain undefined.
 - Unsupported dependency/adapter failures require boundary-specific mapping decisions.

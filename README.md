@@ -34,15 +34,23 @@ The project currently has:
 - a completed Stage 3.5E durable history and permission hardening baseline, including database role / privilege boundaries, accepted-history mutation hardening tests, derived-state mutation permission tests, and a minimal actor metadata boundary
 - a completed Stage 4A SemanticOutcome core, including runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping
 - a completed Stage 4B DecisionReceipt foundation, including the typed contract, generic and producer mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
-- executable tests defending write-side, read-side, durable replay, snapshot trust, durable permission-boundary, Stage 4A runtime semantic-outcome, and Stage 4B receipt semantics
+- a completed Stage 4B.1 DiagnosticTrace / ResolutionTrace stage, including the immutable snapshot-assisted contract, write-side execution characterization, producer-specific write-side trace contract, and traced write-side Result + Trace integration
+- executable tests defending write-side, read-side, durable replay, snapshot trust, durable permission-boundary, Stage 4A runtime semantic-outcome, Stage 4B receipt semantics, and Stage 4B.1 traced execution
 
-Stage 4A and Stage 4B PR1–PR7 are complete.
+Stage 4A, Stage 4B PR1–PR7, and Stage 4B.1 PR1–PR7 are complete.
 
 The current formal development focus is:
 
-- **[Stage 4B.1 — DiagnosticTrace / ResolutionTrace](docs/implementation_notes/stage_4b_1/README.md)**
+- **Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory**
 
-Stage 4B established durable receipt evidence without automatic materialization or reconciliation. Stage 4B.1 PR1 and PR2 completed the trace boundary and immutable snapshot-assisted trace contract. The original traced-resolver PR3 is superseded before implementation; the replacement PR3 is complete and documentation-only, records snapshot-necessity revalidation, and redirects the remaining Stage 4B.1 implementation focus toward source-grounded write-side DiagnosticTrace review. Measurement evidence, policy, strategy selection, retry governance, and action safety remain subsequent stages.
+Stage 4B established durable receipt evidence without automatic materialization
+or reconciliation. [Stage 4B.1](docs/implementation_notes/stage_4b_1/README.md)
+then established bounded producer-specific execution traces. Snapshot traced
+resolver integration remains intentionally deferred, projection-worker tracing
+remains `DO NOT ADD` for the completed stage, and the PostgreSQL write side now
+returns producer-owned Result + Trace executions. Measurement evidence is the
+next formal stage; policy, strategy selection, retry governance, and action
+safety remain subsequent stages.
 
 ### Immediate Engineering Checkpoint
 
@@ -90,11 +98,13 @@ orchestration, accepted-history reconciliation scheduler, or production
 connection-pool integration. The transaction-owner component does not construct
 receipts or automatically wire those deferred paths.
 
-Stage 4B.1 DiagnosticTrace / ResolutionTrace is the current formal development
-stage. Its PR1 boundary and PR2 immutable snapshot-assisted trace contract are
-complete; snapshot runtime integration is deferred, projection-worker tracing is
-not planned for this stage, and any remaining implementation is write-side and
-source-audit-dependent.
+Stage 4B.1 DiagnosticTrace / ResolutionTrace is complete through PR7. Its
+snapshot-assisted trace contract remains implemented without a parallel traced
+resolver runtime API; projection-worker tracing remains `DO NOT ADD` for that
+stage; and the PostgreSQL write side now has producer-specific traced Result +
+Trace execution. See the
+[Stage 4B.1 closeout](docs/implementation_notes/stage_4b_1/stage_4b_1_closeout.md).
+Stage 4B.2 measurement / cost evidence is the next formal development stage.
 
 See the
 [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](docs/boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
@@ -592,16 +602,16 @@ Current boundary of completion:
 - Stage 3.5E durable history and permission hardening is complete
 - Stage 4A SemanticOutcome core is complete
 - Stage 4B PR1–PR7 DecisionReceipt boundary, contract, mapping, serialization, and persistence foundation is complete
+- Stage 4B.1 PR1–PR7 DiagnosticTrace / ResolutionTrace boundary, producer-specific contracts, write-side integration, and closeout are complete
 
 Next implementation focus:
 
-- Stage 4B.1 — source-grounded write-side DiagnosticTrace review after the completed PR1 boundary, completed PR2 snapshot trace contract, and docs-only PR3 reprioritization
+- Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
 
 Stage 4A closeout is complete at the runtime semantic interpretation level.
 
 Next implementation milestones:
 
-- Stage 4B.1 DiagnosticTrace / ResolutionTrace
 - Stage 4B.2 measurement evidence, Stage 4B.5 domain policy, and Stage 4C+ runtime decision policy, StrategySelector, and retry governance
 - Stage 5 dual-dimension governance demo / action safety
 

@@ -9,7 +9,7 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the completion of Stage 4B:
+This version reflects the project position after the completion of Stage 4B.1:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
@@ -17,7 +17,8 @@ This version reflects the project position after the completion of Stage 4B:
 - Stage 3.5E durable history and permission hardening is complete.
 - Stage 4A SemanticOutcome core is complete.
 - Stage 4B DecisionReceipt PR1–PR7 is complete.
-- Stage 4B.1 DiagnosticTrace / ResolutionTrace is now the next implementation stage.
+- Stage 4B.1 DiagnosticTrace / ResolutionTrace PR1–PR7 is complete.
+- Stage 4B.2 Measurement Matrix / Cost Evidence Inventory is now the next implementation stage.
 - Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
@@ -49,6 +50,7 @@ This means:
 - Write-side aggregate snapshot implementation is explicitly deferred.
 - Stage 4A is complete as the SemanticOutcome core.
 - Stage 4B is complete as the DecisionReceipt evidence and persistence foundation.
+- Stage 4B.1 is complete as the bounded producer-specific DiagnosticTrace / ResolutionTrace stage.
 
 Detailed completed-stage execution records now live under:
 
@@ -58,14 +60,16 @@ Detailed completed-stage execution records now live under:
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 - [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 - [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
+- [Stage 4B.1 Implementation Notes](../implementation_notes/stage_4b_1/)
 
 The current major focus is:
 
-- **Stage 4B.1 — DiagnosticTrace / ResolutionTrace**
+- **Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory**
 
-After Stage 4B, the project can now proceed toward:
+After Stage 4B.1, the project can now proceed toward:
 
-- Stage 4B.1 DiagnosticTrace / ResolutionTrace
+- Stage 4B.2 Measurement Matrix / Cost Evidence Inventory
+- Stage 4B.5 Order Domain Policy Contract v0 and Stage 4C+ runtime governance
 - Stage 5 dual-dimension governance demo / action safety
 - Stage 5+ production and agent-facing hardening
 
@@ -713,6 +717,9 @@ outputs or reconcile accepted history.
 
 ## Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 
+**Status:** Complete through PR7. See the
+[Stage 4B.1 closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md).
+
 ### Goal
 
 Stage 4B.1 separates detailed failure-path diagnostics from primary semantic results and decision receipts.
@@ -725,6 +732,12 @@ partial progress belongs in diagnostic trace
 ```
 
 This keeps primary contracts strict while still preserving useful investigation evidence when resolution fails.
+
+The completed stage retains an immutable snapshot-assisted trace contract while
+deferring its parallel runtime API, leaves projection-worker tracing unadded,
+and implements producer-specific PostgreSQL write-side Result + Trace
+execution. It does not introduce a generic `DiagnosticTrace`, trace
+persistence, measurement evidence, retry policy, or governance orchestration.
 
 ---
 
