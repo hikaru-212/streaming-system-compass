@@ -34,11 +34,18 @@ The first concrete read-side slice is:
 ProjectionSnapshotAssistedResolutionTrace
 ```
 
-A write-side slice remains the implementation focus after the bounded
-snapshot-assisted contract completed in PR2. PR4 characterization and the PR5
-immutable contract are complete; PR6 traced execution integration is next.
-Further snapshot-specific runtime integration remains deferred after the PR3
-necessity revalidation.
+A write-side slice became the implementation focus after the bounded
+snapshot-assisted contract completed in PR2. PR4 characterization, the PR5
+immutable contract, and PR6 production integration are complete. Repository-wide
+validation has now executed the full `tests` tree successfully:
+
+```text
+pytest tests -q
+1650 passed in 30.93s
+```
+
+PR6 is accepted for the current repository state. Further snapshot-specific
+runtime integration remains deferred after the PR3 necessity revalidation.
 
 The dedicated write-side source audit and formal PR4 execution characterization
 are complete. They established a bounded, source-grounded execution model for
@@ -308,11 +315,12 @@ PR5
 = immutable write-side DiagnosticTrace contract
 
 PR6
-= NEXT
+= COMPLETE / ACCEPTED
 = write-side traced execution integration
+= repository-wide validation: 1650 passed in 30.93s
 
 PR7
-= PLANNED
+= NEXT / STAGE 4B.1 CLOSEOUT
 ```
 
 The earlier PR4 audit / boundary plan was refined after the parallel read-only
@@ -327,7 +335,8 @@ preserve the completed snapshot-assisted trace contract as a bounded reference
 → retain the projection-worker DO NOT ADD decision
 → preserve PR4 write-side execution characterization as the evidence baseline
 → preserve the completed PR5 immutable write-side trace contract
-→ integrate traced execution in PR6
+→ preserve the implemented PR6 traced execution integration
+→ preserve accepted repository-wide validation
 → Stage 4B.1 closeout
 ```
 
@@ -1024,41 +1033,145 @@ without changing authoritative write semantics.
 
 ## Status
 
-Next.
+Production integration, focused pure-unit validation, and PostgreSQL
+integration coverage are complete. Final repository-wide validation executed
+the full `tests` tree successfully:
 
-## Provisional Branch
+```text
+pytest tests -q
+1650 passed in 30.93s
+```
+
+PR6 is accepted for the current repository state.
+
+## Branch
 
 ```text
 feat/stage4b1-pr6-write-side-traced-execution
 ```
 
-## Intended Scope
+## Completed Scope
 
-Add the narrowest parallel or composition API needed to obtain:
-
-```text
-existing write-side primary result
-+
-one bounded write-side DiagnosticTrace
-```
-
-The exact API shape is not frozen by this breakdown.
-
-PR6 owns:
+PR6 adds:
 
 ```text
-create_order_with_trace(...) / pay_order_with_trace(...)
-  if still justified by implementation review
-production checkpoint instrumentation
-PostgresWriteSideResult + PostgresWriteSideExecutionTrace composition
-result / trace coherence
-post-commit trace or envelope construction failure semantics
-traced-delivery behavior
+src/pipeline/transactional/
+  postgres_write_side.py
+
+tests/unit/pipeline/transactional/
+  test_postgres_write_side_traced_execution_unit.py
+
+tests/integration/pipeline/transactional/
+  test_postgres_write_side_traced_execution_integration.py
+
+docs/implementation_notes/stage_4b_1/
+  write_side_traced_execution.md
 ```
 
-## Required Preservation
+The immutable producer-specific envelope is:
 
-PR6 must preserve:
+```text
+PostgresWriteSideExecution
+├── result: PostgresWriteSideResult
+└── trace: PostgresWriteSideExecutionTrace
+```
+
+Its constructor validates only:
+
+```text
+trace.validation_placement
++ result.outcome
++ trace.terminal_checkpoint
+```
+
+It does not become a second validator for nested idempotency, validation,
+stream-admission, append-admission, or accepted-event result semantics.
+
+PR6 adds parallel APIs:
+
+```text
+create_order_with_trace(...) -> PostgresWriteSideExecution
+pay_order_with_trace(...) -> PostgresWriteSideExecution
+```
+
+The legacy APIs remain unchanged:
+
+```text
+create_order(...) -> PostgresWriteSideResult
+pay_order(...) -> PostgresWriteSideResult
+```
+
+Legacy and traced entry points share the same PRE and IN execution algorithms.
+Only traced entry points create one private invocation-local collector. That
+collector immediately validates each new immutable prefix through the accepted
+PR5 constructor and is never stored on the writer or shared across calls.
+
+The emitted checkpoint sequences remain the exact PR5 canonical sequences.
+
+### PRE_TRANSACTION
+
+```text
+PRELIMINARY_IDEMPOTENCY_CHECK_RETURNED
+→ ACCEPTED_HISTORY_OBSERVED
+→ VALIDATION_RETURNED
+→ BUSINESS_UOW_REACHED
+→ AUTHORITATIVE_IDEMPOTENCY_CHECK_RETURNED
+→ CONCURRENCY_PREPARATION_RETURNED
+→ APPEND_ADMISSION_RETURNED
+→ IDEMPOTENCY_PERSISTENCE_RETURNED
+```
+
+### IN_TRANSACTION
+
+```text
+BUSINESS_UOW_REACHED
+→ AUTHORITATIVE_IDEMPOTENCY_CHECK_RETURNED
+→ CONCURRENCY_PREPARATION_RETURNED
+→ ACCEPTED_HISTORY_OBSERVED
+→ VALIDATION_RETURNED
+→ APPEND_ADMISSION_RETURNED
+→ IDEMPOTENCY_PERSISTENCE_RETURNED
+```
+
+`ACCEPTED_HISTORY_OBSERVED` is recorded immediately after accepted-history
+loading returns and before aggregate reconstruction. Normal source-grounded
+`REPLAY`, `CONFLICT`, `VALIDATION_BLOCKED`, `LOCK_TIMEOUT`, `STALE_WRITE`, other
+admission rejection, and `ACCEPTED` returns compose the primary result with the
+appropriate valid trace prefix.
+
+## Pre-Commit Construction Boundary
+
+For accepted traced execution, the implementation orders finalization as:
+
+```text
+idempotency persistence returns
+→ IDEMPOTENCY_PERSISTENCE_RETURNED is validated
+→ PostgresWriteSideResult(ACCEPTED) is constructed
+→ PostgresWriteSideExecution is constructed
+→ return expression is ready
+→ UOW __exit__ runs
+→ connection.commit() runs
+→ caller receives the already-built execution
+```
+
+Trace or envelope construction failure therefore occurs before commit and
+drives exceptional UOW rollback. A commit exception prevents caller-visible
+execution delivery. PR6 does not classify commit ambiguity or reinterpret that
+exception as a known business result.
+
+This is synchronous composition, not atomic persistence of diagnostic
+artifacts. `PostgresWriteSideResult`, `PostgresWriteSideExecutionTrace`, and
+`PostgresWriteSideExecution` remain Python in-memory objects. Only business
+state such as the accepted event and idempotency record participates in the
+PostgreSQL transaction.
+
+`CLEAN_COMMIT_RETURNED` remains intentionally absent. The trace does not prove
+commit finality, and `IDEMPOTENCY_PERSISTENCE_RETURNED` means only that the
+bounded persistence call returned normally inside the transaction.
+
+## Preservation Evidence
+
+PR6 preserves:
 
 ```text
 accepted history authority
@@ -1072,10 +1185,56 @@ current result status semantics
 current exception propagation
 ```
 
-PR6 must not automatically retry or switch strategies.
+The shared execution implementation and focused tests preserve those
+boundaries. Currently propagating exceptions still propagate without a
+guaranteed `PostgresWriteSideExecution`.
 
-A conflict or lock timeout may terminate the current trace, but any subsequent
-attempt belongs to Stage 4E.
+## Validation
+
+Focused PR5-contract and PR6 pure-unit validation completed during the PR6
+implementation review:
+
+```text
+./.venv/bin/python -m pytest -q \
+  tests/unit/pipeline/transactional/test_postgres_write_side_execution_trace.py \
+  tests/unit/pipeline/transactional/test_postgres_write_side_traced_execution_unit.py
+
+82 passed in 0.11s
+```
+
+The committed focused PostgreSQL traced-execution suite contains 15
+legacy/traced integration cases.
+
+Final repository-wide validation then executed the complete `tests` tree,
+including the focused PostgreSQL traced-execution coverage, PR4 characterization,
+and existing regression tests:
+
+```text
+pytest tests -q
+
+1650 passed in 30.93s
+```
+
+No test failure or skip is reported in the final run. PR6 acceptance is therefore
+grounded in the current full-suite result rather than the earlier
+environment-limited audit state.
+
+## Deferred PR7 Implications
+
+The producer path correctly pairs Result + Trace from one invocation, while
+manual `PostgresWriteSideExecution` construction proves only structural
+compatibility, not historical same-execution provenance. PR6 adds no
+`execution_id`, `attempt_id`, or producer-certification mechanism.
+
+The traced APIs are strict and fail closed: a trace invariant or instrumentation
+failure can roll back an otherwise valid traced execution. Legacy APIs create
+no tracing artifacts and retain their existing availability boundary. PR7 may
+record that trade-off, but any best-effort model requires separate future
+justification.
+
+Later consumer-driven `SemanticOutcome` + Trace composition may be reassessed,
+likely at Stage 4C entry. PR6 adds no such envelope, caller-independent pairing,
+additional coherence validator, or `DecisionReceipt` orchestration.
 
 ## Non-goals
 
@@ -1090,8 +1249,15 @@ cost timing
 benchmarking
 DecisionReceipt materialization
 trace persistence
-generic logging
+generic DiagnosticTrace inheritance
+SemanticOutcome + Trace composition
+same-execution provenance identity
+transaction durability classification
+exception-carried trace
 ```
+
+A conflict or lock timeout may terminate the current trace, but any subsequent
+attempt belongs to Stage 4E.
 
 ---
 
@@ -1142,6 +1308,15 @@ Did DiagnosticTrace remain separate from AttemptLog?
 Did any trace persistence accidentally become required?
 
 Is a repository-wide generic DiagnosticTrace abstraction actually justified?
+
+Does structural Result / Trace compatibility need a later producer-certified
+same-execution provenance mechanism for any concrete consumer?
+
+Should future production consumers retain strict fail-closed traced delivery,
+or does a separately justified consumer require a best-effort model?
+
+Should a trusted producer-returned Result + Trace ever compose with
+SemanticOutcome, and is Stage 4C entry the right reassessment point?
 ```
 
 ## Completion Criteria
@@ -1156,6 +1331,7 @@ existing resolver behavior remains unchanged
 projection-worker trace has an audited, recorded DO NOT ADD decision
 the write-side execution characterization is complete and recorded
 write-side trace is implemented only to the source-justified scope, or explicitly deferred
+focused PostgreSQL traced-execution validation is accepted or explicitly blocks closeout
 single-execution vs AttemptLog boundaries are explicit
 unsafe exception / SQL / payload evidence remains excluded
 DecisionReceipt remains compact and separate
@@ -1302,14 +1478,14 @@ Current remaining development sequence:
 
 ```text
 PR5 accepted and complete
-→ adapt and implement PR6 traced execution integration
-→ review PR6 behavioral equivalence, result / trace coherence,
-  and post-commit delivery semantics
-→ Stage 4B.1 closeout
+→ PR6 production integration complete
+→ focused and repository-wide validation accepted
+→ PR6 accepted
+→ Stage 4B.1 PR7 closeout / handoff
 ```
 
 The concurrent idempotency `check → record` TOCTOU remains a separate hardening
-gap and must not be pulled into PR5 merely because PR4 exposed it.
+gap and must not be pulled into PR6 merely because PR4 exposed it.
 
 Do not start Stage 4B.2 implementation until the PR5/PR6 write-side trace scope
 and Stage 4B.1 closeout are complete.

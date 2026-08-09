@@ -12,18 +12,32 @@ PR5 immutable write-side DiagnosticTrace contract
 = complete and accepted
 
 PR6 design
-= frozen by this note
+= frozen and implemented
 
 PR6 production integration
-= not yet implemented
+= complete
 
-PR6 executable validation
-= not yet accepted
+PR6 pure-unit validation
+= complete / 82 focused PR5 + PR6 tests passed
+
+PR6 PostgreSQL validation
+= complete through repository-wide test execution
+
+PR6 overall acceptance
+= accepted / 1650 tests passed in 30.93s
 ```
 
-This note freezes the implementation design for connecting the accepted PR5
-trace contract to the current PostgreSQL write side. It authorizes no production
-behavior by itself and does not mark PR6 complete.
+This note records the implemented design for connecting the accepted PR5 trace
+contract to the current PostgreSQL write side. Production integration, focused
+pure-unit evidence, and PostgreSQL integration coverage are complete. Final
+repository-wide validation executed the full `tests` tree successfully:
+
+```text
+pytest tests -q
+1650 passed in 30.93s
+```
+
+PR6 is accepted for the current repository state.
 
 ## 1. Purpose and Responsibility
 
@@ -40,7 +54,7 @@ owns only which bounded execution topology was traversed. The execution envelope
 composes those two artifacts without becoming a new source of business truth,
 transaction durability, retry authorization, or runtime policy.
 
-PR6 is limited to:
+The implemented PR6 scope is limited to:
 
 ```text
 immutable producer-specific execution envelope
@@ -231,7 +245,8 @@ history load
 → aggregate reconstruction through OrderAggregate.apply(...)
 ```
 
-PR6 must distinguish those boundaries only as far as required to record:
+The implementation distinguishes those boundaries only as far as required to
+record:
 
 ```text
 history load returns
@@ -273,10 +288,10 @@ current validated prefix
 → latest valid trace
 ```
 
-PR6 must not duplicate the PRE and IN canonical sequences in a second private
-validator while the accepted PR5 constructor can remain the structural
-authority. Duplicate, skipped, reordered, or wrong-placement checkpoints must
-fail at the instrumentation boundary rather than after execution completes.
+PR6 does not duplicate the PRE and IN canonical sequences in a second private
+validator. The accepted PR5 constructor remains the structural authority, so
+duplicate, skipped, reordered, or wrong-placement checkpoints fail at the
+instrumentation boundary rather than after execution completes.
 
 The ownership rule is:
 
@@ -288,8 +303,8 @@ one checkpoint
 
 Current production has no internal retry or repeated checkpoint phase. If a
 later implementation legitimately repeats a PR5 phase within one execution,
-the PR5 canonical-prefix contract requires human re-review; PR6 must not
-silently permit duplicate checkpoints.
+the PR5 canonical-prefix contract requires human re-review; the current
+implementation does not silently permit duplicate checkpoints.
 
 ## 6. Result + Trace Envelope
 
@@ -322,14 +337,16 @@ trace.validation_placement
 ```
 
 The invocation-local collector is created from the writer's actual
-`ValidationPlacement`; focused integration evidence must prove that the emitted
-`trace.validation_placement` matches the placement used for dispatch.
+`ValidationPlacement`. The focused integration suite asserts that emitted
+`trace.validation_placement` matches the placement used for dispatch. That
+coverage executed successfully as part of the final repository-wide
+`pytest tests -q` run.
 
 The existing primary result remains responsible for its business-result
 evidence. Nested semantics such as `IdempotencyVerdict`,
 `ValidationDecision.action`, `StreamAdmissionResult.admitted`,
 `AdmissionResult.admitted`, and accepted-event presence remain existing result
-responsibilities and focused PR6 integration-test evidence. The envelope must
+responsibilities and focused PR6 integration-test evidence. The envelope does
 not parse result reasons, reinterpret payloads, or reproduce those nested
 invariants.
 
@@ -365,12 +382,12 @@ IN history-only
 ```
 
 remain valid structural prefixes but are not current normal Result + Trace
-envelope terminals. PR6 must not manufacture synthetic results for those
+envelope terminals. PR6 does not manufacture synthetic results for those
 prefixes.
 
 ## 8. Mandatory Pre-Commit Construction
 
-No accepted traced execution may construct its trace or envelope in the outer
+No accepted traced execution constructs its trace or envelope in the outer
 dispatcher after a placement-specific execution method has returned from a
 successful business UOW.
 
@@ -420,8 +437,35 @@ business mutation committed
 → misleading generic caller failure
 ```
 
-PR6 must not construct the accepted trace or envelope after commit. If the
-implementation cannot preserve this ordering, work stops for human review.
+PR6 does not construct the accepted trace or envelope after commit. Any later
+change that cannot preserve this ordering requires human review.
+
+### Synchronous composition is not atomic persistence
+
+`PostgresWriteSideResult`, `PostgresWriteSideExecutionTrace`, and
+`PostgresWriteSideExecution` are Python in-memory artifacts. They do not
+participate in the PostgreSQL business transaction and are not durably or
+atomically stored with it. Only business state such as the accepted event and
+idempotency record participates in that transaction.
+
+The traced APIs instead establish a synchronous fail-closed return boundary:
+
+```text
+valid Result
++ valid Trace
++ valid PostgresWriteSideExecution
+= synchronously composed before clean UOW exit
+
+accepted event
++ idempotency record
+= durably committed by the business transaction
+```
+
+Trace or envelope construction failure therefore occurs before commit and
+drives exceptional UOW rollback. A commit exception prevents caller-visible
+execution delivery, but PR6 does not classify the transaction as `COMMITTED`,
+`NOT_COMMITTED`, or `UNKNOWN` and does not reinterpret the exception as a known
+business failure.
 
 ## 9. Normal-Return Finalization
 
@@ -465,7 +509,7 @@ pay_order_with_trace(...) -> PostgresWriteSideExecution
 ```
 
 Legacy and traced entry points share the same PRE and IN write algorithms. PR6
-must not duplicate either algorithm.
+does not duplicate either algorithm.
 
 Legacy calls:
 
@@ -531,25 +575,40 @@ adds bounded topology context only; commit finality never follows from
 PR6 does not authorize another attempt, relate attempts, select an execution
 strategy, or recover a failed process.
 
-## 13. Validation Plan
+## 13. Validation Evidence
 
-PR6 acceptance requires focused evidence that instrumentation leaves current
-write behavior unchanged:
+Focused PR5-contract and PR6 pure-unit validation completed during the PR6
+implementation review:
 
-- pure unit coverage for the immutable envelope, bounded terminal
-  compatibility, and invocation-local collector behavior;
-- focused PostgreSQL traced-execution integration coverage for PRE and IN
-  normal-return prefixes;
-- explicit evidence that accepted trace/envelope construction completes before
-  commit and that construction failure rolls back rather than becoming a
-  post-commit diagnostic failure;
-- legacy-versus-traced primary-result equivalence;
-- unchanged PR4 characterization coverage;
-- unchanged PR5 trace-contract coverage; and
-- focused legacy PostgreSQL write-side regression coverage.
+```text
+./.venv/bin/python -m pytest -q \
+  tests/unit/pipeline/transactional/test_postgres_write_side_execution_trace.py \
+  tests/unit/pipeline/transactional/test_postgres_write_side_traced_execution_unit.py
 
-This documentation commit executes none of those tests and does not establish
-PR6 production acceptance.
+82 passed in 0.11s
+```
+
+The unit evidence covers the immutable envelope, bounded terminal
+compatibility, invocation-local collector behavior, shared legacy/traced
+execution paths, construction-before-commit ordering, construction-failure
+rollback, commit-failure nondelivery, and history-checkpoint placement.
+
+The committed focused PostgreSQL suite contains 15 legacy/traced cases for PRE
+and IN normal-return prefixes, primary-result equivalence, persisted row
+effects, and idempotency-record failure rollback.
+
+Final repository-wide validation executed the complete `tests` tree, including
+the focused PostgreSQL traced-execution suite, PR4 characterization, and
+existing regression coverage:
+
+```text
+pytest tests -q
+
+1650 passed in 30.93s
+```
+
+No test failure or skip is reported in the final run. This full-suite result is
+the current PR6 acceptance evidence.
 
 ## 14. Explicit Non-Goals
 
@@ -576,13 +635,47 @@ PR6 does not add or change:
 The deferred business-UOW bounded-liveness working material remains outside
 PR6 and non-authoritative.
 
-## 15. Implementation Sequence and Stop Conditions
+## 15. PR7 Handoff
 
-The remaining PR6 sequence is:
+PR6 establishes compatibility between the actual validation placement, primary
+outcome, and terminal checkpoint for artifacts produced through one traced
+invocation. It does not prove historical provenance for arbitrary manual
+construction. A caller could manually combine a result from one execution with
+a structurally compatible trace from another. PR7 or a later consumer review
+must keep these questions separate:
+
+```text
+compatibility
+= could these artifacts belong together?
+
+provenance
+= did these artifacts actually come from the same execution?
+```
+
+PR6 introduces no `execution_id`, `attempt_id`, or producer-certification
+mechanism to answer the second question.
+
+The parallel traced APIs also intentionally use strict, fail-closed synchronous
+composition. A systematic trace invariant or instrumentation defect can roll
+back an otherwise valid traced execution and prevent caller-visible result
+delivery. The legacy APIs do not create tracing artifacts and are unaffected by
+that availability trade-off. PR7 should record the implication and defer any
+future best-effort tracing model to a separately justified consumer decision;
+it must not retroactively change the accepted PR6 contract.
+
+Finally, trusted producer-returned Result + Trace may support a later
+consumer-driven `SemanticOutcome` + Trace composition. PR6 does not introduce
+that envelope, an additional coherence validator, caller-independent pairing,
+or `DecisionReceipt` orchestration. The likely reassessment point remains Stage
+4C entry or another concrete consumer review.
+
+## 16. Implementation Sequence and Remaining Acceptance
+
+The PR6 delivery sequence is:
 
 ```text
 Commit 1
-= documentation / design freeze
+= documentation / design freeze — complete
 
 Commit 2
 = production envelope
@@ -590,29 +683,39 @@ Commit 2
 + shared checkpoint instrumentation
 + parallel traced APIs
 + focused unit coverage
+= complete
 
 Commit 3
-= focused PostgreSQL traced-execution integration validation
+= focused PostgreSQL traced-execution integration suite
+= complete / validated within the repository-wide test run
 
 Commit 4
 = PR6 documentation closeout
 + Stage 4B.1 status update
+= this change
 ```
 
-After this design-freeze commit:
+Current authority is:
 
 ```text
 PR6 design
 = frozen
 
 PR6 production integration
-= not yet implemented
+= complete
 
-PR6 executable validation
-= not yet accepted
+PR6 pure-unit validation
+= complete
+
+PR6 PostgreSQL validation
+= complete
+
+PR6 full acceptance
+= accepted / 1650 tests passed in 30.93s
 ```
 
-Stop for human review if implementation would require:
+PR6 validation is complete. PR7 may now close Stage 4B.1. Any future evidence
+that requires one of the following changes must still stop for human review:
 
 - accepted trace or envelope construction after commit;
 - a change to existing result semantics or exception propagation;
