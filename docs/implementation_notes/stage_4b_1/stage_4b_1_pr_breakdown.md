@@ -44,8 +44,10 @@ pytest tests -q
 1650 passed in 30.93s
 ```
 
-PR6 is accepted for the current repository state. Further snapshot-specific
-runtime integration remains deferred after the PR3 necessity revalidation.
+PR6 is accepted for the current repository state. PR7 closes Stage 4B.1 through
+documentation, [ADR 0022](../../adr/0022_traced_write_side_execution_fails_closed_before_business_commit.md),
+and explicit later-stage handoffs. Further snapshot-specific runtime integration
+remains deferred after the PR3 necessity revalidation.
 
 The dedicated write-side source audit and formal PR4 execution characterization
 are complete. They established a bounded, source-grounded execution model for
@@ -320,7 +322,8 @@ PR6
 = repository-wide validation: 1650 passed in 30.93s
 
 PR7
-= NEXT / STAGE 4B.1 CLOSEOUT
+= COMPLETE / DOCUMENTATION CLOSEOUT
+= closeout authority, ADR 0022, deferred handoffs, and global alignment
 ```
 
 The earlier PR4 audit / boundary plan was refined after the parallel read-only
@@ -337,7 +340,8 @@ preserve the completed snapshot-assisted trace contract as a bounded reference
 → preserve the completed PR5 immutable write-side trace contract
 → preserve the implemented PR6 traced execution integration
 → preserve accepted repository-wide validation
-→ Stage 4B.1 closeout
+→ complete the PR7 Stage 4B.1 closeout
+→ hand measurement and cost evidence to Stage 4B.2
 ```
 
 ---
@@ -1270,77 +1274,27 @@ as a coherent DiagnosticTrace responsibility.
 
 ## Status
 
-Planned.
+Complete / documentation only.
 
-## Recommended Branch
+## Branch
 
 ```text
 docs/stage4b1-pr7-closeout
 ```
 
-The final numbering may move if the remaining Stage 4B.1 scope changes.
+## Completed Scope
 
-## Closeout Questions
+PR7 adds no runtime behavior. It records:
 
-Closeout should explicitly answer:
-
-```text
-Did snapshot-assisted resolution retain a safe bounded immutable trace contract?
-
-Was snapshot traced-resolver integration explicitly deferred with its workload
-and consumer rationale?
-
-Did the existing primary resolver API remain behaviorally unchanged?
-
-Was a useful write-side trace implemented to the scope justified by source audit,
-or explicitly deferred if the audit did not justify one?
-
-Was projection-worker trace left unimplemented under its recorded DO NOT ADD
-decision?
-
-Can PRE_TRANSACTION + OCC and IN_TRANSACTION + pessimistic execution be
-explained without mixing in retry or policy?
-
-Did DiagnosticTrace remain separate from DecisionReceipt?
-
-Did DiagnosticTrace remain separate from AttemptLog?
-
-Did any trace persistence accidentally become required?
-
-Is a repository-wide generic DiagnosticTrace abstraction actually justified?
-
-Does structural Result / Trace compatibility need a later producer-certified
-same-execution provenance mechanism for any concrete consumer?
-
-Should future production consumers retain strict fail-closed traced delivery,
-or does a separately justified consumer require a best-effort model?
-
-Should a trusted producer-returned Result + Trace ever compose with
-SemanticOutcome, and is Stage 4C entry the right reassessment point?
-```
-
-## Completion Criteria
-
-Stage 4B.1 may close when:
-
-```text
-the snapshot-assisted trace contract is implemented
-the snapshot-assisted trace contract is tested
-snapshot traced resolver integration is explicitly deferred with rationale
-existing resolver behavior remains unchanged
-projection-worker trace has an audited, recorded DO NOT ADD decision
-the write-side execution characterization is complete and recorded
-write-side trace is implemented only to the source-justified scope, or explicitly deferred
-focused PostgreSQL traced-execution validation is accepted or explicitly blocks closeout
-single-execution vs AttemptLog boundaries are explicit
-unsafe exception / SQL / payload evidence remains excluded
-DecisionReceipt remains compact and separate
-documentation and branch status are aligned
-```
-
-If the write-side audit concludes that no additional trace is justified, the
-closeout must record that decision rather than forcing an unnecessary
-implementation.
+- the stable [Stage 4B.1 closeout](stage_4b_1_closeout.md);
+- [ADR 0022](../../adr/0022_traced_write_side_execution_fails_closed_before_business_commit.md)
+  for strict, fail-closed PostgreSQL traced-write composition;
+- the completed snapshot, projection-worker, and write-side dispositions;
+- deferred same-execution provenance and `SemanticOutcome + Trace` consumer
+  questions for Stage 4C entry;
+- the missing production `Execution → SemanticOutcome → DecisionReceipt →
+  TransactionOwner` orchestration without implementing it; and
+- current repository status/navigation alignment with Stage 4B.2 next.
 
 ## Closeout Non-goals
 
@@ -1446,7 +1400,7 @@ deterministic scheduling evidence, not projection completeness.
 
 ## Stage 4B.1 Final Boundary
 
-Stage 4B.1 should leave the repository with this conceptual separation:
+Stage 4B.1 leaves the repository with this conceptual separation:
 
 ```text
 producer execution
@@ -1474,18 +1428,20 @@ None of these replaces the others.
 
 ## Current Next Step
 
-Current remaining development sequence:
+The completed transition is:
 
 ```text
 PR5 accepted and complete
 → PR6 production integration complete
 → focused and repository-wide validation accepted
 → PR6 accepted
-→ Stage 4B.1 PR7 closeout / handoff
+→ Stage 4B.1 PR7 closeout complete
+→ Stage 4B.2 Measurement Matrix / Cost Evidence Inventory next
 ```
 
 The concurrent idempotency `check → record` TOCTOU remains a separate hardening
-gap and must not be pulled into PR6 merely because PR4 exposed it.
+gap and is not pulled into PR7 merely because PR4 exposed it.
 
-Do not start Stage 4B.2 implementation until the PR5/PR6 write-side trace scope
-and Stage 4B.1 closeout are complete.
+Stage 4B.2 may now proceed from the accepted PR4 topology, PR5 checkpoint
+vocabulary, and PR6 instrumentation sites. This breakdown does not design its
+measurement contract.
