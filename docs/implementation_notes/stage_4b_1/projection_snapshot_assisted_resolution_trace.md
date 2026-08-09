@@ -6,7 +6,7 @@
 
 ```text
 Stage 4B.1
-= current formal development stage
+= complete through PR7
 
 this note
 = source-grounded PR1 boundary and final PR2 contract record
@@ -392,7 +392,10 @@ feat/stage4b1-diagnostic-resolution-trace
 ├── PR2 immutable snapshot-assisted trace contract — complete
 ├── original PR3 parallel traced resolver API — superseded before implementation
 ├── PR3 snapshot necessity revalidation and Stage 4B.1 reprioritization — docs only
-└── PR4+ write-side DiagnosticTrace — exact scope remains source-grounded
+├── PR4 write-side execution characterization — complete
+├── PR5 write-side DiagnosticTrace contract — complete
+├── PR6 write-side traced execution integration — complete / accepted
+└── PR7 Stage 4B.1 closeout and handoff — complete / documentation only
 ```
 
 Every PR branch targets:
