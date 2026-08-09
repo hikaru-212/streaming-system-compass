@@ -195,10 +195,11 @@ Start with:
 8. [Agent Pipelines as a Stochastic Process](./agent_pipelines_as_stochastic_process.md)
 9. [agent_action_as_hypothesis.md](./agent_action_as_hypothesis.md)
 10. [retry_is_not_intent_preservation.md](./retry_is_not_intent_preservation.md)
-11. [shared_context_is_not_shared_contract.md](./shared_context_is_not_shared_contract.md)
-12. [crud_is_not_a_safe_boundary_for_agentic_commerce.md](./crud_is_not_a_safe_boundary_for_agentic_commerce.md)
-13. [Agent-Assisted Compass Layer Construction](./agent_assisted_compass_layer_construction.md)
-14. [input_guardrail_vs_admission_boundary_origin.public](./input_guardrail_vs_admission_boundary_origin.public.md)
+11. [Causal Failure Modeling: From Failure Classification to Failure Genesis](./causal_failure_modeling.md)
+12. [shared_context_is_not_shared_contract.md](./shared_context_is_not_shared_contract.md)
+13. [crud_is_not_a_safe_boundary_for_agentic_commerce.md](./crud_is_not_a_safe_boundary_for_agentic_commerce.md)
+14. [Agent-Assisted Compass Layer Construction](./agent_assisted_compass_layer_construction.md)
+15. [input_guardrail_vs_admission_boundary_origin.public](./input_guardrail_vs_admission_boundary_origin.public.md)
 
 ---
 
