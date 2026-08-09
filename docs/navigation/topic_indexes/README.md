@@ -37,7 +37,11 @@ Topic indexes currently exist for:
 - Durable History / Permission;
 - Stage 4A SemanticOutcome.
 
-Stage 4A and Stage 4B are complete. Current DecisionReceipt material appears in the relevant indexes even though there is no dedicated DecisionReceipt topic index. Stage 4B.1 `DiagnosticTrace` / `ResolutionTrace` is next and is not implemented.
+Stage 4A, Stage 4B, and Stage 4B.1 are complete. Current DecisionReceipt and
+producer-specific trace material appears in the relevant indexes even though
+there are no dedicated DecisionReceipt or DiagnosticTrace topic indexes. See
+the [Stage 4B.1 closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
+for the completed trace boundary and Stage 4B.2 handoff.
 
 [Reasoning Notes](../../reasoning_notes/README.md) are non-authoritative derivation records. [Postmortems](../../postmortems/README.md) reconstruct one concrete engineering, architectural, learning, or preventive episode. Their analytical depth does not determine their category.
 

@@ -15,13 +15,18 @@
   explicit caller-owned PostgreSQL persistence exist.
 - Automatic receipt materialization and automatic mapper-to-store wiring are
   not implemented.
-- Stage 4B.1 is next and is scoped to `DiagnosticTrace` / `ResolutionTrace`;
-  those contracts are not implemented.
+- Stage 4B.1 is complete: producer-specific `DiagnosticTrace` /
+  `ResolutionTrace` contracts exist, and the PostgreSQL write-side traced APIs
+  return Result + Trace; snapshot traced-resolver runtime integration remains
+  intentionally deferred.
+- Stage 4B.2 measurement / cost evidence is next.
 - Policy, strategy selection, retry governance, action authorization, and
   external action execution remain later work.
 
 See the [Stage 4B closeout](../implementation_notes/stage_4b/stage_4b_closeout.md)
-for the current completed receipt baseline.
+for the completed receipt baseline and the
+[Stage 4B.1 closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
+for the completed trace boundary.
 
 ## The Problem
 
@@ -103,8 +108,10 @@ Other runtime artifacts remain useful, but they do not inherit that authority:
 - **DecisionReceipt** preserves selected governance evidence when callers
   explicitly construct and persist a receipt through the implemented
   boundaries.
-- **DiagnosticTrace** is reserved for the next runtime stage and is not
-  implemented.
+- **DiagnosticTrace** preserves bounded producer-specific one-execution
+  topology where a concrete contract exists; it is not a primary result,
+  receipt, measurement record, retry authorization, or generic cross-producer
+  abstraction.
 
 These artifacts must not impersonate one another.
 

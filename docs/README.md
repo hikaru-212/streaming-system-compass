@@ -26,7 +26,7 @@ It now also serves as the reference frame for an executable baseline covering:
 - Stage 3.5E durable history / permission hardening and minimal actor metadata boundary
 - Stage 4A SemanticOutcome core as completed runtime semantic interpretation work
 - Stage 4B DecisionReceipt PR1–PR7 as a completed runtime-evidence and persistence foundation
-- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md) as the current formal development stage, with PR1 and PR2 complete, PR3 complete and documentation-only, and remaining implementation focused on source-grounded write-side DiagnosticTrace review
+- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md) as a completed producer-specific trace stage, with snapshot runtime integration intentionally deferred and PostgreSQL write-side Result + Trace integration complete
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -62,8 +62,8 @@ Stage 3.5E is now complete at the minimal actor / permission boundary level.
 
 The current formal development focus is:
 
-- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md)
-- later measurement, policy, strategy selection, and retry governance in roadmap order
+- Stage 4B.2 Measurement Matrix / Cost Evidence Inventory
+- later policy, strategy selection, and retry governance in roadmap order
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
 Stage 4B preserves selected evidence through explicit mapping, serialization,
@@ -75,12 +75,14 @@ and [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md).
 
 ## Current Engineering Checkpoint
 
-Stage 4B is complete, and Stage 4B.1 DiagnosticTrace / ResolutionTrace is the
-current formal development stage. PR1 completed the boundary, PR2 completed the
-immutable snapshot-assisted trace contract, and the complete documentation-only
-PR3 defers snapshot traced-resolver integration, records projection-worker trace
-as a current-stage `DO NOT ADD`, and makes source-grounded write-side
-DiagnosticTrace review the remaining implementation focus. The repository has
+Stage 4B and Stage 4B.1 are complete. Stage 4B.1 retains the immutable
+snapshot-assisted trace contract while intentionally deferring its parallel
+runtime integration, records projection-worker trace as `DO NOT ADD` for the
+stage, and completes producer-specific PostgreSQL write-side Result + Trace
+integration. The
+[Stage 4B.1 closeout](implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
+is the current completion authority, and Stage 4B.2 measurement / cost evidence
+is next. Separately, the repository has
 completed an independent
 PostgreSQL Level 1 characterization experiment for a live-but-idle
 DecisionReceipt transaction owner and a blocked uniqueness contender.
@@ -129,6 +131,10 @@ If you want exploratory AI governance research notes that are not implementation
 If you want non-authoritative records of how repository assumptions, missing
 premises, or responsibility boundaries were derived, see
 [Reasoning Notes](reasoning_notes/README.md).
+
+For non-authoritative candidate proof obligations derived from accepted
+architecture, contracts, and executable evidence, see
+[Test Specifications](test_specs/README.md).
 
 If you want to understand the core system architecture and implementation sequence, follow the reading order below.
 
@@ -209,6 +215,7 @@ docs/
 ├── semantic_admission/     # AI governance entry point for candidate actions and accepted facts
 ├── research/               # Exploratory research notes and architecture observations
 ├── reasoning_notes/        # Non-authoritative derivation and inference records
+├── test_specs/             # Non-authoritative proof-obligation candidates
 └── postmortems/            # Concrete engineering episodes and preventive discoveries
 ```
 
@@ -420,6 +427,17 @@ or implementation commitments. Current source, tests, migrations, accepted
 ADRs, boundary notes, and stage closeouts remain authoritative for those claims.
 Substantial reasoning does not by itself move a concrete engineering,
 architectural, or learning episode out of postmortems.
+
+---
+
+### [test_specs/](test_specs/README.md)
+
+Non-authoritative proof-obligation candidates derived from accepted
+architecture, contracts, and executable evidence.
+
+Use these documents to inspect candidate adversarial scenarios and their
+derivation premises. They do not change system semantics or inherit
+architecture authority merely because an AI can derive them.
 
 ---
 

@@ -797,17 +797,18 @@ note.
 
 ## Interaction with Stage 4B.1
 
-Stage 4B.1 DiagnosticTrace / ResolutionTrace remains the next formal
-runtime-governance stage.
+Stage 4B.1 DiagnosticTrace / ResolutionTrace is complete. Stage 4B.2
+measurement / cost evidence is the next formal stage.
 
 The owner-liveness work is an independent PostgreSQL hardening follow-up.
 
-It may proceed before Stage 4B.1 when isolated, but it must not:
+Its earlier ability to proceed before Stage 4B.1 depended on remaining isolated,
+and it still must not:
 
-- redefine DiagnosticTrace early;
+- redefine DiagnosticTrace;
 - require Stage 4B.1 to release database resources;
 - encode trace or resolution policy into the transaction owner;
-- delay Stage 4B.1 through unnecessary production-hardening expansion.
+- reopen Stage 4B.1 through unnecessary production-hardening expansion.
 
 Later traces may consume the resulting technical evidence.
 

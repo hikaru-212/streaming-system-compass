@@ -20,19 +20,23 @@ For project-wide sequencing, see:
 
 ## Current Position
 
-Stage 4A and Stage 4B PR1–PR7 are complete.
+Stage 4A, Stage 4B PR1–PR7, and Stage 4B.1 PR1–PR7 are complete.
 
 Stage 4 Interlude PR0 — test helper consolidation before Stage 4B — is complete.
 
 The next implementation focus is:
 
 ```text
-Stage 4B.1 — DiagnosticTrace / ResolutionTrace
+Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
 ```
 
 Stage 4A introduced the stable `SemanticOutcome` core, runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
 
 Stage 4B builds on that semantic interpretation layer by defining how selected `SemanticOutcome`-derived evidence becomes compact, reviewable, machine-readable runtime governance evidence. Its completed delivery record is the [Stage 4B closeout](stage_4b/stage_4b_closeout.md).
+
+Stage 4B.1 preserves bounded producer-specific execution topology separately
+from primary results and receipts. Its completed delivery record is the
+[Stage 4B.1 closeout](stage_4b_1/stage_4b_1_closeout.md).
 
 Stage 4B should not reopen Stage 4A mapping scope unless receipt requirements expose a missing evidence contract.
 
@@ -40,7 +44,6 @@ Stage 4B should also not collapse later Stage 4 layers into the receipt boundary
 
 ```text
 Later Stage 4 work remains separate:
-Stage 4B.1 — DiagnosticTrace / ResolutionTrace
 Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
 Stage 4B.5 — Order Domain Policy Contract v0
 Stage 4C   — RuntimeDecisionPolicy
