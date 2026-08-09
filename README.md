@@ -18,7 +18,7 @@ It is a production-inspired streaming-system project focused on:
 - **orthogonal idempotency / concurrency boundaries**
 - **replay-safe projection runtime design**
 - **exact-money hardening before durable persistence**
-- **snapshot trust as derived-state replay efficiency, not source-of-truth replacement**
+- **snapshot trust for optional derived-state reconstruction, not source-of-truth replacement**
 - **SemanticOutcome as the first runtime semantic interpretation boundary**
 
 The project currently has:
@@ -30,7 +30,7 @@ The project currently has:
 - a completed Stage 3.5B durable write-side baseline, including PostgreSQL-backed accepted history, durable idempotency, transactional write-side execution, two-phase concurrency admission, and validation placement strategy
 - Stage 3.5C PR0 durable order-event vocabulary hardening, including uppercase `event_type` vocabulary, `proof_prev_status` database constraint, and stream-position unique-constraint rename
 - a completed Stage 3.5C durable read-side baseline, later repaired under ADR 0020 to use PostgreSQL-backed exact-next per-order projection progress, with durable replay / rebuild validation
-- a completed Stage 3.5D snapshot trust / replay-efficiency baseline, including projection snapshot schema, store, replay validator, snapshot-assisted state resolver, and aggregate snapshot trust deferral
+- a completed Stage 3.5D snapshot trust / replay-efficiency baseline, now classified under ADR 0021 as optional reference infrastructure for the current Order workload
 - a completed Stage 3.5E durable history and permission hardening baseline, including database role / privilege boundaries, accepted-history mutation hardening tests, derived-state mutation permission tests, and a minimal actor metadata boundary
 - a completed Stage 4A SemanticOutcome core, including runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping
 - a completed Stage 4B DecisionReceipt foundation, including the typed contract, generic and producer mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
@@ -38,11 +38,11 @@ The project currently has:
 
 Stage 4A and Stage 4B PR1–PR7 are complete.
 
-The next implementation focus is:
+The current formal development focus is:
 
-- **Stage 4B.1 — DiagnosticTrace / ResolutionTrace**
+- **[Stage 4B.1 — DiagnosticTrace / ResolutionTrace](docs/implementation_notes/stage_4b_1/README.md)**
 
-Stage 4B established durable receipt evidence without automatic materialization or reconciliation. Stage 4B.1 begins the later trace boundary; measurement evidence, policy, strategy selection, retry governance, and action safety remain subsequent stages.
+Stage 4B established durable receipt evidence without automatic materialization or reconciliation. Stage 4B.1 PR1 and PR2 completed the trace boundary and immutable snapshot-assisted trace contract. The original traced-resolver PR3 is superseded before implementation; the replacement PR3 is complete and documentation-only, records snapshot-necessity revalidation, and redirects the remaining Stage 4B.1 implementation focus toward source-grounded write-side DiagnosticTrace review. Measurement evidence, policy, strategy selection, retry governance, and action safety remain subsequent stages.
 
 ### Immediate Engineering Checkpoint
 
@@ -78,13 +78,23 @@ typed non-ACCEPTED observation
 The owner-liveness experiment strengthens those separate governance
 transactions. It does not reopen the accepted business-transaction boundary.
 
-The repository still has no production receipt transaction owner, production
-timeout value, automatic materialization orchestrator, immediate typed
-non-`ACCEPTED` persistence orchestration, or accepted-history reconciliation
-scheduler.
+The repository now includes the implemented and tested
+`PostgresDecisionReceiptTransactionOwner`. It accepts an already-complete
+`DecisionReceipt` and owns one separate PostgreSQL governance transaction,
+including its dedicated connection, transaction-local timeout, commit or
+rollback, and final connection close or discard.
 
-Stage 4B.1 DiagnosticTrace / ResolutionTrace remains the next formal
-runtime-governance stage.
+The repository still has no calibrated production timeout value, automatic
+materialization orchestrator, immediate typed non-`ACCEPTED` persistence
+orchestration, accepted-history reconciliation scheduler, or production
+connection-pool integration. The transaction-owner component does not construct
+receipts or automatically wire those deferred paths.
+
+Stage 4B.1 DiagnosticTrace / ResolutionTrace is the current formal development
+stage. Its PR1 boundary and PR2 immutable snapshot-assisted trace contract are
+complete; snapshot runtime integration is deferred, projection-worker tracing is
+not planned for this stage, and any remaining implementation is write-side and
+source-audit-dependent.
 
 See the
 [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](docs/boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
@@ -564,6 +574,10 @@ Current baseline completed:
   - projection snapshot-assisted state resolver
   - aggregate snapshot trust boundary / deferral decision
   - write-side aggregate snapshot schema/store and snapshot-assisted write-side rehydration explicitly deferred
+- ADR 0021 snapshot-necessity revalidation:
+  - the Snapshot Trust Contract remains valid
+  - projection snapshots are optional derived reconstruction / trust-reference infrastructure for the current Order workload
+  - further snapshot-specific runtime expansion requires concrete consumer or workload evidence
 
 Current boundary of completion:
 
@@ -573,7 +587,7 @@ Current boundary of completion:
 - exact-money semantics are stabilized before deeper durable persistence work
 - durable accepted-history vocabulary has been hardened before read-side persistence depends on stored events
 - durable read-side projection state and replay / rebuild validation are established through Stage 3.5C, with current completeness repaired to exact-next per-order progress under ADR 0020
-- Stage 3.5D snapshot trust, persistence optimization, and replay efficiency is complete at the read-side projection snapshot baseline level
+- Stage 3.5D snapshot trust, persistence optimization, and replay efficiency is complete at the read-side projection snapshot baseline level; ADR 0021 classifies that subsystem as optional for the current Order workload
 - write-side aggregate snapshot schema/store and snapshot-assisted write-side rehydration are intentionally deferred
 - Stage 3.5E durable history and permission hardening is complete
 - Stage 4A SemanticOutcome core is complete
@@ -581,7 +595,7 @@ Current boundary of completion:
 
 Next implementation focus:
 
-- Stage 4B.1 — DiagnosticTrace / ResolutionTrace
+- Stage 4B.1 — source-grounded write-side DiagnosticTrace review after the completed PR1 boundary, completed PR2 snapshot trace contract, and docs-only PR3 reprioritization
 
 Stage 4A closeout is complete at the runtime semantic interpretation level.
 

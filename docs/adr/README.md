@@ -40,6 +40,8 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0018 | [Producer Receipt Adapters Preserve Evidence but Do Not Evaluate Governance Flags](0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md) | Accepted | Separates producer evidence preservation from governance-flag evaluation and keeps `TRUE`, `FALSE`, and `NOT_EVALUATED` distinct. |
 | 0019 | [Separate Accepted-Result Receipt Reconstruction from Immediate Typed-Observation Evidence Persistence](0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md) | Accepted | Separates reconstructible accepted-result receipts from non-reconstructible failed-attempt and observation evidence, records implemented foundational persistence, and defers reconciliation orchestration. |
 | 0020 | [Per-Order Projection Progress and Order-Local Snapshot Tails](0020_per_order_projection_progress_and_order_local_snapshot_tails.md) | Accepted | Uses per-order progress and order-local snapshot tails because global-position gaps do not prove missing order history. |
+| 0021 | [Projection Snapshots Are Optional for the Current Order Workload](0021_projection_snapshots_are_optional_for_current_order_workload.md) | Accepted | Retains the Snapshot Trust Contract while classifying projection snapshots as optional reference infrastructure for the current shallow Order workload. |
+| 0022 | [Traced Write-Side Execution Fails Closed Before Business Commit](0022_traced_write_side_execution_fails_closed_before_business_commit.md) | Accepted | Preserves strict pre-commit Result + Trace composition for the current PostgreSQL traced write-side APIs without treating diagnostic artifacts as durable business state. |
 
 ---
 
@@ -76,6 +78,8 @@ Recommended order:
 19. [Producer Receipt Adapters Preserve Evidence but Do Not Evaluate Governance Flags](0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md) — explains why producer adapters preserve typed evidence while `TRUE`, `FALSE`, and `NOT_EVALUATED` remain distinct and absence of evaluation is not false.
 20. [Separate Accepted-Result Receipt Reconstruction from Immediate Typed-Observation Evidence Persistence](0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md) — explains why accepted-result reconstruction and non-reconstructible failed-attempt or observation persistence require separate paths, with foundational persistence implemented and reconciliation orchestration deferred.
 21. [Per-Order Projection Progress and Order-Local Snapshot Tails](0020_per_order_projection_progress_and_order_local_snapshot_tails.md) — explains why aggregate-local progress and snapshot tails use order-local sequence instead of treating global-position gaps as missing order history.
+22. [Projection Snapshots Are Optional for the Current Order Workload](0021_projection_snapshots_are_optional_for_current_order_workload.md) — explains why the Snapshot Trust Contract remains valid while further snapshot-specific runtime expansion is evidence-gated for the current shallow Order workload.
+23. [Traced Write-Side Execution Fails Closed Before Business Commit](0022_traced_write_side_execution_fails_closed_before_business_commit.md) — explains why the current PostgreSQL traced APIs construct and validate Result + Trace before clean business-UOW exit while leaving future trace producers independently reviewable.
 
 ---
 
@@ -122,6 +126,14 @@ ADR 0018 keeps producer-specific receipt adapters responsible for typed evidence
 ADR 0019 separates reconstructible accepted-result receipts from failed-attempt and typed-observation evidence that accepted history cannot reconstruct. Foundational persistence contracts are implemented, while materialization and reconciliation orchestration remain deferred.
 
 ADR 0020 records why the order-state projection uses per-order progress and order-local snapshot tails. Global positions remain unique lineage and scheduling coordinates, but gaps do not prove missing order history or global committed-history completeness.
+
+ADR 0021 retains ADR 0013's Snapshot Trust Contract while separating trust correctness from workload necessity. It classifies projection snapshots as optional derived reconstruction and trust-reference infrastructure for the current Order workload and requires concrete consumer or workload evidence before further snapshot-specific expansion.
+
+ADR 0022 records the current PostgreSQL write-side traced-call transaction
+boundary. It requires valid synchronous Result + Trace composition before clean
+business-UOW exit, while keeping those in-memory diagnostic artifacts separate
+from durable business state and leaving best-effort or future producer models
+for separate review.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -196,6 +208,8 @@ Recommended pattern:
 0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md
 0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md
 0020_per_order_projection_progress_and_order_local_snapshot_tails.md
+0021_projection_snapshots_are_optional_for_current_order_workload.md
+0022_traced_write_side_execution_fails_closed_before_business_commit.md
 ```
 
 Evolution or supporting notes may be kept as separate files:

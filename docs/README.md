@@ -20,13 +20,13 @@ It now also serves as the reference frame for an executable baseline covering:
 - PostgreSQL-backed two-phase concurrency admission
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - Stage 3.5C durable read-side baseline
-- Stage 3.5D snapshot trust contract and read-side replay-efficiency baseline
+- Stage 3.5D snapshot trust contract and optional read-side reconstruction baseline for the current Order workload
 - projection snapshot schema, store, replay validator, and snapshot-assisted state resolver
 - aggregate snapshot trust deferral decision
 - Stage 3.5E durable history / permission hardening and minimal actor metadata boundary
 - Stage 4A SemanticOutcome core as completed runtime semantic interpretation work
 - Stage 4B DecisionReceipt PR1–PR7 as a completed runtime-evidence and persistence foundation
-- Stage 4B.1 DiagnosticTrace / ResolutionTrace as the next roadmap entry point
+- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md) as the current formal development stage, with PR1 and PR2 complete, PR3 complete and documentation-only, and remaining implementation focused on source-grounded write-side DiagnosticTrace review
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -53,16 +53,16 @@ The repository currently has an implemented baseline for:
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - executable tests across unit, integration, semantic-case, adversarial-baseline, Stage 3 projection-baseline, storage integration, transactional PostgreSQL-backed write-side, and admission-boundary layers
 - Stage 3.5C durable read-side baseline, including durable order-event vocabulary hardening, read-side schema, `PostgresProjectionStore`, historical checkpoint infrastructure, ADR 0020 per-order progress repair, and durable replay / rebuild validation
-- Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral
+- Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral; ADR 0021 now classifies projection snapshots as optional for the current Order workload
 - Stage 4A `SemanticOutcome` and Stage 4B `DecisionReceipt` mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
 
 The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **Stage 3.5C — Durable Read-Side Baseline**, **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**, and **Stage 3.5E — Durable History and Permission Hardening**.
 
 Stage 3.5E is now complete at the minimal actor / permission boundary level.
 
-The next focus is now:
+The current formal development focus is:
 
-- Stage 4B.1 DiagnosticTrace / ResolutionTrace
+- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md)
 - later measurement, policy, strategy selection, and retry governance in roadmap order
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
@@ -75,8 +75,13 @@ and [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md).
 
 ## Current Engineering Checkpoint
 
-Stage 4B is complete, and Stage 4B.1 DiagnosticTrace / ResolutionTrace remains
-the next runtime-governance stage. The repository has completed an independent
+Stage 4B is complete, and Stage 4B.1 DiagnosticTrace / ResolutionTrace is the
+current formal development stage. PR1 completed the boundary, PR2 completed the
+immutable snapshot-assisted trace contract, and the complete documentation-only
+PR3 defers snapshot traced-resolver integration, records projection-worker trace
+as a current-stage `DO NOT ADD`, and makes source-grounded write-side
+DiagnosticTrace review the remaining implementation focus. The repository has
+completed an independent
 PostgreSQL Level 1 characterization experiment for a live-but-idle
 DecisionReceipt transaction owner and a blocked uniqueness contender.
 
@@ -86,15 +91,19 @@ contender, permits contender progress, and leaves durable state verifiable from
 a fresh connection. The terminated owner connection is closed, broken, and
 unusable.
 
-This evidence proves the physical cleanup mechanism only. The approved
-production transaction-owner contract is now defined in the current specialized
-[DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
-and the
-[DecisionReceipt Transaction-Owner Liveness Hardening implementation note](implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md),
-but the production owner, production timeout configuration and duration,
-automatic materialization, and reconciliation remain unimplemented. The
-experiment does not reopen Stage 4B contracts or authorize retry. See also the
-non-authoritative derivation in
+This evidence originally proved the physical cleanup mechanism only. The
+resulting `PostgresDecisionReceiptTransactionOwner` component is now implemented,
+tested, and merged under the current specialized
+[DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md).
+The historical design chronology remains in the
+[DecisionReceipt Transaction-Owner Liveness Hardening implementation note](implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md).
+
+The component owns one already-complete receipt's separate governance
+transaction. Production timeout calibration and configuration ownership,
+automatic materialization, runtime bootstrap wiring, connection-pool
+integration, and reconciliation remain unimplemented. The owner does not reopen
+Stage 4B contracts or authorize retry. See also the non-authoritative derivation
+in
 [From Statement Success to Owner-Liveness](reasoning_notes/from_statement_success_to_owner_liveness.md).
 
 This abnormal-path transaction-liveness question remains separate from

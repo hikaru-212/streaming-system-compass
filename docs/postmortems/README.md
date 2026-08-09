@@ -62,6 +62,7 @@ than a concrete episode, use [Reasoning Notes](../reasoning_notes/README.md).
 | [from_row_count_assertions_to_evidence_assertions](from_row_count_assertions_to_evidence_assertions.md) | Testing / Assertion Fidelity | Records the Stage 3.5E PR4 near miss where exact evidence assertions exposed a PostgreSQL UUID return-type mismatch that row-count-only assertions would have hidden. |
 | [airflow_failure_and_boundary_thinking](airflow_failure_and_boundary_thinking.md) | Debugging / Boundary Thinking | Records how an early Airflow debugging failure exposed the cost of operating a system without first identifying the boundary responsible for the failure. |
 | [stage_4b_semantic_level_mismatch_in_ai_assisted_runtime_contract](stage_4b_semantic_level_mismatch_in_ai_assisted_runtime_contract.md) | Runtime Contract / AI-Assisted Engineering | Records the Stage 4B PR2 correction where a locally strong `DecisionReceipt` contract mixed evidence-source paths with operation/status vocabulary, and preserves the rule that AI-generated contracts require semantic-level admission review. |
+| [From Snapshot Trust to Snapshot Necessity Revalidation](from_snapshot_trust_to_snapshot_necessity_revalidation.md) | Snapshot Necessity / Stage Reprioritization | Records why a valid Snapshot Trust Contract does not establish runtime necessity for the current shallow Order workload, and why further snapshot-specific expansion became evidence-gated. |
 
 ---
 
@@ -77,6 +78,8 @@ The PR4 postmortem [From Durable Persistence to Semantic Gate Preservation](from
 The postmortem records the implementation lesson.
 
 The ADRs record the follow-up architecture decisions.
+
+The postmortem [From Snapshot Trust to Snapshot Necessity Revalidation](from_snapshot_trust_to_snapshot_necessity_revalidation.md) records the premise revalidation that led to [ADR 0021 — Projection Snapshots Are Optional for the Current Order Workload](../adr/0021_projection_snapshots_are_optional_for_current_order_workload.md). The postmortem preserves the historical correction; ADR 0021 records the accepted current decision.
 
 ---
 
