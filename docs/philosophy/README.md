@@ -15,7 +15,7 @@ It grew from practical debugging, self-directed system design, and repeated atte
 
 | Document | Purpose |
 |---|---|
-| [Learning and Design Methodology](00_learning_and_design_methodology.md) | Explains the working method behind the project, including definition alignment, boundary clarification, documentation-first thinking, and AI-assisted defensive review before implementation. |
+| [Learning and Design Methodology](00_learning_and_design_methodology.md) | Explains the working method behind the project, including definition alignment, boundary clarification, documentation-first thinking, AI-assisted defensive review, and the historical evolution from conversational collaboration to repository-aware audit and implementation support. |
 | [IBO and Core/Enabler Origin](01_ibo_core_enabler_origin.md) | Records the original engineering insight behind Input–Bridge–Output and Core vs Enablers, starting from debugging and Airflow experience. |
 | [Unified Design Philosophy](02_unified_design_philosophy.md) | Extends IBO and Core/Enabler into a broader model of static blueprint, dynamic navigation, and disturbance recovery. |
 | [Core/Enabler as Semantic Fusion of SoC and DIP](03_core_enabler_soc_dip_fusion.md) | Connects the Core/Enabler model to traditional software architecture principles such as Separation of Concerns and Dependency Inversion. |
