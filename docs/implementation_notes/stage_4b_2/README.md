@@ -21,7 +21,11 @@ PR1
 = COMPLETE / DOCUMENTATION ONLY
 
 PR2
-= DETERMINISTIC CHARACTERIZATION IMPLEMENTED
+= COMPLETE / DETERMINISTIC CHARACTERIZATION ACCEPTED
+
+PR3
+= IMMUTABLE CONTRACT IMPLEMENTED
++ PURE UNIT VALIDATION COMPLETE
 + AWAITING HUMAN REVIEW
 ```
 
@@ -44,8 +48,9 @@ concurrency characterization
 = not executed
 ```
 
-PR2 adds test-owned measurement-mechanics evidence only. It does not change
-the production-measurement, instrumentation, or experiment status above.
+PR2 adds test-owned measurement-mechanics evidence only. PR3 adds the immutable
+execution-local contract without production timing or measured producer APIs.
+Neither changes the instrumentation or experiment status above.
 
 ## Purpose
 
@@ -118,6 +123,7 @@ separate from `PostgresWriteSideExecutionTrace`, `SemanticOutcome`,
 |---|---|
 | [Measurement Vocabulary and Ownership](measurement_vocabulary_and_ownership.md) | Current PR1 responsibility authority, source-grounded candidate boundaries, methodology constraints, persistence deferrals, non-goals, and stop conditions. |
 | [Measurement Mechanics Characterization](measurement_mechanics_characterization.md) | PR2 deterministic fake-clock findings for timer boundaries, overlap, absence, current early-exit topology, finalization, exception preservation, and safe post-UOW delivery constraints. |
+| [PostgreSQL Write Measurement Contract](postgres_write_measurement_contract.md) | PR3 producer-specific immutable contract, nanosecond representation, four-state phase semantics, result-first availability, completeness invariants, and opt-in capability boundary. |
 | [Stage 4B.2 PR Breakdown](pr_breakdown.md) | PR1–PR8 branch sequence, responsibilities, dependencies, non-goals, and stop conditions. |
 
 ## Predecessor and Roadmap
@@ -131,7 +137,7 @@ separate from `PostgresWriteSideExecutionTrace`, `SemanticOutcome`,
 ## Boundary
 
 PR1 establishes the responsibility boundary. PR2 adds deterministic test-owned
-measurement-mechanics characterization without implementing a production
-measurement contract or instrumentation. Neither PR performs performance or
-concurrency experiments, persistence, telemetry, strategy policy, retry
-governance, or rate admission.
+measurement-mechanics characterization. PR3 freezes the producer-specific
+immutable contract and delivery decisions without adding production timers.
+None of these PRs performs performance or concurrency experiments, persistence,
+telemetry, strategy policy, retry governance, or rate admission.
