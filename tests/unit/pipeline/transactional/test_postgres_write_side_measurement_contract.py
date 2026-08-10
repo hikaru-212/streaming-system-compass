@@ -479,12 +479,24 @@ def test_existing_unmeasured_apis_do_not_require_measurement(
     assert not any("measurement" in name for name in parameter_names)
 
 
-def test_pr3_does_not_add_measurement_enabled_producer_methods() -> None:
-    assert not hasattr(
-        PostgresTransactionalWriteSide,
+def test_pr4_measured_methods_are_explicit_and_do_not_add_enable_flags() -> None:
+    measured_methods = (
         "create_order_with_measurement",
-    )
-    assert not hasattr(
-        PostgresTransactionalWriteSide,
+        "create_order_with_trace_and_measurement",
         "pay_order_with_measurement",
+        "pay_order_with_trace_and_measurement",
     )
+
+    assert all(
+        hasattr(PostgresTransactionalWriteSide, method_name)
+        for method_name in measured_methods
+    )
+    for method_name in (
+        "create_order",
+        "create_order_with_trace",
+        "pay_order",
+        "pay_order_with_trace",
+    ):
+        assert "measurement_enabled" not in signature(
+            getattr(PostgresTransactionalWriteSide, method_name)
+        ).parameters
