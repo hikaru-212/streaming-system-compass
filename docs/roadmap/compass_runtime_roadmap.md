@@ -152,9 +152,10 @@ technical runtime evidence
 ```
 
 Stage 4B then completed the DecisionReceipt contract, mappings, strict
-serialization, and explicit PostgreSQL persistence foundation. The next
-Compass runtime step is Stage 4B.1, where detailed diagnostic and resolution
-traces remain separate from receipts.
+serialization, and explicit PostgreSQL persistence foundation. Stage 4B.1 then
+completed producer-specific diagnostic and resolution trace boundaries while
+keeping traces separate from receipts. Stage 4B.2 measurement evidence is now
+the current Compass runtime step.
 
 ---
 
@@ -168,14 +169,18 @@ Stage 4A made these results semantically interpretable, and Stage 4B made
 selected evidence durable and reviewable, but Compass has not yet become a
 full state-level governance layer.
 
-That means the next question is no longer only whether drift or snapshot mismatch can be detected. The next question is:
+That means the current question is no longer only whether execution topology can
+be preserved. Stage 4B.2 asks:
 
-> If derived-state drift, snapshot mismatch, or runtime trust failure is detected, what does it mean, and what should the runtime do?
+> What did one current PostgreSQL write execution strategy cost, how do the two
+> current correctness-preserving compositions compare under controlled work,
+> and how does that comparison change under bounded contention?
 
 That interpretation began in Stage 4A through `SemanticOutcome` mapping and
-continued through the completed Stage 4B receipt foundation. The next boundary
-is Stage 4B.1 trace design, followed by later runtime decision policy and Stage
-5 action safety work.
+continued through the completed Stage 4B receipt foundation and Stage 4B.1
+execution-topology evidence. Measurement remains descriptive; later runtime
+decision policy, strategy selection, rate admission, and Stage 5 action safety
+remain separate work.
 
 ---
 
@@ -532,6 +537,11 @@ The capability path is:
 7. align Layer 1 and Layer 2 outcome families
 8. select execution strategies among semantically acceptable paths
 9. classify retry attempts without assuming same intent
+
+The current Phase 4 position is Stage 4B.2: producer-specific write-side
+measurement semantics, controlled PostgreSQL strategy comparison, and bounded
+concurrency characterization. It does not yet implement policy, strategy
+selection, retry governance, or rate admission.
 
 ---
 
