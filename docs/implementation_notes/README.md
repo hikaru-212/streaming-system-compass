@@ -17,6 +17,7 @@ For project-wide sequencing, see:
 - [Stage 4A — SemanticOutcome Core](./stage_4a/)
 - [Stage 4B — DecisionReceipt / Runtime Evidence Record](./stage_4b/)
 - [Stage 4B.1 — DiagnosticTrace / ResolutionTrace](./stage_4b_1/)
+- [Stage 4B.2 — Measurement Evidence](./stage_4b_2/)
 
 ## Current Position
 
@@ -24,10 +25,10 @@ Stage 4A, Stage 4B PR1–PR7, and Stage 4B.1 PR1–PR7 are complete.
 
 Stage 4 Interlude PR0 — test helper consolidation before Stage 4B — is complete.
 
-The next implementation focus is:
+The current formal development stage is:
 
 ```text
-Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
+Stage 4B.2 — Measurement Evidence
 ```
 
 Stage 4A introduced the stable `SemanticOutcome` core, runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
@@ -38,13 +39,18 @@ Stage 4B.1 preserves bounded producer-specific execution topology separately
 from primary results and receipts. Its completed delivery record is the
 [Stage 4B.1 closeout](stage_4b_1/stage_4b_1_closeout.md).
 
+Stage 4B.2 begins with a documentation-only responsibility boundary for
+producer-specific single-execution measurement, controlled PostgreSQL strategy
+comparison, and bounded concurrency characterization. Its current entry point is
+the [Stage 4B.2 implementation index](stage_4b_2/README.md).
+
 Stage 4B should not reopen Stage 4A mapping scope unless receipt requirements expose a missing evidence contract.
 
 Stage 4B should also not collapse later Stage 4 layers into the receipt boundary.
 
 ```text
-Later Stage 4 work remains separate:
-Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
+Current and later Stage 4 work remains separate:
+Stage 4B.2 — Measurement Evidence
 Stage 4B.5 — Order Domain Policy Contract v0
 Stage 4C   — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment

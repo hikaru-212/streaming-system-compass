@@ -41,16 +41,17 @@ Stage 4A, Stage 4B PR1–PR7, and Stage 4B.1 PR1–PR7 are complete.
 
 The current formal development focus is:
 
-- **Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory**
+- **Stage 4B.2 — Measurement Evidence**
 
 Stage 4B established durable receipt evidence without automatic materialization
 or reconciliation. [Stage 4B.1](docs/implementation_notes/stage_4b_1/README.md)
 then established bounded producer-specific execution traces. Snapshot traced
 resolver integration remains intentionally deferred, projection-worker tracing
 remains `DO NOT ADD` for the completed stage, and the PostgreSQL write side now
-returns producer-owned Result + Trace executions. Measurement evidence is the
-next formal stage; policy, strategy selection, retry governance, and action
-safety remain subsequent stages.
+returns producer-owned Result + Trace executions. [Stage 4B.2 Measurement
+Evidence](docs/implementation_notes/stage_4b_2/README.md) is the current formal
+stage; policy, strategy selection, retry governance, and action safety remain
+subsequent stages.
 
 ### Immediate Engineering Checkpoint
 
@@ -104,7 +105,7 @@ resolver runtime API; projection-worker tracing remains `DO NOT ADD` for that
 stage; and the PostgreSQL write side now has producer-specific traced Result +
 Trace execution. See the
 [Stage 4B.1 closeout](docs/implementation_notes/stage_4b_1/stage_4b_1_closeout.md).
-Stage 4B.2 measurement / cost evidence is the next formal development stage.
+Stage 4B.2 Measurement Evidence is the current formal development stage.
 
 See the
 [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](docs/boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
@@ -506,7 +507,7 @@ Everything else grows around this core:
 - SemanticOutcome core
 - DecisionReceipt / runtime evidence record
 - DiagnosticTrace / ResolutionTrace boundary
-- Measurement Matrix / Cost Evidence Inventory
+- Measurement Evidence
 - narrow policy-contract boundary for the current order/payment domain
 - RuntimeDecisionPolicy
 - Layer 1 / Layer 2 outcome-family alignment
@@ -604,13 +605,13 @@ Current boundary of completion:
 - Stage 4B PR1–PR7 DecisionReceipt boundary, contract, mapping, serialization, and persistence foundation is complete
 - Stage 4B.1 PR1–PR7 DiagnosticTrace / ResolutionTrace boundary, producer-specific contracts, write-side integration, and closeout are complete
 
-Next implementation focus:
+Current implementation focus:
 
-- Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
+- Stage 4B.2 — Measurement Evidence
 
 Stage 4A closeout is complete at the runtime semantic interpretation level.
 
-Next implementation milestones:
+Current and later implementation milestones:
 
 - Stage 4B.2 measurement evidence, Stage 4B.5 domain policy, and Stage 4C+ runtime decision policy, StrategySelector, and retry governance
 - Stage 5 dual-dimension governance demo / action safety
