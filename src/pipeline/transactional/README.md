@@ -216,6 +216,26 @@ in-transaction idempotency re-check and append-time admission.
 
 ---
 
+### `postgres_write_side_measurement.py`
+
+Defines the immutable Stage 4B.2 Level-A PostgreSQL write measurement contract.
+
+It owns:
+
+- explicit not-applicable, not-reached, not-collected, and measured states;
+- integer-nanosecond elapsed representation;
+- the complete producer-specific first-contract phase surface;
+- normal-return reach-topology invariants; and
+- result-first available/unavailable delivery for exact legacy or traced
+  producer values.
+
+It does not call a clock, instrument `postgres_write_side.py`, add measured
+producer methods, modify traces, or persist evidence. Existing unmeasured write
+surfaces remain unchanged; production instrumentation belongs to Stage 4B.2
+PR4.
+
+---
+
 ## In-Transaction Write-Side Flow
 
 The explicitly selected `IN_TRANSACTION` durable write-side flow is:

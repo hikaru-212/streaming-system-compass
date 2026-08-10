@@ -260,6 +260,13 @@ feat/stage4b2-pr3-postgres-write-measurement-contract
 
 Define the immutable producer-specific Level-A contract justified by PR2.
 
+### Implementation Status
+
+Implemented on the PR3 branch and awaiting human review. The delivered scope is
+the producer-specific immutable phase, snapshot, availability, and result-first
+delivery contract with pure unit tests. Production timer collection and
+measurement-enabled producer methods remain deferred to PR4.
+
 ### Required Decisions
 
 - exact measurement fields;
