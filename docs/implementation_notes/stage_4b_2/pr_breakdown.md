@@ -41,13 +41,23 @@ Stage 4B.2
 = CURRENT FORMAL DEVELOPMENT STAGE
 
 PR1
-= COMPLETE / DOCUMENTATION ONLY
+= COMPLETE / MERGED
 
 PR2
-= DETERMINISTIC CHARACTERIZATION IMPLEMENTED
+= COMPLETE / MERGED
+
+PR3
+= COMPLETE / MERGED
+
+PR4
+= IMPLEMENTED
++ DETERMINISTIC UNIT VALIDATION COMPLETE
 + AWAITING HUMAN REVIEW
 
-PR3 through PR8
+PR5
+= NEXT / NOT STARTED
+
+PR6–PR8
 = NOT STARTED
 ```
 
@@ -262,10 +272,10 @@ Define the immutable producer-specific Level-A contract justified by PR2.
 
 ### Implementation Status
 
-Implemented on the PR3 branch and awaiting human review. The delivered scope is
-the producer-specific immutable phase, snapshot, availability, and result-first
-delivery contract with pure unit tests. Production timer collection and
-measurement-enabled producer methods remain deferred to PR4.
+Complete and merged. The delivered scope is the producer-specific immutable
+phase, snapshot, availability, and result-first delivery contract with pure
+unit tests. Production timer collection and measurement-enabled producer
+methods remain owned by PR4.
 
 ### Required Decisions
 
@@ -333,6 +343,13 @@ PRE_TRANSACTION + optimistic append-time admission
 IN_TRANSACTION + concrete pessimistic admission
 ```
 
+### Implementation Status
+
+Implemented on the current PR4 branch and awaiting human review. The shared PRE
+and IN algorithms now expose explicit legacy and traced measurement-enabled
+surfaces while existing unmeasured APIs remain valid. PR5 remains responsible
+for the next source-boundary correctness-validation stage.
+
 ### Required Implementation Boundary
 
 - one invocation-local measurement owner;
@@ -374,6 +391,10 @@ test/stage4b2-pr5-postgres-write-measurement-correctness
 
 Prove the correctness of implemented Level-A measurement before interpreting
 performance.
+
+### Implementation Status
+
+Next stage after PR4 acceptance. Not started.
 
 ### Required Evidence
 
