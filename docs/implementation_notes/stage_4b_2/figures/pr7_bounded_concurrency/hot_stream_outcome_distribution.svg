@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">Hot stream: exact typed outcome counts</title>
+  <desc id="desc">SAME_ORDER_HOT_STREAM — 30 recorded bursts per exact cell. Composition-specific outcomes remain separate; observed counts are not universal invariants. Run: stage4b2-pr7-canonical-cdbe542</desc>
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172033; }
+.title { font-size: 22px; font-weight: 600; }
+.subtitle { font-size: 13px; fill: #4b5563; }
+.axis { stroke: #344054; stroke-width: 1.2; }
+.grid { stroke: #d7dce3; stroke-width: 1; }
+.tick { font-size: 12px; fill: #344054; }
+.axis-label { font-size: 13px; font-weight: 600; }
+.legend { font-size: 12px; }
+.note { font-size: 12px; fill: #4b5563; }
+.pre { stroke: #2563eb; fill: #2563eb; }
+.in { stroke: #d97706; fill: #d97706; }
+.pre-reject { stroke: #7c3aed; fill: #7c3aed; }
+.in-reject { stroke: #dc2626; fill: #dc2626; }
+.series-line { fill: none; stroke-width: 2.5; }
+.series-dashed { stroke-dasharray: 7 5; }
+.point { stroke-width: 2; }
+.frame { fill: #ffffff; stroke: #c7cdd6; }
+@media (prefers-color-scheme: dark) {
+  text { fill: #eef2f7; }
+  .subtitle, .note, .tick { fill: #c8d0dc; }
+  .axis { stroke: #c8d0dc; }
+  .grid { stroke: #3b4554; }
+  .frame { fill: #111827; stroke: #596579; }
+  .pre { stroke: #60a5fa; fill: #60a5fa; }
+  .in { stroke: #fbbf24; fill: #fbbf24; }
+  .pre-reject { stroke: #c084fc; fill: #c084fc; }
+  .in-reject { stroke: #f87171; fill: #f87171; }
+}
+</style>
+  <rect class="frame" x="0.5" y="0.5" width="959" height="599"/>
+  <text class="title" x="48" y="38">Hot stream: exact typed outcome counts</text>
+<text class="subtitle" x="48" y="62">SAME_ORDER_HOT_STREAM — 30 recorded bursts per exact cell</text>
+<text class="axis-label" x="512.0" y="565" text-anchor="middle">Workers</text>
+<text class="axis-label" x="25" y="315.0" text-anchor="middle" transform="rotate(-90 25 315.0)">Invocation count</text>
+<line class="grid" x1="104.0" y1="500.0" x2="920.0" y2="500.0"/>
+<text class="tick" x="92.0" y="504.0" text-anchor="end">0</text>
+<line class="grid" x1="104.0" y1="426.0" x2="920.0" y2="426.0"/>
+<text class="tick" x="92.0" y="430.0" text-anchor="end">100</text>
+<line class="grid" x1="104.0" y1="352.0" x2="920.0" y2="352.0"/>
+<text class="tick" x="92.0" y="356.0" text-anchor="end">200</text>
+<line class="grid" x1="104.0" y1="278.0" x2="920.0" y2="278.0"/>
+<text class="tick" x="92.0" y="282.0" text-anchor="end">300</text>
+<line class="grid" x1="104.0" y1="204.0" x2="920.0" y2="204.0"/>
+<text class="tick" x="92.0" y="208.0" text-anchor="end">400</text>
+<line class="grid" x1="104.0" y1="130.0" x2="920.0" y2="130.0"/>
+<text class="tick" x="92.0" y="134.0" text-anchor="end">500</text>
+<line class="axis" x1="104.0" y1="130.0" x2="104.0" y2="500.0"/>
+<line class="axis" x1="104.0" y1="500.0" x2="920.0" y2="500.0"/>
+<rect class="pre" x="465" y="16" width="14" height="14"/>
+<text class="legend" x="487" y="27">PRE_OCC — ACCEPTED</text>
+<rect class="pre-reject" x="465" y="38" width="14" height="14"/>
+<text class="legend" x="487" y="49">PRE_OCC — APPEND_STALE_WRITE</text>
+<rect class="in" x="465" y="60" width="14" height="14"/>
+<text class="legend" x="487" y="71">IN_PESSIMISTIC — ACCEPTED</text>
+<rect class="in-reject" x="465" y="82" width="14" height="14"/>
+<text class="legend" x="487" y="93">IN_PESSIMISTIC — PREPARE_LOCK_TIMEOUT</text>
+<rect class="pre" x="135.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="150.5" y="470.8" text-anchor="middle">30</text>
+<rect class="pre-reject" x="172.5" y="500.0" width="30.0" height="0.0" opacity="0.82"/>
+<rect class="in" x="209.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="224.5" y="470.8" text-anchor="middle">30</text>
+<rect class="in-reject" x="246.5" y="500.0" width="30.0" height="0.0" opacity="0.82"/>
+<text class="tick" x="206.0" y="524.0" text-anchor="middle">1</text>
+<rect class="pre" x="339.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="354.5" y="470.8" text-anchor="middle">30</text>
+<rect class="pre-reject" x="376.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="391.5" y="470.8" text-anchor="middle">30</text>
+<rect class="in" x="413.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="428.5" y="470.8" text-anchor="middle">30</text>
+<rect class="in-reject" x="450.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="465.5" y="470.8" text-anchor="middle">30</text>
+<text class="tick" x="410.0" y="524.0" text-anchor="middle">2</text>
+<rect class="pre" x="543.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="558.5" y="470.8" text-anchor="middle">30</text>
+<rect class="pre-reject" x="580.5" y="433.4" width="30.0" height="66.60000000000002" opacity="0.82"/>
+<text class="tick" x="595.5" y="426.4" text-anchor="middle">90</text>
+<rect class="in" x="617.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="632.5" y="470.8" text-anchor="middle">30</text>
+<rect class="in-reject" x="654.5" y="433.4" width="30.0" height="66.60000000000002" opacity="0.82"/>
+<text class="tick" x="669.5" y="426.4" text-anchor="middle">90</text>
+<text class="tick" x="614.0" y="524.0" text-anchor="middle">4</text>
+<rect class="pre" x="747.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="762.5" y="470.8" text-anchor="middle">30</text>
+<rect class="pre-reject" x="784.5" y="344.6" width="30.0" height="155.39999999999998" opacity="0.82"/>
+<text class="tick" x="799.5" y="337.6" text-anchor="middle">210</text>
+<rect class="in" x="821.5" y="477.8" width="30.0" height="22.19999999999999" opacity="0.82"/>
+<text class="tick" x="836.5" y="470.8" text-anchor="middle">30</text>
+<rect class="in-reject" x="858.5" y="344.6" width="30.0" height="155.39999999999998" opacity="0.82"/>
+<text class="tick" x="873.5" y="337.6" text-anchor="middle">210</text>
+<text class="tick" x="818.0" y="524.0" text-anchor="middle">8</text>
+<text class="note" x="48" y="585">Composition-specific outcomes remain separate; observed counts are not universal invariants. Run: stage4b2-pr7-canonical-cdbe542</text>
+</svg>

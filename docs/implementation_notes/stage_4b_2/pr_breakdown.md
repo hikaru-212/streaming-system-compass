@@ -58,11 +58,14 @@ PR5
 PR6
 = COMPLETE
 
+post-PR6 supplement
+= COMPLETE / CLOSED
+
 PR7
-= NEXT / NOT STARTED
+= COMPLETE / CLOSED
 
 PR8
-= NOT STARTED
+= NEXT / CLOSEOUT
 ```
 
 PR2 does not authorize or begin PR3.
@@ -556,6 +559,33 @@ unbalanced workloads, or results dominated by an unstable environment.
 
 ## PR7 — Bounded Concurrency Characterization
 
+### Status
+
+```text
+PR7
+= COMPLETE / CLOSED
+
+canonical run
+= stage4b2-pr7-canonical-cdbe542
+
+canonical result
+= VALID
+
+canonical release-skew review
+= ACCEPTED FOR CANONICAL INTERPRETATION
+
+production policy
+= NONE
+```
+
+The final method and canonical interpretation are recorded in the
+[PostgreSQL Bounded Concurrency
+Method](postgres_bounded_concurrency_method.md) and [PostgreSQL Bounded
+Concurrency Report](postgres_bounded_concurrency_report.md). The report keeps
+general different-order concurrency separate from same-order hot-stream
+contention and closes PR7 without deriving capacity, a rate limit, or strategy
+selection.
+
 ### Branch
 
 ```text
@@ -567,9 +597,9 @@ experiment/stage4b2-pr7-bounded-concurrency-characterization
 Observe how the two compositions change as concurrent demand increases in one
 recorded environment.
 
-### Candidate Levels
+### Historical Candidate and Final Retained Levels
 
-Current planning may consider:
+The original planning candidates were:
 
 ```text
 1
@@ -578,9 +608,16 @@ Current planning may consider:
 8
 ```
 
-These are candidates, not universal Stage 4B.2 requirements. PR7 must establish
-the actual test connection budget, controller/observer headroom, and environment
-stability before retaining a level.
+Following the valid connection-budget preflight and human review,
+all four levels were retained for the canonical Level-C run.
+
+These retained levels are environment-local experimental points, not universal
+Stage 4B.2 requirements, production-safe concurrency settings, capacity
+certifications, or rate-admission thresholds.
+
+The completed preflight and human review established the experiment-local
+connection budget, required headroom, and environment suitability before the
+levels were retained and frozen into the canonical schedule.
 
 ### Required Workload Distinction
 
@@ -642,6 +679,13 @@ do not claim saturation characterization without human review.
 ---
 
 ## PR8 — Stage 4B.2 Closeout
+
+### Status
+
+```text
+PR8
+= NEXT / CLOSEOUT
+```
 
 ### Branch
 

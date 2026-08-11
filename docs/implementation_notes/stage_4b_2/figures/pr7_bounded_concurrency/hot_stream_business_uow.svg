@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">Hot stream: typed-cohort application business UOW</title>
+  <desc id="desc">SAME_ORDER_HOT_STREAM — measured business_uow medians only. Missing or non-reached phases are omitted, never shown as zero; phases are not summed. Run: stage4b2-pr7-canonical-cdbe542</desc>
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172033; }
+.title { font-size: 22px; font-weight: 600; }
+.subtitle { font-size: 13px; fill: #4b5563; }
+.axis { stroke: #344054; stroke-width: 1.2; }
+.grid { stroke: #d7dce3; stroke-width: 1; }
+.tick { font-size: 12px; fill: #344054; }
+.axis-label { font-size: 13px; font-weight: 600; }
+.legend { font-size: 12px; }
+.note { font-size: 12px; fill: #4b5563; }
+.pre { stroke: #2563eb; fill: #2563eb; }
+.in { stroke: #d97706; fill: #d97706; }
+.pre-reject { stroke: #7c3aed; fill: #7c3aed; }
+.in-reject { stroke: #dc2626; fill: #dc2626; }
+.series-line { fill: none; stroke-width: 2.5; }
+.series-dashed { stroke-dasharray: 7 5; }
+.point { stroke-width: 2; }
+.frame { fill: #ffffff; stroke: #c7cdd6; }
+@media (prefers-color-scheme: dark) {
+  text { fill: #eef2f7; }
+  .subtitle, .note, .tick { fill: #c8d0dc; }
+  .axis { stroke: #c8d0dc; }
+  .grid { stroke: #3b4554; }
+  .frame { fill: #111827; stroke: #596579; }
+  .pre { stroke: #60a5fa; fill: #60a5fa; }
+  .in { stroke: #fbbf24; fill: #fbbf24; }
+  .pre-reject { stroke: #c084fc; fill: #c084fc; }
+  .in-reject { stroke: #f87171; fill: #f87171; }
+}
+</style>
+  <rect class="frame" x="0.5" y="0.5" width="959" height="599"/>
+  <text class="title" x="48" y="38">Hot stream: typed-cohort application business UOW</text>
+<text class="subtitle" x="48" y="62">SAME_ORDER_HOT_STREAM — measured business_uow medians only</text>
+<text class="axis-label" x="512.0" y="565" text-anchor="middle">Workers</text>
+<text class="axis-label" x="25" y="317.5" text-anchor="middle" transform="rotate(-90 25 317.5)">Median business_uow elapsed (ms)</text>
+<line class="grid" x1="104.0" y1="510.0" x2="920.0" y2="510.0"/>
+<text class="tick" x="92.0" y="514.0" text-anchor="end">0.00</text>
+<line class="grid" x1="104.0" y1="433.0" x2="920.0" y2="433.0"/>
+<text class="tick" x="92.0" y="437.0" text-anchor="end">1.00</text>
+<line class="grid" x1="104.0" y1="356.0" x2="920.0" y2="356.0"/>
+<text class="tick" x="92.0" y="360.0" text-anchor="end">2.00</text>
+<line class="grid" x1="104.0" y1="279.0" x2="920.0" y2="279.0"/>
+<text class="tick" x="92.0" y="283.0" text-anchor="end">3.00</text>
+<line class="grid" x1="104.0" y1="202.0" x2="920.0" y2="202.0"/>
+<text class="tick" x="92.0" y="206.0" text-anchor="end">4.00</text>
+<line class="grid" x1="104.0" y1="125.0" x2="920.0" y2="125.0"/>
+<text class="tick" x="92.0" y="129.0" text-anchor="end">5.00</text>
+<line class="axis" x1="104.0" y1="125.0" x2="104.0" y2="510.0"/>
+<line class="axis" x1="104.0" y1="510.0" x2="920.0" y2="510.0"/>
+<line class="axis" x1="104.0" y1="510.0" x2="104.0" y2="516.0"/>
+<text class="tick" x="104.0" y="534.0" text-anchor="middle">1</text>
+<line class="axis" x1="376.0" y1="510.0" x2="376.0" y2="516.0"/>
+<text class="tick" x="376.0" y="534.0" text-anchor="middle">2</text>
+<line class="axis" x1="648.0" y1="510.0" x2="648.0" y2="516.0"/>
+<text class="tick" x="648.0" y="534.0" text-anchor="middle">4</text>
+<line class="axis" x1="920.0" y1="510.0" x2="920.0" y2="516.0"/>
+<text class="tick" x="920.0" y="534.0" text-anchor="middle">8</text>
+<line class="pre series-line" x1="510" y1="34" x2="538" y2="34"/>
+<text class="legend" x="548" y="38">PRE_OCC — ACCEPTED</text>
+<polyline class="pre series-line" points="104.0,410.3892965 376.0,381.228742 648.0,298.55796150000003 920.0,197.6205865"/>
+<circle class="pre point" cx="104.0" cy="410.3892965" r="4.5"/>
+<text class="tick" x="104.0" y="400.3892965" text-anchor="middle">1.29</text>
+<circle class="pre point" cx="376.0" cy="381.228742" r="4.5"/>
+<text class="tick" x="376.0" y="371.228742" text-anchor="middle">1.67</text>
+<circle class="pre point" cx="648.0" cy="298.55796150000003" r="4.5"/>
+<text class="tick" x="648.0" y="288.55796150000003" text-anchor="middle">2.75</text>
+<circle class="pre point" cx="920.0" cy="197.6205865" r="4.5"/>
+<text class="tick" x="920.0" y="187.6205865" text-anchor="middle">4.06</text>
+<line class="pre-reject series-line series-dashed" x1="510" y1="57" x2="538" y2="57"/>
+<text class="legend" x="548" y="61">PRE_OCC — APPEND_STALE_WRITE</text>
+<polyline class="pre-reject series-line series-dashed" points="376.0,360.865476 648.0,259.7692115 920.0,163.53207050000003"/>
+<circle class="pre-reject point" cx="376.0" cy="360.865476" r="4.5"/>
+<text class="tick" x="376.0" y="378.865476" text-anchor="middle">1.94</text>
+<circle class="pre-reject point" cx="648.0" cy="259.7692115" r="4.5"/>
+<text class="tick" x="648.0" y="277.7692115" text-anchor="middle">3.25</text>
+<circle class="pre-reject point" cx="920.0" cy="163.53207050000003" r="4.5"/>
+<text class="tick" x="920.0" y="181.53207050000003" text-anchor="middle">4.50</text>
+<line class="in series-line" x1="510" y1="80" x2="538" y2="80"/>
+<text class="legend" x="548" y="84">IN_PESSIMISTIC — ACCEPTED</text>
+<polyline class="in series-line" points="104.0,369.810258 376.0,328.8975785 648.0,276.6675545 920.0,183.6788125"/>
+<circle class="in point" cx="104.0" cy="369.810258" r="4.5"/>
+<text class="tick" x="104.0" y="341.810258" text-anchor="middle">1.82</text>
+<circle class="in point" cx="376.0" cy="328.8975785" r="4.5"/>
+<text class="tick" x="376.0" y="300.8975785" text-anchor="middle">2.35</text>
+<circle class="in point" cx="648.0" cy="276.6675545" r="4.5"/>
+<text class="tick" x="648.0" y="248.6675545" text-anchor="middle">3.03</text>
+<circle class="in point" cx="920.0" cy="183.6788125" r="4.5"/>
+<text class="tick" x="920.0" y="155.6788125" text-anchor="middle">4.24</text>
+<line class="in-reject series-line series-dashed" x1="510" y1="103" x2="538" y2="103"/>
+<text class="legend" x="548" y="107">IN_PESSIMISTIC — PREPARE_LOCK_TIMEOUT</text>
+<polyline class="in-reject series-line series-dashed" points="376.0,421.958508 648.0,388.620742 920.0,304.58964100000003"/>
+<circle class="in-reject point" cx="376.0" cy="421.958508" r="4.5"/>
+<text class="tick" x="376.0" y="457.958508" text-anchor="middle">1.14</text>
+<circle class="in-reject point" cx="648.0" cy="388.620742" r="4.5"/>
+<text class="tick" x="648.0" y="424.620742" text-anchor="middle">1.58</text>
+<circle class="in-reject point" cx="920.0" cy="304.58964100000003" r="4.5"/>
+<text class="tick" x="920.0" y="340.58964100000003" text-anchor="middle">2.67</text>
+<text class="note" x="48" y="585">Missing or non-reached phases are omitted, never shown as zero; phases are not summed. Run: stage4b2-pr7-canonical-cdbe542</text>
+</svg>
