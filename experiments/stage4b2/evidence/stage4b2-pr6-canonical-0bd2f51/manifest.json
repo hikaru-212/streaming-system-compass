@@ -1,0 +1,53 @@
+{
+  "amount": "100.00",
+  "architecture": "arm64",
+  "autocommit": false,
+  "baseline_git_blob": "c1706c1ce5f498d45301263450b4df2f27d28753",
+  "baseline_sha256": "34bac8a3e67d6a43f870d26ae48642ff1893c5360cbf3ec2c0e1f1cd6630196d",
+  "command": "CREATE",
+  "connection_arrangement": "persistent A connection per composition; two persistent B/C lane connections; separate persistent E measured and locker connections",
+  "history_depth": 0,
+  "isolation_level": "READ_COMMITTED",
+  "ordering_method": "seeded six-surface-permutation cycles; alternating PRE/IN order; alternating fixed two-lane B/C batches",
+  "platform": "Darwin",
+  "postgresql_server_version": "160014",
+  "preflight_counts": {
+    "sequential_samples_per_surface_composition_cell": 1,
+    "surface_composition_cells": 6
+  },
+  "psycopg_version": "3.3.4",
+  "python_implementation": "CPython",
+  "python_version": "3.12.7",
+  "recorded_counts": {
+    "scenario_a_samples_per_surface_per_composition": 30,
+    "scenario_b_batches_per_composition": 30,
+    "scenario_b_core_cohort_minimum": 20,
+    "scenario_c_batches_per_composition": 30,
+    "scenario_e_samples": 30
+  },
+  "schedule_seed": 17,
+  "schema_or_migration_identity": "migrations-through-007",
+  "schema_version": 1,
+  "source_commit": "0bd2f515bcc49e8e1f0e9d2f9dba4a294adadd0d",
+  "source_tree_clean_before_run": true,
+  "stop_rules": [
+    "baseline integrity or isolated-load preflight fails",
+    "canonical composition or lifecycle invariants cannot be enforced",
+    "setup, coordination, or cleanup enters an invocation timer",
+    "a recorded block is incomplete, duplicated, or adaptively extended",
+    "a measured sample is unavailable or loses a required phase reading",
+    "Scenario B returns an unexpected exception or insufficient core cohorts",
+    "fixed two-worker coordination is not credible in the recorded environment",
+    "the method begins varying worker count or characterizing saturation"
+  ],
+  "timer_source": "time.perf_counter_ns",
+  "topology_label": "guarded-test-postgresql",
+  "validation_mode": "STRICT",
+  "validation_runtime": "ValidationRuntime+ValidationDispatcher+ValidationPolicy",
+  "validator": "FullProofValidator",
+  "warmup_counts": {
+    "concurrent_batches_per_composition": 3,
+    "sequential_cycles": 5
+  },
+  "worker_count": 2
+}
