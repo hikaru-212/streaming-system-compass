@@ -50,14 +50,18 @@ PR3
 = COMPLETE / MERGED
 
 PR4
-= IMPLEMENTED
-+ DETERMINISTIC UNIT VALIDATION COMPLETE
-+ AWAITING HUMAN REVIEW
+= COMPLETE / MERGED
 
 PR5
+= CORRECTNESS VALIDATION COMPLETE
++ DETERMINISTIC UNIT EVIDENCE COMPLETE
++ REAL POSTGRESQL EVIDENCE COMPLETE
++ READY FOR FINAL HUMAN REVIEW / MERGE
+
+PR6
 = NEXT / NOT STARTED
 
-PR6–PR8
+PR7–PR8
 = NOT STARTED
 ```
 
@@ -345,10 +349,9 @@ IN_TRANSACTION + concrete pessimistic admission
 
 ### Implementation Status
 
-Implemented on the current PR4 branch and awaiting human review. The shared PRE
-and IN algorithms now expose explicit legacy and traced measurement-enabled
-surfaces while existing unmeasured APIs remain valid. PR5 remains responsible
-for the next source-boundary correctness-validation stage.
+Complete and merged. The shared PRE and IN algorithms expose explicit legacy
+and traced measurement-enabled surfaces while existing unmeasured APIs remain
+valid. PR5 now owns source-boundary correctness validation.
 
 ### Required Implementation Boundary
 
@@ -394,7 +397,13 @@ performance.
 
 ### Implementation Status
 
-Next stage after PR4 acceptance. Not started.
+Implemented and validated on the current PR5 branch. Deterministic eight-case
+source-boundary, elapsed, containment, collection-failure, and
+measured/unmeasured parity evidence is complete. Real PostgreSQL accepted
+persistence, rollback, advisory try-lock non-acquisition, and connection
+IDLE/reuse compatibility are also covered by the final repository-wide
+validation. No production instrumentation defect was discovered. PR5 is ready
+for final human review and merge.
 
 ### Required Evidence
 
