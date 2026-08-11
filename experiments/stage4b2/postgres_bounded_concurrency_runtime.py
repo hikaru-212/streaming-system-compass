@@ -39,6 +39,13 @@ RECORDED_BATCHES_PER_CELL = 30
 RECORDED_SCHEDULE_SEED = 73
 EXACT_CELL_COUNT = 16
 
+SMOKE_WARMUP_BATCHES_PER_CELL = 0
+SMOKE_BATCHES_PER_CELL = 1
+SMOKE_EXACT_CELL_COUNT = 16
+SMOKE_TOTAL_BATCHES = 16
+SMOKE_TOTAL_PLANNED_INVOCATIONS = 60
+SMOKE_EVIDENCE_KIND = "POSTGRESQL_SMOKE"
+
 CANONICAL_AMOUNT = Decimal("100.00")
 CANONICAL_EXPECTED_SEQUENCE = 1
 
@@ -68,6 +75,14 @@ class BoundedConcurrencyRuntimeError(RuntimeError):
 
 class UnsupportedCohortError(BoundedConcurrencyRuntimeError):
     """Reject a normal producer combination outside the exact PR7 cohorts."""
+
+
+class ObservationVerificationError(BoundedConcurrencyRuntimeError):
+    """Report an untimed durable-observation verification failure."""
+
+
+class ConnectionReuseVerificationError(BoundedConcurrencyRuntimeError):
+    """Report an untimed lane-connection reuse or IDLE verification failure."""
 
 
 class WorkloadFamily(str, Enum):
@@ -115,6 +130,13 @@ class EvidenceStatus(str, Enum):
 
     VALID = "VALID"
     INVALID_RUN = "INVALID_RUN"
+
+
+class SmokeStatus(str, Enum):
+    """Distinguish structural validity from a stopped invalid smoke."""
+
+    STRUCTURALLY_VALID = "STRUCTURALLY_VALID"
+    INVALID_SMOKE = "INVALID_SMOKE"
 
 
 @dataclass(frozen=True)
@@ -431,6 +453,195 @@ class RecordedExecutionResult:
     batches: tuple[BatchRecord, ...]
     ownership: tuple[LaneOwnershipRecord, ...]
     validation: RunValidationResult
+
+
+@dataclass(frozen=True)
+class SmokeCellPlan:
+    """Wrap one low-level synchronized burst in the distinct smoke boundary."""
+
+    smoke_cell_index: int
+    mechanics_plan: BatchPlan
+
+    def __post_init__(self) -> None:
+        _require_non_negative_int(self.smoke_cell_index, "smoke_cell_index")
+        if self.smoke_cell_index != self.mechanics_plan.cell.cell_index:
+            raise ValueError("smoke cell index must match the frozen cell order")
+        if self.mechanics_plan.plan_index != self.smoke_cell_index:
+            raise ValueError("smoke mechanics plan must occur exactly once")
+        if not self.mechanics_plan.recorded or self.mechanics_plan.batch_index != 0:
+            raise ValueError("smoke cell requires one non-warmup synchronized burst")
+
+    @property
+    def worker_level(self) -> int:
+        """Return the reviewed worker level for this smoke cell."""
+
+        return self.mechanics_plan.cell.worker_level
+
+    @property
+    def workload_family(self) -> WorkloadFamily:
+        """Return the non-pooled workload family for this smoke cell."""
+
+        return self.mechanics_plan.cell.workload_family
+
+    @property
+    def composition(self) -> Composition:
+        """Return the retained composition for this smoke cell."""
+
+        return self.mechanics_plan.cell.composition
+
+
+@dataclass(frozen=True)
+class SmokeSchedule:
+    """Hold exactly one smoke burst for each canonical seed-73 cell."""
+
+    seed: int
+    retained_worker_levels: tuple[int, ...]
+    warmup_batches_per_cell: int
+    smoke_batches_per_cell: int
+    cells: tuple[SmokeCellPlan, ...]
+
+    def __post_init__(self) -> None:
+        if self.seed != RECORDED_SCHEDULE_SEED:
+            raise ValueError("smoke schedule must use the canonical seed 73")
+        if self.retained_worker_levels != RETAINED_WORKER_LEVELS:
+            raise ValueError("smoke retained levels must be exactly 1, 2, 4, 8")
+        if self.warmup_batches_per_cell != SMOKE_WARMUP_BATCHES_PER_CELL:
+            raise ValueError("smoke schedule has no warmup batches")
+        if self.smoke_batches_per_cell != SMOKE_BATCHES_PER_CELL:
+            raise ValueError("smoke schedule requires exactly one burst per cell")
+        if len(self.cells) != SMOKE_EXACT_CELL_COUNT:
+            raise ValueError("smoke schedule requires exactly 16 cells")
+        indexes = tuple(cell.smoke_cell_index for cell in self.cells)
+        if indexes != tuple(range(SMOKE_EXACT_CELL_COUNT)):
+            raise ValueError("smoke cells must preserve exact canonical order")
+
+    @property
+    def batches(self) -> tuple[BatchPlan, ...]:
+        """Return the sixteen low-level mechanics plans, never canonical records."""
+
+        return tuple(cell.mechanics_plan for cell in self.cells)
+
+    @property
+    def planned_invocation_count(self) -> int:
+        """Return the fixed 4 * (1 + 2 + 4 + 8) smoke accounting."""
+
+        return sum(cell.worker_level for cell in self.cells)
+
+
+@dataclass(frozen=True)
+class SmokeInvocationObservation:
+    """Keep one low-level observation inside the non-canonical smoke envelope."""
+
+    smoke_cell_index: int
+    request_id: str
+    order_id: str
+    record: InvocationRecord
+
+    def __post_init__(self) -> None:
+        _require_non_negative_int(self.smoke_cell_index, "smoke_cell_index")
+        if self.record.cell_index != self.smoke_cell_index:
+            raise ValueError("smoke invocation does not match its smoke cell")
+        if not self.request_id or not self.order_id:
+            raise ValueError("smoke invocation identities must be non-empty")
+
+
+@dataclass(frozen=True)
+class SmokeBatchObservation:
+    """Keep one low-level batch observation outside canonical aggregation."""
+
+    smoke_cell_index: int
+    record: BatchRecord
+
+    def __post_init__(self) -> None:
+        _require_non_negative_int(self.smoke_cell_index, "smoke_cell_index")
+        if self.record.cell_index != self.smoke_cell_index:
+            raise ValueError("smoke batch does not match its smoke cell")
+
+    @property
+    def release_skew_ns(self) -> int:
+        """Expose raw skew for later human review without a threshold."""
+
+        return self.record.release_skew_ns
+
+
+@dataclass(frozen=True)
+class SmokeRuntimeFacts:
+    """Retain sanitized level-scoped topology facts needed by the smoke gate."""
+
+    worker_level: int
+    lane_count: int
+    thread_count: int
+    connection_count: int
+    topology_label: str
+    postgresql_server_version: str | None
+    isolation_level: str
+    autocommit: bool
+
+    def __post_init__(self) -> None:
+        if self.worker_level not in RETAINED_WORKER_LEVELS:
+            raise ValueError("smoke runtime facts require a retained level")
+        for name in ("lane_count", "thread_count", "connection_count"):
+            if getattr(self, name) != self.worker_level:
+                raise ValueError(f"{name} must equal the smoke worker level")
+        if not self.topology_label or not self.isolation_level:
+            raise ValueError("smoke runtime facts require sanitized topology labels")
+        if type(self.autocommit) is not bool:
+            raise TypeError("smoke autocommit fact must be bool")
+
+
+@dataclass(frozen=True)
+class SmokeValidationIssue:
+    """Describe one smoke-local defect without retaining an exception message."""
+
+    code: str
+    smoke_cell_index: int
+    detail: str
+
+    def __post_init__(self) -> None:
+        if not self.code or not self.detail:
+            raise ValueError("smoke issue code and detail must be non-empty")
+        _require_non_negative_int(self.smoke_cell_index, "smoke_cell_index")
+
+
+@dataclass(frozen=True)
+class SmokeExecutionResult:
+    """Return in-memory smoke correctness evidence, never canonical evidence."""
+
+    evidence_kind: str
+    schedule: SmokeSchedule
+    status: SmokeStatus
+    invocations: tuple[SmokeInvocationObservation, ...]
+    batches: tuple[SmokeBatchObservation, ...]
+    ownership: tuple[LaneOwnershipRecord, ...]
+    runtime_facts: tuple[SmokeRuntimeFacts, ...]
+    issues: tuple[SmokeValidationIssue, ...]
+    failed_cell_index: int | None
+    release_skew_human_review_required: bool = True
+
+    def __post_init__(self) -> None:
+        if self.evidence_kind != SMOKE_EVIDENCE_KIND:
+            raise ValueError("smoke result must remain explicitly non-canonical")
+        if self.release_skew_human_review_required is not True:
+            raise ValueError("smoke cannot authorize its own release-skew review")
+        if self.status is SmokeStatus.STRUCTURALLY_VALID:
+            if self.issues or self.failed_cell_index is not None:
+                raise ValueError("valid smoke cannot retain an invalidity marker")
+            if len(self.batches) != SMOKE_TOTAL_BATCHES:
+                raise ValueError("valid smoke requires all sixteen batches")
+            if len(self.invocations) != SMOKE_TOTAL_PLANNED_INVOCATIONS:
+                raise ValueError("valid smoke requires all sixty invocations")
+            if len(self.ownership) != sum(RETAINED_WORKER_LEVELS):
+                raise ValueError("valid smoke requires exact persistent ownership")
+            expected_level_order = tuple(
+                dict.fromkeys(cell.worker_level for cell in self.schedule.cells)
+            )
+            if tuple(
+                item.worker_level for item in self.runtime_facts
+            ) != expected_level_order:
+                raise ValueError("valid smoke requires each level topology once")
+        else:
+            if not self.issues or self.failed_cell_index is None:
+                raise ValueError("invalid smoke requires its first failed cell")
 
 
 @dataclass(frozen=True)
@@ -803,6 +1014,42 @@ def generate_fixed_schedule(
     return schedule
 
 
+def generate_smoke_schedule() -> SmokeSchedule:
+    """Generate one smoke burst in each canonical seed-73 cell, in exact order.
+
+    The returned type is deliberately distinct from ``ExperimentSchedule``.
+    Its low-level batch plans exist only to reuse synchronized release and
+    identity mechanics; they cannot weaken the canonical 3+30 invariant.
+    """
+
+    canonical = generate_fixed_schedule(seed=RECORDED_SCHEDULE_SEED)
+    smoke_cells = tuple(
+        SmokeCellPlan(
+            smoke_cell_index=cell.cell_index,
+            mechanics_plan=BatchPlan(
+                plan_index=cell.cell_index,
+                cell=cell,
+                batch_index=0,
+                recorded=True,
+                lane_identity_rotation=cell.cell_index % cell.worker_level,
+            ),
+        )
+        for cell in canonical.cells
+    )
+    schedule = SmokeSchedule(
+        seed=RECORDED_SCHEDULE_SEED,
+        retained_worker_levels=RETAINED_WORKER_LEVELS,
+        warmup_batches_per_cell=SMOKE_WARMUP_BATCHES_PER_CELL,
+        smoke_batches_per_cell=SMOKE_BATCHES_PER_CELL,
+        cells=smoke_cells,
+    )
+    if schedule.planned_invocation_count != SMOKE_TOTAL_PLANNED_INVOCATIONS:
+        raise BoundedConcurrencyRuntimeError(
+            "fixed smoke schedule did not produce sixty invocations"
+        )
+    return schedule
+
+
 def prepare_invocation_specs(
     *,
     run_id: str,
@@ -1026,8 +1273,24 @@ class RecordedScheduleExecutor:
         for spec, observation in zip(specs, observations, strict=True):
             lane = runtime.lane(spec.lane_index)
             if observation.exception_type is None:
-                runtime.verify_observation(lane.connection, observation.value, spec)
-            runtime.verify_connection(lane.connection)
+                try:
+                    runtime.verify_observation(
+                        lane.connection,
+                        observation.value,
+                        spec,
+                    )
+                except Exception as exc:
+                    raise ObservationVerificationError(
+                        "post-timing observation verification failed: "
+                        f"{type(exc).__name__}"
+                    ) from exc
+            try:
+                runtime.verify_connection(lane.connection)
+            except Exception as exc:
+                raise ConnectionReuseVerificationError(
+                    "post-timing connection reuse verification failed: "
+                    f"{type(exc).__name__}"
+                ) from exc
 
         batch = _build_batch_record(
             run_id=run_id,
@@ -1037,6 +1300,255 @@ class RecordedScheduleExecutor:
             records=records,
         )
         return tuple(records), batch
+
+
+class SmokeScheduleExecutor:
+    """Execute the fixed smoke once and stop after the first invalid cell.
+
+    Each worker-level topology is opened once, starts exactly N persistent lane
+    threads, and is reused across that level's four smoke cells. The executor
+    shares the canonical low-level synchronized-batch mechanics but returns
+    only the distinct ``SmokeExecutionResult`` envelope. It never retries,
+    replaces, extends, aggregates, serializes, or publishes a smoke cell.
+    """
+
+    def __init__(
+        self,
+        *,
+        open_level_runtime: OpenLevelRuntime,
+        timing_source_factory: BatchTimingSourceFactory | None = None,
+    ) -> None:
+        self._open_level_runtime = open_level_runtime
+        self._batch_executor = RecordedScheduleExecutor(
+            open_level_runtime=open_level_runtime,
+            timing_source_factory=timing_source_factory,
+        )
+
+    def execute(
+        self,
+        *,
+        run_id: str,
+        schedule: SmokeSchedule,
+    ) -> SmokeExecutionResult:
+        """Execute exactly sixteen smoke bursts unless the first invalid cell stops it."""
+
+        _require_safe_run_id(run_id)
+        if schedule != generate_smoke_schedule():
+            raise BoundedConcurrencyRuntimeError(
+                "smoke executor accepts only the exact seed-73 smoke schedule"
+            )
+
+        invocations: list[SmokeInvocationObservation] = []
+        batches: list[SmokeBatchObservation] = []
+        ownership: list[LaneOwnershipRecord] = []
+        runtime_facts: list[SmokeRuntimeFacts] = []
+        invocation_index = 0
+        batch_record_index = 0
+
+        cells_by_level: dict[int, list[SmokeCellPlan]] = defaultdict(list)
+        for cell in schedule.cells:
+            cells_by_level[cell.worker_level].append(cell)
+        ordered_levels = tuple(
+            dict.fromkeys(cell.worker_level for cell in schedule.cells)
+        )
+
+        for worker_level in ordered_levels:
+            level_cells = cells_by_level[worker_level]
+            first_cell_index = level_cells[0].smoke_cell_index
+            active_cell_index = first_cell_index
+            try:
+                with self._open_level_runtime(worker_level) as runtime:
+                    if runtime.worker_level != worker_level:
+                        return _invalid_smoke_result(
+                            schedule=schedule,
+                            invocations=invocations,
+                            batches=batches,
+                            ownership=ownership,
+                            runtime_facts=runtime_facts,
+                            issue=SmokeValidationIssue(
+                                code="RUNTIME_LEVEL_MISMATCH",
+                                smoke_cell_index=first_cell_index,
+                                detail=f"worker_level={worker_level}",
+                            ),
+                        )
+                    workers = _PersistentLaneWorkers(runtime)
+                    try:
+                        thread_ids = workers.thread_ids
+                        if len(set(thread_ids)) != worker_level:
+                            return _invalid_smoke_result(
+                                schedule=schedule,
+                                invocations=invocations,
+                                batches=batches,
+                                ownership=ownership,
+                                runtime_facts=runtime_facts,
+                                issue=SmokeValidationIssue(
+                                    code="THREAD_OWNERSHIP_VIOLATION",
+                                    smoke_cell_index=first_cell_index,
+                                    detail=f"worker_level={worker_level}",
+                                ),
+                            )
+                        level_ownership = tuple(
+                            LaneOwnershipRecord(
+                                worker_level=worker_level,
+                                lane_index=lane_index,
+                                connection_slot=lane_index,
+                                thread_id=thread_id,
+                            )
+                            for lane_index, thread_id in enumerate(
+                                thread_ids
+                            )
+                        )
+                        ownership.extend(level_ownership)
+                        runtime_facts.append(
+                            SmokeRuntimeFacts(
+                                worker_level=worker_level,
+                                lane_count=len(runtime.lanes),
+                                thread_count=len(thread_ids),
+                                connection_count=len(
+                                    {id(lane.connection) for lane in runtime.lanes}
+                                ),
+                                topology_label=runtime.topology_label,
+                                postgresql_server_version=(
+                                    runtime.postgresql_server_version
+                                ),
+                                isolation_level=runtime.isolation_level,
+                                autocommit=runtime.autocommit,
+                            )
+                        )
+                        for smoke_cell in level_cells:
+                            active_cell_index = smoke_cell.smoke_cell_index
+                            plan = smoke_cell.mechanics_plan
+                            try:
+                                runtime.reset_database()
+                                specs = prepare_invocation_specs(
+                                    run_id=run_id,
+                                    plan=plan,
+                                )
+                                raw_records, raw_batch = (
+                                    self._batch_executor._execute_batch(
+                                        run_id=run_id,
+                                        plan=plan,
+                                        runtime=runtime,
+                                        workers=workers,
+                                        invocation_index=invocation_index,
+                                        batch_record_index=batch_record_index,
+                                    )
+                                )
+                            except ObservationVerificationError as exc:
+                                return _invalid_smoke_result(
+                                    schedule=schedule,
+                                    invocations=invocations,
+                                    batches=batches,
+                                    ownership=ownership,
+                                    runtime_facts=runtime_facts,
+                                    issue=_smoke_exception_issue(
+                                        code="DURABLE_VERIFICATION_FAILURE",
+                                        smoke_cell_index=(
+                                            smoke_cell.smoke_cell_index
+                                        ),
+                                        exc=exc,
+                                    ),
+                                )
+                            except ConnectionReuseVerificationError as exc:
+                                return _invalid_smoke_result(
+                                    schedule=schedule,
+                                    invocations=invocations,
+                                    batches=batches,
+                                    ownership=ownership,
+                                    runtime_facts=runtime_facts,
+                                    issue=_smoke_exception_issue(
+                                        code="CONNECTION_REUSE_FAILURE",
+                                        smoke_cell_index=(
+                                            smoke_cell.smoke_cell_index
+                                        ),
+                                        exc=exc,
+                                    ),
+                                )
+                            except Exception as exc:
+                                return _invalid_smoke_result(
+                                    schedule=schedule,
+                                    invocations=invocations,
+                                    batches=batches,
+                                    ownership=ownership,
+                                    runtime_facts=runtime_facts,
+                                    issue=_smoke_exception_issue(
+                                        code="SMOKE_BATCH_EXECUTION_FAILURE",
+                                        smoke_cell_index=(
+                                            smoke_cell.smoke_cell_index
+                                        ),
+                                        exc=exc,
+                                    ),
+                                )
+
+                            wrapped_invocations = tuple(
+                                SmokeInvocationObservation(
+                                    smoke_cell_index=(
+                                        smoke_cell.smoke_cell_index
+                                    ),
+                                    request_id=spec.request_id,
+                                    order_id=spec.order_id,
+                                    record=record,
+                                )
+                                for spec, record in zip(
+                                    specs,
+                                    raw_records,
+                                    strict=True,
+                                )
+                            )
+                            wrapped_batch = SmokeBatchObservation(
+                                smoke_cell_index=smoke_cell.smoke_cell_index,
+                                record=raw_batch,
+                            )
+                            invocations.extend(wrapped_invocations)
+                            batches.append(wrapped_batch)
+                            issues = _smoke_cell_issues(
+                                cell=smoke_cell,
+                                invocations=wrapped_invocations,
+                                batch=wrapped_batch,
+                            )
+                            if issues:
+                                return SmokeExecutionResult(
+                                    evidence_kind=SMOKE_EVIDENCE_KIND,
+                                    schedule=schedule,
+                                    status=SmokeStatus.INVALID_SMOKE,
+                                    invocations=tuple(invocations),
+                                    batches=tuple(batches),
+                                    ownership=tuple(ownership),
+                                    runtime_facts=tuple(runtime_facts),
+                                    issues=issues,
+                                    failed_cell_index=(
+                                        smoke_cell.smoke_cell_index
+                                    ),
+                                )
+                            invocation_index += worker_level
+                            batch_record_index += 1
+                    finally:
+                        workers.close()
+            except Exception as exc:
+                return _invalid_smoke_result(
+                    schedule=schedule,
+                    invocations=invocations,
+                    batches=batches,
+                    ownership=ownership,
+                    runtime_facts=runtime_facts,
+                    issue=_smoke_exception_issue(
+                        code="LEVEL_RUNTIME_FAILURE",
+                        smoke_cell_index=active_cell_index,
+                        exc=exc,
+                    ),
+                )
+
+        return SmokeExecutionResult(
+            evidence_kind=SMOKE_EVIDENCE_KIND,
+            schedule=schedule,
+            status=SmokeStatus.STRUCTURALLY_VALID,
+            invocations=tuple(invocations),
+            batches=tuple(batches),
+            ownership=tuple(ownership),
+            runtime_facts=tuple(runtime_facts),
+            issues=(),
+            failed_cell_index=None,
+        )
 
 
 def _timed_after_barrier(
@@ -1446,6 +1958,9 @@ def aggregate_invocations(
 ) -> tuple[InvocationAggregate, ...]:
     """Aggregate exact typed cohorts without pooling outcomes or families."""
 
+    if any(not isinstance(record, InvocationRecord) for record in invocations):
+        raise TypeError("canonical aggregation accepts InvocationRecord only")
+
     grouped: dict[
         tuple[str, int, WorkloadFamily, Composition, Cohort],
         list[InvocationRecord],
@@ -1504,6 +2019,8 @@ def aggregate_invocations(
 def batch_completion_rates(batch: BatchRecord) -> BatchCompletionRates:
     """Derive only synchronized-burst completion rates for one batch."""
 
+    if not isinstance(batch, BatchRecord):
+        raise TypeError("canonical batch rates accept BatchRecord only")
     if batch.batch_elapsed_ns <= 0:
         raise ValueError("batch elapsed must be positive for completion rates")
     scale = 1_000_000_000 / batch.batch_elapsed_ns
@@ -1517,6 +2034,9 @@ def aggregate_batch_rates(
     batches: Sequence[BatchRecord],
 ) -> tuple[BatchRateAggregate, ...]:
     """Aggregate protocol-qualified batch rates by exact Level-C cell."""
+
+    if any(not isinstance(batch, BatchRecord) for batch in batches):
+        raise TypeError("canonical aggregation accepts BatchRecord only")
 
     grouped: dict[
         tuple[str, int, WorkloadFamily, Composition],
@@ -1702,6 +2222,38 @@ def open_postgres_level_runtime(
     finally:
         for connection in connections:
             connection.close()
+
+
+def run_postgres_smoke(
+    *,
+    database_url: str,
+    run_id: str,
+    timing_source_factory: BatchTimingSourceFactory | None = None,
+) -> SmokeExecutionResult:
+    """Run only the guarded PostgreSQL smoke when separately authorized.
+
+    This callable opens each reviewed worker-level topology once, delegates to
+    the fixed smoke executor, and returns in-memory correctness evidence. It is
+    never called on import, exposes no canonical execution, creates no pool,
+    changes no server configuration, publishes nothing, and derives no
+    capacity, throughput, admission, or rate-limit policy.
+    """
+
+    @contextmanager
+    def open_level(worker_level: int) -> Iterator[LevelRuntime]:
+        with open_postgres_level_runtime(
+            database_url=database_url,
+            worker_level=worker_level,
+        ) as runtime:
+            yield runtime
+
+    return SmokeScheduleExecutor(
+        open_level_runtime=open_level,
+        timing_source_factory=timing_source_factory,
+    ).execute(
+        run_id=run_id,
+        schedule=generate_smoke_schedule(),
+    )
 
 
 def _build_current_writer(*, connection: Any, composition: Composition) -> Any:
@@ -2122,6 +2674,226 @@ def _invocation_evidence_issues(record: InvocationRecord) -> list[ValidationIssu
                     )
                 )
     return issues
+
+
+def _smoke_cell_issues(
+    *,
+    cell: SmokeCellPlan,
+    invocations: Sequence[SmokeInvocationObservation],
+    batch: SmokeBatchObservation,
+) -> tuple[SmokeValidationIssue, ...]:
+    """Validate one completed smoke cell before any later cell may execute."""
+
+    issues: list[SmokeValidationIssue] = []
+    plan = cell.mechanics_plan
+    raw_records = tuple(item.record for item in invocations)
+    identity = f"cell={cell.smoke_cell_index}"
+
+    if len(invocations) != cell.worker_level:
+        issues.append(
+            SmokeValidationIssue(
+                code="INCOMPLETE_INVOCATION_ACCOUNTING",
+                smoke_cell_index=cell.smoke_cell_index,
+                detail=f"{identity}; count={len(invocations)}",
+            )
+        )
+
+    lanes = tuple(item.record.lane_index for item in invocations)
+    if lanes != tuple(range(cell.worker_level)):
+        issues.append(
+            SmokeValidationIssue(
+                code="LANE_ACCOUNTING_MISMATCH",
+                smoke_cell_index=cell.smoke_cell_index,
+                detail=f"{identity}; lanes={lanes}",
+            )
+        )
+
+    for item in invocations:
+        record = item.record
+        expected_identity = (
+            plan.cell.cell_index,
+            plan.batch_index,
+            record.lane_index,
+            plan.cell.worker_level,
+            plan.cell.workload_family,
+            plan.cell.composition,
+        )
+        observed_identity = (
+            record.cell_index,
+            record.batch_index,
+            record.connection_slot,
+            record.worker_level,
+            record.workload_family,
+            record.composition,
+        )
+        if observed_identity != expected_identity:
+            issues.append(
+                SmokeValidationIssue(
+                    code="SMOKE_INVOCATION_PLAN_MISMATCH",
+                    smoke_cell_index=cell.smoke_cell_index,
+                    detail=f"{identity}; lane={record.lane_index}",
+                )
+            )
+        issues.extend(
+            SmokeValidationIssue(
+                code=issue.code,
+                smoke_cell_index=cell.smoke_cell_index,
+                detail=issue.detail,
+            )
+            for issue in _invocation_evidence_issues(record)
+        )
+
+    request_ids = tuple(item.request_id for item in invocations)
+    order_ids = tuple(item.order_id for item in invocations)
+    if len(set(request_ids)) != cell.worker_level:
+        issues.append(
+            SmokeValidationIssue(
+                code="REQUEST_IDENTITY_MISMATCH",
+                smoke_cell_index=cell.smoke_cell_index,
+                detail=f"{identity}; request identities are not distinct",
+            )
+        )
+    expected_order_count = (
+        1
+        if cell.workload_family is WorkloadFamily.SAME_ORDER_HOT_STREAM
+        else cell.worker_level
+    )
+    if len(set(order_ids)) != expected_order_count:
+        issues.append(
+            SmokeValidationIssue(
+                code="ORDER_IDENTITY_MISMATCH",
+                smoke_cell_index=cell.smoke_cell_index,
+                detail=(
+                    f"{identity}; expected_distinct_orders={expected_order_count}"
+                ),
+            )
+        )
+
+    if cell.worker_level == 1 and any(
+        record.cohort is not Cohort.ACCEPTED for record in raw_records
+    ):
+        issues.append(
+            SmokeValidationIssue(
+                code="UNCONTENDED_COHORT_MISMATCH",
+                smoke_cell_index=cell.smoke_cell_index,
+                detail=f"{identity}; worker_level=1 must be ACCEPTED",
+            )
+        )
+
+    raw_batch = batch.record
+    expected_batch_identity = (
+        plan.cell.cell_index,
+        plan.batch_index,
+        plan.cell.worker_level,
+        plan.cell.workload_family,
+        plan.cell.composition,
+    )
+    observed_batch_identity = (
+        raw_batch.cell_index,
+        raw_batch.batch_index,
+        raw_batch.worker_level,
+        raw_batch.workload_family,
+        raw_batch.composition,
+    )
+    if observed_batch_identity != expected_batch_identity:
+        issues.append(
+            SmokeValidationIssue(
+                code="SMOKE_BATCH_PLAN_MISMATCH",
+                smoke_cell_index=cell.smoke_cell_index,
+                detail=identity,
+            )
+        )
+    if raw_batch.completed_count != cell.worker_level:
+        issues.append(
+            SmokeValidationIssue(
+                code="INCOMPLETE_BATCH_ACCOUNTING",
+                smoke_cell_index=cell.smoke_cell_index,
+                detail=(
+                    f"{identity}; completed_count={raw_batch.completed_count}"
+                ),
+            )
+        )
+    if len(raw_records) == cell.worker_level:
+        expected_accepted = sum(
+            record.cohort is Cohort.ACCEPTED for record in raw_records
+        )
+        expected_counts = _typed_counts(raw_records)
+        expected_first = min(record.start_offset_ns for record in raw_records)
+        expected_last = max(record.start_offset_ns for record in raw_records)
+        expected_elapsed = max(
+            record.start_offset_ns + record.external_elapsed_ns
+            for record in raw_records
+        )
+        if raw_batch.accepted_count != expected_accepted:
+            issues.append(
+                SmokeValidationIssue(
+                    code="SMOKE_ACCEPTED_COUNT_MISMATCH",
+                    smoke_cell_index=cell.smoke_cell_index,
+                    detail=identity,
+                )
+            )
+        if raw_batch.typed_outcome_counts != expected_counts:
+            issues.append(
+                SmokeValidationIssue(
+                    code="SMOKE_OUTCOME_COUNT_MISMATCH",
+                    smoke_cell_index=cell.smoke_cell_index,
+                    detail=identity,
+                )
+            )
+        if (
+            raw_batch.first_start_offset_ns != expected_first
+            or raw_batch.last_start_offset_ns != expected_last
+            or raw_batch.batch_elapsed_ns != expected_elapsed
+        ):
+            issues.append(
+                SmokeValidationIssue(
+                    code="SMOKE_TIMING_MISMATCH",
+                    smoke_cell_index=cell.smoke_cell_index,
+                    detail=identity,
+                )
+            )
+    return tuple(issues)
+
+
+def _smoke_exception_issue(
+    *,
+    code: str,
+    smoke_cell_index: int,
+    exc: Exception,
+) -> SmokeValidationIssue:
+    """Retain only exception class identity at the smoke boundary."""
+
+    cause = exc.__cause__
+    exception_type = type(cause if isinstance(cause, Exception) else exc).__name__
+    return SmokeValidationIssue(
+        code=code,
+        smoke_cell_index=smoke_cell_index,
+        detail=f"cell={smoke_cell_index}; type={exception_type}",
+    )
+
+
+def _invalid_smoke_result(
+    *,
+    schedule: SmokeSchedule,
+    invocations: Sequence[SmokeInvocationObservation],
+    batches: Sequence[SmokeBatchObservation],
+    ownership: Sequence[LaneOwnershipRecord],
+    runtime_facts: Sequence[SmokeRuntimeFacts],
+    issue: SmokeValidationIssue,
+) -> SmokeExecutionResult:
+    """Build an incomplete invalid result without retry or replacement."""
+
+    return SmokeExecutionResult(
+        evidence_kind=SMOKE_EVIDENCE_KIND,
+        schedule=schedule,
+        status=SmokeStatus.INVALID_SMOKE,
+        invocations=tuple(invocations),
+        batches=tuple(batches),
+        ownership=tuple(ownership),
+        runtime_facts=tuple(runtime_facts),
+        issues=(issue,),
+        failed_cell_index=issue.smoke_cell_index,
+    )
 
 
 def _build_batch_record(

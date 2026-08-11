@@ -26,6 +26,12 @@ from experiments.stage4b2.postgres_bounded_concurrency_runtime import (
     RECORDED_BATCHES_PER_CELL,
     RECORDED_SCHEDULE_SEED,
     RETAINED_WORKER_LEVELS,
+    SMOKE_BATCHES_PER_CELL,
+    SMOKE_EVIDENCE_KIND,
+    SMOKE_EXACT_CELL_COUNT,
+    SMOKE_TOTAL_BATCHES,
+    SMOKE_TOTAL_PLANNED_INVOCATIONS,
+    SMOKE_WARMUP_BATCHES_PER_CELL,
     WARMUP_BATCHES_PER_CELL,
     BatchRecord,
     BoundedConcurrencyRuntimeError,
@@ -41,6 +47,10 @@ from experiments.stage4b2.postgres_bounded_concurrency_runtime import (
     PhaseState,
     RecordedScheduleExecutor,
     RejectionStage,
+    SmokeExecutionResult,
+    SmokeSchedule,
+    SmokeScheduleExecutor,
+    SmokeStatus,
     WorkloadFamily,
     _TimedObservation,
     _admission_gate_factory,
@@ -53,10 +63,12 @@ from experiments.stage4b2.postgres_bounded_concurrency_runtime import (
     batch_records_to_jsonl,
     classify_cohort,
     generate_fixed_schedule,
+    generate_smoke_schedule,
     invocation_record_from_timed_observation,
     invocation_record_to_dict,
     invocation_records_to_jsonl,
     prepare_invocation_specs,
+    run_postgres_smoke,
     validate_recorded_run,
 )
 
@@ -216,6 +228,24 @@ class _FakeDatabase:
                     composition=composition,
                     missing_phase="business_uow",
                 )
+            if is_target and self.invalid_kind == "wrong_phase":
+                phase_name = (
+                    "pessimistic_advisory_try_lock_call"
+                    if composition is Composition.PRE_OCC
+                    else "preliminary_idempotency_check"
+                )
+                return _delivery(
+                    "ACCEPTED",
+                    composition=composition,
+                    phase_state_overrides={phase_name: PhaseState.MEASURED},
+                )
+            if is_target and self.invalid_kind == "wrong_cohort":
+                return _delivery(
+                    "STALE_WRITE"
+                    if composition is Composition.PRE_OCC
+                    else "LOCK_TIMEOUT",
+                    composition=composition,
+                )
 
             if order_id not in self.accepted_orders:
                 self.accepted_orders.add(order_id)
@@ -266,6 +296,8 @@ class _FakeRuntimeProvider:
         *,
         invalid_coordinate: tuple[int, int, int] | None = None,
         invalid_kind: str | None = None,
+        verification_failure_coordinate: tuple[int, int, int] | None = None,
+        connection_failure_coordinate: tuple[int, int, int] | None = None,
     ) -> None:
         self.recorder = _Recorder()
         self.database = _FakeDatabase(
@@ -276,6 +308,8 @@ class _FakeRuntimeProvider:
         self.open_counts: Counter[int] = Counter()
         self.close_counts: Counter[int] = Counter()
         self.connection_count = 0
+        self.verification_failure_coordinate = verification_failure_coordinate
+        self.connection_failure_coordinate = connection_failure_coordinate
 
     @contextmanager
     def open(self, worker_level: int):
@@ -313,18 +347,8 @@ class _FakeRuntimeProvider:
             lanes=lanes,
             reset_database=lambda: self.database.reset(worker_level),
             prepare_batch=self.database.prepare,
-            verify_observation=lambda connection, value, spec: self.recorder.record(
-                "verify_observation",
-                plan_index=spec.plan.plan_index,
-                lane_index=spec.lane_index,
-                worker_level=connection.worker_level,
-            ),
-            verify_connection=lambda connection: self.recorder.record(
-                "verify_connection",
-                plan_index=self.database.current_plan.plan_index,
-                lane_index=connection.lane_index,
-                worker_level=connection.worker_level,
-            ),
+            verify_observation=self._verify_observation,
+            verify_connection=self._verify_connection,
             topology_label="deterministic-fake",
         )
         try:
@@ -335,6 +359,42 @@ class _FakeRuntimeProvider:
 
     def timing_source(self, plan: Any) -> _FakeTimingSource:
         return _FakeTimingSource(plan, self.recorder)
+
+    def _verify_observation(
+        self,
+        connection: _FakeConnection,
+        _value: Any,
+        spec: Any,
+    ) -> None:
+        self.recorder.record(
+            "verify_observation",
+            plan_index=spec.plan.plan_index,
+            lane_index=spec.lane_index,
+            worker_level=connection.worker_level,
+        )
+        coordinate = (
+            spec.plan.cell.cell_index,
+            spec.plan.batch_index,
+            spec.lane_index,
+        )
+        if coordinate == self.verification_failure_coordinate:
+            raise _FakeFailure("durable verification detail must not be retained")
+
+    def _verify_connection(self, connection: _FakeConnection) -> None:
+        plan = self.database.current_plan
+        self.recorder.record(
+            "verify_connection",
+            plan_index=plan.plan_index,
+            lane_index=connection.lane_index,
+            worker_level=connection.worker_level,
+        )
+        coordinate = (
+            plan.cell.cell_index,
+            plan.batch_index,
+            connection.lane_index,
+        )
+        if coordinate == self.connection_failure_coordinate:
+            raise _FakeFailure("connection detail must not be retained")
 
 
 def _measurement(
@@ -432,6 +492,19 @@ def valid_execution() -> tuple[_FakeRuntimeProvider, Any]:
     ).execute(
         run_id="pr7-deterministic-valid",
         schedule=generate_fixed_schedule(),
+    )
+    return provider, result
+
+
+@pytest.fixture(scope="module")
+def valid_smoke_execution() -> tuple[_FakeRuntimeProvider, SmokeExecutionResult]:
+    provider = _FakeRuntimeProvider()
+    result = SmokeScheduleExecutor(
+        open_level_runtime=provider.open,
+        timing_source_factory=provider.timing_source,
+    ).execute(
+        run_id="pr7-deterministic-smoke",
+        schedule=generate_smoke_schedule(),
     )
     return provider, result
 
@@ -599,6 +672,398 @@ def test_schedule_generation_is_independent_of_preflight_candidates(
 
     assert RETAINED_WORKER_LEVELS == (1, 2, 4, 8)
     assert generate_fixed_schedule() == reviewed_schedule
+
+
+def test_smoke_schedule_is_distinct_and_freezes_exact_accounting() -> None:
+    smoke = generate_smoke_schedule()
+    canonical = generate_fixed_schedule()
+
+    assert isinstance(smoke, SmokeSchedule)
+    assert not isinstance(smoke, ExperimentSchedule)
+    assert smoke.seed == RECORDED_SCHEDULE_SEED == 73
+    assert smoke.retained_worker_levels == RETAINED_WORKER_LEVELS == (1, 2, 4, 8)
+    assert smoke.warmup_batches_per_cell == SMOKE_WARMUP_BATCHES_PER_CELL == 0
+    assert smoke.smoke_batches_per_cell == SMOKE_BATCHES_PER_CELL == 1
+    assert len(smoke.cells) == SMOKE_EXACT_CELL_COUNT == 16
+    assert len(smoke.batches) == SMOKE_TOTAL_BATCHES == 16
+    assert smoke.planned_invocation_count == SMOKE_TOTAL_PLANNED_INVOCATIONS == 60
+    assert all(plan.recorded and plan.batch_index == 0 for plan in smoke.batches)
+
+    assert canonical.warmup_batches_per_cell == WARMUP_BATCHES_PER_CELL == 3
+    assert canonical.recorded_batches_per_cell == RECORDED_BATCHES_PER_CELL == 30
+    assert len(canonical.batches) == 16 * 33
+    assert len(canonical.recorded_batches) == 16 * 30
+
+
+def test_smoke_cell_order_exactly_matches_canonical_seed_73() -> None:
+    smoke = generate_smoke_schedule()
+    canonical = generate_fixed_schedule(seed=73)
+    smoke_coordinates = [
+        (cell.worker_level, cell.workload_family, cell.composition)
+        for cell in smoke.cells
+    ]
+    canonical_coordinates = [
+        (cell.worker_level, cell.workload_family, cell.composition)
+        for cell in canonical.cells
+    ]
+
+    assert smoke_coordinates == canonical_coordinates == [
+        (8, WorkloadFamily.SAME_ORDER_HOT_STREAM, Composition.PRE_OCC),
+        (8, WorkloadFamily.SAME_ORDER_HOT_STREAM, Composition.IN_PESSIMISTIC),
+        (
+            8,
+            WorkloadFamily.DIFFERENT_ORDER_GENERAL_CONCURRENCY,
+            Composition.IN_PESSIMISTIC,
+        ),
+        (
+            8,
+            WorkloadFamily.DIFFERENT_ORDER_GENERAL_CONCURRENCY,
+            Composition.PRE_OCC,
+        ),
+        (
+            2,
+            WorkloadFamily.DIFFERENT_ORDER_GENERAL_CONCURRENCY,
+            Composition.PRE_OCC,
+        ),
+        (
+            2,
+            WorkloadFamily.DIFFERENT_ORDER_GENERAL_CONCURRENCY,
+            Composition.IN_PESSIMISTIC,
+        ),
+        (2, WorkloadFamily.SAME_ORDER_HOT_STREAM, Composition.IN_PESSIMISTIC),
+        (2, WorkloadFamily.SAME_ORDER_HOT_STREAM, Composition.PRE_OCC),
+        (1, WorkloadFamily.SAME_ORDER_HOT_STREAM, Composition.PRE_OCC),
+        (1, WorkloadFamily.SAME_ORDER_HOT_STREAM, Composition.IN_PESSIMISTIC),
+        (
+            1,
+            WorkloadFamily.DIFFERENT_ORDER_GENERAL_CONCURRENCY,
+            Composition.IN_PESSIMISTIC,
+        ),
+        (
+            1,
+            WorkloadFamily.DIFFERENT_ORDER_GENERAL_CONCURRENCY,
+            Composition.PRE_OCC,
+        ),
+        (
+            4,
+            WorkloadFamily.DIFFERENT_ORDER_GENERAL_CONCURRENCY,
+            Composition.PRE_OCC,
+        ),
+        (
+            4,
+            WorkloadFamily.DIFFERENT_ORDER_GENERAL_CONCURRENCY,
+            Composition.IN_PESSIMISTIC,
+        ),
+        (4, WorkloadFamily.SAME_ORDER_HOT_STREAM, Composition.IN_PESSIMISTIC),
+        (4, WorkloadFamily.SAME_ORDER_HOT_STREAM, Composition.PRE_OCC),
+    ]
+    assert Counter(smoke_coordinates) == Counter(
+        (level, family, composition)
+        for level in RETAINED_WORKER_LEVELS
+        for family in WorkloadFamily
+        for composition in Composition
+    )
+
+
+def test_valid_smoke_uses_one_persistent_topology_per_level(
+    valid_smoke_execution: tuple[_FakeRuntimeProvider, SmokeExecutionResult],
+) -> None:
+    provider, result = valid_smoke_execution
+
+    assert result.evidence_kind == SMOKE_EVIDENCE_KIND
+    assert result.status is SmokeStatus.STRUCTURALLY_VALID
+    assert result.issues == ()
+    assert result.failed_cell_index is None
+    assert len(result.batches) == 16
+    assert len(result.invocations) == 60
+    assert provider.open_counts == Counter({1: 1, 2: 1, 4: 1, 8: 1})
+    assert provider.close_counts == provider.open_counts
+    assert provider.connection_count == sum(RETAINED_WORKER_LEVELS) == 15
+    assert provider.database.reset_count == 16
+    assert len(provider.database.calls) == 60
+    assert set(provider.database.request_counts.values()) == {1}
+    assert tuple(item.worker_level for item in result.runtime_facts) == (8, 2, 1, 4)
+    assert all(
+        item.lane_count
+        == item.thread_count
+        == item.connection_count
+        == item.worker_level
+        for item in result.runtime_facts
+    )
+
+    ownership = {
+        (item.worker_level, item.lane_index): item.thread_id
+        for item in result.ownership
+    }
+    observed_threads: dict[tuple[int, int], set[int]] = defaultdict(set)
+    for call in provider.database.calls:
+        observed_threads[(call["worker_level"], call["lane_index"])].add(
+            call["thread_id"]
+        )
+    assert set(observed_threads) == set(ownership)
+    assert all(thread_ids == {ownership[key]} for key, thread_ids in observed_threads.items())
+    assert all(
+        item.record.connection_slot == item.record.lane_index
+        for item in result.invocations
+    )
+    for level in RETAINED_WORKER_LEVELS:
+        construction = [
+            event
+            for event in provider.recorder.events
+            if event["kind"] == "connection_constructed"
+            and event["worker_level"] == level
+        ]
+        first_prepare = next(
+            event
+            for event in provider.recorder.events
+            if event["kind"] == "prepare" and event["worker_level"] == level
+        )
+        assert len(construction) == level
+        assert max(event["sequence"] for event in construction) < first_prepare[
+            "sequence"
+        ]
+
+
+def test_smoke_barrier_and_verification_boundaries_are_reused(
+    valid_smoke_execution: tuple[_FakeRuntimeProvider, SmokeExecutionResult],
+) -> None:
+    provider, result = valid_smoke_execution
+
+    for cell in result.schedule.cells:
+        plan_index = cell.mechanics_plan.plan_index
+        events = [
+            event
+            for event in provider.recorder.events
+            if event.get("plan_index") == plan_index
+        ]
+        assert [event["kind"] for event in events].count("release") == 1
+        release_sequence = next(
+            event["sequence"] for event in events if event["kind"] == "release"
+        )
+        assert all(
+            release_sequence
+            < next(
+                event["sequence"]
+                for event in events
+                if event["kind"] == "start" and event["lane_index"] == lane
+            )
+            < next(
+                event["sequence"]
+                for event in events
+                if event["kind"] == "invoke" and event["lane_index"] == lane
+            )
+            < next(
+                event["sequence"]
+                for event in events
+                if event["kind"] == "stop" and event["lane_index"] == lane
+            )
+            for lane in range(cell.worker_level)
+        )
+        assert max(
+            event["sequence"] for event in events if event["kind"] == "stop"
+        ) < min(
+            event["sequence"]
+            for event in events
+            if event["kind"].startswith("verify")
+        )
+
+    assert result.release_skew_human_review_required is True
+    assert all(
+        batch.record.first_start_offset_ns == 10
+        and batch.record.last_start_offset_ns
+        == 10 + (batch.record.worker_level - 1) * 10
+        and batch.release_skew_ns == (batch.record.worker_level - 1) * 10
+        and batch.record.batch_elapsed_ns
+        == 110 + (batch.record.worker_level - 1) * 13
+        for batch in result.batches
+    )
+    assert not hasattr(runtime_module, "SMOKE_RELEASE_SKEW_THRESHOLD")
+
+
+def test_smoke_enforces_exact_workload_cohort_rules(
+    valid_smoke_execution: tuple[_FakeRuntimeProvider, SmokeExecutionResult],
+) -> None:
+    _provider, result = valid_smoke_execution
+
+    for item in result.invocations:
+        record = item.record
+        if (
+            record.workload_family
+            is WorkloadFamily.DIFFERENT_ORDER_GENERAL_CONCURRENCY
+        ):
+            assert record.cohort is Cohort.ACCEPTED
+        elif record.worker_level == 1:
+            assert record.cohort is Cohort.ACCEPTED
+        elif record.composition is Composition.PRE_OCC:
+            assert record.cohort in {Cohort.ACCEPTED, Cohort.APPEND_STALE_WRITE}
+        else:
+            assert record.cohort in {Cohort.ACCEPTED, Cohort.PREPARE_LOCK_TIMEOUT}
+
+    for cell in result.schedule.cells:
+        observed = [
+            item
+            for item in result.invocations
+            if item.smoke_cell_index == cell.smoke_cell_index
+        ]
+        assert len({item.request_id for item in observed}) == cell.worker_level
+        assert len({item.order_id for item in observed}) == (
+            1
+            if cell.workload_family is WorkloadFamily.SAME_ORDER_HOT_STREAM
+            else cell.worker_level
+        )
+
+
+def test_smoke_reuses_all_four_exact_phase_matrices(
+    valid_smoke_execution: tuple[_FakeRuntimeProvider, SmokeExecutionResult],
+) -> None:
+    _provider, result = valid_smoke_execution
+    observed_pairs = set()
+
+    for item in result.invocations:
+        record = item.record
+        assert record.cohort is not None
+        observed_pairs.add((record.composition, record.cohort))
+        assert {phase.name: phase.state for phase in record.phases or ()} == dict(
+            EXPECTED_PHASE_STATE_MATRICES[(record.composition, record.cohort)]
+        )
+
+    assert observed_pairs == set(EXPECTED_PHASE_STATE_MATRICES)
+
+
+@pytest.mark.parametrize(
+    ("invalid_kind", "issue_code"),
+    (
+        ("exception", "UNEXPECTED_EXCEPTION"),
+        ("unsupported", "UNSUPPORTED_OUTCOME"),
+        ("unavailable", "MEASUREMENT_UNAVAILABLE"),
+        ("missing_phase", "MISSING_PHASE_RECORD"),
+        ("wrong_phase", "PHASE_STATE_MISMATCH"),
+    ),
+)
+def test_smoke_stops_after_first_invalid_observation_without_replacement(
+    invalid_kind: str,
+    issue_code: str,
+) -> None:
+    provider = _FakeRuntimeProvider(
+        invalid_coordinate=(0, 0, 0),
+        invalid_kind=invalid_kind,
+    )
+    result = SmokeScheduleExecutor(
+        open_level_runtime=provider.open,
+        timing_source_factory=provider.timing_source,
+    ).execute(
+        run_id=f"smoke-invalid-{invalid_kind}",
+        schedule=generate_smoke_schedule(),
+    )
+
+    assert result.status is SmokeStatus.INVALID_SMOKE
+    assert result.failed_cell_index == 0
+    assert issue_code in {issue.code for issue in result.issues}
+    assert len(result.batches) == 1
+    assert len(result.invocations) == 8
+    assert len(provider.database.calls) == 8
+    assert provider.open_counts == Counter({8: 1})
+    assert provider.close_counts == Counter({8: 1})
+    assert set(provider.database.request_counts.values()) == {1}
+    assert all("message must never enter evidence" not in issue.detail for issue in result.issues)
+
+
+def test_smoke_rejects_different_order_nonaccepted_and_stops() -> None:
+    provider = _FakeRuntimeProvider(
+        invalid_coordinate=(2, 0, 0),
+        invalid_kind="wrong_cohort",
+    )
+    result = SmokeScheduleExecutor(
+        open_level_runtime=provider.open,
+        timing_source_factory=provider.timing_source,
+    ).execute(
+        run_id="smoke-wrong-different-cohort",
+        schedule=generate_smoke_schedule(),
+    )
+
+    assert result.status is SmokeStatus.INVALID_SMOKE
+    assert result.failed_cell_index == 2
+    assert "UNSUPPORTED_WORKLOAD_COHORT" in {
+        issue.code for issue in result.issues
+    }
+    assert len(result.batches) == 3
+    assert len(result.invocations) == 24
+    assert len(provider.database.calls) == 24
+
+
+def test_smoke_requires_accepted_for_uncontended_same_order() -> None:
+    provider = _FakeRuntimeProvider(
+        invalid_coordinate=(8, 0, 0),
+        invalid_kind="wrong_cohort",
+    )
+    result = SmokeScheduleExecutor(
+        open_level_runtime=provider.open,
+        timing_source_factory=provider.timing_source,
+    ).execute(
+        run_id="smoke-wrong-uncontended-cohort",
+        schedule=generate_smoke_schedule(),
+    )
+
+    assert result.status is SmokeStatus.INVALID_SMOKE
+    assert result.failed_cell_index == 8
+    assert "UNCONTENDED_COHORT_MISMATCH" in {
+        issue.code for issue in result.issues
+    }
+    assert len(result.batches) == 9
+    assert len(result.invocations) == 41
+    assert len(provider.database.calls) == 41
+
+
+@pytest.mark.parametrize(
+    ("provider_kwargs", "issue_code"),
+    (
+        (
+            {"verification_failure_coordinate": (0, 0, 0)},
+            "DURABLE_VERIFICATION_FAILURE",
+        ),
+        (
+            {"connection_failure_coordinate": (0, 0, 0)},
+            "CONNECTION_REUSE_FAILURE",
+        ),
+    ),
+)
+def test_smoke_stops_on_post_timing_verification_failure(
+    provider_kwargs: dict[str, Any],
+    issue_code: str,
+) -> None:
+    provider = _FakeRuntimeProvider(**provider_kwargs)
+    result = SmokeScheduleExecutor(
+        open_level_runtime=provider.open,
+        timing_source_factory=provider.timing_source,
+    ).execute(
+        run_id=f"smoke-{issue_code.lower()}",
+        schedule=generate_smoke_schedule(),
+    )
+
+    assert result.status is SmokeStatus.INVALID_SMOKE
+    assert result.failed_cell_index == 0
+    assert [issue.code for issue in result.issues] == [issue_code]
+    assert len(result.batches) == 0
+    assert len(result.invocations) == 0
+    assert len(provider.database.calls) == 8
+    assert result.issues[0].detail.endswith("type=_FakeFailure")
+    assert "detail must not be retained" not in result.issues[0].detail
+
+
+def test_smoke_result_is_rejected_by_canonical_aggregation(
+    valid_smoke_execution: tuple[_FakeRuntimeProvider, SmokeExecutionResult],
+) -> None:
+    _provider, result = valid_smoke_execution
+
+    with pytest.raises(TypeError, match="InvocationRecord only"):
+        aggregate_invocations(result.invocations)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="BatchRecord only"):
+        aggregate_batch_rates(result.batches)  # type: ignore[arg-type]
+
+    result_fields = {item.name for item in fields(SmokeExecutionResult)}
+    assert "rate_limit" not in result_fields
+    assert "capacity" not in result_fields
+    assert not hasattr(runtime_module, "rate_limit")
 
 
 def test_fixed_schedule_has_exact_cells_and_batch_counts(
@@ -1388,7 +1853,8 @@ def test_real_writer_factory_retains_fullproof_strict_pre_and_in_only() -> None:
     assert pessimistic.connection is connection
 
 
-def test_runtime_source_exposes_no_postgresql_execution_entry_point() -> None:
+def test_runtime_exposes_only_the_explicit_postgres_smoke_boundary() -> None:
+    assert runtime_module.run_postgres_smoke is run_postgres_smoke
     assert not hasattr(runtime_module, "main")
     assert not hasattr(runtime_module, "write_evidence_directory")
     assert not hasattr(runtime_module, "run_canonical")
