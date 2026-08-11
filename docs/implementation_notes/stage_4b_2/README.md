@@ -30,12 +30,12 @@ PR4
 = COMPLETE / MERGED
 
 PR5
-= CORRECTNESS VALIDATION COMPLETE
-+ DETERMINISTIC UNIT EVIDENCE COMPLETE
-+ REAL POSTGRESQL EVIDENCE COMPLETE
-+ READY FOR FINAL HUMAN REVIEW / MERGE
+= COMPLETE / MERGED
 
 PR6
+= COMPLETE
+
+PR7
 = NEXT / NOT STARTED
 ```
 
@@ -64,8 +64,9 @@ Neither changes the instrumentation or experiment status recorded at PR1
 completion. PR4 adds the explicit production measurement capability while
 leaving empirical comparison and concurrency characterization unstarted. PR5
 now completes deterministic source-boundary correctness, measured/unmeasured
-parity, and real PostgreSQL compatibility evidence. PR6 remains the next
-unstarted stage for controlled empirical strategy comparison.
+parity, and real PostgreSQL compatibility evidence. PR6 completes the fixed
+Level-B controlled PostgreSQL comparison and its descriptive empirical report.
+PR7 is next for separately bounded concurrency characterization.
 
 ## Purpose
 
@@ -141,6 +142,8 @@ separate from `PostgresWriteSideExecutionTrace`, `SemanticOutcome`,
 | [PostgreSQL Write Measurement Contract](postgres_write_measurement_contract.md) | PR3 producer-specific immutable contract, nanosecond representation, four-state phase semantics, result-first availability, completeness invariants, and opt-in capability boundary. |
 | [PostgreSQL Write Measurement Instrumentation](postgres_write_measurement_instrumentation.md) | PR4 production instrumentation, explicit measured APIs, shared-algorithm seams, clock and failure behavior, canonical composition scope, frozen baseline, and PR5 handoff. |
 | [PostgreSQL Write Measurement Correctness Validation](postgres_write_measurement_correctness_validation.md) | PR5 eight-case phase population, deterministic source-boundary and parity evidence, real PostgreSQL compatibility method, executed results, limitations, and PR6 handoff. |
+| [PostgreSQL Strategy Comparison Method](postgres_strategy_comparison_method.md) | PR6 fixed protocol, lifecycle, timing boundaries, scenarios, cohort separation, evidence schema, validation, and stop conditions. |
+| [PostgreSQL Strategy Comparison Report](postgres_strategy_comparison_report.md) | PR6 canonical Level-B evidence, descriptive PRE/IN findings, mechanism interpretation, observer effect, limitations, non-conclusions, and PR7 boundary. |
 | [Stage 4B.2 PR Breakdown](pr_breakdown.md) | PR1–PR8 branch sequence, responsibilities, dependencies, non-goals, and stop conditions. |
 
 ## Predecessor and Roadmap
@@ -159,5 +162,7 @@ immutable contract and delivery decisions without adding production timers.
 PR4 implements the explicit producer-specific measurement surface while
 preserving the existing unmeasured APIs and shared PRE/IN algorithms. PR5 adds
 correctness tests and their evidence record without changing production code.
-None of these PRs performs performance or concurrency experiments, persistence,
-telemetry, strategy policy, retry governance, or rate admission.
+PR6 records the fixed Level-B comparison without selecting a strategy. PR7
+remains responsible for bounded worker-count characterization. No completed PR
+through PR6 adds persistence, telemetry, strategy policy, retry governance, or
+rate admission.

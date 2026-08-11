@@ -6,13 +6,13 @@
 
 ```text
 PR6
-= IN PROGRESS
+= COMPLETE
 
 Comparison method
 = DEFINED
 
 Experiment infrastructure
-= IMPLEMENTED / NON-POSTGRESQL VALIDATION PASS
+= COMPLETE
 
 Untimed preflight capability
 = IMPLEMENTED
@@ -38,16 +38,24 @@ Canonical IN/pessimistic compatibility
 Current measured availability
 = PASS
 
-Recorded comparison
-= NOT STARTED
+Canonical PostgreSQL comparison
+= COMPLETE / VALID
 
-Empirical result
-= NONE
+Recorded samples
+= 450
+
+Canonical evidence
+= RECORDED
+
+Empirical report
+= COMPLETE
 ```
 
-This note fixes the method for the later Stage 4B.2 PR6 controlled PostgreSQL
-comparison. It does not report latency evidence, choose a production strategy,
-or claim that either composition is faster.
+This note records the method used for the Stage 4B.2 PR6 controlled PostgreSQL
+comparison. The resulting Level-B descriptive evidence is reported separately
+in the [PostgreSQL Strategy Comparison Report](postgres_strategy_comparison_report.md).
+This method does not choose a production strategy or claim universal
+superiority for either composition.
 
 ## 1. Responsibility and Boundary
 
@@ -390,12 +398,12 @@ alternates B/C composition-block order, and rotates lane/connection assignment.
 Recorded sample indexes and block/batch/lane indexes are experiment accounting,
 not runtime governance identities.
 
-The future runner must execute the recorded schedule once, exactly as fixed.
-It must not append samples in response to observed cohort counts.
+The recorded executor consumes the schedule once, exactly as fixed. It must
+not append samples in response to observed cohort counts.
 
 ## 14. Raw Sample and Manifest Evidence
 
-The future canonical evidence layout is:
+The canonical evidence layout is:
 
 ```text
 manifest.json
@@ -414,12 +422,12 @@ measurement availability and phases as JSON `null`.
 For an ordinary invocation exception, `producer_outcome`, `cohort`,
 `measurement_availability`, and `phases` are JSON `null`; `exception_type` is
 the exception class name and `external_elapsed_ns` remains present. Schema
-version 1 remains the pre-first-recorded-run schema freeze because no canonical
-real evidence has yet been emitted. After the first canonical run, this shape
+version 1 is the schema used by the first canonical real evidence. This shape
 must not change without an explicit schema-version decision.
 
-No `execution_id` or `attempt_id` is introduced. No real evidence directory is
-created until a separately authorized PostgreSQL run.
+No `execution_id` or `attempt_id` is introduced. A real evidence directory may
+be created only by a separately authorized, structurally valid PostgreSQL run;
+the canonical directory was published only after validation returned `VALID`.
 
 The sanitized manifest records source commit, whether the source tree was clean
 before evidence generation, verified baseline identities, Python and psycopg
@@ -564,25 +572,38 @@ This preflight is compatibility evidence only. It establishes that the accepted
 PR6 comparison surfaces and lifecycle can execute credibly against real
 PostgreSQL. It does not establish any latency ranking or performance result.
 
-### Current validation record
+### Final validation record
 
-The current PR6 infrastructure checkpoint has the following executed
-non-performance validation:
+PR6 completed the following validation and recorded execution:
 
 ```text
 focused PR6 deterministic experiment tests
-= 49 passed
+= 79 passed
 
 complete unit suite
 = 1163 passed
 
 untimed PostgreSQL preflight
 = PASS
+
+real PostgreSQL executor smoke
+= VALID
+
+canonical recorded samples
+= 450
+
+canonical run validation
+= VALID
+
+exception samples
+= 0
+
+current measured delivery
+= 330 / 330 AVAILABLE
 ```
 
-PR6 therefore has no remaining preflight blocker. The recorded comparison,
-canonical bounded sample run, aggregate generation, empirical interpretation,
-and final comparison report remain pending.
-
-PR6 remains `IN PROGRESS`; `recorded_comparison=NOT_STARTED` and
-`empirical_result=NONE`.
+PR6 is `COMPLETE`. The canonical evidence is recorded under
+`experiments/stage4b2/evidence/stage4b2-pr6-canonical-0bd2f51/`; the accepted
+interpretation and limitations are in the [PostgreSQL Strategy Comparison
+Report](postgres_strategy_comparison_report.md). The recorded result remains
+Level-B descriptive evidence and does not select a production strategy.
