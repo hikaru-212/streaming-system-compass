@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">General concurrency: synchronized-burst completion rate</title>
+  <desc id="desc">DIFFERENT_ORDER_GENERAL_CONCURRENCY — median accepted completion rate. Protocol-qualified synchronized-burst completion rate — NOT production throughput. Run: stage4b2-pr7-canonical-cdbe542</desc>
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172033; }
+.title { font-size: 22px; font-weight: 600; }
+.subtitle { font-size: 13px; fill: #4b5563; }
+.axis { stroke: #344054; stroke-width: 1.2; }
+.grid { stroke: #d7dce3; stroke-width: 1; }
+.tick { font-size: 12px; fill: #344054; }
+.axis-label { font-size: 13px; font-weight: 600; }
+.legend { font-size: 12px; }
+.note { font-size: 12px; fill: #4b5563; }
+.pre { stroke: #2563eb; fill: #2563eb; }
+.in { stroke: #d97706; fill: #d97706; }
+.pre-reject { stroke: #7c3aed; fill: #7c3aed; }
+.in-reject { stroke: #dc2626; fill: #dc2626; }
+.series-line { fill: none; stroke-width: 2.5; }
+.series-dashed { stroke-dasharray: 7 5; }
+.point { stroke-width: 2; }
+.frame { fill: #ffffff; stroke: #c7cdd6; }
+@media (prefers-color-scheme: dark) {
+  text { fill: #eef2f7; }
+  .subtitle, .note, .tick { fill: #c8d0dc; }
+  .axis { stroke: #c8d0dc; }
+  .grid { stroke: #3b4554; }
+  .frame { fill: #111827; stroke: #596579; }
+  .pre { stroke: #60a5fa; fill: #60a5fa; }
+  .in { stroke: #fbbf24; fill: #fbbf24; }
+  .pre-reject { stroke: #c084fc; fill: #c084fc; }
+  .in-reject { stroke: #f87171; fill: #f87171; }
+}
+</style>
+  <rect class="frame" x="0.5" y="0.5" width="959" height="599"/>
+  <text class="title" x="48" y="38">General concurrency: synchronized-burst completion rate</text>
+<text class="subtitle" x="48" y="62">DIFFERENT_ORDER_GENERAL_CONCURRENCY — median accepted completion rate</text>
+<text class="axis-label" x="512.0" y="565" text-anchor="middle">Workers</text>
+<text class="axis-label" x="25" y="317.5" text-anchor="middle" transform="rotate(-90 25 317.5)">Accepted completions per second (protocol-qualified)</text>
+<line class="grid" x1="104.0" y1="510.0" x2="920.0" y2="510.0"/>
+<text class="tick" x="92.0" y="514.0" text-anchor="end">0</text>
+<line class="grid" x1="104.0" y1="433.0" x2="920.0" y2="433.0"/>
+<text class="tick" x="92.0" y="437.0" text-anchor="end">400</text>
+<line class="grid" x1="104.0" y1="356.0" x2="920.0" y2="356.0"/>
+<text class="tick" x="92.0" y="360.0" text-anchor="end">800</text>
+<line class="grid" x1="104.0" y1="279.0" x2="920.0" y2="279.0"/>
+<text class="tick" x="92.0" y="283.0" text-anchor="end">1200</text>
+<line class="grid" x1="104.0" y1="202.0" x2="920.0" y2="202.0"/>
+<text class="tick" x="92.0" y="206.0" text-anchor="end">1600</text>
+<line class="grid" x1="104.0" y1="125.0" x2="920.0" y2="125.0"/>
+<text class="tick" x="92.0" y="129.0" text-anchor="end">2000</text>
+<line class="axis" x1="104.0" y1="125.0" x2="104.0" y2="510.0"/>
+<line class="axis" x1="104.0" y1="510.0" x2="920.0" y2="510.0"/>
+<line class="axis" x1="104.0" y1="510.0" x2="104.0" y2="516.0"/>
+<text class="tick" x="104.0" y="534.0" text-anchor="middle">1</text>
+<line class="axis" x1="376.0" y1="510.0" x2="376.0" y2="516.0"/>
+<text class="tick" x="376.0" y="534.0" text-anchor="middle">2</text>
+<line class="axis" x1="648.0" y1="510.0" x2="648.0" y2="516.0"/>
+<text class="tick" x="648.0" y="534.0" text-anchor="middle">4</text>
+<line class="axis" x1="920.0" y1="510.0" x2="920.0" y2="516.0"/>
+<text class="tick" x="920.0" y="534.0" text-anchor="middle">8</text>
+<line class="pre series-line" x1="510" y1="34" x2="538" y2="34"/>
+<text class="legend" x="548" y="38">PRE_OCC — ACCEPTED</text>
+<polyline class="pre series-line" points="104.0,423.9154402481947 376.0,401.1667813108211 648.0,358.05012073012216 920.0,300.4808190258374"/>
+<circle class="pre point" cx="104.0" cy="423.9154402481947" r="4.5"/>
+<text class="tick" x="104.0" y="413.9154402481947" text-anchor="middle">447</text>
+<circle class="pre point" cx="376.0" cy="401.1667813108211" r="4.5"/>
+<text class="tick" x="376.0" y="391.1667813108211" text-anchor="middle">565</text>
+<circle class="pre point" cx="648.0" cy="358.05012073012216" r="4.5"/>
+<text class="tick" x="648.0" y="348.05012073012216" text-anchor="middle">789</text>
+<circle class="pre point" cx="920.0" cy="300.4808190258374" r="4.5"/>
+<text class="tick" x="920.0" y="290.4808190258374" text-anchor="middle">1088</text>
+<line class="in series-line" x1="510" y1="57" x2="538" y2="57"/>
+<text class="legend" x="548" y="61">IN_PESSIMISTIC — ACCEPTED</text>
+<polyline class="in series-line" points="104.0,407.23848565580244 376.0,387.8259395115869 648.0,338.98830784285684 920.0,264.67549140426"/>
+<circle class="in point" cx="104.0" cy="407.23848565580244" r="4.5"/>
+<text class="tick" x="104.0" y="425.23848565580244" text-anchor="middle">534</text>
+<circle class="in point" cx="376.0" cy="387.8259395115869" r="4.5"/>
+<text class="tick" x="376.0" y="405.8259395115869" text-anchor="middle">635</text>
+<circle class="in point" cx="648.0" cy="338.98830784285684" r="4.5"/>
+<text class="tick" x="648.0" y="356.98830784285684" text-anchor="middle">888</text>
+<circle class="in point" cx="920.0" cy="264.67549140426" r="4.5"/>
+<text class="tick" x="920.0" y="282.67549140426" text-anchor="middle">1274</text>
+<text class="note" x="48" y="585">Protocol-qualified synchronized-burst completion rate — NOT production throughput. Run: stage4b2-pr7-canonical-cdbe542</text>
+</svg>

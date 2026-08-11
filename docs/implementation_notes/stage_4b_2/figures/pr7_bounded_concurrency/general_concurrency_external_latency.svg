@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">General concurrency: accepted external elapsed</title>
+  <desc id="desc">DIFFERENT_ORDER_GENERAL_CONCURRENCY — canonical medians. Bounded synchronized bursts; descriptive local evidence only. Run: stage4b2-pr7-canonical-cdbe542</desc>
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172033; }
+.title { font-size: 22px; font-weight: 600; }
+.subtitle { font-size: 13px; fill: #4b5563; }
+.axis { stroke: #344054; stroke-width: 1.2; }
+.grid { stroke: #d7dce3; stroke-width: 1; }
+.tick { font-size: 12px; fill: #344054; }
+.axis-label { font-size: 13px; font-weight: 600; }
+.legend { font-size: 12px; }
+.note { font-size: 12px; fill: #4b5563; }
+.pre { stroke: #2563eb; fill: #2563eb; }
+.in { stroke: #d97706; fill: #d97706; }
+.pre-reject { stroke: #7c3aed; fill: #7c3aed; }
+.in-reject { stroke: #dc2626; fill: #dc2626; }
+.series-line { fill: none; stroke-width: 2.5; }
+.series-dashed { stroke-dasharray: 7 5; }
+.point { stroke-width: 2; }
+.frame { fill: #ffffff; stroke: #c7cdd6; }
+@media (prefers-color-scheme: dark) {
+  text { fill: #eef2f7; }
+  .subtitle, .note, .tick { fill: #c8d0dc; }
+  .axis { stroke: #c8d0dc; }
+  .grid { stroke: #3b4554; }
+  .frame { fill: #111827; stroke: #596579; }
+  .pre { stroke: #60a5fa; fill: #60a5fa; }
+  .in { stroke: #fbbf24; fill: #fbbf24; }
+  .pre-reject { stroke: #c084fc; fill: #c084fc; }
+  .in-reject { stroke: #f87171; fill: #f87171; }
+}
+</style>
+  <rect class="frame" x="0.5" y="0.5" width="959" height="599"/>
+  <text class="title" x="48" y="38">General concurrency: accepted external elapsed</text>
+<text class="subtitle" x="48" y="62">DIFFERENT_ORDER_GENERAL_CONCURRENCY — canonical medians</text>
+<text class="axis-label" x="512.0" y="565" text-anchor="middle">Workers</text>
+<text class="axis-label" x="25" y="317.5" text-anchor="middle" transform="rotate(-90 25 317.5)">Median external elapsed (ms)</text>
+<line class="grid" x1="104.0" y1="510.0" x2="920.0" y2="510.0"/>
+<text class="tick" x="92.0" y="514.0" text-anchor="end">0.00</text>
+<line class="grid" x1="104.0" y1="433.0" x2="920.0" y2="433.0"/>
+<text class="tick" x="92.0" y="437.0" text-anchor="end">2.00</text>
+<line class="grid" x1="104.0" y1="356.0" x2="920.0" y2="356.0"/>
+<text class="tick" x="92.0" y="360.0" text-anchor="end">4.00</text>
+<line class="grid" x1="104.0" y1="279.0" x2="920.0" y2="279.0"/>
+<text class="tick" x="92.0" y="283.0" text-anchor="end">6.00</text>
+<line class="grid" x1="104.0" y1="202.0" x2="920.0" y2="202.0"/>
+<text class="tick" x="92.0" y="206.0" text-anchor="end">8.00</text>
+<line class="grid" x1="104.0" y1="125.0" x2="920.0" y2="125.0"/>
+<text class="tick" x="92.0" y="129.0" text-anchor="end">10.00</text>
+<line class="axis" x1="104.0" y1="125.0" x2="104.0" y2="510.0"/>
+<line class="axis" x1="104.0" y1="510.0" x2="920.0" y2="510.0"/>
+<line class="axis" x1="104.0" y1="510.0" x2="104.0" y2="516.0"/>
+<text class="tick" x="104.0" y="534.0" text-anchor="middle">1</text>
+<line class="axis" x1="376.0" y1="510.0" x2="376.0" y2="516.0"/>
+<text class="tick" x="376.0" y="534.0" text-anchor="middle">2</text>
+<line class="axis" x1="648.0" y1="510.0" x2="648.0" y2="516.0"/>
+<text class="tick" x="648.0" y="534.0" text-anchor="middle">4</text>
+<line class="axis" x1="920.0" y1="510.0" x2="920.0" y2="516.0"/>
+<text class="tick" x="920.0" y="534.0" text-anchor="middle">8</text>
+<line class="pre series-line" x1="510" y1="34" x2="538" y2="34"/>
+<text class="legend" x="548" y="38">PRE_OCC — ACCEPTED</text>
+<polyline class="pre series-line" points="104.0,423.9549255 376.0,376.63361299999997 648.0,323.61747675 920.0,244.35883575000003"/>
+<circle class="pre point" cx="104.0" cy="423.9549255" r="4.5"/>
+<text class="tick" x="104.0" y="413.9549255" text-anchor="middle">2.23</text>
+<circle class="pre point" cx="376.0" cy="376.63361299999997" r="4.5"/>
+<text class="tick" x="376.0" y="366.63361299999997" text-anchor="middle">3.46</text>
+<circle class="pre point" cx="648.0" cy="323.61747675" r="4.5"/>
+<text class="tick" x="648.0" y="313.61747675" text-anchor="middle">4.84</text>
+<circle class="pre point" cx="920.0" cy="244.35883575000003" r="4.5"/>
+<text class="tick" x="920.0" y="234.35883575000003" text-anchor="middle">6.90</text>
+<line class="in series-line" x1="510" y1="57" x2="538" y2="57"/>
+<text class="legend" x="548" y="61">IN_PESSIMISTIC — ACCEPTED</text>
+<polyline class="in series-line" points="104.0,437.92559374999996 376.0,392.4988085 648.0,342.36220275 920.0,280.0731875"/>
+<circle class="in point" cx="104.0" cy="437.92559374999996" r="4.5"/>
+<text class="tick" x="104.0" y="455.92559374999996" text-anchor="middle">1.87</text>
+<circle class="in point" cx="376.0" cy="392.4988085" r="4.5"/>
+<text class="tick" x="376.0" y="410.4988085" text-anchor="middle">3.05</text>
+<circle class="in point" cx="648.0" cy="342.36220275" r="4.5"/>
+<text class="tick" x="648.0" y="360.36220275" text-anchor="middle">4.35</text>
+<circle class="in point" cx="920.0" cy="280.0731875" r="4.5"/>
+<text class="tick" x="920.0" y="298.0731875" text-anchor="middle">5.97</text>
+<text class="note" x="48" y="585">Bounded synchronized bursts; descriptive local evidence only. Run: stage4b2-pr7-canonical-cdbe542</text>
+</svg>

@@ -11,7 +11,7 @@ PR7 responsibility
 = Level-C bounded local concurrency / contention characterization
 
 method
-= DEFINED
+= DEFINED / COMPLETE
 
 method-definition-time connection-budget preflight
 = REQUIRED / DEFINED / NOT EXECUTED
@@ -22,35 +22,41 @@ method-definition-time retained worker levels
 method-definition-time full concurrency runtime
 = NOT IMPLEMENTED
 
-current connection-budget preflight
+connection-budget preflight
 = EXECUTED / VALID
 
-current human-retained worker levels
+retained worker levels
 = (1, 2, 4, 8)
 
-current deterministic full Level-C runtime
+canonical runtime
 = IMPLEMENTED / VALIDATED
 
-current runtime deterministic tests
+runtime deterministic tests
 = GREEN
 
-PostgreSQL smoke method
-= DEFINED
-
-PostgreSQL smoke execution
+PostgreSQL smoke
 = EXECUTED / STRUCTURALLY_VALID
 
-release-skew human review
-= COMPLETE / ACCEPTED FOR THE NEXT PR7 GATE
+smoke skew review
+= COMPLETE / ACCEPTED
 
-canonical Level-C evidence/persistence contract
-= DEFINED
+canonical evidence contract
+= DEFINED / COMPLETE
 
-canonical Level-C evidence persistence implementation
-= NOT IMPLEMENTED
+canonical evidence persistence
+= IMPLEMENTED / VALIDATED
 
-canonical Level-C evidence
-= NOT EXECUTED
+canonical execution
+= EXECUTED / VALID
+
+canonical evidence
+= RECORDED
+
+canonical release-skew review
+= COMPLETE / ACCEPTED FOR CANONICAL INTERPRETATION
+
+PR7
+= COMPLETE / CLOSED
 
 production policy
 = NONE
@@ -600,7 +606,9 @@ does not adapt to observed latency, outcomes, or cohort counts.
 Composition-first order must balance across matched cells. Level and workload
 ordering must be deterministic from a recorded schedule seed. The full
 schedule generator and executor are implemented and deterministically
-validated. The canonical schedule has not executed.
+validated. At method-definition time the canonical schedule had not executed;
+the subsequently authorized canonical run executed once and produced valid
+recorded evidence.
 
 The first protocol omits p95. A same-order accepted cohort can contain at most
 one accepted observation per batch, giving only 30 planned accepted
@@ -1175,6 +1183,10 @@ seed-73 canonical schedule. It does not execute PostgreSQL, authorize the
 canonical run, choose a strategy, or derive capacity, saturation, an SLO, or a
 rate limit.
 
+This section preserves the docs-first contract in the future tense in which it
+was accepted. The implementation, execution, and closeout state reached after
+that definition point is recorded in Section 21.
+
 ### 20.1 Distinct immutable namespace
 
 One future canonical Level-C run publishes beneath:
@@ -1547,3 +1559,80 @@ Canonical Level-C evidence may later become one empirical input to future
 load-admission or rate-limiting work. This persistence contract does not derive
 a rate limit, safe concurrency setting, capacity, saturation point, SLO, or
 strategy selector.
+
+## 21. Accepted Canonical Level-C Closeout
+
+The human-operated canonical run executed exactly once from committed source,
+published the complete immutable evidence directory, passed immediate
+read-back and aggregate recomputation, and completed the required human
+release-skew review.
+
+```text
+canonical run ID
+= stage4b2-pr7-canonical-cdbe542
+
+canonical source commit
+= cdbe542a6cf557b5524070e4045165d1764b2ebf
+
+canonical evidence commit
+= 276a486d8e19459755f82078c797d75c96f32852
+
+validation
+= VALID
+
+recorded batches
+= 480
+
+recorded invocations
+= 1800
+
+ownership records
+= 15
+
+unexpected exceptions
+= 0
+
+canonical release-skew human review
+= ACCEPTED FOR CANONICAL INTERPRETATION
+
+PostgreSQL rerun
+= NOT REQUIRED
+```
+
+The accepted interpretation and exact workload-, composition-, cohort-, phase-,
+batch-, and release-skew-qualified findings are recorded in the
+[PostgreSQL Bounded Concurrency Report](postgres_bounded_concurrency_report.md).
+The report retains `DIFFERENT_ORDER_GENERAL_CONCURRENCY` separately from
+`SAME_ORDER_HOT_STREAM` and derives no strategy selection or production
+policy.
+
+The canonical release-skew review found no concrete cell in which release
+coordination overtook or obviously dominated producer or batch timing. The
+review introduced no numeric universal skew threshold. The evidence remains a
+bounded synchronized-burst characterization, not a sustained load test or
+production capacity certification.
+
+Two experiment-harness maintenance observations are deferred:
+
+- `fcntl.flock(...)` is a Python standard-library POSIX publication-locking
+  facility that works for the current macOS/Linux workflow but is not natively
+  portable to Windows. This is experiment-harness portability debt with no
+  current production impact or evidence-validity blocker.
+- the canonical schema's conservative secret-marker rejection is fail-closed
+  by design and could theoretically reject an unusual but benign sanitized
+  string. It had no canonical-run impact and remains experiment-harness
+  ergonomics debt.
+
+Reconsider either only if the harness becomes long-lived shared tooling,
+requires native Windows support, or needs wider metadata vocabularies.
+
+```text
+PR7
+= COMPLETE / CLOSED
+
+PR8
+= NEXT / STAGE 4B.2 CLOSEOUT
+
+production policy
+= NONE
+```

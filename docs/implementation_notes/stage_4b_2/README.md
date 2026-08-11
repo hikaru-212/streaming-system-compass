@@ -35,8 +35,14 @@ PR5
 PR6
 = COMPLETE
 
+post-PR6 supplement
+= COMPLETE / CLOSED
+
 PR7
-= NEXT / NOT STARTED
+= COMPLETE / CLOSED
+
+PR8
+= NEXT / CLOSEOUT
 ```
 
 At PR1 completion:
@@ -66,7 +72,9 @@ leaving empirical comparison and concurrency characterization unstarted. PR5
 now completes deterministic source-boundary correctness, measured/unmeasured
 parity, and real PostgreSQL compatibility evidence. PR6 completes the fixed
 Level-B controlled PostgreSQL comparison and its descriptive empirical report.
-PR7 is next for separately bounded concurrency characterization.
+PR7 now completes the bounded Level-C PostgreSQL concurrency characterization,
+its valid canonical evidence, and the release-skew validity review. PR8 is next
+for final Stage 4B.2 closeout; the stage is not yet marked complete.
 
 ## Purpose
 
@@ -144,6 +152,8 @@ separate from `PostgresWriteSideExecutionTrace`, `SemanticOutcome`,
 | [PostgreSQL Write Measurement Correctness Validation](postgres_write_measurement_correctness_validation.md) | PR5 eight-case phase population, deterministic source-boundary and parity evidence, real PostgreSQL compatibility method, executed results, limitations, and PR6 handoff. |
 | [PostgreSQL Strategy Comparison Method](postgres_strategy_comparison_method.md) | PR6 fixed protocol, lifecycle, timing boundaries, scenarios, cohort separation, evidence schema, validation, and stop conditions. |
 | [PostgreSQL Strategy Comparison Report](postgres_strategy_comparison_report.md) | PR6 canonical Level-B evidence, descriptive PRE/IN findings, mechanism interpretation, observer effect, limitations, non-conclusions, and PR7 boundary. |
+| [PostgreSQL Bounded Concurrency Method](postgres_bounded_concurrency_method.md) | PR7 bounded synchronized-burst protocol, preflight, runtime, smoke, canonical evidence contract, execution lineage, validity review, and closeout boundary. |
+| [PostgreSQL Bounded Concurrency Report](postgres_bounded_concurrency_report.md) | PR7 canonical Level-C evidence, separate general-concurrency and hot-stream findings, phase placement, release-skew review, limitations, and future load-admission boundary. |
 | [Stage 4B.2 PR Breakdown](pr_breakdown.md) | PR1–PR8 branch sequence, responsibilities, dependencies, non-goals, and stop conditions. |
 
 ## Predecessor and Roadmap
@@ -162,7 +172,8 @@ immutable contract and delivery decisions without adding production timers.
 PR4 implements the explicit producer-specific measurement surface while
 preserving the existing unmeasured APIs and shared PRE/IN algorithms. PR5 adds
 correctness tests and their evidence record without changing production code.
-PR6 records the fixed Level-B comparison without selecting a strategy. PR7
-remains responsible for bounded worker-count characterization. No completed PR
-through PR6 adds persistence, telemetry, strategy policy, retry governance, or
-rate admission.
+PR6 records the fixed Level-B comparison without selecting a strategy. PR7 now
+records the bounded worker-count characterization without selecting a strategy
+or deriving capacity or rate admission. PR8 remains responsible for final
+Stage 4B.2 closeout. No completed PR through PR7 adds production telemetry,
+strategy policy, retry governance, or rate-admission policy.
