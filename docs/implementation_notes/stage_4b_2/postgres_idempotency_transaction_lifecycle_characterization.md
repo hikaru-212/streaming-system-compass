@@ -8,27 +8,36 @@
 Post-PR6 supplemental characterization
 != reopening PR6
 
-PR6
-= COMPLETE
+PR6 canonical comparison
+= COMPLETE / CLOSED
 
 Supplement purpose
 = explain which current production-path costs plausibly account for the
   recorded PRE/OCC accepted-path overhead
 
-Supplemental method
-= DEFINED
-
 Dedicated path-E real-PostgreSQL correctness test
 = IMPLEMENTED
 
-Full Layer-1 measured runner
+Layer 1 supplemental characterization
+= IMPLEMENTED / EXECUTED / EVIDENCE RECORDED
+
+Layer 2 factorial characterization
+= IMPLEMENTED / EXECUTED / VALID EVIDENCE RECORDED
+
+Layer 2 recorded source commit
+= 9d2e4ac80cdf33b5dcd3638fa29ceb74d54bc8fd
+
+Layer 2 evidence commit
+= ba5224168802ed9b59c14fe0ff511d8af739d46a
+
+Layer 3 methodology
+= DEFINED
+
+Layer 3 runtime / tests / evidence
 = NOT IMPLEMENTED
 
-Layer-2 factorial runner
-= NOT IMPLEMENTED
-
-Layer-3 cleanup-control runner
-= NOT IMPLEMENTED
+Layer 3 PostgreSQL execution
+= NOT EXECUTED
 ```
 
 This method is separate post-PR6 explanatory characterization. It is not part
@@ -608,43 +617,268 @@ the measured `check()` and cleanup boundaries.
 
 ## 8. Layer 3 — Transaction and Cleanup Controls
 
-### Control 1 — IDLE rollback
+Layer 3 is the final planned explanatory control layer. Its responsibility is
+limited to:
+
+1. establishing an idle-cleanup baseline; and
+2. characterizing one isolated PRE-like preliminary read-transaction
+   lifecycle.
+
+Layer 3 does not compare PRE and IN strategies, define a production
+optimization, prove that preliminary idempotency should be removed, or alter
+production semantics. It invokes current production read primitives but does
+not create a new production composition.
+
+### 8.1 `CONTROL_A_IDLE_ROLLBACK`
+
+Initial state:
 
 ```text
-connection TransactionStatus.IDLE
-→ connection.rollback()
-→ assert TransactionStatus.IDLE
+PostgreSQL TransactionStatus.IDLE
 ```
 
-Purpose:
+No SQL statement is executed inside the measured control before rollback. The
+only measured operation is:
 
 ```text
-estimate driver/no-active-transaction rollback behavior
+connection.rollback()
 ```
 
-This is not treated as the cost of rolling back an active PostgreSQL read
-transaction.
-
-### Control 2 — Actual PRE preliminary read bundle
+The control retains:
 
 ```text
-connection TransactionStatus.IDLE
-→ I = MISS
-→ assert TransactionStatus.INTRANS
-→ H on an empty order stream
-→ separately timed connection.rollback()
-→ assert TransactionStatus.IDLE
+status_before_cleanup = IDLE
+status_after_cleanup  = IDLE
+cleanup_elapsed_ns    = elapsed time of connection.rollback()
 ```
 
-Purpose:
+Its purpose is to measure the application/client cleanup-call baseline when no
+PostgreSQL transaction is active. It is not an observation of active-transaction
+rollback cost, PRE cleanup cost, total database cost, or business-UOW cost.
+
+### 8.2 `CONTROL_B_PRELIMINARY_READ_LIFECYCLE`
+
+Every sample begins with a fresh `request_id` and fresh `order_id` for which no
+idempotency record or accepted event exists. The control uses the same
+production `PostgresIdempotencyStore.check(...)` and
+`PostgresEventStore.load(...)` read primitives used by the actual PRE path:
 
 ```text
-characterize the actual preliminary read bundle used by A, D, and E
+TransactionStatus.IDLE
+→ production PostgresIdempotencyStore.check(...)
+→ IdempotencyVerdict.MISS
+→ TransactionStatus.INTRANS
+→ production PostgresEventStore.load(...) for the fresh order
+→ accepted history = empty
+→ TransactionStatus.INTRANS
+→ direct connection.rollback()
+→ TransactionStatus.IDLE
 ```
 
-Idempotency lookup, history loading, and cleanup retain separate boundaries.
-The control does not combine their elapsed values into one inferred server-side
-transaction cost.
+The history read is the actual accepted-history load, not `SELECT 1` or
+synthetic SQL. No fake accepted event is inserted to manufacture the empty
+history condition.
+
+### 8.3 Measurement boundaries
+
+`CONTROL_A_IDLE_ROLLBACK` directly measures only:
+
+- `cleanup_elapsed_ns`: immediately before to immediately after the direct
+  `connection.rollback()` call.
+
+`CONTROL_B_PRELIMINARY_READ_LIFECYCLE` directly measures four independent
+fields:
+
+- `idempotency_check_elapsed_ns`: immediately before to immediately after the
+  exact production `check(...)` call;
+- `accepted_history_load_elapsed_ns`: immediately before to immediately after
+  the exact production accepted-history `load(...)` call;
+- `cleanup_elapsed_ns`: immediately before to immediately after the direct
+  `connection.rollback()` call; and
+- `lifecycle_elapsed_ns`: independently from immediately before the
+  idempotency check until immediately after cleanup completes.
+
+The three component timers are nested observations within the direct lifecycle
+timer. `lifecycle_elapsed_ns` is not derived by adding them. The component
+values are never summed or labeled as synthetic "database time"; their purpose
+is to describe where elapsed time is observed within the directly timed
+lifecycle.
+
+All elapsed fields use `time.perf_counter_ns()` or the same injected monotonic
+nanosecond clock seam. Wall-clock timestamps are not latency measurements.
+
+### 8.4 Transaction-status and reuse evidence
+
+`CONTROL_A_IDLE_ROLLBACK` retains:
+
+```text
+status_before_cleanup
+status_after_cleanup
+
+expected lifecycle
+IDLE → IDLE
+```
+
+`CONTROL_B_PRELIMINARY_READ_LIFECYCLE` retains:
+
+```text
+status_before_check
+status_after_check
+status_after_history
+status_after_cleanup
+
+expected lifecycle
+IDLE → INTRANS → INTRANS → IDLE
+```
+
+After the measured Control-B lifecycle, `SELECT 1` must succeed on the same
+connection. That reuse verification is outside the lifecycle timer, and its
+cleanup must restore the connection to `TransactionStatus.IDLE`. Any status or
+reuse mismatch invalidates the sample and the run.
+
+### 8.5 Fixed recorded schedule
+
+The first Layer-3 recorded schedule is frozen as:
+
+```text
+30 rounds
+× CONTROL_A_IDLE_ROLLBACK, CONTROL_B_PRELIMINARY_READ_LIFECYCLE
+= 30 samples per control
+= 60 recorded samples total
+```
+
+The declared order and count are fixed before PostgreSQL execution. There is no
+adaptive extension, retry, replacement sample, or run-more-until-stable
+behavior. A failed sample is retained as invalid evidence rather than replaced.
+
+### 8.6 Identity and setup boundary
+
+Identity generation, connection construction, store construction, database
+reset or verification, and all other preparation occur outside measurement.
+Each Control-B sample uses experiment-local unique identities and must prove
+before timing that its request and order conditions are fresh:
+
+```text
+request_id has no idempotency record
+order_id has no accepted event
+```
+
+The timed calls themselves must establish `MISS` and empty history. Setup may
+not seed a fake event or execute substitute SQL inside the measured lifecycle.
+
+### 8.7 Run validity and stop rule
+
+A Layer-3 recorded run is valid only when all 60 planned samples execute exactly
+once and satisfy their control-specific invariants.
+
+For `CONTROL_A_IDLE_ROLLBACK`, every sample must:
+
+- start in `IDLE`;
+- execute no measured SQL before rollback;
+- complete the direct rollback normally; and
+- end in `IDLE`.
+
+For `CONTROL_B_PRELIMINARY_READ_LIFECYCLE`, every sample must:
+
+- start in `IDLE`;
+- return exact `IdempotencyVerdict.MISS` from `check(...)`;
+- be `INTRANS` after the check;
+- return empty accepted history from `load(...)`;
+- remain `INTRANS` after history;
+- complete the direct rollback normally;
+- be `IDLE` after cleanup;
+- succeed at the post-measurement reuse `SELECT 1`; and
+- return to `IDLE` after reuse verification.
+
+Any unexpected ordinary exception, wrong count, wrong verdict, non-empty
+history, lifecycle mismatch, reuse failure, or missing required observation
+invalidates the complete run. Execution stops for human review. No sample is
+retried or replaced.
+
+### 8.8 Interpretation boundary
+
+Layer 3 may report:
+
+- the observed IDLE rollback baseline;
+- the observed isolated PRE-like preliminary read lifecycle; and
+- the elapsed time descriptively associated with its exact idempotency check,
+  accepted-history load, and active read-transaction cleanup boundaries.
+
+Those observations may be compared descriptively with the Layer-1 PRE
+preliminary-read observations and the Layer-2 P-context check and cleanup
+observations. Exact equality is not required across runs; environment and run
+jitter remain expected.
+
+Layer 3 must not claim:
+
+- a causal percentage of the PR6 end-to-end difference;
+- a synthetic total database time;
+- a universal physical-transaction-start cost;
+- PRE strategy inferiority or IN strategy superiority;
+- safe removal of preliminary idempotency; or
+- a production performance prediction.
+
+### 8.9 Supplemental closeout rule
+
+The post-PR6 supplemental investigation is sufficient to close if valid
+Layer-3 evidence forms a coherent bounded explanation with Layers 1 and 2:
+
+```text
+observed PR6 environment
+→ PRE accepted end-to-end elapsed was slightly higher
+→ PRE application business-UOW elapsed was shorter
+→ current PRE performs additional pre-UOW durable read-lifecycle work
+→ Layer 2 shows that the exact idempotency check and its transaction context
+  have non-negligible observed cost
+→ Layer 3 directly characterizes the isolated PRE-like preliminary read
+  lifecycle
+```
+
+Closure does not require a causal percentage-of-explanation threshold,
+`PRE_NO_PRELIMINARY`, `IN_OCC`, or another strategy matrix. Those remain
+optional future questions. Further characterization requires a specific
+contradictory or unexplained observation and a separate human checkpoint.
+
+### 8.10 Future Layer-3 evidence
+
+Future Layer-3 evidence uses this distinct supplemental namespace:
+
+```text
+experiments/stage4b2/evidence/
+stage4b2-post-pr6-idempotency-read-lifecycle-layer3/<run_id>/
+```
+
+It publishes exactly:
+
+```text
+manifest.json
+samples.jsonl
+aggregates.json
+```
+
+The manifest retains only the supplemental schema name/version, run ID, full
+source commit, clean-source fact, fixed control/sample schedule, clock identity,
+sanitized PostgreSQL server version, and validation status. It does not retain
+a DSN, endpoint, credential, database identity, or environment-variable value.
+
+Sample records retain only the control identity and exact control-specific
+timing, transaction-status, verdict/history, reuse, final-IDLE, and
+exception-class facts required by this method. Exception messages and
+connection identity are not evidence.
+
+Aggregates remain separate by control and timing field and report only:
+
+```text
+count
+min
+mean
+median
+max
+```
+
+There is no p95, pooled control score, summed component metric, or strategy
+ranking. This section defines the future evidence contract; it does not
+authorize or implement evidence persistence in this docs-only slice.
 
 ## 9. Measurement Interpretation Rules
 
@@ -722,13 +956,17 @@ This method does not authorize that comparison. No counterfactual production
 algorithm, shadow implementation, gate cross-comparison, or check-removal
 experiment is implemented in this supplement.
 
-## 12. Initial Implementation Boundary
+## 12. Historical Initial Implementation Boundary
 
-The first implementation slice contains only:
+This section records the originally authorized first implementation slice. It
+is historical chronology, not the current supplemental status reported at the
+top of this document.
+
+That first implementation slice contained only:
 
 - this supplemental method document; and
 - the dedicated real-PostgreSQL path-E correctness test.
 
-It does not implement the full Layer-1 runner, the Layer-2 factorial, the
-Layer-3 timed controls, performance execution, aggregation, serialization, or
-supplemental evidence persistence.
+At that checkpoint, it did not implement the full Layer-1 runner, the Layer-2
+factorial, the Layer-3 timed controls, performance execution, aggregation,
+serialization, or supplemental evidence persistence.
