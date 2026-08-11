@@ -8,6 +8,9 @@
 PR6
 = IN PROGRESS
 
+Comparison method
+= DEFINED
+
 Experiment infrastructure
 = IMPLEMENTED / NON-POSTGRESQL VALIDATION PASS
 
@@ -15,10 +18,28 @@ Untimed preflight capability
 = IMPLEMENTED
 
 PostgreSQL preflight execution
-= NOT EXECUTED
+= PASS
+
+Preflight structural cells
+= 6 / 6 PASS
+
+Same-connection sequential reuse
+= PASS
+
+Frozen/current compatibility
+= PASS
+
+Canonical PRE/OCC compatibility
+= PASS
+
+Canonical IN/pessimistic compatibility
+= PASS
+
+Current measured availability
+= PASS
 
 Recorded comparison
-= NOT EXECUTED
+= NOT STARTED
 
 Empirical result
 = NONE
@@ -500,5 +521,68 @@ From an already configured project shell, the exact preflight command is:
 ./.venv/bin/python -m experiments.stage4b2.postgres_strategy_comparison --preflight
 ```
 
-Until the untimed PostgreSQL preflight and later authorized recorded run
-succeed, PR6 remains experiment infrastructure with no empirical result.
+### Recorded preflight evidence
+
+The guarded six-cell preflight has now executed successfully against the
+configured project test database.
+
+```text
+FROZEN_BASELINE    × PRE_OCC         = PASS
+CURRENT_UNMEASURED × PRE_OCC         = PASS
+CURRENT_MEASURED   × PRE_OCC         = PASS
+
+CURRENT_UNMEASURED × IN_PESSIMISTIC  = PASS
+CURRENT_MEASURED   × IN_PESSIMISTIC  = PASS
+FROZEN_BASELINE    × IN_PESSIMISTIC  = PASS
+```
+
+The run established:
+
+```text
+same_connection_sequential_reuse
+= PASS
+
+frozen_current_compatible
+= PASS
+
+canonical_pre_compatible
+= PASS
+
+canonical_in_pessimistic_compatible
+= PASS
+
+current_measured_available
+= PASS
+```
+
+Every cell returned `ACCEPTED`, persisted the expected sequence-one CREATE
+event, returned its connection to `IDLE`, and remained reusable through
+`SELECT 1`. Frozen cells verified the isolated historical baseline identity;
+current measured cells returned `AVAILABLE` measurement evidence.
+
+This preflight is compatibility evidence only. It establishes that the accepted
+PR6 comparison surfaces and lifecycle can execute credibly against real
+PostgreSQL. It does not establish any latency ranking or performance result.
+
+### Current validation record
+
+The current PR6 infrastructure checkpoint has the following executed
+non-performance validation:
+
+```text
+focused PR6 deterministic experiment tests
+= 49 passed
+
+complete unit suite
+= 1163 passed
+
+untimed PostgreSQL preflight
+= PASS
+```
+
+PR6 therefore has no remaining preflight blocker. The recorded comparison,
+canonical bounded sample run, aggregate generation, empirical interpretation,
+and final comparison report remain pending.
+
+PR6 remains `IN PROGRESS`; `recorded_comparison=NOT_STARTED` and
+`empirical_result=NONE`.
