@@ -13,14 +13,29 @@ PR7 responsibility
 method
 = DEFINED
 
-connection-budget preflight
+method-definition-time connection-budget preflight
 = REQUIRED / DEFINED / NOT EXECUTED
 
-retained worker levels
+method-definition-time retained worker levels
 = PENDING LIVE PREFLIGHT + HUMAN REVIEW
 
-full concurrency runtime
+method-definition-time full concurrency runtime
 = NOT IMPLEMENTED
+
+current connection-budget preflight
+= EXECUTED / VALID
+
+current human-retained worker levels
+= (1, 2, 4, 8)
+
+current deterministic full Level-C runtime
+= IMPLEMENTED / VALIDATED
+
+current runtime deterministic tests
+= GREEN
+
+PostgreSQL smoke method
+= DEFINED / NOT EXECUTED
 
 canonical Level-C evidence
 = NOT EXECUTED
@@ -388,13 +403,14 @@ retained level
 
 The connection-budget preflight always reports an empty final retained-level
 set. It cannot make the human headroom decision. At method-definition time the
-retained set remains pending live preflight plus human review. No candidate is
-retained merely because it appears in the planning set or fits the raw
+retained set was pending live preflight plus human review. No candidate was or
+is retained merely because it appears in the planning set or fits the raw
 connection ceiling before headroom.
 
-After human review, the exact retained set is frozen into the canonical
-schedule and manifest before execution. A recorded run never silently drops,
-adds, or extends a level.
+The guarded live preflight subsequently executed and was valid. Human review
+then retained exactly `1`, `2`, `4`, and `8` as environment-local experimental
+points. That retained set is frozen into the canonical schedule before
+execution. A recorded run never silently drops, adds, or extends a level.
 
 If worker level 8 is not credible, that is not a preflight failure. If fewer
 than three levels survive human review, PR7 may still report bounded contention
@@ -461,7 +477,7 @@ reservation.
 
 ### 10.2 Connection accounting
 
-The future recorded runtime topology is:
+The implemented and deterministically validated recorded runtime topology is:
 
 ```text
 N workers
@@ -570,8 +586,9 @@ schedule is generated once after retained-level review and consumed once. It
 does not adapt to observed latency, outcomes, or cohort counts.
 
 Composition-first order must balance across matched cells. Level and workload
-ordering must be deterministic from a recorded schedule seed. The full schedule
-generator and executor remain later PR7 implementation work.
+ordering must be deterministic from a recorded schedule seed. The full
+schedule generator and executor are implemented and deterministically
+validated. The canonical schedule has not executed.
 
 The first protocol omits p95. A same-order accepted cohort can contain at most
 one accepted observation per batch, giving only 30 planned accepted
@@ -583,7 +600,8 @@ recorded run.
 
 ## 13. Stability and Harness Evidence
 
-The future runtime and evidence must show:
+The implemented runtime establishes the structural capability, and canonical
+evidence must show:
 
 - start-offset distributions per worker level;
 - first and last start offsets per batch;
@@ -609,7 +627,7 @@ Before any canonical run, deterministic tests must prove:
 - connection requirement accounting is exact;
 - preflight serialization cannot contain secret-shaped metadata;
 - invalid and insufficient budget states remain distinct;
-- the future schedule is fixed and balanced;
+- the canonical schedule is fixed and balanced;
 - same-order and different-order identities cannot be pooled;
 - connections and workers are preconstructed and stable;
 - barrier wait occurs outside invocation timing;
@@ -653,9 +671,9 @@ This method and preflight capability do not authorize the later arrows.
 
 ## 16. Required Preflight Execution
 
-The live connection-budget preflight has not executed at the method-definition
-point. It may run only after the pure deterministic preflight tests pass. From
-an already configured project shell, the accepted command is:
+At the method-definition point, the live connection-budget preflight had not
+executed and could run only after the pure deterministic preflight tests
+passed. From an already configured project shell, the accepted command was:
 
 ```bash
 ./.venv/bin/python -m experiments.stage4b2.postgres_bounded_concurrency --preflight
@@ -665,7 +683,8 @@ The command must emit only the sanitized preflight schema and must expose no
 Level-C runtime or recorded-experiment entry point. Its result must remain a
 proposal for human headroom review; it cannot retain worker levels by itself.
 
-After live preflight, a separate evidence-alignment checkpoint may record:
+The subsequent live preflight was valid, and the completed evidence-alignment
+checkpoint recorded:
 
 - deterministic preflight validation results;
 - sanitized live budget facts;
@@ -674,11 +693,12 @@ After live preflight, a separate evidence-alignment checkpoint may record:
 - the explicit human headroom decision; and
 - the final experiment-local retained levels.
 
-Until that checkpoint, retained worker levels remain pending. Any later retained
-set defines only fixed Level-C experimental points for the recorded local
-environment. It cannot certify production capacity, recommend production
-concurrency, define safe production headroom, recommend a connection pool, or
-establish saturation.
+Until that checkpoint, retained worker levels were pending. That historical
+condition is now closed: human review retained exactly `1`, `2`, `4`, and `8`.
+Those levels define only fixed Level-C experimental points for the recorded
+local environment. They do not certify production capacity, recommend
+production concurrency, define safe production headroom, recommend a
+connection pool, or establish saturation.
 
 ## 17. Explicit Non-Goals
 
@@ -696,3 +716,241 @@ PR7 does not implement or decide:
 - `DecisionReceipt`, accepted-event metadata, or `DiagnosticTrace` changes;
 - read-side or snapshot measurement; or
 - universal performance, skew, saturation, or headroom thresholds.
+
+## 18. Separately Authorized PostgreSQL Smoke Protocol
+
+The PostgreSQL smoke is a correctness and topology gate between deterministic
+runtime validation and any separately authorized canonical Level-C run. Its
+only purpose is to prove that the real guarded PostgreSQL topology,
+synchronized release mechanics, current production compositions, exact
+cohorts, frozen phase topology, persistent connection reuse, and durable
+verification behave coherently in the recorded environment.
+
+```text
+PostgreSQL smoke
+= experiment-local correctness and topology validation
+
+PostgreSQL smoke
+!= canonical Level-C evidence
+!= performance evidence
+!= a reduced performance benchmark
+!= production concurrency certification
+```
+
+Smoke invocation and batch observations remain separately labeled smoke
+evidence. They cannot enter canonical Level-C raw records, aggregates,
+completion-rate summaries, curves, or comparisons.
+
+### 18.1 Exact cells and fixed count
+
+The smoke covers every already reviewed PR7 coordinate:
+
+```text
+4 retained worker levels
+× 2 workload families
+× 2 compositions
+= 16 exact smoke cells
+
+smoke bursts per exact cell
+= 1
+
+total smoke bursts
+= 16
+```
+
+The retained worker levels remain exactly `1`, `2`, `4`, and `8`. The workload
+families remain exactly `SAME_ORDER_HOT_STREAM` and
+`DIFFERENT_ORDER_GENERAL_CONCURRENCY`. The compositions remain exactly
+`PRE_OCC` and `IN_PESSIMISTIC`; the smoke introduces no `IN_OCC` or other
+counterfactual composition.
+
+The smoke uses the same deterministic cell-order semantics already frozen by
+the canonical seed-73 schedule. Only its batch count differs:
+
+| Cell order | Worker level | Workload family | Composition |
+| ---: | ---: | --- | --- |
+| 1 | 8 | `SAME_ORDER_HOT_STREAM` | `PRE_OCC` |
+| 2 | 8 | `SAME_ORDER_HOT_STREAM` | `IN_PESSIMISTIC` |
+| 3 | 8 | `DIFFERENT_ORDER_GENERAL_CONCURRENCY` | `IN_PESSIMISTIC` |
+| 4 | 8 | `DIFFERENT_ORDER_GENERAL_CONCURRENCY` | `PRE_OCC` |
+| 5 | 2 | `DIFFERENT_ORDER_GENERAL_CONCURRENCY` | `PRE_OCC` |
+| 6 | 2 | `DIFFERENT_ORDER_GENERAL_CONCURRENCY` | `IN_PESSIMISTIC` |
+| 7 | 2 | `SAME_ORDER_HOT_STREAM` | `IN_PESSIMISTIC` |
+| 8 | 2 | `SAME_ORDER_HOT_STREAM` | `PRE_OCC` |
+| 9 | 1 | `SAME_ORDER_HOT_STREAM` | `PRE_OCC` |
+| 10 | 1 | `SAME_ORDER_HOT_STREAM` | `IN_PESSIMISTIC` |
+| 11 | 1 | `DIFFERENT_ORDER_GENERAL_CONCURRENCY` | `IN_PESSIMISTIC` |
+| 12 | 1 | `DIFFERENT_ORDER_GENERAL_CONCURRENCY` | `PRE_OCC` |
+| 13 | 4 | `DIFFERENT_ORDER_GENERAL_CONCURRENCY` | `PRE_OCC` |
+| 14 | 4 | `DIFFERENT_ORDER_GENERAL_CONCURRENCY` | `IN_PESSIMISTIC` |
+| 15 | 4 | `SAME_ORDER_HOT_STREAM` | `IN_PESSIMISTIC` |
+| 16 | 4 | `SAME_ORDER_HOT_STREAM` | `PRE_OCC` |
+
+The smoke has no recorded warmup series and does not use the canonical three
+warmup plus thirty recorded batches per cell. It performs no retry, replacement
+batch, outcome-sensitive repetition, or adaptive extension. Every planned
+smoke cell executes at most once.
+
+### 18.2 Persistent topology and ownership
+
+For each retained worker level `N`:
+
+```text
+N persistent worker threads
+= N persistent PostgreSQL connections
+= N fixed lane owners
+```
+
+The topology is opened before that level's first smoke burst. Its `N` threads,
+connections, validation runtimes, composition writers, and lane owners are
+reused across all four smoke cells for that level. No connection is shared
+concurrently and no connection is created inside a smoke batch.
+
+The synchronized producer batch adds no dedicated controller or observer
+connection. Lane 0 may perform guarded reset, fresh-identity setup, and
+post-timing verification only while no batch is active, consistent with the
+accepted Level-C runtime topology.
+
+### 18.3 Synchronized release and timing review
+
+Every smoke burst uses the canonical synchronized-release boundary:
+
+1. identities and commands are prepared before timing;
+2. all `N` lanes reach one outside-timer barrier;
+3. the barrier action captures one common monotonic release reference;
+4. each lane captures its invocation start only after release and immediately
+   before the public measured CREATE call;
+5. each lane captures its invocation stop on normal return or when an ordinary
+   `Exception` reaches the experiment boundary;
+6. batch elapsed ends at the latest invocation stop; and
+7. classification, durable verification, connection checks, and cleanup begin
+   only after every lane has captured its stop reading.
+
+Each smoke batch retains its first and last start offsets, observed release
+skew, and release-to-last-completion batch elapsed. The following structural
+facts are machine validated:
+
+- exactly one release reference exists for the batch;
+- no invocation start precedes that reference;
+- no invocation stop precedes its start;
+- first and last offsets equal the minimum and maximum lane offsets;
+- batch elapsed equals the last completion relative to release;
+- completed count equals the worker level; and
+- verification starts only after every invocation stop.
+
+PR7 defines no arbitrary numeric smoke-skew threshold. The observed release
+skew magnitude is reviewed by a human relative to invocation and batch
+duration before canonical authorization. Canonical execution cannot proceed if
+that review shows an obvious harness-dominated release failure. Passing this
+review is environment-local and is not a production concurrency guarantee.
+
+### 18.4 Expected workload and cohort behavior
+
+For `DIFFERENT_ORDER_GENERAL_CONCURRENCY`, every invocation must classify as:
+
+```text
+ACCEPTED
+```
+
+Any other normal cohort invalidates the smoke cell and therefore the smoke.
+
+For `SAME_ORDER_HOT_STREAM`, only these composition-specific cohorts are
+supported:
+
+```text
+PRE_OCC
+→ ACCEPTED
+→ ADMISSION_REJECTED_APPEND_STALE_WRITE
+
+IN_PESSIMISTIC
+→ ACCEPTED
+→ ADMISSION_REJECTED_PREPARE_LOCK_TIMEOUT
+```
+
+At worker level `1`, both workload families are uncontended and must return
+`ACCEPTED`. At levels greater than `1`, the smoke does not prescribe an
+accepted/rejected numerical split. It instead requires every invocation to
+belong to the exact supported workload/composition cohort set, accepted
+history to remain durable and coherent, rejected request identities to remain
+absent from accepted history, and every lane connection to remain reusable.
+The smoke is never repeated to obtain a preferred outcome count.
+
+### 18.5 Frozen thirteen-phase topology
+
+The smoke reuses the exact current thirteen-phase state matrices already frozen
+by the Level-C runtime for these four supported composition/cohort pairs:
+
+- `PRE_OCC + ACCEPTED`;
+- `PRE_OCC + APPEND_STALE_WRITE`;
+- `IN_PESSIMISTIC + ACCEPTED`; and
+- `IN_PESSIMISTIC + PREPARE_LOCK_TIMEOUT`.
+
+All thirteen records must exist exactly once, every state must match its frozen
+matrix, measured phases must retain elapsed nanoseconds, and non-measured
+phases must retain `elapsed_ns = None`. Missing phases, unexpected measured
+phases, or any other state mismatch invalidate the smoke. The smoke defines no
+second measurement vocabulary or smoke-specific phase topology.
+
+### 18.6 Durable and connection validation
+
+After every timed smoke batch, outside producer and batch timing:
+
+- accepted writes must exist exactly as expected in accepted history;
+- a rejected request identity must not appear as an accepted write;
+- strict `FullProofValidator` evidence and `ValidationMode.STRICT` must remain
+  coherent where the accepted runtime requires them;
+- every lane must pass a `SELECT 1` reuse check;
+- every lane connection must be restored to PostgreSQL `IDLE`; and
+- stable lane-to-thread and lane-to-connection ownership must remain intact.
+
+An unexpected ordinary exception invalidates the smoke. Only its class name may
+enter experiment-local diagnostic evidence; its message does not. No retry or
+replacement follows an exception, verification failure, or invalid batch.
+
+### 18.7 Smoke result boundary
+
+The separately labeled smoke result may retain only correctness and topology
+facts needed for the canonical-authorization decision, including:
+
+- the exact sixteen-cell identity and one-batch accounting;
+- invocation and batch completeness;
+- exact supported typed cohorts;
+- the frozen thirteen-phase state topology;
+- stable thread, lane, and connection ownership and reuse facts;
+- durable accepted/rejected history verification;
+- release offsets, release skew, and batch elapsed; and
+- sanitized PostgreSQL runtime facts such as server version, isolation level,
+  autocommit state, and topology label.
+
+It does not retain credentials or connection endpoint identity. It cannot be
+interpreted as production throughput, production capacity, a saturation point,
+an SLO, a rate limit, a safe concurrency limit, a connection-pool
+recommendation, or universal PRE/IN superiority.
+
+PR7's bounded concurrency evidence may later serve as an empirical input to
+load-admission or rate-limiting work, but PR7 does not derive or select such a
+policy.
+
+### 18.8 Smoke stop conditions and canonical gate
+
+The smoke stops without retry, replacement, or further smoke cells when any
+cell shows:
+
+- an unexpected ordinary exception;
+- an unsupported workload/composition cohort;
+- missing measurement or a missing, duplicate, or wrong phase state;
+- an incomplete invocation or batch account;
+- lane, thread, or connection ownership violation;
+- connection reuse or PostgreSQL `IDLE` restoration failure;
+- durable accepted-history or rejected-request verification failure;
+- wrong same-order or different-order request/order identity behavior;
+- invalid release reference, start offset, stop, skew, or batch elapsed
+  accounting; or
+- PostgreSQL test-database guard failure.
+
+No failed cell may be replaced, and no later cell may be run merely to improve
+the smoke result. A structurally valid smoke still requires explicit human
+review of observed release skew before canonical authorization. The smoke
+definition does not itself authorize smoke execution, and neither a valid
+smoke nor its skew review authorizes the canonical Level-C run without the next
+separate human checkpoint.
