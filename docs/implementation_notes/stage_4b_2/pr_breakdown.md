@@ -53,15 +53,15 @@ PR4
 = COMPLETE / MERGED
 
 PR5
-= CORRECTNESS VALIDATION COMPLETE
-+ DETERMINISTIC UNIT EVIDENCE COMPLETE
-+ REAL POSTGRESQL EVIDENCE COMPLETE
-+ READY FOR FINAL HUMAN REVIEW / MERGE
+= COMPLETE / MERGED
 
 PR6
+= COMPLETE
+
+PR7
 = NEXT / NOT STARTED
 
-PR7–PR8
+PR8
 = NOT STARTED
 ```
 
@@ -397,13 +397,14 @@ performance.
 
 ### Implementation Status
 
-Implemented and validated on the current PR5 branch. Deterministic eight-case
-source-boundary, elapsed, containment, collection-failure, and
-measured/unmeasured parity evidence is complete. Real PostgreSQL accepted
-persistence, rollback, advisory try-lock non-acquisition, and connection
-IDLE/reuse compatibility are also covered by the final repository-wide
-validation. No production instrumentation defect was discovered. PR5 is ready
-for final human review and merge.
+Complete and merged. Deterministic eight-case source-boundary, elapsed,
+containment, collection-failure, and measured/unmeasured parity evidence is
+complete. Real PostgreSQL accepted persistence, rollback, advisory try-lock
+non-acquisition, and connection IDLE/reuse compatibility were also validated.
+No production instrumentation defect was discovered.
+
+The accepted PR5 evidence is the correctness foundation consumed by the
+completed PR6 controlled comparison.
 
 ### Required Evidence
 
@@ -437,6 +438,30 @@ thresholds or if measurement changes the existing producer behavior.
 ---
 
 ## PR6 — Controlled PostgreSQL Strategy Comparison
+
+### Status
+
+```text
+PR6
+= COMPLETE
+
+Canonical run
+= VALID
+
+Recorded samples
+= 450
+
+Exceptions
+= 0
+
+Empirical report
+= COMPLETE
+```
+
+The canonical evidence and descriptive interpretation are recorded in the
+[PostgreSQL Strategy Comparison
+Report](postgres_strategy_comparison_report.md). The result remains Level-B
+environment-qualified evidence and does not select a production strategy.
 
 ### Branch
 
