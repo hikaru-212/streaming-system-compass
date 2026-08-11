@@ -8,6 +8,7 @@ from time import monotonic
 
 import pytest
 from psycopg import IsolationLevel
+from psycopg.pq import TransactionStatus
 
 from src.compass.transition.types import (
     EnforcementAction,
@@ -16,6 +17,7 @@ from src.compass.transition.types import (
     ValidationResult,
     ValidationVerdict,
 )
+from src.core.order.enums import CommandType
 from src.pipeline.transactional.admission import AdmissionVerdict
 from src.pipeline.transactional.postgres_admission import (
     PostgresOptimisticAdmissionGate,
@@ -33,7 +35,10 @@ from src.pipeline.transactional.postgres_write_side_config import (
     PostgresWriteSideConfig,
     ValidationPlacement,
 )
-from src.storage.idempotency_store import IdempotencyVerdict
+from src.storage.idempotency_store import (
+    IdempotencyVerdict,
+    RequestSignature,
+)
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_idempotency_store import PostgresIdempotencyStore
 from tests.shared.postgres import count_rows
@@ -430,7 +435,13 @@ def _pessimistic_gate_factory(uow):
     )
 
 
-def _accept_create(connection, *, request_id: str, order_id: str):
+def _accept_create(
+    connection,
+    *,
+    request_id: str,
+    order_id: str,
+    amount: Decimal = Decimal("100.00"),
+):
     write_side = _build_write_side(
         connection,
         placement=ValidationPlacement.PRE_TRANSACTION,
@@ -442,8 +453,18 @@ def _accept_create(connection, *, request_id: str, order_id: str):
     return write_side.create_order(
         request_id=request_id,
         order_id=order_id,
-        amount=Decimal("100.00"),
+        amount=amount,
     )
+
+
+def _assert_idle_and_reusable(connection) -> None:
+    """Prove one producer connection is clean and reusable after finalization."""
+    assert connection.info.transaction_status is TransactionStatus.IDLE
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1")
+        assert cursor.fetchone() == (1,)
+    connection.rollback()
+    assert connection.info.transaction_status is TransactionStatus.IDLE
 
 
 def _accept_in_pessimistic_create(
@@ -571,6 +592,123 @@ def test_pre_authoritative_replay_occurs_after_validation_and_business_uow(
     assert result.admission_result is None
     assert count_rows(db_connection, "order_events") == 1
     assert count_rows(db_connection, "idempotency_records") == 1
+
+
+def test_pre_authoritative_conflict_occurs_after_validation_and_business_uow(
+    db_connection,
+    db_connection_factory,
+    monkeypatch,
+):
+    concurrent_connection = db_connection_factory()
+    concurrent_results = []
+    request_id = "pre-authoritative-conflict-request"
+    order_id = "pre-authoritative-conflict-order"
+    winning_amount = Decimal("999.00")
+    losing_amount = Decimal("100.00")
+    recorder = _CheckpointRecorder(
+        idempotency_labels=[
+            "preliminary_idempotency_completed",
+            "authoritative_idempotency_completed",
+        ],
+        history_labels=["preliminary_history_observed"],
+    )
+
+    def accept_conflicting_request_during_validation():
+        with recorder.paused():
+            concurrent_results.append(
+                _accept_create(
+                    concurrent_connection,
+                    request_id=request_id,
+                    order_id=order_id,
+                    amount=winning_amount,
+                )
+            )
+            _assert_idle_and_reusable(concurrent_connection)
+
+    recorder.install(monkeypatch)
+    write_side = _build_write_side(
+        db_connection,
+        placement=ValidationPlacement.PRE_TRANSACTION,
+        validation_runtime=_RecordingValidationRuntime(
+            recorder=recorder,
+            action=EnforcementAction.ALLOW,
+            before_decision=accept_conflicting_request_during_validation,
+        ),
+    )
+
+    try:
+        result = write_side.create_order(
+            request_id=request_id,
+            order_id=order_id,
+            amount=losing_amount,
+        )
+    finally:
+        concurrent_connection.close()
+
+    assert db_connection.info.transaction_status is TransactionStatus.IDLE
+    assert recorder.events == [
+        "preliminary_idempotency_completed",
+        "preliminary_history_observed",
+        "validation_completed",
+        "business_uow_reached",
+        "authoritative_idempotency_completed",
+        "rollback_acknowledged",
+    ]
+    assert len(concurrent_results) == 1
+    winning_result = concurrent_results[0]
+    assert winning_result.outcome == PostgresWriteSideOutcome.ACCEPTED
+    assert winning_result.accepted_event is not None
+    assert winning_result.accepted_event.amount == winning_amount
+
+    assert isinstance(result, PostgresWriteSideResult)
+    assert result.outcome == PostgresWriteSideOutcome.CONFLICT
+    assert result.idempotency_decision.verdict == IdempotencyVerdict.CONFLICT
+    assert result.accepted_event is None
+    assert result.idempotency_decision.record is not None
+    assert (
+        result.idempotency_decision.record.accepted_event
+        == winning_result.accepted_event
+    )
+    assert result.idempotency_decision.record.signature.amount == winning_amount
+    assert result.validation_decision is not None
+    assert result.validation_decision.action == EnforcementAction.ALLOW
+    assert result.stream_admission_result is None
+    assert result.admission_result is None
+
+    losing_candidate_id = (
+        result.validation_decision.validation_result.candidate_event_id
+    )
+    with recorder.paused():
+        durable_events = PostgresEventStore(db_connection).load(order_id)
+        winning_replay = PostgresIdempotencyStore(db_connection).check(
+            RequestSignature(
+                request_id=request_id,
+                command_type=CommandType.CREATE,
+                order_id=order_id,
+                amount=winning_amount,
+            )
+        )
+        losing_conflict = PostgresIdempotencyStore(db_connection).check(
+            RequestSignature(
+                request_id=request_id,
+                command_type=CommandType.CREATE,
+                order_id=order_id,
+                amount=losing_amount,
+            )
+        )
+
+    assert durable_events == [winning_result.accepted_event]
+    assert all(event.event_id != losing_candidate_id for event in durable_events)
+    assert winning_replay.verdict == IdempotencyVerdict.REPLAY
+    assert winning_replay.record is not None
+    assert winning_replay.record.accepted_event == winning_result.accepted_event
+    assert losing_conflict.verdict == IdempotencyVerdict.CONFLICT
+    assert losing_conflict.record is not None
+    assert losing_conflict.record.accepted_event == winning_result.accepted_event
+    assert count_rows(db_connection, "order_events") == 1
+    assert count_rows(db_connection, "idempotency_records") == 1
+    db_connection.rollback()
+    _assert_idle_and_reusable(db_connection)
 
 
 def test_pre_occ_conflict_stops_after_one_append_without_reload_or_retry(
@@ -1053,6 +1191,7 @@ def test_uncommitted_stream_position_commit_makes_waiting_writer_stale(
         contender_connection.close()
 
 
+
 def test_uncommitted_stream_position_rollback_allows_waiting_writer_to_commit(
     db_connection,
     db_connection_factory,
@@ -1175,4 +1314,3 @@ def test_uncommitted_stream_position_rollback_allows_waiting_writer_to_commit(
         owner_connection.close()
         contender_connection.rollback()
         contender_connection.close()
-
