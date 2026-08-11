@@ -27,13 +27,16 @@ PR3
 = COMPLETE / MERGED
 
 PR4
-= CURRENT IMPLEMENTATION STAGE
-+ PRODUCTION INSTRUMENTATION IMPLEMENTED
-+ DETERMINISTIC UNIT VALIDATION IN PROGRESS
-+ AWAITING HUMAN REVIEW
+= COMPLETE / MERGED
 
 PR5
-= NEXT / MEASUREMENT CORRECTNESS VALIDATION
+= CORRECTNESS VALIDATION COMPLETE
++ DETERMINISTIC UNIT EVIDENCE COMPLETE
++ REAL POSTGRESQL EVIDENCE COMPLETE
++ READY FOR FINAL HUMAN REVIEW / MERGE
+
+PR6
+= NEXT / NOT STARTED
 ```
 
 At PR1 completion:
@@ -58,8 +61,11 @@ concurrency characterization
 PR2 adds test-owned measurement-mechanics evidence only. PR3 adds the immutable
 execution-local contract without production timing or measured producer APIs.
 Neither changes the instrumentation or experiment status recorded at PR1
-completion. PR4 now adds the explicit production measurement capability while
-leaving empirical comparison and concurrency characterization unstarted.
+completion. PR4 adds the explicit production measurement capability while
+leaving empirical comparison and concurrency characterization unstarted. PR5
+now completes deterministic source-boundary correctness, measured/unmeasured
+parity, and real PostgreSQL compatibility evidence. PR6 remains the next
+unstarted stage for controlled empirical strategy comparison.
 
 ## Purpose
 
@@ -134,6 +140,7 @@ separate from `PostgresWriteSideExecutionTrace`, `SemanticOutcome`,
 | [Measurement Mechanics Characterization](measurement_mechanics_characterization.md) | PR2 deterministic fake-clock findings for timer boundaries, overlap, absence, current early-exit topology, finalization, exception preservation, and safe post-UOW delivery constraints. |
 | [PostgreSQL Write Measurement Contract](postgres_write_measurement_contract.md) | PR3 producer-specific immutable contract, nanosecond representation, four-state phase semantics, result-first availability, completeness invariants, and opt-in capability boundary. |
 | [PostgreSQL Write Measurement Instrumentation](postgres_write_measurement_instrumentation.md) | PR4 production instrumentation, explicit measured APIs, shared-algorithm seams, clock and failure behavior, canonical composition scope, frozen baseline, and PR5 handoff. |
+| [PostgreSQL Write Measurement Correctness Validation](postgres_write_measurement_correctness_validation.md) | PR5 eight-case phase population, deterministic source-boundary and parity evidence, real PostgreSQL compatibility method, executed results, limitations, and PR6 handoff. |
 | [Stage 4B.2 PR Breakdown](pr_breakdown.md) | PR1–PR8 branch sequence, responsibilities, dependencies, non-goals, and stop conditions. |
 
 ## Predecessor and Roadmap
@@ -150,6 +157,7 @@ PR1 establishes the responsibility boundary. PR2 adds deterministic test-owned
 measurement-mechanics characterization. PR3 freezes the producer-specific
 immutable contract and delivery decisions without adding production timers.
 PR4 implements the explicit producer-specific measurement surface while
-preserving the existing unmeasured APIs and shared PRE/IN algorithms. None of
-these PRs performs performance or concurrency experiments, persistence,
+preserving the existing unmeasured APIs and shared PRE/IN algorithms. PR5 adds
+correctness tests and their evidence record without changing production code.
+None of these PRs performs performance or concurrency experiments, persistence,
 telemetry, strategy policy, retry governance, or rate admission.
