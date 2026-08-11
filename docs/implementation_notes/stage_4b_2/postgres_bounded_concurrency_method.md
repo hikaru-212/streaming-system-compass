@@ -35,7 +35,16 @@ current runtime deterministic tests
 = GREEN
 
 PostgreSQL smoke method
-= DEFINED / NOT EXECUTED
+= DEFINED
+
+PostgreSQL smoke execution
+= EXECUTED / STRUCTURALLY_VALID
+
+release-skew human review
+= COMPLETE / ACCEPTED FOR THE NEXT PR7 GATE
+
+canonical Level-C evidence persistence
+= NOT IMPLEMENTED
 
 canonical Level-C evidence
 = NOT EXECUTED
@@ -954,3 +963,197 @@ review of observed release skew before canonical authorization. The smoke
 definition does not itself authorize smoke execution, and neither a valid
 smoke nor its skew review authorizes the canonical Level-C run without the next
 separate human checkpoint.
+
+## 19. Accepted Live PostgreSQL Smoke Checkpoint
+
+The human-operated real PostgreSQL smoke executed exactly once from committed
+source and completed structurally valid. This section records the accepted
+execution checkpoint without changing the protocol defined in Section 18.
+
+### 19.1 Execution identity and status
+
+```text
+source commit
+= 8dcfbdc1e1bc4cca8a8e7c48a73126a40ec9c958
+
+run ID
+= stage4b2-pr7-postgres-smoke-8dcfbdc
+
+PostgreSQL smoke
+= EXECUTED / STRUCTURALLY_VALID
+
+canonical Level-C
+= NOT EXECUTED
+
+production policy
+= NONE
+```
+
+### 19.2 Exact smoke accounting
+
+```text
+planned cells
+= 16
+
+completed cells
+= 16
+
+planned invocations
+= 60
+
+observed invocations
+= 60
+
+failed cell
+= NONE
+```
+
+The smoke completed every retained coordinate:
+
+```text
+worker levels
+= 1, 2, 4, 8
+
+workload families
+= SAME_ORDER_HOT_STREAM
+  DIFFERENT_ORDER_GENERAL_CONCURRENCY
+
+compositions
+= PRE_OCC
+  IN_PESSIMISTIC
+```
+
+### 19.3 Observed live topology
+
+Every visited worker level reported:
+
+```text
+N lanes
+= N threads
+= N PostgreSQL connections
+
+topology label
+= guarded-test-postgresql
+
+PostgreSQL server version identity
+= 160014
+
+transaction isolation
+= READ_COMMITTED
+
+autocommit
+= false
+```
+
+This checkpoint records no endpoint identity, database name, role identity,
+credentials, or `TEST_DATABASE_URL` value.
+
+### 19.4 Observed smoke cohorts
+
+For `DIFFERENT_ORDER_GENERAL_CONCURRENCY`, every observed invocation was
+`ACCEPTED` for both compositions at worker levels `1`, `2`, `4`, and `8`.
+
+For `SAME_ORDER_HOT_STREAM`, worker level `1` produced:
+
+```text
+PRE_OCC
+= ACCEPTED
+
+IN_PESSIMISTIC
+= ACCEPTED
+```
+
+At worker levels `2`, `4`, and `8`, the observed composition-specific splits
+were:
+
+```text
+PRE_OCC
+= 1 ACCEPTED
++ (N - 1) ADMISSION_REJECTED_APPEND_STALE_WRITE
+
+IN_PESSIMISTIC
+= 1 ACCEPTED
++ (N - 1) ADMISSION_REJECTED_PREPARE_LOCK_TIMEOUT
+```
+
+These numerical splits are bounded observations from this one local smoke.
+They are not promoted to production invariants, universal concurrency
+semantics, guaranteed rejection counts, or expectations for another run or
+environment.
+
+### 19.5 Completed release-skew human review
+
+The required human release-skew review completed using the per-cell invocation
+and batch diagnostics. The observed release-skew ranges were:
+
+| Worker level | Observed release-skew range |
+| ---: | ---: |
+| 1 | `0 ns` |
+| 2 | `30,583 ns` to `75,625 ns` |
+| 4 | `84,666 ns` to `112,083 ns` |
+| 8 | `197,041 ns` to `345,916 ns` |
+
+The most notable relative smoke cell was:
+
+```text
+worker level
+= 8
+
+workload family
+= SAME_ORDER_HOT_STREAM
+
+composition
+= IN_PESSIMISTIC
+
+release skew
+= 219,792 ns
+
+median invocation elapsed
+= 2,244,312.5 ns
+
+batch elapsed
+= 4,302,292 ns
+```
+
+```text
+human review conclusion
+= ACCEPTED FOR THE NEXT PR7 GATE
+
+reason
+= No observed smoke cell showed obvious release-harness domination relative
+  to its invocation and batch durations.
+```
+
+This conclusion defines no numeric acceptable-skew threshold and does not claim
+that the observed skew is universally safe. Canonical Level-C evidence must
+still retain and expose release-skew distribution. Interpretation may still
+stop if canonical batches show material harness domination.
+
+### 19.6 Performance interpretation boundary
+
+The one-burst-per-cell smoke is not performance evidence. Its invocation or
+batch latency cannot establish:
+
+- PRE superiority or inferiority;
+- IN superiority or inferiority;
+- capacity or saturation;
+- production throughput;
+- a rate limit or safe concurrency limit;
+- an SLO; or
+- a connection-pool or production worker recommendation.
+
+The smoke establishes only live correctness and topology viability for
+proceeding to the next PR7 experiment gate.
+
+### 19.7 Next authorized gate
+
+The accepted smoke plus completed human release-skew review authorizes work on
+the canonical Level-C evidence and persistence boundary. It does not authorize
+the canonical Level-C PostgreSQL execution.
+
+Canonical execution still requires:
+
+- evidence schema and persistence implementation;
+- deterministic validation of that boundary;
+- clean committed source; and
+- a separate explicit human execution authorization.
