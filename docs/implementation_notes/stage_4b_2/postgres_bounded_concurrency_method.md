@@ -43,7 +43,10 @@ PostgreSQL smoke execution
 release-skew human review
 = COMPLETE / ACCEPTED FOR THE NEXT PR7 GATE
 
-canonical Level-C evidence persistence
+canonical Level-C evidence/persistence contract
+= DEFINED
+
+canonical Level-C evidence persistence implementation
 = NOT IMPLEMENTED
 
 canonical Level-C evidence
@@ -1157,3 +1160,390 @@ Canonical execution still requires:
 - deterministic validation of that boundary;
 - clean committed source; and
 - a separate explicit human execution authorization.
+
+## 20. Canonical Level-C Evidence and Persistence Contract
+
+This section defines the evidence boundary authorized by the accepted smoke
+checkpoint. It authorizes future implementation of closed serialization,
+valid-only durable publication, exact source and schedule lineage,
+deterministic aggregate publication, and immediate read-back verification for
+already-defined canonical Level-C observations.
+
+It does not change runtime semantics, worker levels, workload families,
+compositions, cohort vocabulary, phase matrices, timing boundaries, or the
+seed-73 canonical schedule. It does not execute PostgreSQL, authorize the
+canonical run, choose a strategy, or derive capacity, saturation, an SLO, or a
+rate limit.
+
+### 20.1 Distinct immutable namespace
+
+One future canonical Level-C run publishes beneath:
+
+```text
+experiments/stage4b2/evidence/
+stage4b2-pr7-canonical-levelc/
+<run_id>/
+```
+
+This namespace is distinct from PR6 canonical evidence, post-PR6 supplemental
+Layer 1/2/3 evidence, and PR7 PostgreSQL smoke diagnostics. Smoke diagnostics
+never enter this directory.
+
+The final `<run_id>/` directory is immutable after publication. A publisher
+must fail closed when that directory already exists; it never overwrites,
+merges into, deletes, or repairs an existing canonical run directory.
+
+### 20.2 Exact published file set
+
+A successfully published run directory contains exactly these six files:
+
+```text
+manifest.json
+invocations.jsonl
+batches.jsonl
+ownership.json
+invocation_aggregates.json
+batch_rate_aggregates.json
+```
+
+No checksum sidecar, completion marker, diagnostic log, skew-score file,
+exception file, hidden result file, or other artifact belongs to the canonical
+contract. Hidden same-parent staging state is an implementation detail and
+must not remain after successful publication.
+
+### 20.3 Closed sanitized manifest
+
+`manifest.json` is one closed JSON object with exactly these fields:
+
+| Field | Required value or meaning |
+| --- | --- |
+| `schema_name` | `stage4b2-pr7-canonical-levelc-evidence` |
+| `schema_version` | `1` |
+| `run_id` | exact canonical experiment-local run identity |
+| `source_commit` | one full Git commit identity |
+| `source_tree_clean_before_run` | `true` |
+| `schedule_identity` | `stage4b2-pr7-seed73-levels1-2-4-8-cells16-warmup3-recorded30` |
+| `recorded_schedule_seed` | `73` |
+| `retained_worker_levels` | `[1, 2, 4, 8]` |
+| `exact_cell_count` | `16` |
+| `warmup_batches_per_exact_cell` | `3` |
+| `recorded_batches_per_exact_cell` | `30` |
+| `expected_recorded_batch_count` | `480` |
+| `expected_recorded_invocation_count` | `1800` |
+| `expected_ownership_count` | `15` |
+| `clock_identity` | `time.perf_counter_ns` |
+| `postgresql_server_version` | sanitized server-version identity |
+| `transaction_isolation` | sanitized transaction-isolation identity |
+| `autocommit` | observed boolean fact |
+| `topology_label` | sanitized runtime topology label |
+| `validation_status` | `VALID` |
+| `smoke_source_commit` | `8dcfbdc1e1bc4cca8a8e7c48a73126a40ec9c958` |
+| `smoke_run_id` | `stage4b2-pr7-postgres-smoke-8dcfbdc` |
+| `smoke_release_skew_review` | `ACCEPTED` |
+| `publication_rule` | `VALID_ONLY_ATOMIC_IMMUTABLE_DIRECTORY` |
+
+The three smoke fields establish experiment-gate lineage only. Smoke timing,
+invocations, batches, cohorts, and aggregates do not enter canonical evidence.
+
+The manifest never retains `TEST_DATABASE_URL`, a DSN, host, port, database
+name, username, credentials, environment-variable values, raw connection
+objects, or endpoint identity.
+
+### 20.4 `invocations.jsonl`
+
+`invocations.jsonl` contains exactly `1800` recorded canonical invocations.
+Each UTF-8 line is one closed serialization of the already-frozen
+`InvocationRecord` and contains exactly:
+
+```text
+schema_name
+schema_version
+run_id
+invocation_index
+cell_index
+batch_index
+lane_index
+connection_slot
+worker_level
+workload_family
+composition
+external_elapsed_ns
+start_offset_ns
+producer_outcome
+rejection_stage
+stream_admission_verdict
+append_admission_verdict
+cohort
+measurement_availability
+phases
+exception_type
+```
+
+Each `phases` value preserves all thirteen ordered records with only `name`,
+`state`, and `elapsed_ns`. Warmup invocations never enter the file. Every line
+uses the manifest run ID and the exact recorded invocation index, cell, batch,
+lane, connection slot, worker level, workload family, composition, outcome,
+verdicts, cohort, measurement availability, external elapsed, start offset,
+and phase evidence already produced by the runtime.
+
+For a publishable `VALID` run:
+
+```text
+unexpected exception count
+= 0
+```
+
+`exception_type` therefore remains `null` in publishable canonical records;
+the closed field remains present because it belongs to the frozen record
+schema. The file does not add `request_id`, `order_id`, credentials, endpoint
+identity, `attempt_id`, or `execution_id`.
+
+### 20.5 `batches.jsonl`
+
+`batches.jsonl` contains exactly `480` recorded `BatchRecord` entries. Warmup
+batches never enter the file. Each UTF-8 line contains exactly:
+
+```text
+schema_name
+schema_version
+run_id
+batch_record_index
+cell_index
+batch_index
+worker_level
+workload_family
+composition
+release_reference_ns
+first_start_offset_ns
+last_start_offset_ns
+batch_elapsed_ns
+completed_count
+accepted_count
+typed_outcome_counts
+```
+
+Each `typed_outcome_counts` value preserves only exact sorted `outcome` and
+`count` pairs. Canonical release skew remains derivable per batch as:
+
+```text
+release_skew_ns
+= last_start_offset_ns - first_start_offset_ns
+```
+
+No stored or derived field assigns a universal release-skew pass/fail
+threshold.
+
+### 20.6 `ownership.json`
+
+`ownership.json` is one closed JSON array containing exactly the fifteen
+canonical `LaneOwnershipRecord` observations:
+
+```text
+1 + 2 + 4 + 8
+= 15
+```
+
+Every array entry contains exactly:
+
+```text
+worker_level
+lane_index
+connection_slot
+thread_id
+```
+
+`thread_id` is experiment-local observed thread identity. The file proves the
+fixed lane, thread, and connection-slot ownership of this run; it contains no
+connection object, server endpoint, credential, or external governance
+identity.
+
+### 20.7 `invocation_aggregates.json`
+
+`invocation_aggregates.json` is one closed JSON array generated only from the
+complete raw `InvocationRecord` sequence through the existing canonical
+`aggregate_invocations(...)` function. Array order is the deterministic tuple
+order returned by that function. The publisher does not duplicate, reorder,
+or reinterpret its grouping logic.
+
+Every aggregate group remains exact:
+
+```text
+worker level
+× workload family
+× composition
+× typed cohort
+```
+
+`SAME_ORDER_HOT_STREAM` is never pooled with
+`DIFFERENT_ORDER_GENERAL_CONCURRENCY`. `ACCEPTED`, `APPEND_STALE_WRITE`, and
+`PREPARE_LOCK_TIMEOUT` are never pooled with one another.
+
+Each closed aggregate entry contains:
+
+- `run_id`;
+- `worker_level`;
+- `workload_family`;
+- `composition`;
+- exact `cohort`;
+- `external_elapsed_ns`; and
+- `phases`, containing independent statistics only for actually `MEASURED`
+  phases.
+
+`phases` is an ordered array of closed objects containing exactly
+`phase_name` and `statistics_ns`. Its order is the existing PR3 phase order
+returned by `aggregate_invocations(...)`.
+
+Every descriptive-statistics object contains exactly:
+
+```text
+count
+minimum
+maximum
+mean
+median
+```
+
+There is no p95, summed-phase metric, generic rejection score, generic PRE or
+IN score, strategy winner, or cross-family/cohort aggregate.
+
+### 20.8 `batch_rate_aggregates.json`
+
+`batch_rate_aggregates.json` is one closed JSON array generated only from the
+complete raw `BatchRecord` sequence through the existing canonical
+`aggregate_batch_rates(...)` function. Array order is the deterministic tuple
+order returned by that function. The publisher does not duplicate, reorder,
+or reinterpret its grouping logic. The array contains exactly sixteen groups,
+one per exact:
+
+```text
+worker level
+× workload family
+× composition
+```
+
+Each closed group contains:
+
+- `run_id`;
+- `worker_level`;
+- `workload_family`;
+- `composition`;
+- `accepted_completion_rate_per_second`; and
+- `all_completion_rate_per_second`.
+
+Each completion-rate field contains exactly `count`, `minimum`, `maximum`,
+`mean`, and `median`, with `count = 30`. Names and interpretation remain
+protocol-qualified synchronized-burst completion rates. They are not
+production throughput, arrival capacity, rate limits, SLOs, or production
+admission settings.
+
+### 20.9 Canonical release-skew evidence
+
+The contract creates no separate skew score or skew artifact. Canonical
+release-skew interpretation is derived from `invocations.jsonl` plus
+`batches.jsonl`, which preserve start offsets, invocation elapsed values,
+first and last start offsets, and batch elapsed.
+
+These raw observations support later human review of start-offset
+distributions, batch release-skew distributions, and release skew relative to
+invocation and batch duration. No universal numeric threshold is introduced.
+Human review remains required, and material harness domination may still stop
+canonical interpretation.
+
+### 20.10 Valid-only publication gate
+
+The future publisher may construct canonical payloads only after all of these
+conditions hold:
+
+- `source_commit` is one known full Git identity;
+- the source tree was clean before execution;
+- the schedule equals the exact seed-73 canonical schedule;
+- runtime validation status is `VALID`;
+- recorded batch count is exactly `480`;
+- recorded invocation count is exactly `1800`;
+- ownership count is exactly `15`;
+- there is no missing, duplicate, or unplanned invocation or batch;
+- every observed cohort is supported;
+- every `DIFFERENT_ORDER_GENERAL_CONCURRENCY` invocation is `ACCEPTED`;
+- every invocation has `AVAILABLE` required measurement;
+- all thirteen phases exist exactly once and match the frozen matrix;
+- unexpected exception count is zero;
+- every recorded batch has `completed_count = worker_level`;
+- lane, thread, and connection-slot ownership is exact;
+- `aggregate_invocations(...)` succeeds;
+- `aggregate_batch_rates(...)` succeeds and returns exactly sixteen groups;
+  and
+- accepted smoke source, run, and release-skew-review lineage is present.
+
+Failure of any gate means no canonical evidence file or final run directory is
+published. There is no sample replacement, run extension, alternate run ID,
+partial canonical publication, or outcome-sensitive rerun.
+
+### 20.11 Valid-only atomic publication
+
+Future implementation must publish one already-complete valid result with this
+exact sequence:
+
+1. validate the full run and construct all six complete payloads in memory;
+2. confirm that the final `<run_id>/` directory does not exist;
+3. create one hidden staging directory in the same parent as the final run
+   directory;
+4. exclusively create each of the six expected files;
+5. fully write, flush, and `fsync` every file;
+6. `fsync` the staging directory;
+7. atomically rename the complete staging directory to `<run_id>/`; and
+8. `fsync` the canonical evidence root.
+
+A pre-validation failure writes nothing. A staging or partial-write failure
+must leave no visible final run directory and must clean up only its own hidden
+staging state. A successful publication leaves no staging state. Existing
+final run directories remain immutable and are never overwritten.
+
+Publication failure does not authorize retry, replacement, extension, or a
+second PostgreSQL canonical execution.
+
+### 20.12 Immediate read-back and recomputation
+
+The same future execution workflow must immediately read the final run
+directory back after atomic publication. Acceptance requires:
+
+- exactly the six contract filenames and no others;
+- parsed manifest equality with the in-memory manifest;
+- exactly `1800` invocation lines;
+- exactly `480` batch lines;
+- exactly `15` ownership entries;
+- one consistent manifest and raw-record run ID;
+- reconstruction and canonical validation status `VALID`;
+- published invocation aggregates equal a fresh
+  `aggregate_invocations(...)` recomputation from read-back raw invocations;
+- published batch-rate aggregates equal a fresh
+  `aggregate_batch_rates(...)` recomputation from read-back raw batches;
+- exactly sixteen recomputed batch-rate groups; and
+- no secret, environment-variable value, credential, raw connection, database
+  identity, or endpoint identity anywhere in the six files.
+
+A read-back failure stops acceptance for human review. It does not authorize a
+second PostgreSQL canonical run, mutation of the immutable final directory, or
+publication under an alternate run ID.
+
+### 20.13 Canonical execution authorization boundary
+
+This contract authorizes only future implementation of the canonical evidence
+writer and read-back boundary. It does not authorize canonical PostgreSQL
+execution, a human-operated canonical runner, evidence generation from
+PostgreSQL, another smoke, different worker levels, or different sample
+counts.
+
+The canonical run still requires, in order:
+
+1. evidence writer implementation;
+2. deterministic writer and read-back tests;
+3. committed clean source;
+4. a separately reviewed one-shot canonical runner; and
+5. separate explicit human execution authorization.
+
+### 20.14 Future rate-admission boundary
+
+Canonical Level-C evidence may later become one empirical input to future
+load-admission or rate-limiting work. This persistence contract does not derive
+a rate limit, safe concurrency setting, capacity, saturation point, SLO, or
+strategy selector.
