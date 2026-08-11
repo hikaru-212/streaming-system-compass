@@ -9,6 +9,9 @@ Post-PR6 supplemental characterization
 != reopening PR6
 
 PR6 canonical comparison
+= COMPLETE / CLOSED / UNCHANGED
+
+Post-PR6 supplemental characterization
 = COMPLETE / CLOSED
 
 Supplement purpose
@@ -19,10 +22,10 @@ Dedicated path-E real-PostgreSQL correctness test
 = IMPLEMENTED
 
 Layer 1 supplemental characterization
-= IMPLEMENTED / EXECUTED / EVIDENCE RECORDED
+= IMPLEMENTED / EXECUTED / VALID / EVIDENCE RECORDED
 
 Layer 2 factorial characterization
-= IMPLEMENTED / EXECUTED / VALID EVIDENCE RECORDED
+= IMPLEMENTED / EXECUTED / VALID / EVIDENCE RECORDED
 
 Layer 2 recorded source commit
 = 9d2e4ac80cdf33b5dcd3638fa29ceb74d54bc8fd
@@ -31,18 +34,27 @@ Layer 2 evidence commit
 = ba5224168802ed9b59c14fe0ff511d8af739d46a
 
 Layer 3 methodology
-= DEFINED
+= COMPLETE
 
 Layer 3 runtime / tests / evidence
-= NOT IMPLEMENTED
+= IMPLEMENTED / EXECUTED / VALID / EVIDENCE RECORDED
 
-Layer 3 PostgreSQL execution
-= NOT EXECUTED
+Layer 3 recorded source commit
+= b5e57f1b18eb8f484225d0dc745e9c9cc1f620aa
+
+Layer 3 evidence commit
+= 8b3c50c20068eb74279d8cee6770ac3af1fccac0
+
+Counterfactuals
+= DEFERRED / NOT REQUIRED FOR CLOSEOUT
 ```
 
-This method is separate post-PR6 explanatory characterization. It is not part
-of the canonical PR6 evidence, does not alter the accepted PR6 report, and does
-not reinterpret the canonical PR6 samples.
+This method defines separate post-PR6 explanatory characterization. It is not
+part of the canonical PR6 evidence, does not alter the accepted PR6 report, and
+does not reinterpret the canonical PR6 samples.
+
+The completed evidence and bounded interpretation are recorded in the
+[supplemental report](postgres_idempotency_transaction_lifecycle_report.md).
 
 No architecture change is authorized. In particular, this method does not
 remove, bypass, conditionally disable, or reorder either current idempotency
@@ -839,9 +851,12 @@ Closure does not require a causal percentage-of-explanation threshold,
 optional future questions. Further characterization requires a specific
 contradictory or unexplained observation and a separate human checkpoint.
 
-### 8.10 Future Layer-3 evidence
+The valid Layer-1, Layer-2, and Layer-3 evidence satisfies this rule. The
+supplement is complete and closed; this method authorizes no further run.
 
-Future Layer-3 evidence uses this distinct supplemental namespace:
+### 8.10 Layer-3 evidence contract and recorded namespace
+
+Layer-3 evidence uses this distinct supplemental namespace:
 
 ```text
 experiments/stage4b2/evidence/
@@ -877,8 +892,8 @@ max
 ```
 
 There is no p95, pooled control score, summed component metric, or strategy
-ranking. This section defines the future evidence contract; it does not
-authorize or implement evidence persistence in this docs-only slice.
+ranking. This contract governed the completed valid Layer-3 run and does not
+authorize another execution.
 
 ## 9. Measurement Interpretation Rules
 
@@ -916,7 +931,7 @@ experiments/stage4b2/evidence/stage4b2-pr6-canonical-0bd2f51/
 
 The canonical PR6 report and evidence remain complete historical evidence.
 
-A future Layer-1/2/3 recorded run is invalid if:
+Any Layer-1/2/3 recorded run is invalid if:
 
 - an unexpected exception occurs;
 - any producer connection is not `IDLE` after normal finalization;
@@ -928,8 +943,8 @@ A future Layer-1/2/3 recorded run is invalid if:
 
 ## 11. Explicitly Deferred Counterfactuals
 
-The following are explicitly deferred until Layers 1–3 are implemented,
-executed, and interpreted at a separate human checkpoint:
+The following remain explicitly deferred after the valid Layers 1–3 evidence
+and are not required for supplemental closeout:
 
 ```text
 PRE_NO_PRELIMINARY

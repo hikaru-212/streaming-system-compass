@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img"
+     aria-labelledby="title desc">
+  <title id="title">Layer-2 exact idempotency-check medians</title>
+  <desc id="desc">Grouped bars show median exact production idempotency-check
+  elapsed for P, U, and T contexts across MISS, REPLAY, and CONFLICT. T is an
+  experimental already-INTRANS control and not production IN.</desc>
+  <style>
+    text { font-family: system-ui, -apple-system, sans-serif; fill: #24313b; }
+    .title { font-size: 22px; font-weight: 650; }
+    .subtitle { font-size: 13px; fill: #5c6872; }
+    .axis { stroke: #aeb8bf; stroke-width: 1; }
+    .grid { stroke: #dfe5e9; stroke-width: 1; }
+    .tick { font-size: 12px; fill: #5c6872; }
+    .group { font-size: 14px; font-weight: 600; }
+    .value { font-size: 11px; font-variant-numeric: tabular-nums; }
+    .p { fill: #3f6682; }
+    .u { fill: #87939c; }
+    .t { fill: #b88a4b; }
+    .frame { fill: none; stroke: #c8d0d5; stroke-width: 1; }
+  </style>
+
+  <text class="title" x="40" y="38">Layer 2 — Exact production check()</text>
+  <text class="subtitle" x="40" y="62">
+    Median client-observed elapsed by verdict and transaction context
+  </text>
+
+  <rect class="p" x="515" y="78" width="18" height="12"/>
+  <text class="tick" x="540" y="89">P — direct, begins IDLE</text>
+  <rect class="u" x="515" y="98" width="18" height="12"/>
+  <text class="tick" x="540" y="109">U — UOW entered, PG still IDLE</text>
+  <rect class="t" x="515" y="118" width="18" height="12"/>
+  <text class="tick" x="540" y="129">T — already-INTRANS control</text>
+
+  <rect class="frame" x="110" y="150" width="790" height="300"/>
+  <line class="grid" x1="110" y1="450" x2="900" y2="450"/>
+  <line class="grid" x1="110" y1="383" x2="900" y2="383"/>
+  <line class="grid" x1="110" y1="317" x2="900" y2="317"/>
+  <line class="grid" x1="110" y1="250" x2="900" y2="250"/>
+  <line class="grid" x1="110" y1="183" x2="900" y2="183"/>
+  <line class="grid" x1="110" y1="150" x2="900" y2="150"/>
+
+  <text class="tick" x="96" y="454" text-anchor="end">0</text>
+  <text class="tick" x="96" y="387" text-anchor="end">200</text>
+  <text class="tick" x="96" y="321" text-anchor="end">400</text>
+  <text class="tick" x="96" y="254" text-anchor="end">600</text>
+  <text class="tick" x="96" y="187" text-anchor="end">800</text>
+  <text class="tick" x="96" y="154" text-anchor="end">900</text>
+  <text class="group" transform="translate(28 300) rotate(-90)"
+        text-anchor="middle">Median check elapsed (µs)</text>
+
+  <rect class="p" x="190" y="177" width="46" height="273"/>
+  <text class="value" x="213" y="169" text-anchor="middle">819.521</text>
+  <rect class="u" x="244" y="203" width="46" height="247"/>
+  <text class="value" x="267" y="195" text-anchor="middle">740.001</text>
+  <rect class="t" x="298" y="270" width="46" height="180"/>
+  <text class="value" x="321" y="262" text-anchor="middle">540.896</text>
+  <text class="group" x="267" y="478" text-anchor="middle">MISS</text>
+
+  <rect class="p" x="440" y="217" width="46" height="233"/>
+  <text class="value" x="463" y="209" text-anchor="middle">697.500</text>
+  <rect class="u" x="494" y="202" width="46" height="248"/>
+  <text class="value" x="517" y="194" text-anchor="middle">744.375</text>
+  <rect class="t" x="548" y="281" width="46" height="169"/>
+  <text class="value" x="571" y="273" text-anchor="middle">507.396</text>
+  <text class="group" x="517" y="478" text-anchor="middle">REPLAY</text>
+
+  <rect class="p" x="690" y="218" width="46" height="232"/>
+  <text class="value" x="713" y="210" text-anchor="middle">696.980</text>
+  <rect class="u" x="744" y="216" width="46" height="234"/>
+  <text class="value" x="767" y="208" text-anchor="middle">700.771</text>
+  <rect class="t" x="798" y="288" width="46" height="162"/>
+  <text class="value" x="821" y="280" text-anchor="middle">484.771</text>
+  <text class="group" x="767" y="478" text-anchor="middle">CONFLICT</text>
+
+  <text class="subtitle" x="110" y="516">
+    T is an experimental already-INTRANS control; it is not the production IN path.
+  </text>
+  <text class="subtitle" x="110" y="538">
+    These values do not isolate a universal implicit-BEGIN cost.
+  </text>
+</svg>

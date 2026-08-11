@@ -18,11 +18,16 @@ Layer 1
 = COMPLETE / VALID RECORDED EVIDENCE
 
 Layer 2
-= IMPLEMENTED / POSTGRESQL SMOKE + STRUCTURAL CHARACTERIZATION VALID
-  recorded characterization pending
+= COMPLETE / 270-SAMPLE VALID RECORDED EVIDENCE
 
 Layer 3
-= NOT IMPLEMENTED
+= COMPLETE / 60-SAMPLE VALID RECORDED EVIDENCE
+
+Post-PR6 supplemental characterization
+= COMPLETE / CLOSED
+
+Counterfactual compositions
+= DEFERRED / NOT REQUIRED FOR CLOSEOUT
 ```
 
 The supplemental work does not reopen or replace PR6.
@@ -399,10 +404,12 @@ lifecycle before proceeding.
 
 These observations are descriptive and environment-qualified.
 
-They do not yet prove a complete causal decomposition.
+They do not prove a complete causal decomposition.
 
-Layer 2 has also established the transaction-lifecycle shape of the exact
-production idempotency check:
+Layer 2 completed its fixed 270-sample exact production idempotency-check
+factorial: 30 samples in every P/U/T × MISS/REPLAY/CONFLICT cell, validation
+`VALID`, no exceptions, reuse 270/270, and final IDLE 270/270. It established
+the transaction-lifecycle shape:
 
 ```text
 P
@@ -415,15 +422,57 @@ T
 INTRANS → INTRANS → IDLE
 ```
 
-for MISS, REPLAY, and CONFLICT smoke cells.
+across the MISS, REPLAY, and CONFLICT recorded cells.
 
 A separate structural characterization confirmed that every Layer-2 cell emits
 one check-attributable production SQL statement with the same normalized
 identity.
 
-The fixed 270-sample Layer-2 recorded characterization remains pending.
+P versus U check elapsed did not show one stable directional difference
+sufficient to attribute the PR6 ordering to application-UOW entry itself. The
+already-INTRANS T control had lower check medians than U for all three verdicts
+in this recorded environment, but T is not the production IN composition and
+does not isolate a universal physical-transaction-start cost.
 
-Layer 3 remains pending.
+Layer 3 completed its fixed 60-sample run: 30 IDLE rollback controls and 30
+PRE-like preliminary read-lifecycle controls, validation `VALID`, no
+exceptions, and all required lifecycle/reuse evidence satisfied. Its recorded
+medians were:
+
+```text
+IDLE rollback baseline
+= 3.167 µs
+
+PRE-like idempotency check
+= 719.854 µs
+
+accepted-history load
+= 319.1875 µs
+
+active read cleanup
+= 214.3335 µs
+
+directly measured preliminary read lifecycle
+= 1,263.6255 µs
+```
+
+The direct lifecycle was independently timed and is not a sum of the component
+medians.
+
+Together, the three layers support a bounded explanation: the current PRE/OCC
+accepted path performs an additional durable idempotency lookup,
+accepted-history load, and read-transaction cleanup before its business UOW.
+Those boundaries have non-negligible client-observed elapsed, while moving
+that work and validation outside the write-side application business UOW keeps
+PRE's business-UOW interval materially shorter. Slightly higher PRE external
+elapsed and shorter PRE business-UOW elapsed are therefore coherent rather
+than contradictory observations.
+
+The final values, evidence lineage, limitations, and closeout are recorded in
+the [supplemental report](../implementation_notes/stage_4b_2/postgres_idempotency_transaction_lifecycle_report.md).
+No concrete contradiction requires another control, so the supplement is
+complete and closed. `PRE_NO_PRELIMINARY` and `IN_OCC` are not required for
+closeout.
 
 ## Alternatives Considered
 
@@ -476,7 +525,7 @@ disjoint server-side cost decomposition.
 - Some late REPLAY / CONFLICT outer timing is intentionally unusable because
   deterministic coordination contaminates the external and validation timing
   boundaries.
-- The investigation may finish with a bounded mechanism explanation rather than
+- The investigation finishes with a bounded mechanism explanation rather than
   one single causal number.
 
 ### Neutral but Important
@@ -543,19 +592,20 @@ PR6 comparison
 = preserved historical evidence
 
 post-PR6 supplement
-= explain where current cost is paid
+= COMPLETE / CLOSED
+  with a bounded explanation of where current cost is paid
 
 Layer 1
-= production-path evidence
+= COMPLETE / VALID production-path evidence
 
 Layer 2
-= exact idempotency-check evidence
+= COMPLETE / VALID exact idempotency-check evidence
 
 Layer 3
-= transaction / cleanup controls
+= COMPLETE / VALID transaction / cleanup controls
 
 counterfactual compositions
-= optional, not required
+= DEFERRED / NOT REQUIRED FOR CLOSEOUT
 
 PR7
 = separate bounded-concurrency responsibility
