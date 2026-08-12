@@ -8,9 +8,13 @@
 > epoch, and `order_id`; it does not use the historical scalar checkpoint as its
 > restart boundary. Projection state and per-order progress commit in one
 > worker-owned transaction. Current replay validation is mapped into Stage 4A
-> `SemanticOutcome`, while Stage 4B.3 separately defines projection trust
-> continuation. See [ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
-> and the [Stage 4B.3 responsibility boundary](../implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md).
+> `SemanticOutcome`. Stage 4B.3 is now closed as not currently justified because
+> the current exact-next worker, reducer, progress, permission, transaction, and
+> replay boundaries already own normal projection correctness. See
+> [ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md),
+> [ADR 0026](../adr/0026_projection_trust_continuation_is_not_currently_justified.md),
+> and the historical/reference
+> [Stage 4B.3 responsibility boundary](../implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md).
 
 ## Purpose
 

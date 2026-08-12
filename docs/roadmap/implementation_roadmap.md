@@ -9,8 +9,8 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the completion of Stage 4B.2
-and the start of Stage 4B.3 PR1 documentation work:
+This version reflects the project position after completion of Stage 4B.2 and
+the documentation-only Stage 4B.3 closeout:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
@@ -20,12 +20,12 @@ and the start of Stage 4B.3 PR1 documentation work:
 - Stage 4B DecisionReceipt PR1–PR7 is complete.
 - Stage 4B.1 DiagnosticTrace / ResolutionTrace PR1–PR7 is complete.
 - Stage 4B.2 Measurement Evidence PR1–PR8 is complete and closed.
-- Stage 4B.3 Projection Trust Boundary and Continuation is in progress through
-  documentation-only PR1 responsibility-boundary work; no production Stage
-  4B.3 runtime implementation exists yet.
-- Stage 4B.5 Order Correctness Contract v0 remains separately owned parallel
-  Stage 4 foundation work and has not started. No semantic dependency is
-  created between Stage 4B.3 and Stage 4B.5.
+- Stage 4B.3 Projection Trust Boundary and Continuation is closed as not
+  currently justified. PR1 and PR2 remain historical/reference work; PR3 and
+  later implementation PRs do not proceed.
+- Stage 4B.5 Order Correctness Contract v0 is in progress as separately owned
+  parallel Stage 4 foundation work. It is technically independent from the
+  Stage 4B.3 closeout, which does not move, redefine, block, or sequence it.
 - Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
@@ -72,16 +72,16 @@ Detailed completed-stage and current-stage records now live under:
 - [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
 - [Stage 4B.3 Implementation Notes](../implementation_notes/stage_4b_3/)
 
-The completed stage and current Stage 4 foundation work are:
+The completed and current Stage 4 foundation position is:
 
 - **Stage 4B.2 — COMPLETE / CLOSED**
-- **Stage 4B.3 — IN PROGRESS / PR1 DOCUMENTATION AND RESPONSIBILITY BOUNDARY**
-- **Stage 4B.5 — PARALLEL FOUNDATION WORK / NOT STARTED**
+- **Stage 4B.3 — CLOSED AS NOT CURRENTLY JUSTIFIED**
+- **Stage 4B.5 — IN PROGRESS / SEPARATELY OWNED PARALLEL FOUNDATION WORK**
 
 With Stage 4B.2 complete, the current and later responsibilities are:
 
-- Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
-  Correctness Contract as separately owned parallel foundation work
+- Stage 4B.5 Order Correctness Contract as separately owned foundation work;
+  Stage 4B.3 remains closed unless ADR 0026 re-entry conditions are met
 - Stage 4C+ runtime decision governance
 - Stage 5 dual-dimension governance demo / action safety
 - Stage 5+ production and agent-facing hardening
@@ -107,7 +107,7 @@ The project should evolve from:
 13. runtime semantic governance / SemanticOutcome core
 14. decision receipts / runtime evidence
 15. producer-specific trace and measurement evidence
-16. parallel projection trust continuation and machine-readable order correctness contract work
+16. evidence-gated closure of projection trust continuation and separately owned machine-readable order correctness contract work
 17. runtime decision, strategy selection, and retry governance
 18. action safety gate / dual-dimension governance demo
 19. later production and agent-facing hardening
@@ -640,9 +640,8 @@ Stage 4A — SemanticOutcome Core
 Stage 4B — DecisionReceipt / Runtime Evidence Record
 Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 Stage 4B.2 — Measurement Evidence
-Parallel Stage 4 foundation work:
-  Stage 4B.3 — Projection Trust Boundary and Continuation
-  Stage 4B.5 — Order Correctness Contract v0
+Stage 4B.3 — Projection Trust Boundary and Continuation — closed as not currently justified
+Stage 4B.5 — Order Correctness Contract v0 — in progress / separately owned parallel foundation work
 Stage 4C — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 Stage 4D — StrategySelector / Fast-Path Health Policy
@@ -653,10 +652,12 @@ This sequence is intentionally staged.
 
 Compass should first define semantic meaning, then preserve decision evidence,
 then preserve producer-specific execution-topology evidence, then measure bounded
-execution cost and obtain empirical evidence. Stage 4B.3 projection-trust work
-and Stage 4B.5 order-correctness work may then proceed in parallel as separately
-owned foundation responsibilities. Stage 4C+ runtime decisions, outcome-family
-alignment, strategy selection, and retry governance remain downstream.
+execution cost and obtain empirical evidence. Stage 4B.3 used an evidence-first
+investigation to determine that incremental projection-trust continuation is not
+currently justified. Stage 4B.5 is in progress as separately owned parallel
+foundation work and is technically independent from Stage 4B.3. Stage 4C+
+runtime decisions, outcome-family alignment, strategy selection, and retry
+governance remain downstream.
 
 ---
 
@@ -842,22 +843,39 @@ not become policy merely because one composition measured lower cost.
 
 ### Status
 
-In progress through PR1 documentation and responsibility-boundary work. No
-production Stage 4B.3 runtime implementation exists yet. See the
-[Stage 4B.3 implementation notes](../implementation_notes/stage_4b_3/).
+Closed as not currently justified. PR1 responsibility/problem-boundary work and
+PR2 executable mechanics characterization remain complete historical/reference
+work. PR3 and later Stage 4B.3 implementation PRs do not proceed. See
+[ADR 0026](../adr/0026_projection_trust_continuation_is_not_currently_justified.md)
+and the
+[Stage 4B.3 closeout notes](../implementation_notes/stage_4b_3/).
 
-### Goal
+### Closeout Decision
 
-Stage 4B.3 owns the high-level Projection Trust Boundary and Continuation
-responsibility. Its detailed design and implementation shape belong to
-separately reviewed stage-specific work, not this sequencing update.
+The source-grounded current projection model already uses accepted history as
+sole business authority, exact-next accepted-event discovery, the canonical
+reducer, mutable projection state, durable per-order progress, one worker-owned
+state/progress transaction, normal-runtime database-role separation, and
+accepted-history replay as the independent comparison/recovery path.
 
-Stage 4B.3 does not impose an ordering or semantic dependency on the separately
-owned Stage 4B.5 work.
+No current production consumer requires incremental qualification, and the
+proposed machinery does not prevent later privileged mutation or independently
+solve reducer/deployment bugs. Re-entry requires a concrete consumer, action,
+missing correctness property, replay-cost justification, restart/durability
+requirements, and an explicit defense against secondary business authority.
+
+The closeout does not impose an ordering or semantic dependency on the
+separately owned Stage 4B.5 work.
 
 ---
 
 ## Stage 4B.5 — Order Correctness Contract v0
+
+### Status
+
+IN PROGRESS in a separately owned parallel development stream. This status is
+independent from the Stage 4B.3 closeout; this roadmap correction does not make
+or alter any Stage 4B.5 architectural decision.
 
 ### Goal
 
@@ -1226,9 +1244,10 @@ Runtime Semantic Governance
   4B DecisionReceipt / Runtime Evidence Record
   4B.1 DiagnosticTrace / ResolutionTrace Boundary
   4B.2 Measurement Evidence
-  parallel Stage 4 foundation work
-    4B.3 Projection Trust Boundary and Continuation
-    4B.5 Order Correctness Contract v0
+  4B.3 Projection Trust Boundary and Continuation
+    closed as not currently justified after PR1/PR2 investigation
+  4B.5 Order Correctness Contract v0
+    in progress in a separately owned parallel development stream
   4C RuntimeDecisionPolicy
   4C.5 Layer 1 / Layer 2 Outcome Alignment
   4D StrategySelector / Fast-Path Health Policy
@@ -1260,7 +1279,8 @@ durable truth
 → runtime semantic governance
 → decision receipts / runtime evidence
 → trace and measurement evidence
-→ parallel projection trust continuation and machine-readable correctness contract work
+→ evidence-gated closure of projection trust continuation
+→ separately owned machine-readable correctness contract work
 → runtime decision, strategy selection, and retry governance
 → action safety / dual-dimension governance demo
 ```
@@ -1286,9 +1306,9 @@ technical correctness evidence
 → DecisionReceipt
 → DiagnosticTrace / ResolutionTrace
 → Measurement Evidence
-→ parallel Stage 4 foundation work:
-  Projection Trust Boundary and Continuation
-  Order Correctness Contract
+→ Projection Trust Boundary and Continuation
+  closed as not currently justified
+→ separately owned Order Correctness Contract
 → RuntimeDecisionPolicy
 → StrategySelector
 → RetryGovernance

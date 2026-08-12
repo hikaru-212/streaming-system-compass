@@ -4,9 +4,16 @@
 
 ## Status
 
-Stage 4B.3 PR2 executable characterization is implemented. The focused real-
-PostgreSQL commands remain for the human operator to run; this note does not
-record those commands as passed until their results are separately confirmed.
+Stage 4B.3 PR2 executable characterization is implemented, and its scoped
+PostgreSQL validation has been completed by the human operator:
+
+* focused Stage 4B.3 PR2 characterization cases: `5 passed in 0.33s`;
+* corroborating atomicity / delivery cases: `2 passed in 0.16s`;
+* all three affected projection integration files: `29 passed in 1.21s`;
+* projection-definition unit suite: `7 passed in 0.08s`.
+
+These results record only the named runs; they do not claim broader test
+coverage.
 
 ## Purpose
 
@@ -90,8 +97,7 @@ the supported production runtime identity.
 
 ## What PR2 Proves
 
-Subject to successful execution of the focused PostgreSQL tests, PR2 provides
-executable evidence that:
+The completed focused PostgreSQL execution provides executable evidence that:
 
 * replay `MATCH` does not imply repaired-progress qualification;
 * one replay result is scoped to one stable repeatable-read observation;
@@ -111,18 +117,25 @@ authority. It does not define a validated-boundary contract, projection-advance
 evidence, state binding, reducer identity, serializer, trust checkpoint,
 persistence, policy, strategy, retry, rebuild, quarantine, or remediation.
 
-## Implications for PR3
+## Historical PR3 Implications
 
-PR3 must not treat raw `MATCH`, sequence/version equality, worker body success,
-or `worker_name` as projection-trust identity. Immutable evidence contracts must
-keep an observation-scoped replay comparison distinct from repaired-progress
-lineage and from one commit-correlated projection advance. Missing progress and
-missing state-content binding must remain explicitly unqualified.
+These implications described what contract work would have required if PR3 had
+proceeded. ADR 0026 later concluded that no additional Stage 4B.3 runtime layer
+is currently justified, so PR3 does not proceed. The characterization findings
+remain valid historical/reference evidence.
 
-## Remaining Gaps
+Had PR3 proceeded, it could not have treated raw `MATCH`, sequence/version
+equality, worker body success, or `worker_name` as projection-trust identity.
+Immutable evidence contracts would have needed to keep an observation-scoped
+replay comparison distinct from repaired-progress lineage and from one
+commit-correlated projection advance. Missing progress and missing
+state-content binding would have needed to remain explicitly unqualified.
 
-The focused PostgreSQL tests still require human execution and result capture.
-Architecture decisions also remain open for state-content binding, live
-projection-logic identity, preservation or requalification of the original
-read-only observation, and whether durable trust checkpoints are needed. Those
-gaps are not resolved by PR2.
+## Historical Open Questions After PR2
+
+At PR2 completion, architecture questions remained about state-content binding,
+live projection-logic identity, preservation or requalification of the original
+read-only observation, and whether durable trust checkpoints would be needed.
+PR2 did not resolve those questions. ADR 0026 later determined that they do not
+currently justify another Stage 4B.3 runtime layer; they are re-entry
+considerations, not unfinished PR2 validation.

@@ -5,10 +5,13 @@
 > **Current implementation note:** The original external responsibility split
 > below remains valid. Runtime progress is now implemented through exact-next
 > per-order rows for the fixed projection definition and repaired epoch, while
-> legacy scalar checkpoints are historical operational evidence. Stage 4B.3
-> separately defines projection trust continuation; it does not change accepted
-> history into derived projection authority. See [ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
-> and the [Stage 4B.3 responsibility boundary](../implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md).
+> legacy scalar checkpoints are historical operational evidence. Stage 4B.3 is
+> closed as not currently justified; accepted history remains sole business
+> authority and projection state remains derived. See
+> [ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md),
+> [ADR 0026](../adr/0026_projection_trust_continuation_is_not_currently_justified.md),
+> and the historical/reference
+> [Stage 4B.3 responsibility boundary](../implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md).
 
 ## Purpose
 

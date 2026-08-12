@@ -175,9 +175,13 @@ provides a separate adapter from `ReplayValidationResult` to `SemanticOutcome`;
 the validator itself remains an evidence producer.
 
 Its successful `MATCH` is one point-in-time state-consistency observation. It
-does not inspect repaired per-order progress and is not a continuation-capable
-validated projection boundary. See the
-[Stage 4B.3 responsibility boundary](../../../docs/implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md).
+does not inspect repaired per-order progress. The repository does not require a
+separate continuation-qualified boundary for current projection correctness;
+see
+[ADR 0026](../../../docs/adr/0026_projection_trust_continuation_is_not_currently_justified.md).
+The original
+[Stage 4B.3 responsibility boundary](../../../docs/implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md)
+remains historical/reference investigation.
 
 ---
 
@@ -326,7 +330,8 @@ Repair, rebuild, and recovery policy belong to later stages.
 
 The current projection pipeline does not implement:
 
-- projection trust continuation or durable trust checkpoints
+- projection trust continuation or durable trust checkpoints; Stage 4B.3 is
+  closed as not currently justified under ADR 0026
 - automatic repair or rebuild from `SemanticOutcome` / `DecisionReceipt`
 - runtime decision policy
 - out-of-order buffering
