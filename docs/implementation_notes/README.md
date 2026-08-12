@@ -18,6 +18,7 @@ For project-wide sequencing, see:
 - [Stage 4B — DecisionReceipt / Runtime Evidence Record](./stage_4b/)
 - [Stage 4B.1 — DiagnosticTrace / ResolutionTrace](./stage_4b_1/)
 - [Stage 4B.2 — Measurement Evidence](./stage_4b_2/)
+- [Stage 4B.5 — Order Correctness Contract v0](./stage_4b_5/)
 
 ## Current Position
 
@@ -42,7 +43,8 @@ Stage 4B.3 and Stage 4B.5
 = SEPARATELY OWNED PARALLEL FOUNDATION WORK
 ```
 
-Neither stage has begun.
+The stages remain separately owned. Stage 4B.5 PR1 source-grounded
+documentation is active.
 
 Stage 4A introduced the stable `SemanticOutcome` core, runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
 
@@ -65,7 +67,7 @@ Stage 4B should also not collapse later Stage 4 layers into the receipt boundary
 Completed and later Stage 4 work remains separate:
 Stage 4B.2 — Measurement Evidence — COMPLETE / CLOSED
 Stage 4B.3 — Projection Trust Boundary and Continuation — PARALLEL / NOT STARTED
-Stage 4B.5 — Order Correctness Contract v0 — PARALLEL / NOT STARTED
+Stage 4B.5 — Order Correctness Contract v0 — PARALLEL / PR1 DOCUMENTATION ACTIVE
 Stage 4C   — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 Stage 4D   — StrategySelector / Fast-Path Health Policy
