@@ -4,15 +4,24 @@
 
 ## Status and Sequencing Rule
 
-This is a planning sequence, not implementation authority. Each PR must remain
-within the decisions established by accepted earlier work and must stop when
-the next step would require an unresolved semantic or persistence choice.
+```text
+Stage 4B.3
+= CLOSED AS NOT CURRENTLY JUSTIFIED
+```
+
+The canonical closeout decision is
+[ADR 0026 — Projection Trust Continuation Is Not Currently Justified](../../adr/0026_projection_trust_continuation_is_not_currently_justified.md).
+
+This file preserves the original evidence-first planning sequence as historical
+context. It is no longer an active implementation plan. PR1 and PR2 completed
+the investigation needed to decide necessity; PR3 and later Stage 4B.3
+implementation PRs are not proceeding.
 
 Concepts such as a validated projection boundary or projection-advance evidence
 are responsibility labels in this plan. PR1 does not freeze future class, field,
 status, serializer, schema, or table names.
 
-The sequence is evidence-first:
+The original sequence was:
 
 ```text
 PR1  documentation / responsibility boundary
@@ -25,11 +34,13 @@ PR7  durable trust checkpoint integration — CONDITIONAL
 final Stage 4B.3 closeout
 ```
 
-Characterization precedes contracts; contracts precede integration; durable
-persistence remains conditional on evidence that it is necessary and on a
-separately accepted atomicity decision.
+Characterization preceded the necessity decision. That evidence established
+that contracts and later integration are not currently justified, so the
+sequence stops after PR2.
 
 ## PR1 — Documentation / Responsibility Boundary
+
+Disposition: **COMPLETE / RETAINED AS HISTORICAL REFERENCE**.
 
 Purpose:
 
@@ -47,6 +58,8 @@ behavior. It must not choose state-binding, live-logic identity, or checkpoint
 atomicity representations.
 
 ## PR2 — Trust-Mechanics Characterization
+
+Disposition: **COMPLETE / RETAINED AS HISTORICAL REFERENCE**.
 
 Purpose: turn the source assumptions that matter to continuation into focused,
 executable evidence before immutable contracts are designed.
@@ -73,6 +86,11 @@ trust state.
 
 ## PR3 — Immutable Projection Trust Evidence Contracts
 
+Disposition: **NOT PROCEEDING**.
+
+The abandoned PR3 WIP was never accepted. No contract implementation is part of
+the Stage 4B.3 closeout.
+
 Purpose: define the smallest producer-specific immutable evidence contracts
 justified by PR1 and PR2.
 
@@ -89,6 +107,8 @@ No PostgreSQL table, migration, runtime policy, or durable checkpoint belongs in
 PR3.
 
 ## PR4 — Base Observation Qualification
+
+Disposition: **NOT PROCEEDING**.
 
 Purpose: qualify a replay observation as a continuation-capable order-local base
 only when the required identity, accepted-event lineage, progress qualification,
@@ -109,6 +129,8 @@ unless separately authorized after the atomicity decision.
 
 ## PR5 — Projection Advance Evidence Integration
 
+Disposition: **NOT PROCEEDING**.
+
 Purpose: produce or qualify the evidence needed to describe one worker-owned,
 exact-next committed projection step.
 
@@ -124,6 +146,8 @@ runtime action authority.
 
 ## PR6 — Trust Continuation Evaluator
 
+Disposition: **NOT PROCEEDING**.
+
 Purpose: evaluate whether a qualified order-local base at sequence `N` can
 continue across qualified evidence for the exact-next committed advance at
 `N + 1`.
@@ -135,6 +159,8 @@ worker, validate the domain, select an action or strategy, retry, rebuild, or
 remediate.
 
 ## PR7 — Durable Trust Checkpoint Integration — CONDITIONAL
+
+Disposition: **NOT PROCEEDING**.
 
 PR7 exists only if earlier PRs demonstrate that a reusable durable checkpoint
 is required and repository authority separately resolves its atomicity and
@@ -154,18 +180,21 @@ that conclusion.
 
 ## Final PR — Stage 4B.3 Closeout
 
+Disposition: **THIS DOCUMENTATION-ONLY CLOSEOUT**.
+
 The closeout records:
 
-* implemented responsibility and evidence boundaries;
-* accepted architecture decisions and their rationale;
-* executable validation results;
-* whether conditional PR7 occurred;
-* limitations and explicit non-goals;
-* deferred work and ownership by later stages.
+* PR1 responsibility and problem-boundary work as complete reference material;
+* PR2 executable mechanics characterization as complete reference material;
+* the current accepted-history, reducer, progress, transaction, permission, and
+  replay correctness model;
+* that no current consumer or missing runtime correctness property justifies
+  incremental qualification;
+* PR3–PR7 as not proceeding;
+* explicit re-entry conditions for any future reconsideration.
 
-Stage 4B.3 is not complete merely because types or tables exist. Completion
-requires source and executable evidence that the accepted continuation boundary
-is implemented without absorbing Stage 4B.5, 4C, 4D, or 4E responsibilities.
+No Stage 4B.3 type, table, evaluator, producer integration, or persistence
+surface is implemented. Stage 4B.5, 4C, 4D, and 4E remain separately owned.
 
 ## Stage-Wide Exclusions
 

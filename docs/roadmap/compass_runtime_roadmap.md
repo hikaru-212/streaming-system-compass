@@ -157,11 +157,13 @@ serialization, and explicit PostgreSQL persistence foundation. Stage 4B.1 then
 completed producer-specific diagnostic and resolution trace boundaries while
 keeping traces separate from receipts. Stage 4B.2 then completed
 producer-specific measurement, controlled comparison, explanatory
-characterization, and bounded concurrency evidence. Stage 4B.3 is now in
-progress through documentation-only PR1 responsibility-boundary work; no
-production Stage 4B.3 runtime implementation exists yet. Stage 4B.5 remains
-separately owned parallel foundation work and not started. No semantic
-dependency is created between Stage 4B.3 and Stage 4B.5.
+characterization, and bounded concurrency evidence. Stage 4B.3 is closed as not
+currently justified after PR1 responsibility-boundary work, PR2 executable
+mechanics characterization, and an accepted architecture-necessity audit. PR3
+and later Stage 4B.3 implementation work do not proceed. Stage 4B.5 is in
+progress as separately owned parallel foundation work and is technically
+independent from the closeout, which does not move, redefine, block, or sequence
+it.
 
 ---
 
@@ -538,8 +540,9 @@ The capability path is:
 2. record decision evidence at receipt level
 3. preserve detailed failure diagnostics separately
 4. make cost / timing evidence observable
-5. advance projection trust continuation and define order correctness references
-   as separately owned parallel foundation work
+5. close projection trust continuation when no additional correctness need or
+   consumer is demonstrated, while keeping order correctness references as
+   separately owned foundation work
 6. convert semantic outcomes into runtime decisions
 7. align Layer 1 and Layer 2 outcome families
 8. select execution strategies among semantically acceptable paths
@@ -547,12 +550,13 @@ The capability path is:
 
 Stage 4B.2 is complete and closed after producer-specific write-side
 measurement semantics, controlled PostgreSQL strategy comparison, explanatory
-characterization, and bounded concurrency evidence. Stage 4B.3 PR1
-documentation and responsibility-boundary work is in progress; no production
-Stage 4B.3 runtime implementation exists yet. Stage 4B.5 remains separately
-owned parallel foundation work and not started, with no semantic dependency
-between the two stages. Stage 4B.2 did not implement policy, strategy selection,
-retry governance, or rate admission.
+characterization, and bounded concurrency evidence. Stage 4B.3 is closed as not
+currently justified under
+[ADR 0026](../adr/0026_projection_trust_continuation_is_not_currently_justified.md):
+PR1/PR2 remain reference evidence and PR3+ do not proceed. Stage 4B.5 is in
+progress as separately owned parallel foundation work, independent from Stage
+4B.3. Stage 4B.2 did not implement policy, strategy selection, retry governance,
+or rate admission.
 
 ---
 

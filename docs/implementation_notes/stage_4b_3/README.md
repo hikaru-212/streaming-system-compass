@@ -1,32 +1,51 @@
-# Stage 4B.3 — Projection Trust Boundary and Continuation
+# Stage 4B.3 — Projection Trust Boundary and Continuation Closeout
 
 [← Back to Implementation Notes](../README.md)
 
 ## Status
 
-Stage 4B.3 remains evidence-first. PR1 establishes responsibility, evidence
-boundaries, limitations, and sequencing. PR2 implements focused current-mechanics
-characterization tests; human execution of the real-PostgreSQL scenarios remains
-pending. No production source, migration, persistence, or runtime-policy change
-is introduced by PR2.
+```text
+Stage 4B.3
+= CLOSED AS NOT CURRENTLY JUSTIFIED
+```
+
+The accepted architecture-necessity audit concluded that incremental
+projection-trust continuation is not a current runtime correctness requirement.
+The canonical decision is
+[ADR 0026 — Projection Trust Continuation Is Not Currently Justified](../../adr/0026_projection_trust_continuation_is_not_currently_justified.md).
+
+PR1 and PR2 remain complete historical/reference work. PR3 and later Stage
+4B.3 implementation PRs will not proceed. The abandoned PR3 contract proposal
+was never accepted, and this closeout adds no production source, tests,
+migration, persistence, serializer, trust checkpoint, policy, strategy, or
+retry behavior.
 
 The current public documents are:
 
 * [Projection Trust Boundary and Continuation](projection_trust_continuation_boundary.md) — PR1 responsibility authority;
-* [PR Breakdown](pr_breakdown.md) — evidence-first delivery sequence;
-* [Trust Mechanics Characterization](trust_mechanics_characterization.md) — PR2 executable current-mechanics evidence and limitations.
+* [PR Breakdown](pr_breakdown.md) — original evidence-first plan plus final delivery disposition;
+* [Trust Mechanics Characterization](trust_mechanics_characterization.md) — PR2 executable current-mechanics evidence and limitations;
+* [ADR 0026](../../adr/0026_projection_trust_continuation_is_not_currently_justified.md) — canonical closeout decision;
+* [目前投影執行期正確性模型（中文說明）](projection_runtime_correctness_model.zh.md) — non-authoritative Chinese companion for maintainers.
 
 The responsibility names used by these notes are conceptual. They do not freeze
 future class, field, status, serialization, schema, or table names.
 
-## Stage Responsibility
+## Investigation Responsibility and Result
 
 Accepted history is business authority. Projection state is derived mutable
-state. Stage 4B.3 asks what evidence would be required to qualify one observed
+state. Stage 4B.3 asked what evidence would be required to qualify one observed
 order-local projection boundary and then evaluate whether trust can continue
 across one exact-next committed projection advance.
 
-It does not declare current projection state trusted. It also does not own
+PR1 bounded that question and PR2 characterized the actual mechanics before
+implementation. The necessity audit then established that the supported normal
+runtime already owns projection correctness through accepted-only exact-next
+discovery, the canonical reducer, accepted-event progress lineage, atomic
+state/progress persistence, database-role separation, and replay/rebuild.
+
+No current production consumer needs an additional continuation conclusion, so
+the stage closes without declaring projection state authoritative or absorbing
 domain correctness, freshness policy, runtime action selection, retry,
 remediation, snapshot trust, or global catch-up.
 
@@ -45,44 +64,77 @@ These statements are grounded in the current projection definition, worker,
 validator, stores, and migrations. The detailed responsibility authority links
 those sources.
 
-## Required Qualification Gap
+## Current Correctness Model
 
-Neither current result is sufficient continuation evidence:
+The accepted current model is:
 
 ```text
-MATCH
-= point-in-time state-consistency observation
-!= continuation-capable validated projection boundary
+accepted order_events
+= sole business authority
 
-APPLIED
-= one committed exact-next projection advance
-!= continuing trust
+→ currently visible exact-next event
+→ canonical reduce_order_event(...)
+→ mutable projection state
++ durable projection_order_progress
+→ worker-owned atomic commit
+
+accepted-history replay
+→ independent comparison / recovery
 ```
 
-A future design must establish how boundary evidence binds accepted-event
-lineage, durable progress, the observed projection-state content, source
-observation, and projection logic. Sequence or version equality alone is not
-sufficient state-content binding.
+The write side rehydrates from accepted history and does not use projection
+state as command authority. Under the Stage 3.5E role boundary,
+`compass_projection_worker` is the intended normal runtime projection-state
+writer; application, snapshot, and read-only roles cannot mutate
+`projection_states`.
 
-## Open Architecture Decisions
+## Why Qualification Does Not Add Required Correctness
 
-PR1 deliberately leaves these questions unresolved:
+The proposed continuation relation was:
 
-* the representation used to bind projection-state content;
-* an authoritative identity for live projection logic;
-* how a read-only replay observation can be qualified and later materialized
-  without losing its observation boundary;
-* whether a future durable trust checkpoint is committed with state and
-  progress (Model A) or materialized separately (Model B);
-* whether durable trust checkpoints are needed at all after earlier evidence
-  work is complete.
+```text
+previous replay consistency
++ one exact-next committed projection advance
+→ continuing qualification
+```
 
-Snapshot `payload_hash` and snapshot reducer-version metadata are not selected
-as answers. Projection epoch is not reducer version.
+The advance is already protected by accepted-event eligibility, exact-next
+per-order progress, same-order and exact-next reducer checks, current transition
+and amount checks, accepted-event lineage revalidation, and atomic
+state/progress commit. Qualification would repackage those guarantees as
+additional governance/attestation vocabulary without strengthening the normal
+materialization path.
+
+It would also not prevent a privileged actor from changing a mutable projection
+row after qualification. A fresh accepted-history replay or separately
+justified independent integrity mechanism is still required to detect that
+later content drift.
+
+No current production consumer requires the additional vocabulary or takes an
+action based on it.
+
+## Delivery Disposition
+
+```text
+PR1
+= responsibility / problem boundary
+= COMPLETE / HISTORICAL REFERENCE
+
+PR2
+= executable mechanics characterization
+= COMPLETE / HISTORICAL REFERENCE
+
+PR3–PR7
+= NOT PROCEEDING
+```
+
+The original PR sequence is retained in the
+[PR breakdown](pr_breakdown.md) as historical planning context, with explicit
+closeout dispositions. It is not an active implementation plan.
 
 ## Stage Boundaries
 
-Stage 4B.3 remains distinct from:
+The closed Stage 4B.3 investigation remains distinct from:
 
 * Stage 4B.1 `DiagnosticTrace`;
 * Stage 4B.2 measurement evidence;
@@ -97,13 +149,29 @@ or structurally similar.
 
 ## Non-Goals
 
-PR1 does not select or create a state hash or fingerprint, reducer-version
-representation, trust-checkpoint schema, persistence table, migration,
-revalidation cadence, trust TTL, scheduler, production runner, automatic
-rebuild, quarantine, fallback, remediation, or runtime action semantics.
+The closeout does not select or create projection trust evidence contracts, a
+state hash or fingerprint, reducer-version representation, trust checkpoint,
+persistence table, migration, serializer, revalidation cadence, trust TTL,
+scheduler, production runner, automatic rebuild, quarantine, fallback,
+remediation, policy, strategy, retry behavior, or runtime action semantics.
+
+## Re-entry Conditions
+
+Projection trust continuation may be reconsidered only when a concrete consumer
+can identify:
+
+1. who consumes qualification;
+2. what action depends on it;
+3. which correctness property existing reducer, progress, lineage, permission,
+   and transaction guarantees cannot provide;
+4. why replay/rebuild is insufficient or too expensive;
+5. restart and durability requirements;
+6. how accepted history remains sole business authority;
+7. how qualification avoids becoming a secondary business authority.
 
 ## Reusable Principle
 
-> Equality observed once and a committed update observed once are evidence
-> about different boundaries. Continuing trust requires explicit qualification
-> of both boundaries and of the lineage that connects them.
+> Additional qualification machinery is justified only when a concrete
+> consumer needs evidence beyond accepted-history authority, producer
+> invariants, durable processing lineage, atomic persistence, and replay-based
+> recovery.

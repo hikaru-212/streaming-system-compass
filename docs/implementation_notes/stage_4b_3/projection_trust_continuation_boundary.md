@@ -2,6 +2,16 @@
 
 [← Back to Stage 4B.3](README.md)
 
+## Historical Status and Supersession
+
+This document preserves the accepted PR1 problem framing and source analysis.
+Its proposal that Stage 4B.3 proceed into runtime trust-continuation
+implementation is superseded by
+[ADR 0026](../../adr/0026_projection_trust_continuation_is_not_currently_justified.md),
+which closes Stage 4B.3 as not currently justified. PR1 remains useful
+historical/reference evidence; Stage 4B.3 PR3 and later implementation work do
+not proceed.
+
 ## Status
 
 This document is the Stage 4B.3 PR1 responsibility authority. It records the

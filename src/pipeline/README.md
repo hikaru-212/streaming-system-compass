@@ -207,8 +207,9 @@ qualified projection snapshot
 
 Stage 4A and Stage 4B now map the current read-side validation evidence into
 `SemanticOutcome` and `DecisionReceipt`. Those mappings remain point-in-time
-governance evidence; they do not establish projection trust continuation or
-runtime action authority.
+governance evidence; they do not establish runtime action authority. ADR 0026
+records that an additional projection trust-continuation layer is not currently
+required for projection correctness.
 
 For the higher-level projection design, see:
 
@@ -216,8 +217,9 @@ For the higher-level projection design, see:
 - [Projection Boundary](../../docs/boundary_notes/projection_boundary.md)
 - [Global-Position Projection Worker Boundary](../../docs/boundary_notes/global_position_projection_worker_boundary.md)
 - [ADR 0013 — Snapshot Runtime Eligibility and Validation Receipt Boundary](../../docs/adr/0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md)
+- [ADR 0026 — Projection Trust Continuation Is Not Currently Justified](../../docs/adr/0026_projection_trust_continuation_is_not_currently_justified.md)
 - [Projection README](projection/README.md)
-- [Stage 4B.3 Projection Trust Boundary](../../docs/implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md)
+- [Stage 4B.3 Closeout](../../docs/implementation_notes/stage_4b_3/README.md)
 
 ---
 
@@ -354,9 +356,10 @@ It supports:
 - explicit result states for match, missing snapshot, invalid boundary, tail contract violation, drift, unresolved resolver paths, and compatibility failures
 - aggregate snapshot trust deferral because write-side aggregate snapshots can affect command validation and accepted-history admission
 
-The projection path still does **not yet** include:
+The projection path does not include:
 
-- projection trust continuation or durable projection-trust checkpoints
+- projection trust continuation or durable projection-trust checkpoints; Stage
+  4B.3 is closed as not currently justified
 - runtime decision policy
 - action safety gate
 - out-of-order buffering
@@ -368,8 +371,10 @@ The projection path still does **not yet** include:
 - a production projection runner
 
 Stage 4A and Stage 4B already provide structured semantic and receipt mappings
-for current validation results. The remaining concerns stay separately owned by
-Stage 4B.3, later runtime-governance stages, or production hardening.
+for current validation results. Runtime policy, action safety, and operational
+hardening remain separately owned by later stages. ADR 0026 closes additional
+projection trust-continuation machinery unless its explicit re-entry conditions
+are met.
 
 ---
 
@@ -437,12 +442,13 @@ Later, this module will also connect heavily with:
 
 To strengthen write-side and read-side restart semantics beyond the current durable baseline.
 
-### Stage 4B.3 projection trust continuation
+### Stage 4B.3 projection correctness closeout
 
-To define whether a previously qualified per-order projection boundary remains
-qualified after one exact-next committed advance. The current `MATCH` and
-`APPLIED` results are inputs to that design, not continuation evidence by
-themselves.
+ADR 0026 records that accepted-history authority, exact-next per-order progress,
+the canonical reducer, atomic state/progress persistence, database-role
+separation, and replay/rebuild already form the required current correctness
+model. PR1/PR2 remain reference investigation; no continuation runtime is
+planned without a concrete consumer and newly demonstrated correctness need.
 
 ### Stage 4 runtime governance
 
@@ -526,5 +532,6 @@ If the core defines what the system means, the pipeline defines how that meaning
 The pipeline layer includes durable write-side orchestration, durable read-side
 projection orchestration, replay validation, snapshot-assisted read-side
 resolution, and Stage 4A/4B mapping into structured governance evidence. It
-remains intentionally short of projection trust continuation, runtime decision
-policy, strategy selection, retry governance, and action safety.
+does not include projection trust continuation because ADR 0026 closes that
+additional layer as not currently justified. Runtime decision policy, strategy
+selection, retry governance, and action safety remain later responsibilities.
