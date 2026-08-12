@@ -2,6 +2,17 @@
 
 [← Back to Boundary Notes Index](README.md)
 
+> **Current implementation note:** The original external responsibility split
+> below remains valid. Runtime progress is now implemented through exact-next
+> per-order rows for the fixed projection definition and repaired epoch, while
+> legacy scalar checkpoints are historical operational evidence. Stage 4B.3 is
+> closed as not currently justified; accepted history remains sole business
+> authority and projection state remains derived. See
+> [ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md),
+> [ADR 0026](../adr/0026_projection_trust_continuation_is_not_currently_justified.md),
+> and the historical/reference
+> [Stage 4B.3 responsibility boundary](../implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md).
+
 ## Purpose
 
 This module defines how accepted event history is transformed into read-side state.
@@ -22,7 +33,7 @@ This module is responsible for:
 - applying projection logic incrementally
 - deriving read-side state
 - supporting rebuild / replay
-- later supporting checkpoint-based runtime processing
+- tracking exact-next order-local processing through durable per-order progress
 
 ---
 
@@ -66,7 +77,7 @@ This keeps the projection layer stable and decoupled from write-side provenance 
 
 Projection outputs are consumed by:
 - read-side query models
-- state-level Compass validation
+- read-side validation and Stage 4 governance-evidence mapping
 - experiments / demos
 - future analytical or monitoring components
 
