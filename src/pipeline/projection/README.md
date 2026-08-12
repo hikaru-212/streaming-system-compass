@@ -40,10 +40,9 @@ This module is responsible for:
 - applying accepted events to projection state
 - keeping reducer logic deterministic
 - coordinating worker execution
-- tracking worker progress through checkpoints
-- tracking current durable completeness through exact-next per-order progress
+- retaining generic legacy checkpoint support for the in-memory / historical baseline
+- tracking current durable order-local progress through exact-next per-order rows
 - supporting replay / rebuild through the same projection semantics
-- orchestrating PostgreSQL-backed projection state and checkpoint persistence
 - orchestrating PostgreSQL-backed projection state and per-order progress persistence
 
 ---
@@ -57,7 +56,7 @@ This module is **not** responsible for:
 - validating write-side transition truth
 - defining domain event meaning
 - acting as the accepted-history store
-- implementing Compass Layer 2 validation
+- choosing semantic or runtime action from read-side validation evidence
 - implementing runtime decision policy
 - implementing out-of-order buffering
 - implementing DLQ or watermark semantics
@@ -142,13 +141,16 @@ An event is eligible only when its order-local sequence is exactly next.
 `global_position` is lineage and deterministic scheduling metadata, not a
 complete committed-history frontier.
 
-This worker assumes:
+The supported production topology is:
 
 ```text
-one active process per worker_name
+one active worker for this projection definition and epoch
 ```
 
-It does not implement worker leasing, checkpoint row locking, or distributed multi-worker coordination.
+`worker_name` is operational identity only. It is not repaired progress identity,
+and changing it does not create an independently coordinated projection. The
+worker does not implement leasing, claiming, or distributed multi-worker
+coordination.
 
 ---
 
@@ -167,7 +169,15 @@ DRIFT
 NO_ACCEPTED_HISTORY
 ```
 
-This validator does not mutate accepted history, rebuild projection state automatically, advance checkpoint progress, produce `SemanticOutcome`, or make runtime recovery decisions.
+This validator does not mutate accepted history, rebuild projection state
+automatically, advance progress, or make runtime recovery decisions. Stage 4A
+provides a separate adapter from `ReplayValidationResult` to `SemanticOutcome`;
+the validator itself remains an evidence producer.
+
+Its successful `MATCH` is one point-in-time state-consistency observation. It
+does not inspect repaired per-order progress and is not a continuation-capable
+validated projection boundary. See the
+[Stage 4B.3 responsibility boundary](../../../docs/implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md).
 
 ---
 
@@ -219,9 +229,10 @@ The purpose is to answer:
 Does persisted projection state still match accepted-history replay?
 ```
 
-It does not answer what runtime decision should be made if drift is detected.
-
-That belongs to later Compass Layer 2, structured outcome, runtime decision, and recovery policy work.
+Stage 4A can map this evidence into `SemanticOutcome`, and Stage 4B can map it
+into `DecisionReceipt`. Neither mapping makes the observation continuing trust
+or decides what runtime action should follow. Runtime decision and recovery
+policy remain separately owned.
 
 ---
 
@@ -315,7 +326,7 @@ Repair, rebuild, and recovery policy belong to later stages.
 
 The current projection pipeline does not implement:
 
-- Compass Layer 2 projection-drift validation
+- projection trust continuation or durable trust checkpoints
 - automatic repair or rebuild from `SemanticOutcome` / `DecisionReceipt`
 - runtime decision policy
 - out-of-order buffering

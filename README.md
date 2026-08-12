@@ -41,13 +41,15 @@ The project currently has:
 Stage 4A, Stage 4B PR1–PR7, Stage 4B.1 PR1–PR7, and Stage 4B.2
 PR1–PR8 are complete.
 
-The next Stage 4 foundation work is:
+The current Stage 4 foundation work is:
 
-- **Stage 4B.3 — Projection Trust Boundary and Continuation**
+- **[Stage 4B.3 — Projection Trust Boundary and Continuation](docs/implementation_notes/stage_4b_3/README.md) — IN PROGRESS / PR1 documentation and responsibility boundary**
 - **Stage 4B.5 — Order Correctness Contract v0**
 
-Stage 4B.3 and Stage 4B.5 are separately owned parallel foundation work. They
-have not begun.
+Stage 4B.3 has begun with documentation-only PR1 work; no production Stage 4B.3
+runtime implementation exists yet. Stage 4B.5 remains not started. Stage 4B.3
+and Stage 4B.5 remain separately owned parallel foundation work, with no
+semantic dependency created between them.
 
 Stage 4B established durable receipt evidence without automatic materialization
 or reconciliation. [Stage 4B.1](docs/implementation_notes/stage_4b_1/README.md)
@@ -57,9 +59,11 @@ remains `DO NOT ADD` for the completed stage, and the PostgreSQL write side now
 returns producer-owned Result + Trace executions. [Stage 4B.2 Measurement
 Evidence](docs/implementation_notes/stage_4b_2/README.md) is complete and
 closed; its [closeout](docs/implementation_notes/stage_4b_2/stage_4b_2_closeout.md)
-is the final completion authority. Stage 4B.3 and Stage 4B.5 are the next
-separately owned Stage 4 foundation responsibilities and may proceed in
-parallel. Stage 4C+ decision-governance work remains downstream.
+is the final completion authority. Stage 4B.3 PR1 documentation and
+responsibility-boundary work is in progress, with no production Stage 4B.3
+runtime implementation yet. Stage 4B.5 remains separately owned parallel
+foundation work and not started; neither stage creates a semantic dependency on
+the other. Stage 4C+ decision-governance work remains downstream.
 
 ### Immediate Engineering Checkpoint
 
@@ -113,9 +117,11 @@ resolver runtime API; projection-worker tracing remains `DO NOT ADD` for that
 stage; and the PostgreSQL write side now has producer-specific traced Result +
 Trace execution. See the
 [Stage 4B.1 closeout](docs/implementation_notes/stage_4b_1/stage_4b_1_closeout.md).
-Stage 4B.2 Measurement Evidence is complete and closed. Stage 4B.3 and Stage
-4B.5 are the next separately owned Stage 4 foundation responsibilities and may
-proceed in parallel; neither has begun.
+Stage 4B.2 Measurement Evidence is complete and closed. Stage 4B.3 PR1
+documentation and responsibility-boundary work is in progress; no production
+Stage 4B.3 runtime implementation exists yet. Stage 4B.5 remains separately
+owned parallel foundation work and not started. No semantic dependency is
+created between Stage 4B.3 and Stage 4B.5.
 
 See the
 [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](docs/boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
@@ -617,13 +623,14 @@ Current boundary of completion:
 - Stage 4B.1 PR1–PR7 DiagnosticTrace / ResolutionTrace boundary, producer-specific contracts, write-side integration, and closeout are complete
 - Stage 4B.2 PR1–PR8 producer-specific measurement, controlled comparison, explanatory characterization, bounded concurrency evidence, and closeout are complete
 
-Next Stage 4 foundation work:
+Current Stage 4 foundation work:
 
-- Stage 4B.3 — Projection Trust Boundary and Continuation
+- Stage 4B.3 — Projection Trust Boundary and Continuation — IN PROGRESS through documentation-only PR1 responsibility-boundary work
 - Stage 4B.5 — Order Correctness Contract v0
 
-Stage 4B.3 and Stage 4B.5 are separately owned parallel foundation work. They
-have not begun.
+No production Stage 4B.3 runtime implementation exists yet. Stage 4B.5 remains
+not started. The stages remain separately owned parallel foundation work, with
+no semantic dependency created between them.
 
 Stage 4A closeout is complete at the runtime semantic interpretation level.
 
@@ -657,7 +664,7 @@ The repository remains intentionally conservative:
 - `tests/` make selected invariants and failure paths executable
 - the original Stage 3 in-memory baseline remains available as historical executable context alongside the durable repaired worker
 - Stage 3.5A has hardened exact-money semantics before persistence expands
-- later phases extend the completed Stage 4B receipt foundation through traces and measurement, then parallel Stage 4B.3 projection-trust continuation and Stage 4B.5 correctness-contract work before downstream runtime decision policy, Stage 5 action safety, and production / agent-facing hardening
+- current work extends the completed Stage 4B receipt, trace, and measurement foundations through parallel Stage 4B.3 projection-trust continuation and Stage 4B.5 correctness-contract work before downstream runtime decision policy, Stage 5 action safety, and production / agent-facing hardening
 
 ---
 
