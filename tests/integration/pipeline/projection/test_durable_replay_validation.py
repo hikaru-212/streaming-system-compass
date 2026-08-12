@@ -1,3 +1,4 @@
+from contextlib import closing
 from decimal import Decimal
 
 import pytest
@@ -7,6 +8,11 @@ from src.core.order.enums import EventType, OrderStatus
 from src.core.order.events import OrderEvent
 from src.core.order.proofs import Proof
 from src.core.order.state import OrderState
+from src.pipeline.projection.order_projection_definition import (
+    ORDER_STATE_PROJECTION_EPOCH,
+    ORDER_STATE_PROJECTION_NAME,
+)
+from src.pipeline.projection.postgres_worker import PostgresProjectionWorker
 from src.pipeline.projection.replay_validator import (
     DurableReplayValidator,
     ReplayValidationStatus,
@@ -17,6 +23,9 @@ from src.storage.postgres_checkpoint_store import (
     ProjectionCheckpoint,
 )
 from src.storage.postgres_event_store import PostgresEventStore
+from src.storage.postgres_projection_progress_store import (
+    PostgresProjectionProgressStore,
+)
 from src.storage.postgres_projection_store import PostgresProjectionStore
 
 
@@ -139,6 +148,7 @@ def test_validate_order_returns_match_when_projection_matches_replay(
 ) -> None:
     event_store = PostgresEventStore(db_connection)
     projection_store = PostgresProjectionStore(db_connection)
+    progress_store = PostgresProjectionProgressStore(db_connection)
     validator = make_validator(db_connection)
 
     created_event = make_created_event(
@@ -170,6 +180,122 @@ def test_validate_order_returns_match_when_projection_matches_replay(
     assert result.expected_state == make_paid_state(order_id="order-001")
     assert result.persisted_state == make_paid_state(order_id="order-001")
     assert result.reason == "Persisted projection state matches replay-derived state"
+    assert (
+        progress_store.load_progress(
+            projection_name=ORDER_STATE_PROJECTION_NAME,
+            projection_epoch=ORDER_STATE_PROJECTION_EPOCH,
+            order_id="order-001",
+        )
+        is None
+    )
+
+
+def test_validate_order_keeps_repeatable_read_observation_when_state_changes_between_reads(
+    db_connection: Connection,
+    db_connection_factory,
+    clean_database: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T1 retains its snapshot when T2 commits between validator reads."""
+    order_id = "order-repeatable-read-state-mutation"
+    event_store = PostgresEventStore(db_connection)
+    created_event = make_created_event(
+        request_id="request-repeatable-read-state-mutation",
+        order_id=order_id,
+    )
+    event_store.append(created_event, expected_current_version=0)
+    db_connection.commit()
+
+    worker = PostgresProjectionWorker(
+        db_connection,
+        worker_name="repeatable-read-setup-worker",
+    )
+    applied = worker.process_next()
+    assert applied.action == "applied"
+
+    projection_store = PostgresProjectionStore(db_connection)
+    progress_store = PostgresProjectionProgressStore(db_connection)
+    original_state = projection_store.load_state(order_id)
+    original_progress = progress_store.load_progress(
+        projection_name=ORDER_STATE_PROJECTION_NAME,
+        projection_epoch=ORDER_STATE_PROJECTION_EPOCH,
+        order_id=order_id,
+    )
+    assert original_state is not None
+    assert original_state == make_created_state(order_id=order_id)
+    assert original_progress is not None
+    assert original_progress.last_sequence == original_state.version
+    db_connection.rollback()
+
+    with (
+        closing(db_connection_factory()) as writer_connection,
+        closing(db_connection_factory()) as observer_connection,
+    ):
+        writer_connection.rollback()
+        observer_connection.rollback()
+        writer_projection_store = PostgresProjectionStore(writer_connection)
+        observer_projection_store = PostgresProjectionStore(observer_connection)
+        observer_progress_store = PostgresProjectionProgressStore(observer_connection)
+        changed_state = make_created_state(
+            order_id=order_id,
+            total_amount=Decimal("125.00"),
+            version=original_state.version,
+        )
+
+        validator_event_store = PostgresEventStore(db_connection)
+        validator = DurableReplayValidator(
+            event_store=validator_event_store,
+            projection_store=PostgresProjectionStore(db_connection),
+        )
+        load_accepted_history = validator_event_store.load
+        mutation_committed = False
+
+        def load_history_then_commit_state_mutation(
+            selected_order_id: str,
+        ) -> list[OrderEvent]:
+            nonlocal mutation_committed
+            # The accepted-history SELECT establishes T1's snapshot before T2
+            # commits the independently mutable same-version projection state.
+            accepted_history = load_accepted_history(selected_order_id)
+            writer_projection_store.save_state(changed_state)
+            writer_connection.commit()
+            mutation_committed = True
+            return accepted_history
+
+        monkeypatch.setattr(
+            validator_event_store,
+            "load",
+            load_history_then_commit_state_mutation,
+        )
+
+        observed_before_mutation = validator.validate_order(order_id)
+
+        assert mutation_committed is True
+        assert observed_before_mutation.status == ReplayValidationStatus.MATCH
+        assert observed_before_mutation.expected_state == original_state
+        assert observed_before_mutation.persisted_state == original_state
+
+        independently_observed_state = observer_projection_store.load_state(order_id)
+        independently_observed_progress = observer_progress_store.load_progress(
+            projection_name=ORDER_STATE_PROJECTION_NAME,
+            projection_epoch=ORDER_STATE_PROJECTION_EPOCH,
+            order_id=order_id,
+        )
+
+        assert independently_observed_state is not None
+        assert independently_observed_state == changed_state
+        assert independently_observed_state.version == original_state.version
+        assert independently_observed_progress is not None
+        assert independently_observed_progress == original_progress
+        assert independently_observed_progress.last_sequence == changed_state.version
+        observer_connection.rollback()
+
+        monkeypatch.setattr(validator_event_store, "load", load_accepted_history)
+        observed_after_mutation = validator.validate_order(order_id)
+
+        assert observed_after_mutation.status == ReplayValidationStatus.DRIFT
+        assert observed_after_mutation.expected_state == original_state
+        assert observed_after_mutation.persisted_state == changed_state
 
 
 def test_validate_order_returns_missing_projection_when_history_exists_but_state_missing(
