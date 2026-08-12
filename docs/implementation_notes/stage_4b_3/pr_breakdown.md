@@ -51,6 +51,13 @@ atomicity representations.
 Purpose: turn the source assumptions that matter to continuation into focused,
 executable evidence before immutable contracts are designed.
 
+Status: focused characterization tests are implemented for replay `MATCH`
+without repaired progress, repeatable-read observation stability, independent
+same-version projection-state mutation, state-ahead sequence failure,
+commit-correlated worker delivery, and continuation under a replacement worker
+name. Human execution of the real-PostgreSQL scenarios remains pending. See
+[Trust Mechanics Characterization](trust_mechanics_characterization.md).
+
 Characterization should cover only mechanics required by the PR1 boundary,
 including:
 
