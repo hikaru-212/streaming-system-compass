@@ -1,0 +1,27 @@
+{
+  "cells": [
+    "P-MISS",
+    "P-REPLAY",
+    "P-CONFLICT",
+    "U-MISS",
+    "U-REPLAY",
+    "U-CONFLICT",
+    "T-MISS",
+    "T-REPLAY",
+    "T-CONFLICT"
+  ],
+  "clock_identity": "time.perf_counter_ns",
+  "fixed_recorded_schedule_seed": 4202702,
+  "fixed_schedule_identity": "P_U_T_X_MISS_REPLAY_CONFLICT_COUNTERBALANCED_30_EACH_V1",
+  "planned_sample_count": 270,
+  "postgresql_server_version": "16.14 (Debian 16.14-1.pgdg13+1)",
+  "publication_rule": "validate_run=VALID; clean source required; invalid writes nothing; no replacement, retry, or extension",
+  "run_id": "stage4b2-post-pr6-idempotency-layer2-9d2e4ac",
+  "samples_per_cell": 30,
+  "schema_name": "stage4b2.post_pr6.postgres_idempotency_check.layer2.manifest",
+  "schema_version": 1,
+  "source_commit": "9d2e4ac80cdf33b5dcd3638fa29ceb74d54bc8fd",
+  "source_tree_clean_before_run": true,
+  "structural_smoke_validated": true,
+  "validation_status": "VALID"
+}

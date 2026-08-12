@@ -152,9 +152,13 @@ technical runtime evidence
 ```
 
 Stage 4B then completed the DecisionReceipt contract, mappings, strict
-serialization, and explicit PostgreSQL persistence foundation. The next
-Compass runtime step is Stage 4B.1, where detailed diagnostic and resolution
-traces remain separate from receipts.
+serialization, and explicit PostgreSQL persistence foundation. Stage 4B.1 then
+completed producer-specific diagnostic and resolution trace boundaries while
+keeping traces separate from receipts. Stage 4B.2 then completed
+producer-specific measurement, controlled comparison, explanatory
+characterization, and bounded concurrency evidence. Stage 4B.3 and Stage 4B.5
+are the next separately owned Stage 4 foundation responsibilities and may
+proceed in parallel; neither has begun.
 
 ---
 
@@ -168,14 +172,18 @@ Stage 4A made these results semantically interpretable, and Stage 4B made
 selected evidence durable and reviewable, but Compass has not yet become a
 full state-level governance layer.
 
-That means the next question is no longer only whether drift or snapshot mismatch can be detected. The next question is:
+Stage 4B.2 answered the next bounded question after execution topology was
+preserved:
 
-> If derived-state drift, snapshot mismatch, or runtime trust failure is detected, what does it mean, and what should the runtime do?
+> What did one current PostgreSQL write execution strategy cost, how do the two
+> current correctness-preserving compositions compare under controlled work,
+> and how does that comparison change under bounded contention?
 
 That interpretation began in Stage 4A through `SemanticOutcome` mapping and
-continued through the completed Stage 4B receipt foundation. The next boundary
-is Stage 4B.1 trace design, followed by later runtime decision policy and Stage
-5 action safety work.
+continued through the completed Stage 4B receipt foundation and Stage 4B.1
+execution-topology evidence. Measurement remains descriptive; later runtime
+decision policy, strategy selection, rate admission, and Stage 5 action safety
+remain separate work.
 
 ---
 
@@ -527,11 +535,19 @@ The capability path is:
 2. record decision evidence at receipt level
 3. preserve detailed failure diagnostics separately
 4. make cost / timing evidence observable
-5. connect outcomes to narrow policy references
+5. advance projection trust continuation and define order correctness references
+   as separately owned parallel foundation work
 6. convert semantic outcomes into runtime decisions
 7. align Layer 1 and Layer 2 outcome families
 8. select execution strategies among semantically acceptable paths
 9. classify retry attempts without assuming same intent
+
+Stage 4B.2 is complete and closed after producer-specific write-side
+measurement semantics, controlled PostgreSQL strategy comparison, explanatory
+characterization, and bounded concurrency evidence. Stage 4B.3 and Stage 4B.5
+are separately owned parallel foundation work and have not begun. Stage 4B.2
+did not implement policy, strategy selection, retry governance, or rate
+admission.
 
 ---
 

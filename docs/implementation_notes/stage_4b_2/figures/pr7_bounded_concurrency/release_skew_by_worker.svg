@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">Canonical release skew by worker level</title>
+  <desc id="desc">Minimum, median, and maximum release skew for workers 1, 2, 4, and 8. Experiment validity diagnostic only.</desc>
+  <style>text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #172033; }
+.title { font-size: 22px; font-weight: 600; }
+.subtitle { font-size: 13px; fill: #4b5563; }
+.axis { stroke: #344054; stroke-width: 1.2; }
+.grid { stroke: #d7dce3; stroke-width: 1; }
+.tick { font-size: 12px; fill: #344054; }
+.axis-label { font-size: 13px; font-weight: 600; }
+.legend { font-size: 12px; }
+.note { font-size: 12px; fill: #4b5563; }
+.pre { stroke: #2563eb; fill: #2563eb; }
+.in { stroke: #d97706; fill: #d97706; }
+.pre-reject { stroke: #7c3aed; fill: #7c3aed; }
+.in-reject { stroke: #dc2626; fill: #dc2626; }
+.series-line { fill: none; stroke-width: 2.5; }
+.series-dashed { stroke-dasharray: 7 5; }
+.point { stroke-width: 2; }
+.frame { fill: #ffffff; stroke: #c7cdd6; }
+@media (prefers-color-scheme: dark) {
+  text { fill: #eef2f7; }
+  .subtitle, .note, .tick { fill: #c8d0dc; }
+  .axis { stroke: #c8d0dc; }
+  .grid { stroke: #3b4554; }
+  .frame { fill: #111827; stroke: #596579; }
+  .pre { stroke: #60a5fa; fill: #60a5fa; }
+  .in { stroke: #fbbf24; fill: #fbbf24; }
+  .pre-reject { stroke: #c084fc; fill: #c084fc; }
+  .in-reject { stroke: #f87171; fill: #f87171; }
+}
+</style>
+  <rect class="frame" x="0.5" y="0.5" width="959" height="599"/>
+  <text class="title" x="48" y="38">Canonical release skew by worker level</text>
+<text class="subtitle" x="48" y="62">Experiment validity diagnostic — raw min / median / max across 120 batches per level</text>
+<text class="axis-label" x="512.0" y="565" text-anchor="middle">Workers</text>
+<text class="axis-label" x="25" y="310.0" text-anchor="middle" transform="rotate(-90 25 310.0)">Release skew (µs)</text>
+<line class="grid" x1="104.0" y1="500.0" x2="920.0" y2="500.0"/>
+<text class="tick" x="92.0" y="504.0" text-anchor="end">0</text>
+<line class="grid" x1="104.0" y1="424.0" x2="920.0" y2="424.0"/>
+<text class="tick" x="92.0" y="428.0" text-anchor="end">100</text>
+<line class="grid" x1="104.0" y1="348.0" x2="920.0" y2="348.0"/>
+<text class="tick" x="92.0" y="352.0" text-anchor="end">200</text>
+<line class="grid" x1="104.0" y1="272.0" x2="920.0" y2="272.0"/>
+<text class="tick" x="92.0" y="276.0" text-anchor="end">300</text>
+<line class="grid" x1="104.0" y1="196.0" x2="920.0" y2="196.0"/>
+<text class="tick" x="92.0" y="200.0" text-anchor="end">400</text>
+<line class="grid" x1="104.0" y1="120.0" x2="920.0" y2="120.0"/>
+<text class="tick" x="92.0" y="124.0" text-anchor="end">500</text>
+<line class="axis" x1="104.0" y1="120.0" x2="104.0" y2="500.0"/>
+<line class="axis" x1="104.0" y1="500.0" x2="920.0" y2="500.0"/>
+<line class="pre series-line" x1="104.0" y1="500.0" x2="104.0" y2="500.0"/>
+<line class="pre series-line" x1="91.0" y1="500.0" x2="117.0" y2="500.0"/>
+<line class="pre series-line" x1="91.0" y1="500.0" x2="117.0" y2="500.0"/>
+<circle class="in point" cx="104.0" cy="500.0" r="5"/>
+<text class="tick" x="116.0" y="492.0" text-anchor="start">median 0.0</text>
+<text class="tick" x="104.0" y="524.0" text-anchor="middle">1</text>
+<line class="pre series-line" x1="376.0" y1="466.40116" x2="376.0" y2="486.225"/>
+<line class="pre series-line" x1="363.0" y1="466.40116" x2="389.0" y2="466.40116"/>
+<line class="pre series-line" x1="363.0" y1="486.225" x2="389.0" y2="486.225"/>
+<circle class="in point" cx="376.0" cy="482.8525" r="5"/>
+<text class="tick" x="388.0" y="474.8525" text-anchor="start">median 22.6</text>
+<text class="tick" x="376.0" y="524.0" text-anchor="middle">2</text>
+<line class="pre series-line" x1="648.0" y1="372.16192" x2="648.0" y2="455.28692"/>
+<line class="pre series-line" x1="635.0" y1="372.16192" x2="661.0" y2="372.16192"/>
+<line class="pre series-line" x1="635.0" y1="455.28692" x2="661.0" y2="455.28692"/>
+<circle class="in point" cx="648.0" cy="436.255" r="5"/>
+<text class="tick" x="660.0" y="428.255" text-anchor="start">median 83.9</text>
+<text class="tick" x="648.0" y="524.0" text-anchor="middle">4</text>
+<line class="pre series-line" x1="920.0" y1="189.19191999999998" x2="920.0" y2="378.71692"/>
+<line class="pre series-line" x1="907.0" y1="189.19191999999998" x2="933.0" y2="189.19191999999998"/>
+<line class="pre series-line" x1="907.0" y1="378.71692" x2="933.0" y2="378.71692"/>
+<circle class="in point" cx="920.0" cy="289.51192" r="5"/>
+<text class="tick" x="908.0" y="281.51192" text-anchor="end">median 277.0</text>
+<text class="tick" x="920.0" y="524.0" text-anchor="middle">8</text>
+<line class="pre series-line" x1="620" y1="35" x2="648" y2="35"/>
+<text class="legend" x="658" y="39">min–max</text>
+<circle class="in point" cx="755" cy="35" r="5"/>
+<text class="legend" x="768" y="39">median</text>
+<text class="note" x="48" y="585">Experiment validity diagnostic — not a performance/capacity metric; no acceptance threshold. Run: stage4b2-pr7-canonical-cdbe542</text>
+</svg>

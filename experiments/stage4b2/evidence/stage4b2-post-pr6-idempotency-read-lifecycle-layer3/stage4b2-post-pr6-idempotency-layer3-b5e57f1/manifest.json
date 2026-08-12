@@ -1,0 +1,19 @@
+{
+  "clock_identity": "time.perf_counter_ns",
+  "controls": [
+    "CONTROL_A_IDLE_ROLLBACK",
+    "CONTROL_B_PRELIMINARY_READ_LIFECYCLE"
+  ],
+  "fixed_schedule_identity": "CONTROL_A_THEN_CONTROL_B_30_ROUNDS_V1",
+  "postgresql_server_version": "16.14 (Debian 16.14-1.pgdg13+1)",
+  "publication_rule": "validate_run=VALID; clean source required; invalid writes nothing; no retry, replacement, extension, or overwrite",
+  "recorded_rounds": 30,
+  "run_id": "stage4b2-post-pr6-idempotency-layer3-b5e57f1",
+  "samples_per_control": 30,
+  "schema_name": "stage4b2.post_pr6.postgres_idempotency_read_lifecycle.layer3.manifest",
+  "schema_version": 1,
+  "source_commit": "b5e57f1b18eb8f484225d0dc745e9c9cc1f620aa",
+  "source_tree_clean_before_run": true,
+  "total_planned_samples": 60,
+  "validation_status": "VALID"
+}

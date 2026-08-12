@@ -1,0 +1,881 @@
+{
+  "aggregates": [
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "IN_PESSIMISTIC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 3498833,
+        "mean_ns": 2610187.566666667,
+        "median_ns": 2509333.0,
+        "min_ns": 2012875
+      },
+      "history_depth": 0,
+      "phases": {
+        "accepted_history_load": {
+          "count": 30,
+          "max_ns": 1078000,
+          "mean_ns": 285041.7,
+          "median_ns": 251312.5,
+          "min_ns": 190583
+        },
+        "append_admission_call": {
+          "count": 30,
+          "max_ns": 1436708,
+          "mean_ns": 630384.8333333334,
+          "median_ns": 573562.5,
+          "min_ns": 500250
+        },
+        "authoritative_idempotency_check": {
+          "count": 30,
+          "max_ns": 1640167,
+          "mean_ns": 680250.0,
+          "median_ns": 536208.5,
+          "min_ns": 448542
+        },
+        "business_uow": {
+          "count": 30,
+          "max_ns": 3448792,
+          "mean_ns": 2566486.1666666665,
+          "median_ns": 2461604.5,
+          "min_ns": 1973083
+        },
+        "commit_finalization": {
+          "count": 30,
+          "max_ns": 759333,
+          "mean_ns": 379662.63333333336,
+          "median_ns": 359604.5,
+          "min_ns": 264917
+        },
+        "concurrency_preparation_call": {
+          "count": 30,
+          "max_ns": 355792,
+          "mean_ns": 254986.13333333333,
+          "median_ns": 248729.0,
+          "min_ns": 177875
+        },
+        "idempotency_record_call": {
+          "count": 30,
+          "max_ns": 373625,
+          "mean_ns": 284473.6,
+          "median_ns": 278021.0,
+          "min_ns": 236917
+        },
+        "pessimistic_advisory_try_lock_call": {
+          "count": 30,
+          "max_ns": 348458,
+          "mean_ns": 250319.5,
+          "median_ns": 244708.5,
+          "min_ns": 174750
+        },
+        "producer_write_invocation": {
+          "count": 30,
+          "max_ns": 3454833,
+          "mean_ns": 2573929.1,
+          "median_ns": 2469312.5,
+          "min_ns": 1978916
+        },
+        "validation_runtime_call": {
+          "count": 30,
+          "max_ns": 12583,
+          "mean_ns": 7249.966666666666,
+          "median_ns": 6958.0,
+          "min_ns": 4542
+        }
+      },
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "A_UNCONTENDED",
+      "surface": "CURRENT_MEASURED"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "PRE_OCC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 5298750,
+        "mean_ns": 2986376.3666666667,
+        "median_ns": 2862083.0,
+        "min_ns": 2163292
+      },
+      "history_depth": 0,
+      "phases": {
+        "accepted_history_load": {
+          "count": 30,
+          "max_ns": 454709,
+          "mean_ns": 262818.1,
+          "median_ns": 249458.5,
+          "min_ns": 183792
+        },
+        "append_admission_call": {
+          "count": 30,
+          "max_ns": 1065459,
+          "mean_ns": 592538.9,
+          "median_ns": 574166.5,
+          "min_ns": 476625
+        },
+        "authoritative_idempotency_check": {
+          "count": 30,
+          "max_ns": 1903583,
+          "mean_ns": 565397.2333333333,
+          "median_ns": 494833.5,
+          "min_ns": 375875
+        },
+        "business_uow": {
+          "count": 30,
+          "max_ns": 3430709,
+          "mean_ns": 1856798.7,
+          "median_ns": 1761396.0,
+          "min_ns": 1337709
+        },
+        "commit_finalization": {
+          "count": 30,
+          "max_ns": 830292,
+          "mean_ns": 397698.6,
+          "median_ns": 367542.0,
+          "min_ns": 240958
+        },
+        "concurrency_preparation_call": {
+          "count": 30,
+          "max_ns": 28625,
+          "mean_ns": 2801.4333333333334,
+          "median_ns": 1896.0,
+          "min_ns": 1334
+        },
+        "idempotency_record_call": {
+          "count": 30,
+          "max_ns": 389958,
+          "mean_ns": 285734.76666666666,
+          "median_ns": 271812.5,
+          "min_ns": 231875
+        },
+        "preliminary_idempotency_check": {
+          "count": 30,
+          "max_ns": 1045791,
+          "mean_ns": 557066.5666666667,
+          "median_ns": 549291.5,
+          "min_ns": 429750
+        },
+        "preliminary_read_cleanup": {
+          "count": 30,
+          "max_ns": 1233000,
+          "mean_ns": 227284.66666666666,
+          "median_ns": 193395.5,
+          "min_ns": 139292
+        },
+        "producer_write_invocation": {
+          "count": 30,
+          "max_ns": 5258416,
+          "mean_ns": 2949517.933333333,
+          "median_ns": 2826854.0,
+          "min_ns": 2131042
+        },
+        "validation_runtime_call": {
+          "count": 30,
+          "max_ns": 30750,
+          "mean_ns": 7249.9,
+          "median_ns": 6499.5,
+          "min_ns": 4416
+        }
+      },
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "A_UNCONTENDED",
+      "surface": "CURRENT_MEASURED"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "IN_PESSIMISTIC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 3610750,
+        "mean_ns": 2410474.933333333,
+        "median_ns": 2226520.5,
+        "min_ns": 1989791
+      },
+      "history_depth": 0,
+      "phases": {},
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "A_UNCONTENDED",
+      "surface": "CURRENT_UNMEASURED"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "PRE_OCC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 4625958,
+        "mean_ns": 2886586.1666666665,
+        "median_ns": 2705687.5,
+        "min_ns": 2311916
+      },
+      "history_depth": 0,
+      "phases": {},
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "A_UNCONTENDED",
+      "surface": "CURRENT_UNMEASURED"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "IN_PESSIMISTIC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 3617959,
+        "mean_ns": 2531749.933333333,
+        "median_ns": 2430146.0,
+        "min_ns": 1962750
+      },
+      "history_depth": 0,
+      "phases": {},
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "A_UNCONTENDED",
+      "surface": "FROZEN_BASELINE"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "PRE_OCC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 4816958,
+        "mean_ns": 3156738.8666666667,
+        "median_ns": 3063687.5,
+        "min_ns": 2436334
+      },
+      "history_depth": 0,
+      "phases": {},
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "A_UNCONTENDED",
+      "surface": "FROZEN_BASELINE"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "IN_PESSIMISTIC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 3767000,
+        "mean_ns": 2819630.5,
+        "median_ns": 2614041.5,
+        "min_ns": 2165958
+      },
+      "history_depth": 0,
+      "phases": {
+        "accepted_history_load": {
+          "count": 30,
+          "max_ns": 821625,
+          "mean_ns": 336530.5333333333,
+          "median_ns": 294395.5,
+          "min_ns": 250834
+        },
+        "append_admission_call": {
+          "count": 30,
+          "max_ns": 936334,
+          "mean_ns": 609183.4333333333,
+          "median_ns": 590812.0,
+          "min_ns": 472792
+        },
+        "authoritative_idempotency_check": {
+          "count": 30,
+          "max_ns": 1521000,
+          "mean_ns": 687011.1333333333,
+          "median_ns": 602021.0,
+          "min_ns": 466875
+        },
+        "business_uow": {
+          "count": 30,
+          "max_ns": 3731833,
+          "mean_ns": 2784602.7,
+          "median_ns": 2577000.0,
+          "min_ns": 2137125
+        },
+        "commit_finalization": {
+          "count": 30,
+          "max_ns": 1367250,
+          "mean_ns": 415302.73333333334,
+          "median_ns": 368167.0,
+          "min_ns": 283334
+        },
+        "concurrency_preparation_call": {
+          "count": 30,
+          "max_ns": 1287708,
+          "mean_ns": 407765.3,
+          "median_ns": 274334.0,
+          "min_ns": 236875
+        },
+        "idempotency_record_call": {
+          "count": 30,
+          "max_ns": 344875,
+          "mean_ns": 278536.1666666667,
+          "median_ns": 274021.0,
+          "min_ns": 222000
+        },
+        "pessimistic_advisory_try_lock_call": {
+          "count": 30,
+          "max_ns": 1283125,
+          "mean_ns": 403697.1666666667,
+          "median_ns": 270770.5,
+          "min_ns": 232458
+        },
+        "producer_write_invocation": {
+          "count": 30,
+          "max_ns": 3738291,
+          "mean_ns": 2790540.1666666665,
+          "median_ns": 2582916.0,
+          "min_ns": 2141750
+        },
+        "validation_runtime_call": {
+          "count": 30,
+          "max_ns": 8666,
+          "mean_ns": 6891.6,
+          "median_ns": 6791.5,
+          "min_ns": 5000
+        }
+      },
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "B_SAME_ORDER",
+      "surface": "CURRENT_MEASURED"
+    },
+    {
+      "cohort": "ADMISSION_REJECTED_PREPARE_LOCK_TIMEOUT",
+      "command": "CREATE",
+      "composition": "IN_PESSIMISTIC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 2239417,
+        "mean_ns": 1438516.6333333333,
+        "median_ns": 1243624.5,
+        "min_ns": 946250
+      },
+      "history_depth": 0,
+      "phases": {
+        "authoritative_idempotency_check": {
+          "count": 30,
+          "max_ns": 1576000,
+          "mean_ns": 716169.3666666667,
+          "median_ns": 619624.5,
+          "min_ns": 480250
+        },
+        "business_uow": {
+          "count": 30,
+          "max_ns": 2190000,
+          "mean_ns": 1402872.2,
+          "median_ns": 1205854.5,
+          "min_ns": 913417
+        },
+        "concurrency_preparation_call": {
+          "count": 30,
+          "max_ns": 1290208,
+          "mean_ns": 431686.13333333336,
+          "median_ns": 304312.5,
+          "min_ns": 234417
+        },
+        "pessimistic_advisory_try_lock_call": {
+          "count": 30,
+          "max_ns": 1286750,
+          "mean_ns": 428676.4666666667,
+          "median_ns": 300917.0,
+          "min_ns": 231917
+        },
+        "producer_write_invocation": {
+          "count": 30,
+          "max_ns": 2196959,
+          "mean_ns": 1408212.5333333334,
+          "median_ns": 1209979.5,
+          "min_ns": 918125
+        },
+        "rollback_finalization": {
+          "count": 30,
+          "max_ns": 721709,
+          "mean_ns": 244997.3,
+          "median_ns": 218312.5,
+          "min_ns": 164833
+        }
+      },
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "B_SAME_ORDER",
+      "surface": "CURRENT_MEASURED"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "PRE_OCC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 5578209,
+        "mean_ns": 3926613.8333333335,
+        "median_ns": 3739958.0,
+        "min_ns": 3018458
+      },
+      "history_depth": 0,
+      "phases": {
+        "accepted_history_load": {
+          "count": 30,
+          "max_ns": 1272916,
+          "mean_ns": 374745.76666666666,
+          "median_ns": 303729.0,
+          "min_ns": 205583
+        },
+        "append_admission_call": {
+          "count": 30,
+          "max_ns": 2070916,
+          "mean_ns": 846583.3,
+          "median_ns": 670229.5,
+          "min_ns": 523000
+        },
+        "authoritative_idempotency_check": {
+          "count": 30,
+          "max_ns": 2286916,
+          "mean_ns": 775636.0333333333,
+          "median_ns": 580812.0,
+          "min_ns": 468333
+        },
+        "business_uow": {
+          "count": 30,
+          "max_ns": 3814750,
+          "mean_ns": 2344416.6666666665,
+          "median_ns": 2091771.0,
+          "min_ns": 1841542
+        },
+        "commit_finalization": {
+          "count": 30,
+          "max_ns": 688167,
+          "mean_ns": 399600.0,
+          "median_ns": 383666.5,
+          "min_ns": 314209
+        },
+        "concurrency_preparation_call": {
+          "count": 30,
+          "max_ns": 2792,
+          "mean_ns": 1843.0666666666666,
+          "median_ns": 1979.5,
+          "min_ns": 958
+        },
+        "idempotency_record_call": {
+          "count": 30,
+          "max_ns": 636125,
+          "mean_ns": 309345.76666666666,
+          "median_ns": 284458.5,
+          "min_ns": 249375
+        },
+        "preliminary_idempotency_check": {
+          "count": 30,
+          "max_ns": 2359750,
+          "mean_ns": 800566.7,
+          "median_ns": 617916.5,
+          "min_ns": 473042
+        },
+        "preliminary_read_cleanup": {
+          "count": 30,
+          "max_ns": 1238292,
+          "mean_ns": 319361.1666666667,
+          "median_ns": 239541.5,
+          "min_ns": 155333
+        },
+        "producer_write_invocation": {
+          "count": 30,
+          "max_ns": 5541875,
+          "mean_ns": 3891544.6,
+          "median_ns": 3705521.0,
+          "min_ns": 2986709
+        },
+        "validation_runtime_call": {
+          "count": 30,
+          "max_ns": 11875,
+          "mean_ns": 6438.833333333333,
+          "median_ns": 6625.0,
+          "min_ns": 3125
+        }
+      },
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "B_SAME_ORDER",
+      "surface": "CURRENT_MEASURED"
+    },
+    {
+      "cohort": "ADMISSION_REJECTED_APPEND_STALE_WRITE",
+      "command": "CREATE",
+      "composition": "PRE_OCC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 5930291,
+        "mean_ns": 4219199.966666667,
+        "median_ns": 4048208.0,
+        "min_ns": 3342875
+      },
+      "history_depth": 0,
+      "phases": {
+        "accepted_history_load": {
+          "count": 30,
+          "max_ns": 1193292,
+          "mean_ns": 373572.13333333336,
+          "median_ns": 307249.5,
+          "min_ns": 242833
+        },
+        "append_admission_call": {
+          "count": 30,
+          "max_ns": 2850167,
+          "mean_ns": 1643593.0333333334,
+          "median_ns": 1448250.0,
+          "min_ns": 1298042
+        },
+        "authoritative_idempotency_check": {
+          "count": 30,
+          "max_ns": 2278209,
+          "mean_ns": 787315.3333333334,
+          "median_ns": 581500.0,
+          "min_ns": 498167
+        },
+        "business_uow": {
+          "count": 30,
+          "max_ns": 4029542,
+          "mean_ns": 2639631.8666666667,
+          "median_ns": 2366895.5,
+          "min_ns": 2092083
+        },
+        "concurrency_preparation_call": {
+          "count": 30,
+          "max_ns": 2417,
+          "mean_ns": 1420.7,
+          "median_ns": 1187.5,
+          "min_ns": 833
+        },
+        "preliminary_idempotency_check": {
+          "count": 30,
+          "max_ns": 2324542,
+          "mean_ns": 801919.3666666667,
+          "median_ns": 604167.0,
+          "min_ns": 498917
+        },
+        "preliminary_read_cleanup": {
+          "count": 30,
+          "max_ns": 1197416,
+          "mean_ns": 324487.4666666667,
+          "median_ns": 246791.5,
+          "min_ns": 154250
+        },
+        "producer_write_invocation": {
+          "count": 30,
+          "max_ns": 5901833,
+          "mean_ns": 4191033.3333333335,
+          "median_ns": 4020875.0,
+          "min_ns": 3309875
+        },
+        "rollback_finalization": {
+          "count": 30,
+          "max_ns": 261500,
+          "mean_ns": 197691.66666666666,
+          "median_ns": 197354.0,
+          "min_ns": 147875
+        },
+        "validation_runtime_call": {
+          "count": 30,
+          "max_ns": 9792,
+          "mean_ns": 5970.9,
+          "median_ns": 5479.0,
+          "min_ns": 3833
+        }
+      },
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "B_SAME_ORDER",
+      "surface": "CURRENT_MEASURED"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "IN_PESSIMISTIC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 60,
+        "max_ns": 6952459,
+        "mean_ns": 3696281.966666667,
+        "median_ns": 3495354.0,
+        "min_ns": 2360542
+      },
+      "history_depth": 0,
+      "phases": {
+        "accepted_history_load": {
+          "count": 60,
+          "max_ns": 1377417,
+          "mean_ns": 552295.1166666667,
+          "median_ns": 356645.5,
+          "min_ns": 224750
+        },
+        "append_admission_call": {
+          "count": 60,
+          "max_ns": 1979458,
+          "mean_ns": 880484.7666666667,
+          "median_ns": 707187.5,
+          "min_ns": 501125
+        },
+        "authoritative_idempotency_check": {
+          "count": 60,
+          "max_ns": 3171500,
+          "mean_ns": 781374.2666666667,
+          "median_ns": 621146.0,
+          "min_ns": 498292
+        },
+        "business_uow": {
+          "count": 60,
+          "max_ns": 6899958,
+          "mean_ns": 3657186.7666666666,
+          "median_ns": 3458729.0,
+          "min_ns": 2327792
+        },
+        "commit_finalization": {
+          "count": 60,
+          "max_ns": 1650292,
+          "mean_ns": 645527.1166666667,
+          "median_ns": 534750.0,
+          "min_ns": 285083
+        },
+        "concurrency_preparation_call": {
+          "count": 60,
+          "max_ns": 1025166,
+          "mean_ns": 339848.6,
+          "median_ns": 305063.0,
+          "min_ns": 235208
+        },
+        "idempotency_record_call": {
+          "count": 60,
+          "max_ns": 1354000,
+          "mean_ns": 399957.61666666664,
+          "median_ns": 332583.5,
+          "min_ns": 226291
+        },
+        "pessimistic_advisory_try_lock_call": {
+          "count": 60,
+          "max_ns": 1021000,
+          "mean_ns": 335824.3333333333,
+          "median_ns": 301313.0,
+          "min_ns": 231208
+        },
+        "producer_write_invocation": {
+          "count": 60,
+          "max_ns": 6912375,
+          "mean_ns": 3663800.716666667,
+          "median_ns": 3464791.5,
+          "min_ns": 2333416
+        },
+        "validation_runtime_call": {
+          "count": 60,
+          "max_ns": 10584,
+          "mean_ns": 6258.333333333333,
+          "median_ns": 6458.5,
+          "min_ns": 3000
+        }
+      },
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "C_DIFFERENT_ORDER",
+      "surface": "CURRENT_MEASURED"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "composition": "PRE_OCC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 60,
+        "max_ns": 6028417,
+        "mean_ns": 4340018.783333333,
+        "median_ns": 4182521.0,
+        "min_ns": 3176417
+      },
+      "history_depth": 0,
+      "phases": {
+        "accepted_history_load": {
+          "count": 60,
+          "max_ns": 904584,
+          "mean_ns": 375233.4166666667,
+          "median_ns": 314000.0,
+          "min_ns": 252666
+        },
+        "append_admission_call": {
+          "count": 60,
+          "max_ns": 2059208,
+          "mean_ns": 884701.4,
+          "median_ns": 704063.0,
+          "min_ns": 607583
+        },
+        "authoritative_idempotency_check": {
+          "count": 60,
+          "max_ns": 1837250,
+          "mean_ns": 834629.15,
+          "median_ns": 680271.0,
+          "min_ns": 492166
+        },
+        "business_uow": {
+          "count": 60,
+          "max_ns": 4545333,
+          "mean_ns": 2786665.2333333334,
+          "median_ns": 2780124.5,
+          "min_ns": 1932583
+        },
+        "commit_finalization": {
+          "count": 60,
+          "max_ns": 1540209,
+          "mean_ns": 597210.3166666667,
+          "median_ns": 511041.5,
+          "min_ns": 338875
+        },
+        "concurrency_preparation_call": {
+          "count": 60,
+          "max_ns": 5584,
+          "mean_ns": 1731.35,
+          "median_ns": 1771.0,
+          "min_ns": 709
+        },
+        "idempotency_record_call": {
+          "count": 60,
+          "max_ns": 1306417,
+          "mean_ns": 456428.51666666666,
+          "median_ns": 340146.0,
+          "min_ns": 251625
+        },
+        "preliminary_idempotency_check": {
+          "count": 60,
+          "max_ns": 1955250,
+          "mean_ns": 782520.1333333333,
+          "median_ns": 675520.5,
+          "min_ns": 512791
+        },
+        "preliminary_read_cleanup": {
+          "count": 60,
+          "max_ns": 932417,
+          "mean_ns": 304489.61666666664,
+          "median_ns": 252396.0,
+          "min_ns": 148542
+        },
+        "producer_write_invocation": {
+          "count": 60,
+          "max_ns": 5992042,
+          "mean_ns": 4305655.55,
+          "median_ns": 4144249.5,
+          "min_ns": 3144375
+        },
+        "validation_runtime_call": {
+          "count": 60,
+          "max_ns": 12000,
+          "mean_ns": 6415.25,
+          "median_ns": 6645.5,
+          "min_ns": 2916
+        }
+      },
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "C_DIFFERENT_ORDER",
+      "surface": "CURRENT_MEASURED"
+    },
+    {
+      "cohort": "ADMISSION_REJECTED_PREPARE_LOCK_TIMEOUT",
+      "command": "CREATE",
+      "composition": "IN_PESSIMISTIC",
+      "expected_sequence": 1,
+      "external_elapsed": {
+        "count": 30,
+        "max_ns": 2402958,
+        "mean_ns": 1401836.1,
+        "median_ns": 1261396.0,
+        "min_ns": 959917
+      },
+      "history_depth": 0,
+      "phases": {
+        "authoritative_idempotency_check": {
+          "count": 30,
+          "max_ns": 1534125,
+          "mean_ns": 685373.5666666667,
+          "median_ns": 630687.5,
+          "min_ns": 477875
+        },
+        "business_uow": {
+          "count": 30,
+          "max_ns": 2361458,
+          "mean_ns": 1358993.0666666667,
+          "median_ns": 1221312.5,
+          "min_ns": 923334
+        },
+        "concurrency_preparation_call": {
+          "count": 30,
+          "max_ns": 1502542,
+          "mean_ns": 370512.56666666665,
+          "median_ns": 301895.5,
+          "min_ns": 216417
+        },
+        "pessimistic_advisory_try_lock_call": {
+          "count": 30,
+          "max_ns": 1498625,
+          "mean_ns": 366372.1666666667,
+          "median_ns": 297312.5,
+          "min_ns": 212584
+        },
+        "producer_write_invocation": {
+          "count": 30,
+          "max_ns": 2368208,
+          "mean_ns": 1366065.3333333333,
+          "median_ns": 1228000.5,
+          "min_ns": 929000
+        },
+        "rollback_finalization": {
+          "count": 30,
+          "max_ns": 1252459,
+          "mean_ns": 290630.6666666667,
+          "median_ns": 251333.5,
+          "min_ns": 185375
+        }
+      },
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "E_LOCK_NON_ACQUISITION",
+      "surface": "CURRENT_MEASURED"
+    }
+  ],
+  "paired_differences": [
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "count": 30,
+      "expected_sequence": 1,
+      "history_depth": 0,
+      "mean_in_minus_pre_ns": -376188.8,
+      "median_in_minus_pre_ns": -319937.5,
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "A_UNCONTENDED",
+      "surface": "CURRENT_MEASURED"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "count": 30,
+      "expected_sequence": 1,
+      "history_depth": 0,
+      "mean_in_minus_pre_ns": -476111.23333333334,
+      "median_in_minus_pre_ns": -439521.0,
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "A_UNCONTENDED",
+      "surface": "CURRENT_UNMEASURED"
+    },
+    {
+      "cohort": "ACCEPTED",
+      "command": "CREATE",
+      "count": 30,
+      "expected_sequence": 1,
+      "history_depth": 0,
+      "mean_in_minus_pre_ns": -624988.9333333333,
+      "median_in_minus_pre_ns": -507437.5,
+      "run_id": "stage4b2-pr6-canonical-0bd2f51",
+      "scenario": "A_UNCONTENDED",
+      "surface": "FROZEN_BASELINE"
+    }
+  ],
+  "schema_version": 1
+}

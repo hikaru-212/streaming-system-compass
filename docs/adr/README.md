@@ -42,6 +42,9 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0020 | [Per-Order Projection Progress and Order-Local Snapshot Tails](0020_per_order_projection_progress_and_order_local_snapshot_tails.md) | Accepted | Uses per-order progress and order-local snapshot tails because global-position gaps do not prove missing order history. |
 | 0021 | [Projection Snapshots Are Optional for the Current Order Workload](0021_projection_snapshots_are_optional_for_current_order_workload.md) | Accepted | Retains the Snapshot Trust Contract while classifying projection snapshots as optional reference infrastructure for the current shallow Order workload. |
 | 0022 | [Traced Write-Side Execution Fails Closed Before Business Commit](0022_traced_write_side_execution_fails_closed_before_business_commit.md) | Accepted | Preserves strict pre-commit Result + Trace composition for the current PostgreSQL traced write-side APIs without treating diagnostic artifacts as durable business state. |
+| 0023 | [Measurement Availability Does Not Govern Business Truth](0023_measurement_availability_does_not_govern_business_truth.md) | Accepted | Keeps post-UOW measurement construction and availability from rewriting exact normal producer values, transaction finalization, or existing exception behavior. |
+| 0024 | [Detailed PostgreSQL Write Measurement Is an Opt-In Capability](0024_detailed_postgres_write_measurement_is_opt_in.md) | Accepted | Preserves existing unmeasured writes and makes detailed Stage 4B.2 measurement an explicit execution-level capability. |
+| 0025 | [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) | Accepted | Preserves PR6 as complete comparison evidence while assigning causal decomposition to a separate post-PR6 supplemental investigation. |
 
 ---
 
@@ -80,6 +83,9 @@ Recommended order:
 21. [Per-Order Projection Progress and Order-Local Snapshot Tails](0020_per_order_projection_progress_and_order_local_snapshot_tails.md) — explains why aggregate-local progress and snapshot tails use order-local sequence instead of treating global-position gaps as missing order history.
 22. [Projection Snapshots Are Optional for the Current Order Workload](0021_projection_snapshots_are_optional_for_current_order_workload.md) — explains why the Snapshot Trust Contract remains valid while further snapshot-specific runtime expansion is evidence-gated for the current shallow Order workload.
 23. [Traced Write-Side Execution Fails Closed Before Business Commit](0022_traced_write_side_execution_fails_closed_before_business_commit.md) — explains why the current PostgreSQL traced APIs construct and validate Result + Trace before clean business-UOW exit while leaving future trace producers independently reviewable.
+24. [Measurement Availability Does Not Govern Business Truth](0023_measurement_availability_does_not_govern_business_truth.md) — explains why final measurement construction follows normal producer return and cannot rewrite exact business results or current finalization and exception behavior.
+25. [Detailed PostgreSQL Write Measurement Is an Opt-In Capability](0024_detailed_postgres_write_measurement_is_opt_in.md) — explains why detailed Stage 4B.2 collection uses an explicit measured surface while existing unmeasured execution remains valid.
+26. [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) — explains why the unexpected PR6 latency ordering is preserved as comparison evidence and investigated through a separate bounded explanatory supplement instead of being promoted directly into an architecture conclusion.
 
 ---
 
@@ -134,6 +140,22 @@ boundary. It requires valid synchronous Result + Trace composition before clean
 business-UOW exit, while keeping those in-memory diagnostic artifacts separate
 from durable business state and leaving best-effort or future producer models
 for separate review.
+
+ADR 0023 keeps Stage 4B.2 measurement availability subordinate to established
+business truth. It requires normal producer return and transaction finalization
+before final measurement construction, preserves the exact producer value when
+that construction is unavailable, and leaves ADR 0022 trace semantics intact.
+
+ADR 0024 separates detailed measurement capability from mandatory producer
+execution. Existing legacy and traced APIs remain valid unmeasured surfaces;
+future sampling or dynamic observability policy belongs above the explicit
+measured surface.
+
+ADR 0025 preserves the completed PR6 production-composition comparison while
+separating its unexpected latency ordering from causal interpretation. It
+assigns current single-execution mechanism decomposition to the post-PR6
+supplement, leaves bounded concurrency to PR7, and keeps counterfactual
+compositions optional unless the current Layer 1–3 evidence is insufficient.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -210,6 +232,9 @@ Recommended pattern:
 0020_per_order_projection_progress_and_order_local_snapshot_tails.md
 0021_projection_snapshots_are_optional_for_current_order_workload.md
 0022_traced_write_side_execution_fails_closed_before_business_commit.md
+0023_measurement_availability_does_not_govern_business_truth.md
+0024_detailed_postgres_write_measurement_is_opt_in.md
+0025_pr6_comparison_requires_separate_explanatory_characterization.md
 ```
 
 Evolution or supporting notes may be kept as separate files:

@@ -35,22 +35,31 @@ The project currently has:
 - a completed Stage 4A SemanticOutcome core, including runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping
 - a completed Stage 4B DecisionReceipt foundation, including the typed contract, generic and producer mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
 - a completed Stage 4B.1 DiagnosticTrace / ResolutionTrace stage, including the immutable snapshot-assisted contract, write-side execution characterization, producer-specific write-side trace contract, and traced write-side Result + Trace integration
+- a completed Stage 4B.2 Measurement Evidence stage, including producer-specific Level-A measurement, valid Level-B comparison and explanatory evidence, and valid bounded Level-C concurrency evidence
 - executable tests defending write-side, read-side, durable replay, snapshot trust, durable permission-boundary, Stage 4A runtime semantic-outcome, Stage 4B receipt semantics, and Stage 4B.1 traced execution
 
-Stage 4A, Stage 4B PR1–PR7, and Stage 4B.1 PR1–PR7 are complete.
+Stage 4A, Stage 4B PR1–PR7, Stage 4B.1 PR1–PR7, and Stage 4B.2
+PR1–PR8 are complete.
 
-The current formal development focus is:
+The next Stage 4 foundation work is:
 
-- **Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory**
+- **Stage 4B.3 — Projection Trust Boundary and Continuation**
+- **Stage 4B.5 — Order Correctness Contract v0**
+
+Stage 4B.3 and Stage 4B.5 are separately owned parallel foundation work. They
+have not begun.
 
 Stage 4B established durable receipt evidence without automatic materialization
 or reconciliation. [Stage 4B.1](docs/implementation_notes/stage_4b_1/README.md)
 then established bounded producer-specific execution traces. Snapshot traced
 resolver integration remains intentionally deferred, projection-worker tracing
 remains `DO NOT ADD` for the completed stage, and the PostgreSQL write side now
-returns producer-owned Result + Trace executions. Measurement evidence is the
-next formal stage; policy, strategy selection, retry governance, and action
-safety remain subsequent stages.
+returns producer-owned Result + Trace executions. [Stage 4B.2 Measurement
+Evidence](docs/implementation_notes/stage_4b_2/README.md) is complete and
+closed; its [closeout](docs/implementation_notes/stage_4b_2/stage_4b_2_closeout.md)
+is the final completion authority. Stage 4B.3 and Stage 4B.5 are the next
+separately owned Stage 4 foundation responsibilities and may proceed in
+parallel. Stage 4C+ decision-governance work remains downstream.
 
 ### Immediate Engineering Checkpoint
 
@@ -104,7 +113,9 @@ resolver runtime API; projection-worker tracing remains `DO NOT ADD` for that
 stage; and the PostgreSQL write side now has producer-specific traced Result +
 Trace execution. See the
 [Stage 4B.1 closeout](docs/implementation_notes/stage_4b_1/stage_4b_1_closeout.md).
-Stage 4B.2 measurement / cost evidence is the next formal development stage.
+Stage 4B.2 Measurement Evidence is complete and closed. Stage 4B.3 and Stage
+4B.5 are the next separately owned Stage 4 foundation responsibilities and may
+proceed in parallel; neither has begun.
 
 See the
 [DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](docs/boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md)
@@ -506,8 +517,9 @@ Everything else grows around this core:
 - SemanticOutcome core
 - DecisionReceipt / runtime evidence record
 - DiagnosticTrace / ResolutionTrace boundary
-- Measurement Matrix / Cost Evidence Inventory
-- narrow policy-contract boundary for the current order/payment domain
+- Measurement Evidence
+- projection trust boundary / continuation
+- narrow correctness-contract boundary for the current order/payment domain
 - RuntimeDecisionPolicy
 - Layer 1 / Layer 2 outcome-family alignment
 - StrategySelector / fast-path health policy
@@ -603,16 +615,21 @@ Current boundary of completion:
 - Stage 4A SemanticOutcome core is complete
 - Stage 4B PR1–PR7 DecisionReceipt boundary, contract, mapping, serialization, and persistence foundation is complete
 - Stage 4B.1 PR1–PR7 DiagnosticTrace / ResolutionTrace boundary, producer-specific contracts, write-side integration, and closeout are complete
+- Stage 4B.2 PR1–PR8 producer-specific measurement, controlled comparison, explanatory characterization, bounded concurrency evidence, and closeout are complete
 
-Next implementation focus:
+Next Stage 4 foundation work:
 
-- Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
+- Stage 4B.3 — Projection Trust Boundary and Continuation
+- Stage 4B.5 — Order Correctness Contract v0
+
+Stage 4B.3 and Stage 4B.5 are separately owned parallel foundation work. They
+have not begun.
 
 Stage 4A closeout is complete at the runtime semantic interpretation level.
 
-Next implementation milestones:
+Current and later implementation milestones:
 
-- Stage 4B.2 measurement evidence, Stage 4B.5 domain policy, and Stage 4C+ runtime decision policy, StrategySelector, and retry governance
+- Stage 4B.3 and Stage 4B.5 as parallel foundation work, followed by Stage 4C+ runtime decision policy, StrategySelector, and retry governance
 - Stage 5 dual-dimension governance demo / action safety
 
 ---
@@ -640,7 +657,7 @@ The repository remains intentionally conservative:
 - `tests/` make selected invariants and failure paths executable
 - the original Stage 3 in-memory baseline remains available as historical executable context alongside the durable repaired worker
 - Stage 3.5A has hardened exact-money semantics before persistence expands
-- later phases will extend the completed Stage 4B receipt foundation through traces, measurement, runtime decision policy, Stage 5 action safety, and production / agent-facing hardening
+- later phases extend the completed Stage 4B receipt foundation through traces and measurement, then parallel Stage 4B.3 projection-trust continuation and Stage 4B.5 correctness-contract work before downstream runtime decision policy, Stage 5 action safety, and production / agent-facing hardening
 
 ---
 

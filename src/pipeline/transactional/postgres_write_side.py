@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
-from typing import Optional, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 from psycopg import Connection
 
@@ -36,6 +36,13 @@ from src.pipeline.transactional.postgres_write_side_execution_trace import (
     PostgresWriteSideExecutionCheckpoint,
     PostgresWriteSideExecutionTrace,
 )
+from src.pipeline.transactional.postgres_write_side_measurement_instrumentation import (
+    _PostgresWriteSideMeasurementPhase,
+    _PostgresWriteSideMeasurementRecorder,
+    _instrument_concrete_pessimistic_gate,
+    _new_measured_uow,
+    _new_measurement_recorder,
+)
 from src.storage.idempotency_store import (
     IdempotencyDecision,
     IdempotencyVerdict,
@@ -43,6 +50,11 @@ from src.storage.idempotency_store import (
 )
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_idempotency_store import PostgresIdempotencyStore
+
+if TYPE_CHECKING:
+    from src.pipeline.transactional.postgres_write_side_measurement import (
+        PostgresWriteSideMeasurementDelivery,
+    )
 
 
 AdmissionGateFactory = Callable[[PostgresWriteSideUnitOfWork], ConcurrencyGate]
@@ -325,6 +337,7 @@ class PostgresTransactionalWriteSide:
         uow: PostgresWriteSideUnitOfWork,
         order_id: str,
         trace_collector: _PostgresWriteSideTraceCollector | None,
+        measurement_recorder: _PostgresWriteSideMeasurementRecorder | None,
     ) -> tuple[OrderAggregate, list[OrderEvent]]:
         """
         Rebuild aggregate state from durable accepted history.
@@ -332,7 +345,13 @@ class PostgresTransactionalWriteSide:
         This mirrors the existing in-memory Registry rule:
         replay accepted history through Aggregate.apply(event).
         """
-        history = uow.event_store.load(order_id)
+        if measurement_recorder is None:
+            history = uow.event_store.load(order_id)
+        else:
+            history = measurement_recorder.measure_call(
+                _PostgresWriteSideMeasurementPhase.ACCEPTED_HISTORY_LOAD,
+                lambda: uow.event_store.load(order_id),
+            )
         _record_checkpoint(
             trace_collector,
             PostgresWriteSideExecutionCheckpoint.ACCEPTED_HISTORY_OBSERVED,
@@ -365,6 +384,9 @@ class PostgresTransactionalWriteSide:
         command_type: CommandType,
         build_candidate_event: CandidateEventBuilder,
         trace_collector: _PostgresWriteSideTraceCollector | None = None,
+        measurement_recorder: (
+            _PostgresWriteSideMeasurementRecorder | None
+        ) = None,
     ) -> _PostgresWriteSideCommandResult:
         """
         Dispatch command execution by validation placement.
@@ -377,6 +399,7 @@ class PostgresTransactionalWriteSide:
                 command_type=command_type,
                 build_candidate_event=build_candidate_event,
                 trace_collector=trace_collector,
+                measurement_recorder=measurement_recorder,
             )
 
         if self._config.validation_placement == ValidationPlacement.PRE_TRANSACTION:
@@ -387,12 +410,50 @@ class PostgresTransactionalWriteSide:
                 command_type=command_type,
                 build_candidate_event=build_candidate_event,
                 trace_collector=trace_collector,
+                measurement_recorder=measurement_recorder,
             )
 
         raise NotImplementedError(
             "Unsupported validation placement: "
             f"{self._config.validation_placement}"
         )
+
+    def _execute_command_with_measurement(
+        self,
+        *,
+        request_id: str,
+        order_id: str,
+        amount: Decimal,
+        command_type: CommandType,
+        build_candidate_event: CandidateEventBuilder,
+        trace_collector: _PostgresWriteSideTraceCollector | None = None,
+    ) -> PostgresWriteSideMeasurementDelivery:
+        """Measure the shared producer algorithm and compose after return.
+
+        The producer call is deliberately outside final measurement-
+        construction failure handling. Existing exceptions therefore propagate
+        unchanged and produce no normal measurement delivery.
+        """
+        measurement_recorder = _new_measurement_recorder(
+            self._config.validation_placement
+        )
+        producer_started_ns = measurement_recorder.start(
+            _PostgresWriteSideMeasurementPhase.PRODUCER_WRITE_INVOCATION
+        )
+        producer_value = self._execute_command(
+            request_id=request_id,
+            order_id=order_id,
+            amount=amount,
+            command_type=command_type,
+            build_candidate_event=build_candidate_event,
+            trace_collector=trace_collector,
+            measurement_recorder=measurement_recorder,
+        )
+        measurement_recorder.finish(
+            _PostgresWriteSideMeasurementPhase.PRODUCER_WRITE_INVOCATION,
+            producer_started_ns,
+        )
+        return measurement_recorder.build_delivery(producer_value)
 
     def _execute_in_transaction_command(
         self,
@@ -403,6 +464,7 @@ class PostgresTransactionalWriteSide:
         command_type: CommandType,
         build_candidate_event: CandidateEventBuilder,
         trace_collector: _PostgresWriteSideTraceCollector | None,
+        measurement_recorder: _PostgresWriteSideMeasurementRecorder | None,
     ) -> _PostgresWriteSideCommandResult:
         """
         Execute the durable write-side flow with Compass validation inside the
@@ -423,12 +485,24 @@ class PostgresTransactionalWriteSide:
             amount=amount,
         )
 
-        with PostgresWriteSideUnitOfWork(self._connection) as uow:
+        uow_context = (
+            PostgresWriteSideUnitOfWork(self._connection)
+            if measurement_recorder is None
+            else _new_measured_uow(self._connection, measurement_recorder)
+        )
+        with uow_context as uow:
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint.BUSINESS_UOW_REACHED,
             )
-            idempotency_decision = uow.idempotency_store.check(signature)
+            if measurement_recorder is None:
+                idempotency_decision = uow.idempotency_store.check(signature)
+            else:
+                idempotency_decision = measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase
+                    .AUTHORITATIVE_IDEMPOTENCY_CHECK,
+                    lambda: uow.idempotency_store.check(signature),
+                )
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint
@@ -458,7 +532,18 @@ class PostgresTransactionalWriteSide:
                 )
 
             admission_gate = self._admission_gate_factory(uow)
-            stream_admission_result = admission_gate.prepare_stream(order_id)
+            if measurement_recorder is not None:
+                admission_gate = _instrument_concrete_pessimistic_gate(
+                    admission_gate,
+                    measurement_recorder,
+                )
+                stream_admission_result = measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase
+                    .CONCURRENCY_PREPARATION_CALL,
+                    lambda: admission_gate.prepare_stream(order_id),
+                )
+            else:
+                stream_admission_result = admission_gate.prepare_stream(order_id)
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint
@@ -481,6 +566,7 @@ class PostgresTransactionalWriteSide:
                 uow,
                 order_id,
                 trace_collector,
+                measurement_recorder,
             )
             actual_prev_event = history[-1] if history else None
             validation_context = self._build_validation_context(
@@ -491,10 +577,19 @@ class PostgresTransactionalWriteSide:
             # The candidate event is not accepted history until validation and admission pass.
             candidate_event = build_candidate_event(aggregate)
 
-            validation_decision = self._validation_runtime.decide(
-                candidate_event,
-                validation_context,
-            )
+            if measurement_recorder is None:
+                validation_decision = self._validation_runtime.decide(
+                    candidate_event,
+                    validation_context,
+                )
+            else:
+                validation_decision = measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase.VALIDATION_RUNTIME_CALL,
+                    lambda: self._validation_runtime.decide(
+                        candidate_event,
+                        validation_context,
+                    ),
+                )
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint.VALIDATION_RETURNED,
@@ -516,10 +611,19 @@ class PostgresTransactionalWriteSide:
 
             # append-time admission has a physical side effect:
             # if admitted, the candidate event is appended to order_events here.
-            admission_result = admission_gate.append_if_admitted(
-                candidate_event,
-                expected_current_version=expected_current_version,
-            )
+            if measurement_recorder is None:
+                admission_result = admission_gate.append_if_admitted(
+                    candidate_event,
+                    expected_current_version=expected_current_version,
+                )
+            else:
+                admission_result = measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase.APPEND_ADMISSION_CALL,
+                    lambda: admission_gate.append_if_admitted(
+                        candidate_event,
+                        expected_current_version=expected_current_version,
+                    ),
+                )
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint.APPEND_ADMISSION_RETURNED,
@@ -539,7 +643,16 @@ class PostgresTransactionalWriteSide:
                     trace_collector,
                 )
 
-            uow.idempotency_store.record(signature, candidate_event)
+            if measurement_recorder is None:
+                uow.idempotency_store.record(signature, candidate_event)
+            else:
+                measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase.IDEMPOTENCY_RECORD_CALL,
+                    lambda: uow.idempotency_store.record(
+                        signature,
+                        candidate_event,
+                    ),
+                )
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint.IDEMPOTENCY_PERSISTENCE_RETURNED,
@@ -570,6 +683,7 @@ class PostgresTransactionalWriteSide:
         command_type: CommandType,
         build_candidate_event: CandidateEventBuilder,
         trace_collector: _PostgresWriteSideTraceCollector | None,
+        measurement_recorder: _PostgresWriteSideMeasurementRecorder | None,
     ) -> _PostgresWriteSideCommandResult:
         """
         Execute Compass validation before entering the PostgreSQL write-side
@@ -597,7 +711,18 @@ class PostgresTransactionalWriteSide:
         read_event_store = PostgresEventStore(self._connection)
 
         try:
-            preliminary_idempotency_decision = read_idempotency_store.check(signature)
+            if measurement_recorder is None:
+                preliminary_idempotency_decision = read_idempotency_store.check(
+                    signature
+                )
+            else:
+                preliminary_idempotency_decision = (
+                    measurement_recorder.measure_call(
+                        _PostgresWriteSideMeasurementPhase
+                        .PRELIMINARY_IDEMPOTENCY_CHECK,
+                        lambda: read_idempotency_store.check(signature),
+                    )
+                )
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint
@@ -626,7 +751,13 @@ class PostgresTransactionalWriteSide:
                     trace_collector,
                 )
 
-            history = read_event_store.load(order_id)
+            if measurement_recorder is None:
+                history = read_event_store.load(order_id)
+            else:
+                history = measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase.ACCEPTED_HISTORY_LOAD,
+                    lambda: read_event_store.load(order_id),
+                )
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint.ACCEPTED_HISTORY_OBSERVED,
@@ -635,7 +766,14 @@ class PostgresTransactionalWriteSide:
             # Close the implicit read transaction before CPU-side validation or return.
             # This keeps PRE_TRANSACTION validation from holding an open PostgreSQL
             # transaction while Compass validation runs.
-            self._connection.rollback()
+            if measurement_recorder is None:
+                self._connection.rollback()
+            else:
+                measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase
+                    .PRELIMINARY_READ_CLEANUP,
+                    self._connection.rollback,
+                )
 
         aggregate = self._rehydrate_aggregate_from_history(order_id, history)
         actual_prev_event = history[-1] if history else None
@@ -647,10 +785,19 @@ class PostgresTransactionalWriteSide:
         # The candidate event is validated before the write transaction begins.
         candidate_event = build_candidate_event(aggregate)
 
-        validation_decision = self._validation_runtime.decide(
-            candidate_event,
-            validation_context,
-        )
+        if measurement_recorder is None:
+            validation_decision = self._validation_runtime.decide(
+                candidate_event,
+                validation_context,
+            )
+        else:
+            validation_decision = measurement_recorder.measure_call(
+                _PostgresWriteSideMeasurementPhase.VALIDATION_RUNTIME_CALL,
+                lambda: self._validation_runtime.decide(
+                    candidate_event,
+                    validation_context,
+                ),
+            )
         _record_checkpoint(
             trace_collector,
             PostgresWriteSideExecutionCheckpoint.VALIDATION_RETURNED,
@@ -668,12 +815,28 @@ class PostgresTransactionalWriteSide:
 
         expected_current_version = aggregate.current_version
 
-        with PostgresWriteSideUnitOfWork(self._connection) as uow:
+        uow_context = (
+            PostgresWriteSideUnitOfWork(self._connection)
+            if measurement_recorder is None
+            else _new_measured_uow(self._connection, measurement_recorder)
+        )
+        with uow_context as uow:
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint.BUSINESS_UOW_REACHED,
             )
-            authoritative_idempotency_decision = uow.idempotency_store.check(signature)
+            if measurement_recorder is None:
+                authoritative_idempotency_decision = (
+                    uow.idempotency_store.check(signature)
+                )
+            else:
+                authoritative_idempotency_decision = (
+                    measurement_recorder.measure_call(
+                        _PostgresWriteSideMeasurementPhase
+                        .AUTHORITATIVE_IDEMPOTENCY_CHECK,
+                        lambda: uow.idempotency_store.check(signature),
+                    )
+                )
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint
@@ -707,7 +870,18 @@ class PostgresTransactionalWriteSide:
                 )
 
             admission_gate = self._admission_gate_factory(uow)
-            stream_admission_result = admission_gate.prepare_stream(order_id)
+            if measurement_recorder is not None:
+                admission_gate = _instrument_concrete_pessimistic_gate(
+                    admission_gate,
+                    measurement_recorder,
+                )
+                stream_admission_result = measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase
+                    .CONCURRENCY_PREPARATION_CALL,
+                    lambda: admission_gate.prepare_stream(order_id),
+                )
+            else:
+                stream_admission_result = admission_gate.prepare_stream(order_id)
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint
@@ -729,10 +903,19 @@ class PostgresTransactionalWriteSide:
 
             # append-time admission has a physical side effect:
             # if admitted, the candidate event is appended to order_events here.
-            admission_result = admission_gate.append_if_admitted(
-                candidate_event,
-                expected_current_version=expected_current_version,
-            )
+            if measurement_recorder is None:
+                admission_result = admission_gate.append_if_admitted(
+                    candidate_event,
+                    expected_current_version=expected_current_version,
+                )
+            else:
+                admission_result = measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase.APPEND_ADMISSION_CALL,
+                    lambda: admission_gate.append_if_admitted(
+                        candidate_event,
+                        expected_current_version=expected_current_version,
+                    ),
+                )
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint.APPEND_ADMISSION_RETURNED,
@@ -752,7 +935,16 @@ class PostgresTransactionalWriteSide:
                     trace_collector,
                 )
 
-            uow.idempotency_store.record(signature, candidate_event)
+            if measurement_recorder is None:
+                uow.idempotency_store.record(signature, candidate_event)
+            else:
+                measurement_recorder.measure_call(
+                    _PostgresWriteSideMeasurementPhase.IDEMPOTENCY_RECORD_CALL,
+                    lambda: uow.idempotency_store.record(
+                        signature,
+                        candidate_event,
+                    ),
+                )
             _record_checkpoint(
                 trace_collector,
                 PostgresWriteSideExecutionCheckpoint.IDEMPOTENCY_PERSISTENCE_RETURNED,
@@ -801,6 +993,47 @@ class PostgresTransactionalWriteSide:
             ),
         )
 
+    def create_order_with_measurement(
+        self,
+        *,
+        request_id: str,
+        order_id: str,
+        amount: Decimal,
+    ) -> PostgresWriteSideMeasurementDelivery:
+        """Execute CREATE with opt-in Level-A elapsed evidence.
+
+        Supported measured interpretation:
+            Stage 4B.2 supports this evidence only for PRE_TRANSACTION with
+            the current optimistic/OCC admission and IN_TRANSACTION with the
+            current concrete PostgreSQL pessimistic admission. Other placement
+            and admission cross-combinations are not an interpretation-safe
+            Stage 4B.2 measurement surface.
+
+        Returns:
+            Result-first delivery whose producer value is the exact current
+            ``PostgresWriteSideResult`` and whose measurement is constructed
+            only after normal producer return.
+
+        Failure behavior:
+            Existing producer and finalization exceptions propagate unchanged.
+            Narrow final measurement-construction failure produces an
+            unavailable measurement without rewriting the producer value.
+
+        Non-goals:
+            This method does not create a trace, persist evidence, select a
+            strategy, authorize retry, or alter the existing unmeasured API.
+        """
+        return self._execute_command_with_measurement(
+            request_id=request_id,
+            order_id=order_id,
+            amount=amount,
+            command_type=CommandType.CREATE,
+            build_candidate_event=lambda aggregate: aggregate.create(
+                request_id,
+                amount,
+            ),
+        )
+
     def create_order_with_trace(
         self,
         *,
@@ -834,6 +1067,51 @@ class PostgresTransactionalWriteSide:
             ),
         )
 
+    def create_order_with_trace_and_measurement(
+        self,
+        *,
+        request_id: str,
+        order_id: str,
+        amount: Decimal,
+    ) -> PostgresWriteSideMeasurementDelivery:
+        """Execute traced CREATE with separate opt-in elapsed evidence.
+
+        Supported measured interpretation:
+            Stage 4B.2 supports this evidence only for PRE_TRANSACTION with
+            the current optimistic/OCC admission and IN_TRANSACTION with the
+            current concrete PostgreSQL pessimistic admission. Other placement
+            and admission cross-combinations are not an interpretation-safe
+            Stage 4B.2 measurement surface.
+
+        Returns:
+            Result-first delivery whose producer value is the exact current
+            ``PostgresWriteSideExecution``. Its trace remains constructed under
+            ADR 0022 before business commit and contains no timing fields.
+
+        Failure behavior:
+            Existing producer, trace, UOW, and finalization exceptions propagate
+            unchanged. Post-return measurement-construction failure affects only
+            measurement availability.
+
+        Non-goals:
+            This method does not move timing into the trace, persist evidence,
+            or alter the existing traced API.
+        """
+        trace_collector = _PostgresWriteSideTraceCollector(
+            self._config.validation_placement
+        )
+        return self._execute_command_with_measurement(
+            request_id=request_id,
+            order_id=order_id,
+            amount=amount,
+            command_type=CommandType.CREATE,
+            build_candidate_event=lambda aggregate: aggregate.create(
+                request_id,
+                amount,
+            ),
+            trace_collector=trace_collector,
+        )
+
     def pay_order(
         self,
         *,
@@ -858,6 +1136,47 @@ class PostgresTransactionalWriteSide:
                     request_id,
                     amount,
                 ),
+            ),
+        )
+
+    def pay_order_with_measurement(
+        self,
+        *,
+        request_id: str,
+        order_id: str,
+        amount: Decimal,
+    ) -> PostgresWriteSideMeasurementDelivery:
+        """Execute PAY with opt-in Level-A elapsed evidence.
+
+        Supported measured interpretation:
+            Stage 4B.2 supports this evidence only for PRE_TRANSACTION with
+            the current optimistic/OCC admission and IN_TRANSACTION with the
+            current concrete PostgreSQL pessimistic admission. Other placement
+            and admission cross-combinations are not an interpretation-safe
+            Stage 4B.2 measurement surface.
+
+        Returns:
+            Result-first delivery whose producer value is the exact current
+            ``PostgresWriteSideResult`` and whose measurement follows normal
+            producer return.
+
+        Failure behavior:
+            Existing producer and finalization exceptions propagate unchanged.
+            Narrow post-return construction failure changes only measurement
+            availability.
+
+        Non-goals:
+            This method does not create a trace, persist evidence, choose
+            policy, or alter the existing unmeasured PAY API.
+        """
+        return self._execute_command_with_measurement(
+            request_id=request_id,
+            order_id=order_id,
+            amount=amount,
+            command_type=CommandType.PAY,
+            build_candidate_event=lambda aggregate: aggregate.pay(
+                request_id,
+                amount,
             ),
         )
 
@@ -892,4 +1211,49 @@ class PostgresTransactionalWriteSide:
                 ),
                 trace_collector=trace_collector,
             ),
+        )
+
+    def pay_order_with_trace_and_measurement(
+        self,
+        *,
+        request_id: str,
+        order_id: str,
+        amount: Decimal,
+    ) -> PostgresWriteSideMeasurementDelivery:
+        """Execute traced PAY with separate opt-in elapsed evidence.
+
+        Supported measured interpretation:
+            Stage 4B.2 supports this evidence only for PRE_TRANSACTION with
+            the current optimistic/OCC admission and IN_TRANSACTION with the
+            current concrete PostgreSQL pessimistic admission. Other placement
+            and admission cross-combinations are not an interpretation-safe
+            Stage 4B.2 measurement surface.
+
+        Returns:
+            Result-first delivery whose producer value is the exact current
+            ``PostgresWriteSideExecution`` and whose measurement is constructed
+            after normal producer return.
+
+        Failure behavior:
+            Existing producer, trace, UOW, and finalization exceptions propagate
+            unchanged. Post-return measurement failure cannot rewrite the
+            traced producer value.
+
+        Non-goals:
+            This method does not add timing to the trace, persist evidence,
+            authorize retry, or alter the existing traced PAY API.
+        """
+        trace_collector = _PostgresWriteSideTraceCollector(
+            self._config.validation_placement
+        )
+        return self._execute_command_with_measurement(
+            request_id=request_id,
+            order_id=order_id,
+            amount=amount,
+            command_type=CommandType.PAY,
+            build_candidate_event=lambda aggregate: aggregate.pay(
+                request_id,
+                amount,
+            ),
+            trace_collector=trace_collector,
         )

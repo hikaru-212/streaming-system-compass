@@ -12,13 +12,13 @@ Use roadmap documents to understand:
 * what depends on what
 * which features are intentionally deferred
 * how the project moves from durable truth toward runtime governance
-* how the project has completed Stage 4B and is entering Stage 4B.1 DiagnosticTrace / ResolutionTrace work
+* how the project has completed Stage 4B.2 measurement and bounded empirical cost-evidence work and reached parallel Stage 4B.3 and Stage 4B.5 foundation work
 
 ---
 
 ## Completed Baseline
 
-The project has completed the baseline sequence through Stage 4B:
+The project has completed the baseline sequence through Stage 4B.2:
 
 * Stage 1 — Transactional Semantic Core
 * Stage 2 — Compass Layer 1 Write-side Validation
@@ -30,6 +30,8 @@ The project has completed the baseline sequence through Stage 4B:
 * Stage 3.5E — Durable History and Permission Hardening
 * Stage 4A — SemanticOutcome Core
 * Stage 4B — DecisionReceipt / Runtime Evidence Record
+* Stage 4B.1 — DiagnosticTrace / ResolutionTrace
+* Stage 4B.2 — Measurement Evidence
 
 Detailed sequencing remains in [Implementation Roadmap](implementation_roadmap.md).
 
@@ -41,11 +43,22 @@ Completed implementation details from Stage 3.5B onward are preserved in [Implem
 * [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 * [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 * [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
+* [Stage 4B.1 Implementation Notes](../implementation_notes/stage_4b_1/)
+* [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
 
 Stage 4B PR1–PR7 completed the DecisionReceipt boundary, contract, generic and
 producer mapping, strict serializer, storage-neutral persistence contracts,
 and PostgreSQL persistence foundation. Automatic materialization and
 reconciliation remain deferred.
+
+Stage 4B.1 PR1–PR7 completed the producer-specific DiagnosticTrace /
+ResolutionTrace boundary, PostgreSQL write-side execution characterization,
+immutable write-side trace contract, traced Result + Trace integration, and
+closeout. Stage 4B.2 PR1–PR8 then completed producer-specific measurement,
+controlled comparison, explanatory characterization, bounded concurrency
+evidence, and closeout. Stage 4B.3 and Stage 4B.5 are the next separately owned
+Stage 4 foundation responsibilities and may proceed in parallel; neither has
+begun.
 
 ---
 
@@ -75,13 +88,24 @@ The deferred architecture backlog should be read after the main roadmaps. It doe
 
 ## Current Roadmap Position
 
-Current implementation focus:
+Completed stage and next Stage 4 foundation work:
 
 ```text
-Stage 4B.1 — DiagnosticTrace / ResolutionTrace
+Stage 4B.2
+= COMPLETE / CLOSED
+
+Stage 4B.3
+= PROJECTION TRUST BOUNDARY AND CONTINUATION / NOT STARTED
+
+Stage 4B.5
+= ORDER CORRECTNESS CONTRACT V0 / NOT STARTED
+
+Stage 4B.3 and Stage 4B.5
+= SEPARATELY OWNED PARALLEL FOUNDATION WORK
 ```
 
-Stage 4B is complete. It starts later work from a stable evidence foundation:
+Stage 4B, Stage 4B.1, and Stage 4B.2 are complete. Stage 4B.2 consumed a stable
+semantic and execution-topology evidence foundation:
 
 - raw technical status has a stable SemanticOutcome interpretation layer
 - read-side / snapshot observations preserve their observation boundaries
@@ -89,7 +113,10 @@ Stage 4B is complete. It starts later work from a stable evidence foundation:
 - identity evidence hardening is preserved in durable receipt contracts
 - producer-created flags remain `NOT_EVALUATED`
 - serializer v1 and explicit caller-owned persistence are implemented
-- traces remain separate and begin in Stage 4B.1
+- traces remain producer-specific and separate from measurement evidence
+- Stage 4B.2 completed one-execution measurement semantics, controlled
+  strategy comparison, explanatory characterization, and bounded concurrency
+  evidence without creating production policy
 
 ---
 
@@ -111,6 +138,7 @@ semantic truth
 → SemanticOutcome core
 → DecisionReceipt
 → DiagnosticTrace / ResolutionTrace
+→ Measurement Evidence
 → action safety demo
 → later production and agent-facing hardening
 ```
@@ -161,9 +189,10 @@ Stage 4 proceeds through:
 
 * Stage 4A — SemanticOutcome Core — complete
 * Stage 4B — DecisionReceipt / Runtime Evidence Record — complete
-* Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
-* Stage 4B.2 — Measurement Matrix / Cost Evidence Inventory
-* Stage 4B.5 — Order Domain Policy Contract v0
+* Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary — complete
+* Stage 4B.2 — Measurement Evidence — complete / closed
+* Stage 4B.3 — Projection Trust Boundary and Continuation — parallel / not started
+* Stage 4B.5 — Order Correctness Contract v0 — parallel / not started
 * Stage 4C — RuntimeDecisionPolicy
 * Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 * Stage 4D — StrategySelector / Fast-Path Health Policy
