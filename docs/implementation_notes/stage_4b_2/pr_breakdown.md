@@ -28,8 +28,9 @@ The stage produces descriptive evidence. It does not select an execution
 strategy, authorize retry, define semantic acceptability, implement rate
 limiting, or claim universal production capacity.
 
-The current responsibility authority is [Measurement Vocabulary and
-Ownership](measurement_vocabulary_and_ownership.md).
+The PR1 responsibility authority is [Measurement Vocabulary and
+Ownership](measurement_vocabulary_and_ownership.md). The final completion
+authority is the [Stage 4B.2 Closeout](stage_4b_2_closeout.md).
 
 ## Current Status
 
@@ -38,7 +39,7 @@ Stage 4B.1
 = COMPLETE / CLOSED
 
 Stage 4B.2
-= CURRENT FORMAL DEVELOPMENT STAGE
+= COMPLETE / CLOSED
 
 PR1
 = COMPLETE / MERGED
@@ -56,16 +57,16 @@ PR5
 = COMPLETE / MERGED
 
 PR6
-= COMPLETE
+= COMPLETE / MERGED
 
 post-PR6 supplement
-= COMPLETE / CLOSED
+= COMPLETE / CLOSED / MERGED VIA PR #84
 
 PR7
-= COMPLETE / CLOSED
+= COMPLETE / CLOSED / MERGED VIA PR #85
 
 PR8
-= NEXT / CLOSEOUT
+= COMPLETE / DOCUMENTATION CLOSEOUT
 ```
 
 PR2 does not authorize or begin PR3.
@@ -684,7 +685,7 @@ do not claim saturation characterization without human review.
 
 ```text
 PR8
-= NEXT / CLOSEOUT
+= COMPLETE / DOCUMENTATION CLOSEOUT
 ```
 
 ### Branch
@@ -749,6 +750,13 @@ It is complete when:
 
 If Level-C characterization is not meaningful in the available environment,
 the stage stops for human review rather than silently closing as vocabulary-only.
+
+The accepted PR8 closeout records all eight criteria as satisfied:
+
+```text
+Stage 4B.2
+= COMPLETE / CLOSED
+```
 
 ## Stage-Wide Non-Goals
 

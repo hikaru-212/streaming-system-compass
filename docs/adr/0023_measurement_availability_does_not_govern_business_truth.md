@@ -9,7 +9,9 @@ Accepted
 ## Implementation Status
 
 Stage 4B.2 PR3 implements the immutable result-first availability contract.
-Production measurement collection and delivery remain assigned to PR4.
+PR4 implements the explicit production measurement collection and delivery
+surface while preserving existing producer behavior. Stage 4B.2 is complete
+and closed; this implementation status does not change the accepted decision.
 
 ---
 

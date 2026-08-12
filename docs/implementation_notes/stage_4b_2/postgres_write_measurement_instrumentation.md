@@ -9,12 +9,13 @@ PR3 immutable contract
 = COMPLETE / MERGED
 
 PR4 production instrumentation
-= IMPLEMENTED
-+ DETERMINISTIC UNIT VALIDATION COMPLETE
-+ AWAITING HUMAN REVIEW
+= COMPLETE / MERGED
 
 PR5 measurement correctness validation
-= NOT STARTED
+= COMPLETE / MERGED
+
+Stage 4B.2
+= COMPLETE / CLOSED
 ```
 
 This note is the formal Stage 4B.2 PR4 implementation record. It documents how

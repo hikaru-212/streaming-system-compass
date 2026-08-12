@@ -2,7 +2,21 @@
 
 [← Back to Stage 4B.2](README.md)
 
-## Current Status
+## Status and Authority
+
+```text
+Stage 4B.2
+= COMPLETE / CLOSED
+
+PR8
+= COMPLETE / DOCUMENTATION CLOSEOUT
+
+current completion authority
+= Stage 4B.2 Closeout
+```
+
+The following block preserves the PR1 acceptance-time status. It is historical
+chronology rather than the current repository state.
 
 ```text
 Stage 4A
@@ -33,8 +47,9 @@ bounded concurrency characterization
 = not executed
 ```
 
-This document is the current Stage 4B.2 PR1 planning authority. It supersedes
-the historical pre-Stage-4B.1 draft wording in this same file.
+This document is the historical Stage 4B.2 PR1 planning authority. It
+supersedes the pre-Stage-4B.1 draft wording in this same file. The current stage
+completion authority is the [Stage 4B.2 Closeout](stage_4b_2_closeout.md).
 
 PR1 documents responsibility, source-grounded candidate boundaries, empirical
 goals, methodology constraints, deferrals, and the downstream PR sequence. It

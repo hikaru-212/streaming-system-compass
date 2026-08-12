@@ -9,7 +9,7 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the completion of Stage 4B.1:
+This version reflects the project position after the completion of Stage 4B.2:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
@@ -18,7 +18,10 @@ This version reflects the project position after the completion of Stage 4B.1:
 - Stage 4A SemanticOutcome core is complete.
 - Stage 4B DecisionReceipt PR1–PR7 is complete.
 - Stage 4B.1 DiagnosticTrace / ResolutionTrace PR1–PR7 is complete.
-- Stage 4B.2 Measurement Evidence is now the current formal development stage.
+- Stage 4B.2 Measurement Evidence PR1–PR8 is complete and closed.
+- Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
+  Correctness Contract v0 are separately owned parallel Stage 4 foundation
+  work; neither has begun.
 - Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
@@ -51,6 +54,7 @@ This means:
 - Stage 4A is complete as the SemanticOutcome core.
 - Stage 4B is complete as the DecisionReceipt evidence and persistence foundation.
 - Stage 4B.1 is complete as the bounded producer-specific DiagnosticTrace / ResolutionTrace stage.
+- Stage 4B.2 is complete as the producer-specific measurement and bounded empirical cost-evidence stage.
 
 Detailed completed-stage and current-stage records now live under:
 
@@ -63,14 +67,17 @@ Detailed completed-stage and current-stage records now live under:
 - [Stage 4B.1 Implementation Notes](../implementation_notes/stage_4b_1/)
 - [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
 
-The current major focus is:
+The completed stage and next Stage 4 foundation work are:
 
-- **Stage 4B.2 — Measurement Evidence**
+- **Stage 4B.2 — COMPLETE / CLOSED**
+- **Stage 4B.3 — PARALLEL FOUNDATION WORK / NOT STARTED**
+- **Stage 4B.5 — PARALLEL FOUNDATION WORK / NOT STARTED**
 
-With Stage 4B.1 complete, the current and later sequence is:
+With Stage 4B.2 complete, the later responsibilities are:
 
-- Stage 4B.2 Measurement Evidence
-- Stage 4B.5 Order Correctness Contract v0 and Stage 4C+ runtime governance
+- Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
+  Correctness Contract as separately owned parallel foundation work
+- Stage 4C+ runtime decision governance
 - Stage 5 dual-dimension governance demo / action safety
 - Stage 5+ production and agent-facing hardening
 
@@ -94,9 +101,11 @@ The project should evolve from:
 12. durable history immutability and permission hardening
 13. runtime semantic governance / SemanticOutcome core
 14. decision receipts / runtime evidence
-15. strategy selection and retry governance
-16. action safety gate / dual-dimension governance demo
-17. later production and agent-facing hardening
+15. producer-specific trace and measurement evidence
+16. parallel projection trust continuation and machine-readable order correctness contract work
+17. runtime decision, strategy selection, and retry governance
+18. action safety gate / dual-dimension governance demo
+19. later production and agent-facing hardening
 
 This order is intentional.
 
@@ -626,7 +635,9 @@ Stage 4A — SemanticOutcome Core
 Stage 4B — DecisionReceipt / Runtime Evidence Record
 Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 Stage 4B.2 — Measurement Evidence
-Stage 4B.5 — Order Correctness Contract v0
+Parallel Stage 4 foundation work:
+  Stage 4B.3 — Projection Trust Boundary and Continuation
+  Stage 4B.5 — Order Correctness Contract v0
 Stage 4C — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 Stage 4D — StrategySelector / Fast-Path Health Policy
@@ -637,9 +648,10 @@ This sequence is intentionally staged.
 
 Compass should first define semantic meaning, then preserve decision evidence,
 then preserve producer-specific execution-topology evidence, then measure bounded
-execution cost and obtain empirical evidence, then define intended order
-correctness, then decide runtime action, then align Layer 1 / Layer 2 outcome
-families, then choose execution strategy, and only then govern retries.
+execution cost and obtain empirical evidence. Stage 4B.3 projection-trust work
+and Stage 4B.5 order-correctness work may then proceed in parallel as separately
+owned foundation responsibilities. Stage 4C+ runtime decisions, outcome-family
+alignment, strategy selection, and retry governance remain downstream.
 
 ---
 
@@ -748,8 +760,9 @@ persistence, measurement evidence, retry policy, or governance orchestration.
 
 ## Stage 4B.2 — Measurement Evidence
 
-**Status:** Current formal development stage. PR1 is documentation only. See the
-[Stage 4B.2 implementation notes](../implementation_notes/stage_4b_2/).
+**Status:** Complete and closed through PR8. See the
+[Stage 4B.2 implementation notes](../implementation_notes/stage_4b_2/) and
+[Stage 4B.2 closeout](../implementation_notes/stage_4b_2/stage_4b_2_closeout.md).
 
 ### Goal
 
@@ -817,6 +830,22 @@ The bounded Stage 4B.2 experiments are not a production benchmark suite,
 continuous regression system, performance dashboard, metrics backend, or
 automatic optimization platform. Environment-scoped empirical observations do
 not become policy merely because one composition measured lower cost.
+
+---
+
+## Stage 4B.3 — Projection Trust Boundary and Continuation
+
+### Status
+
+Separately owned parallel Stage 4 foundation work. Not started.
+
+### Goal
+
+Stage 4B.3 owns the high-level Projection Trust Boundary and Continuation
+responsibility. Its detailed design and implementation shape belong to
+separately reviewed stage-specific work, not this sequencing update.
+
+Stage 4B.3 does not impose an ordering on the separately owned Stage 4B.5 work.
 
 ---
 
@@ -1189,7 +1218,9 @@ Runtime Semantic Governance
   4B DecisionReceipt / Runtime Evidence Record
   4B.1 DiagnosticTrace / ResolutionTrace Boundary
   4B.2 Measurement Evidence
-  4B.5 Order Correctness Contract v0
+  parallel Stage 4 foundation work
+    4B.3 Projection Trust Boundary and Continuation
+    4B.5 Order Correctness Contract v0
   4C RuntimeDecisionPolicy
   4C.5 Layer 1 / Layer 2 Outcome Alignment
   4D StrategySelector / Fast-Path Health Policy
@@ -1220,7 +1251,9 @@ durable truth
 → durable history hardening
 → runtime semantic governance
 → decision receipts / runtime evidence
-→ strategy selection and retry governance
+→ trace and measurement evidence
+→ parallel projection trust continuation and machine-readable correctness contract work
+→ runtime decision, strategy selection, and retry governance
 → action safety / dual-dimension governance demo
 ```
 
@@ -1244,8 +1277,10 @@ technical correctness evidence
 → SemanticOutcome
 → DecisionReceipt
 → DiagnosticTrace / ResolutionTrace
-→ Measurement Matrix
-→ Policy Contract
+→ Measurement Evidence
+→ parallel Stage 4 foundation work:
+  Projection Trust Boundary and Continuation
+  Order Correctness Contract
 → RuntimeDecisionPolicy
 → StrategySelector
 → RetryGovernance

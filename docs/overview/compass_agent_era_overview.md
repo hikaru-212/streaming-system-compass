@@ -19,7 +19,10 @@
   `ResolutionTrace` contracts exist, and the PostgreSQL write-side traced APIs
   return Result + Trace; snapshot traced-resolver runtime integration remains
   intentionally deferred.
-- Stage 4B.2 measurement / cost evidence is next.
+- Stage 4B.2 measurement / cost evidence is complete and closed.
+- Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
+  Correctness Contract v0 are separately owned parallel Stage 4 foundation
+  work.
 - Policy, strategy selection, retry governance, action authorization, and
   external action execution remain later work.
 

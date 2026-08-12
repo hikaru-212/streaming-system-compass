@@ -27,7 +27,7 @@ It now also serves as the reference frame for an executable baseline covering:
 - Stage 4A SemanticOutcome core as completed runtime semantic interpretation work
 - Stage 4B DecisionReceipt PR1–PR7 as a completed runtime-evidence and persistence foundation
 - [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md) as a completed producer-specific trace stage, with snapshot runtime integration intentionally deferred and PostgreSQL write-side Result + Trace integration complete
-- [Stage 4B.2 Measurement Evidence](implementation_notes/stage_4b_2/README.md) as the current producer-measurement and bounded empirical cost-evidence stage
+- [Stage 4B.2 Measurement Evidence](implementation_notes/stage_4b_2/README.md) as a completed producer-measurement and bounded empirical cost-evidence stage
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -61,10 +61,17 @@ The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **S
 
 Stage 3.5E is now complete at the minimal actor / permission boundary level.
 
-The current formal development focus is:
+Stage 4B.2 is complete and closed. Its final completion authority is the
+[Stage 4B.2 closeout](implementation_notes/stage_4b_2/stage_4b_2_closeout.md).
 
-- [Stage 4B.2 Measurement Evidence](implementation_notes/stage_4b_2/README.md)
-- later policy, strategy selection, and retry governance in roadmap order
+The next Stage 4 foundation work is:
+
+- Stage 4B.3 — Projection Trust Boundary and Continuation
+- Stage 4B.5 — Order Correctness Contract v0
+- later runtime policy, strategy selection, and retry governance in roadmap order
+
+Stage 4B.3 and Stage 4B.5 are separately owned parallel foundation work. They
+have not begun.
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
 Stage 4B preserves selected evidence through explicit mapping, serialization,
@@ -82,8 +89,11 @@ runtime integration, records projection-worker trace as `DO NOT ADD` for the
 stage, and completes producer-specific PostgreSQL write-side Result + Trace
 integration. The
 [Stage 4B.1 closeout](implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
-is the current completion authority for Stage 4B.1, and Stage 4B.2 Measurement
-Evidence is current. Separately, the repository has
+is the current completion authority for Stage 4B.1. Stage 4B.2 Measurement
+Evidence is complete and closed. Stage 4B.3 Projection Trust Boundary and
+Continuation and Stage 4B.5 Order Correctness Contract v0 are the next
+separately owned Stage 4 foundation responsibilities and may proceed in
+parallel. Separately, the repository has
 completed an independent
 PostgreSQL Level 1 characterization experiment for a live-but-idle
 DecisionReceipt transaction owner and a blocked uniqueness contender.
@@ -190,7 +200,11 @@ top-level system structure
 → completed minimal actor / permission boundary
 → completed SemanticOutcome core
 → completed DecisionReceipt foundation
-→ DiagnosticTrace / ResolutionTrace
+→ completed DiagnosticTrace / ResolutionTrace
+→ completed Measurement Evidence
+→ parallel Stage 4 foundation work:
+  Projection Trust Boundary and Continuation
+  Order Correctness Contract
 → runtime decision policy and action safety
 → boundary clarification
 → reasoning derivations

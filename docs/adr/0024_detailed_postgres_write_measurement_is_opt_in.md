@@ -9,9 +9,10 @@ Accepted
 ## Implementation Status
 
 Stage 4B.2 PR3 implements the producer-specific immutable contract without
-changing existing producer APIs. The explicit production measurement-enabled
-surface and its instrumentation remain assigned to PR4. The existing
-unmeasured APIs remain unchanged.
+changing existing producer APIs. PR4 implements the explicit production
+measurement-enabled surface and its instrumentation. The existing unmeasured
+APIs remain unchanged. Stage 4B.2 is complete and closed; this implementation
+status does not change the accepted decision.
 
 ---
 

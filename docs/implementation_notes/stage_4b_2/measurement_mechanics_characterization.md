@@ -9,14 +9,16 @@ PR1 responsibility boundary
 = complete
 
 PR2 deterministic characterization
-= implemented
-+ awaiting human review
+= COMPLETE / MERGED / ACCEPTED
 
 production measurement contract
-= not implemented
+= COMPLETE / MERGED
 
 production instrumentation
-= not implemented
+= COMPLETE / MERGED
+
+Stage 4B.2
+= COMPLETE / CLOSED
 ```
 
 This note records Stage 4B.2 PR2 findings from deterministic, test-owned

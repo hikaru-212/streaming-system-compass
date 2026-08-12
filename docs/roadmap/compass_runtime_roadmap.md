@@ -154,8 +154,11 @@ technical runtime evidence
 Stage 4B then completed the DecisionReceipt contract, mappings, strict
 serialization, and explicit PostgreSQL persistence foundation. Stage 4B.1 then
 completed producer-specific diagnostic and resolution trace boundaries while
-keeping traces separate from receipts. Stage 4B.2 measurement evidence is now
-the current Compass runtime step.
+keeping traces separate from receipts. Stage 4B.2 then completed
+producer-specific measurement, controlled comparison, explanatory
+characterization, and bounded concurrency evidence. Stage 4B.3 and Stage 4B.5
+are the next separately owned Stage 4 foundation responsibilities and may
+proceed in parallel; neither has begun.
 
 ---
 
@@ -169,8 +172,8 @@ Stage 4A made these results semantically interpretable, and Stage 4B made
 selected evidence durable and reviewable, but Compass has not yet become a
 full state-level governance layer.
 
-That means the current question is no longer only whether execution topology can
-be preserved. Stage 4B.2 asks:
+Stage 4B.2 answered the next bounded question after execution topology was
+preserved:
 
 > What did one current PostgreSQL write execution strategy cost, how do the two
 > current correctness-preserving compositions compare under controlled work,
@@ -532,16 +535,19 @@ The capability path is:
 2. record decision evidence at receipt level
 3. preserve detailed failure diagnostics separately
 4. make cost / timing evidence observable
-5. connect outcomes to narrow policy references
+5. advance projection trust continuation and define order correctness references
+   as separately owned parallel foundation work
 6. convert semantic outcomes into runtime decisions
 7. align Layer 1 and Layer 2 outcome families
 8. select execution strategies among semantically acceptable paths
 9. classify retry attempts without assuming same intent
 
-The current Phase 4 position is Stage 4B.2: producer-specific write-side
-measurement semantics, controlled PostgreSQL strategy comparison, and bounded
-concurrency characterization. It does not yet implement policy, strategy
-selection, retry governance, or rate admission.
+Stage 4B.2 is complete and closed after producer-specific write-side
+measurement semantics, controlled PostgreSQL strategy comparison, explanatory
+characterization, and bounded concurrency evidence. Stage 4B.3 and Stage 4B.5
+are separately owned parallel foundation work and have not begun. Stage 4B.2
+did not implement policy, strategy selection, retry governance, or rate
+admission.
 
 ---
 
