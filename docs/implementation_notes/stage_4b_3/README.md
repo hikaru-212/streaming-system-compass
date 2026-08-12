@@ -4,14 +4,17 @@
 
 ## Status
 
-Stage 4B.3 is in documentation-first design. PR1 establishes responsibility,
-evidence boundaries, limitations, and sequencing. It authorizes no production
-code, test, migration, persistence, or runtime-policy change.
+Stage 4B.3 remains evidence-first. PR1 establishes responsibility, evidence
+boundaries, limitations, and sequencing. PR2 implements focused current-mechanics
+characterization tests; human execution of the real-PostgreSQL scenarios remains
+pending. No production source, migration, persistence, or runtime-policy change
+is introduced by PR2.
 
 The current public documents are:
 
 * [Projection Trust Boundary and Continuation](projection_trust_continuation_boundary.md) — PR1 responsibility authority;
-* [PR Breakdown](pr_breakdown.md) — evidence-first delivery sequence.
+* [PR Breakdown](pr_breakdown.md) — evidence-first delivery sequence;
+* [Trust Mechanics Characterization](trust_mechanics_characterization.md) — PR2 executable current-mechanics evidence and limitations.
 
 The responsibility names used by these notes are conceptual. They do not freeze
 future class, field, status, serialization, schema, or table names.

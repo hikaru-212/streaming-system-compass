@@ -371,7 +371,7 @@ def test_process_next_fails_fast_when_projection_state_is_ahead_of_checkpoint(
         worker_name=WORKER_NAME,
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"expected 2, got 1"):
         worker.process_next()
 
     state = projection_store.load_state("order-001")
@@ -518,11 +518,17 @@ def test_worker_name_is_not_independent_projection_progress_identity(
     # This is a sequential identity check, not a competing-worker guarantee.
     # The production boundary remains one active worker per definition/epoch.
     event_store = PostgresEventStore(db_connection)
-    event = make_created_event(
+    created_event = make_created_event(
         request_id="request-shared-progress",
         order_id="order-shared-progress",
     )
-    event_store.append(event, expected_current_version=0)
+    paid_event = make_paid_event(
+        request_id="request-shared-progress-paid",
+        order_id=created_event.order_id,
+        previous_event=created_event,
+    )
+    event_store.append(created_event, expected_current_version=0)
+    event_store.append(paid_event, expected_current_version=1)
     db_connection.commit()
 
     first = PostgresProjectionWorker(
@@ -534,5 +540,25 @@ def test_worker_name_is_not_independent_projection_progress_identity(
         worker_name=f"{WORKER_NAME}-two",
     )
 
-    assert first.process_next().action == "applied"
-    assert second.process_next().action == "no_event"
+    first_result = first.process_next()
+    second_result = second.process_next()
+
+    assert first_result.worker_name == f"{WORKER_NAME}-one"
+    assert first_result.action == "applied"
+    assert first_result.event_sequence == 1
+
+    assert second_result.worker_name == f"{WORKER_NAME}-two"
+    assert second_result.action == "applied"
+    assert second_result.event_sequence == 2
+    assert second_result.projected_version == 2
+
+    progress = PostgresProjectionProgressStore(db_connection).load_progress(
+        projection_name=ORDER_STATE_PROJECTION_NAME,
+        projection_epoch=ORDER_STATE_PROJECTION_EPOCH,
+        order_id=created_event.order_id,
+    )
+
+    assert progress is not None
+    assert progress.last_sequence == 2
+    assert progress.last_event_id == paid_event.event_id
+    assert progress.last_global_position == second_result.global_position
