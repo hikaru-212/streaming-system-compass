@@ -21,7 +21,7 @@ This version reflects the project position after the completion of Stage 4B.2:
 - Stage 4B.2 Measurement Evidence PR1–PR8 is complete and closed.
 - Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
   Correctness Contract v0 are separately owned parallel Stage 4 foundation
-  work; neither has begun.
+  work and may proceed independently; Stage 4B.5 PR1 documentation is active.
 - Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
@@ -66,12 +66,13 @@ Detailed completed-stage and current-stage records now live under:
 - [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
 - [Stage 4B.1 Implementation Notes](../implementation_notes/stage_4b_1/)
 - [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
+- [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
 
 The completed stage and next Stage 4 foundation work are:
 
 - **Stage 4B.2 — COMPLETE / CLOSED**
 - **Stage 4B.3 — PARALLEL FOUNDATION WORK / NOT STARTED**
-- **Stage 4B.5 — PARALLEL FOUNDATION WORK / NOT STARTED**
+- **Stage 4B.5 — PARALLEL FOUNDATION WORK / PR1 DOCUMENTATION ACTIVE**
 
 With Stage 4B.2 complete, the later responsibilities are:
 
@@ -851,12 +852,19 @@ Stage 4B.3 does not impose an ordering on the separately owned Stage 4B.5 work.
 
 ## Stage 4B.5 — Order Correctness Contract v0
 
+### Status
+
+Separately owned parallel Stage 4 foundation work. PR1 source-grounded
+documentation is active.
+
 ### Goal
 
 Stage 4B.5 introduces a narrow correctness-contract boundary for the current
 order/payment domain.
 
-The purpose is to connect semantic outcomes to stable rule references and recovery hints without turning Stage 4 into a general policy platform.
+The purpose is to establish stable rule references for source-legitimate live
+constraint feedback without turning Stage 4B.5 into a recovery or general
+policy platform.
 
 Core boundary:
 
@@ -879,6 +887,7 @@ Stage 4B.5 does not implement:
 - cross-domain governance
 - automatic policy evolution
 - agent workflow orchestration
+- recovery, runtime-action selection, or retry governance
 
 ---
 

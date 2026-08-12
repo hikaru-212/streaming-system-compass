@@ -56,9 +56,12 @@ ResolutionTrace boundary, PostgreSQL write-side execution characterization,
 immutable write-side trace contract, traced Result + Trace integration, and
 closeout. Stage 4B.2 PR1–PR8 then completed producer-specific measurement,
 controlled comparison, explanatory characterization, bounded concurrency
-evidence, and closeout. Stage 4B.3 and Stage 4B.5 are the next separately owned
-Stage 4 foundation responsibilities and may proceed in parallel; neither has
-begun.
+evidence, and closeout. Stage 4B.3 and Stage 4B.5 are separately owned Stage 4
+foundation responsibilities and may proceed in parallel. Stage 4B.5 PR1
+documentation is active.
+
+Current Stage 4B.5 work is recorded in the
+[Stage 4B.5 implementation notes](../implementation_notes/stage_4b_5/).
 
 ---
 
@@ -98,7 +101,7 @@ Stage 4B.3
 = PROJECTION TRUST BOUNDARY AND CONTINUATION / NOT STARTED
 
 Stage 4B.5
-= ORDER CORRECTNESS CONTRACT V0 / NOT STARTED
+= ORDER CORRECTNESS CONTRACT V0 / PR1 DOCUMENTATION ACTIVE
 
 Stage 4B.3 and Stage 4B.5
 = SEPARATELY OWNED PARALLEL FOUNDATION WORK
@@ -192,7 +195,7 @@ Stage 4 proceeds through:
 * Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary — complete
 * Stage 4B.2 — Measurement Evidence — complete / closed
 * Stage 4B.3 — Projection Trust Boundary and Continuation — parallel / not started
-* Stage 4B.5 — Order Correctness Contract v0 — parallel / not started
+* Stage 4B.5 — Order Correctness Contract v0 — parallel / PR1 documentation active
 * Stage 4C — RuntimeDecisionPolicy
 * Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 * Stage 4D — StrategySelector / Fast-Path Health Policy
