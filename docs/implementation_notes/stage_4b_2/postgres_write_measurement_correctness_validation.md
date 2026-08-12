@@ -15,8 +15,10 @@ PR5 real PostgreSQL correctness evidence
 = COMPLETE
 
 PR5
-= IMPLEMENTATION AND CORRECTNESS EVIDENCE COMPLETE
-+ READY FOR FINAL HUMAN REVIEW / MERGE
+= COMPLETE / MERGED / ACCEPTED CORRECTNESS FOUNDATION
+
+Stage 4B.2
+= COMPLETE / CLOSED
 ```
 
 This note records Stage 4B.2 PR5 measurement-correctness evidence. It validates

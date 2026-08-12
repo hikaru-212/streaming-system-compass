@@ -15,11 +15,16 @@ PR3 contract decisions
 = implemented
 
 PR3 implementation and validation
-= complete
-+ awaiting human review
+= COMPLETE / MERGED
 
 PR4 production instrumentation
-= not started
+= COMPLETE / MERGED
+
+PR5 correctness validation
+= COMPLETE / MERGED
+
+Stage 4B.2
+= COMPLETE / CLOSED
 ```
 
 This note records the Stage 4B.2 PR3 producer-specific Level-A contract selected

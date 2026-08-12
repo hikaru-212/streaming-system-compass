@@ -58,10 +58,13 @@ This is the shortest complete conceptual arc: **problem → executable authority
 | 14 | [Stage 4B Closeout](../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Confirm the complete mapping, tri-state flag, serializer-v1, persistence, and explicit non-goal baseline. |
 | 15 | [ADR 0022 — Traced Write-Side Execution Fails Closed](../adr/0022_traced_write_side_execution_fails_closed_before_business_commit.md) | Accepted producer-specific decision | Understand why the current PostgreSQL traced APIs synchronously construct valid Result + Trace before clean business-UOW exit. |
 | 16 | [Stage 4B.1 Closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Confirm completed producer-specific traces, intentional non-integrations, and the Stage 4B.2 handoff. |
+| 17 | [Stage 4B.2 Closeout](../implementation_notes/stage_4b_2/stage_4b_2_closeout.md) | Stage closeout | Confirm producer-specific measurement, valid Level-B and Level-C evidence, bounded explanation, limitations, and the no-policy handoff. |
 
-Stage 4B and Stage 4B.1 are complete, but mapping does not automatically
-materialize or persist a receipt. Stage 4B.2 measurement evidence is next;
-policy, strategy, retry, action authorization, and execution remain later work.
+Stage 4B, Stage 4B.1, and Stage 4B.2 are complete, but mapping does not
+automatically materialize or persist a receipt, and measurement evidence does
+not create production policy. Stage 4B.3 and Stage 4B.5 are the next separately
+owned Stage 4 foundation responsibilities and may proceed in parallel; policy,
+strategy, retry, action authorization, and execution remain later work.
 
 ## 6. Choose by Professional Background
 
@@ -123,7 +126,7 @@ Completion below means the repository's bounded baseline, not production complet
 | Stage 4A `SemanticOutcome` | Completed | Interprets evidence; does not execute policy, strategy, retry, or action. |
 | Stage 4B `DecisionReceipt` | Completed | Generic and producer mapping, tri-state flags, strict serializer v1, storage-neutral contracts, and explicit caller-owned PostgreSQL persistence exist; automatic materialization does not. |
 | Stage 4B.1 `DiagnosticTrace` / `ResolutionTrace` | Completed | Producer-specific contracts exist and PostgreSQL write-side tracing is integrated; snapshot runtime integration, projection-worker tracing, persistence, and a generic abstraction remain deferred. |
-| Stage 4B.2 measurement / cost evidence | Next | Must remain distinct from Stage 4B.1 execution topology and later policy. |
+| Stage 4B.2 measurement / cost evidence | Completed | Producer-specific measurement and bounded Level-B/Level-C evidence exist; they remain distinct from Stage 4B.1 execution topology and later policy. |
 | Policy / strategy / retry / action authorization and execution | Future | Must not be projected backward into current runtime behavior. |
 
 ## 8. What Not to Assume

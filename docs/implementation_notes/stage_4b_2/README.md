@@ -15,13 +15,13 @@ Stage 4B.1
 = COMPLETE / CLOSED
 
 Stage 4B.2
-= CURRENT FORMAL DEVELOPMENT STAGE
+= COMPLETE / CLOSED
 
 PR1
-= COMPLETE / DOCUMENTATION ONLY
+= COMPLETE / MERGED
 
 PR2
-= COMPLETE / DETERMINISTIC CHARACTERIZATION ACCEPTED
+= COMPLETE / MERGED
 
 PR3
 = COMPLETE / MERGED
@@ -33,16 +33,16 @@ PR5
 = COMPLETE / MERGED
 
 PR6
-= COMPLETE
+= COMPLETE / MERGED
 
 post-PR6 supplement
-= COMPLETE / CLOSED
+= COMPLETE / CLOSED / MERGED VIA PR #84
 
 PR7
-= COMPLETE / CLOSED
+= COMPLETE / CLOSED / MERGED VIA PR #85
 
 PR8
-= NEXT / CLOSEOUT
+= COMPLETE / DOCUMENTATION CLOSEOUT
 ```
 
 At PR1 completion:
@@ -73,8 +73,9 @@ now completes deterministic source-boundary correctness, measured/unmeasured
 parity, and real PostgreSQL compatibility evidence. PR6 completes the fixed
 Level-B controlled PostgreSQL comparison and its descriptive empirical report.
 PR7 now completes the bounded Level-C PostgreSQL concurrency characterization,
-its valid canonical evidence, and the release-skew validity review. PR8 is next
-for final Stage 4B.2 closeout; the stage is not yet marked complete.
+its valid canonical evidence, and the release-skew validity review. PR8 records
+the final closeout and documentation/status alignment. Stage 4B.2 is complete
+and closed.
 
 ## Purpose
 
@@ -145,16 +146,21 @@ separate from `PostgresWriteSideExecutionTrace`, `SemanticOutcome`,
 
 | Document | Role |
 |---|---|
-| [Measurement Vocabulary and Ownership](measurement_vocabulary_and_ownership.md) | Current PR1 responsibility authority, source-grounded candidate boundaries, methodology constraints, persistence deferrals, non-goals, and stop conditions. |
+| [Measurement Vocabulary and Ownership](measurement_vocabulary_and_ownership.md) | Historical PR1 responsibility authority, source-grounded candidate boundaries, methodology constraints, persistence deferrals, non-goals, and stop conditions. |
 | [Measurement Mechanics Characterization](measurement_mechanics_characterization.md) | PR2 deterministic fake-clock findings for timer boundaries, overlap, absence, current early-exit topology, finalization, exception preservation, and safe post-UOW delivery constraints. |
 | [PostgreSQL Write Measurement Contract](postgres_write_measurement_contract.md) | PR3 producer-specific immutable contract, nanosecond representation, four-state phase semantics, result-first availability, completeness invariants, and opt-in capability boundary. |
 | [PostgreSQL Write Measurement Instrumentation](postgres_write_measurement_instrumentation.md) | PR4 production instrumentation, explicit measured APIs, shared-algorithm seams, clock and failure behavior, canonical composition scope, frozen baseline, and PR5 handoff. |
 | [PostgreSQL Write Measurement Correctness Validation](postgres_write_measurement_correctness_validation.md) | PR5 eight-case phase population, deterministic source-boundary and parity evidence, real PostgreSQL compatibility method, executed results, limitations, and PR6 handoff. |
 | [PostgreSQL Strategy Comparison Method](postgres_strategy_comparison_method.md) | PR6 fixed protocol, lifecycle, timing boundaries, scenarios, cohort separation, evidence schema, validation, and stop conditions. |
 | [PostgreSQL Strategy Comparison Report](postgres_strategy_comparison_report.md) | PR6 canonical Level-B evidence, descriptive PRE/IN findings, mechanism interpretation, observer effect, limitations, non-conclusions, and PR7 boundary. |
+| [PostgreSQL Idempotency and Transaction-Lifecycle Characterization](postgres_idempotency_transaction_lifecycle_characterization.md) | Post-PR6 Layer-1/2/3 explanatory method, current-path lifecycle controls, evidence boundaries, and stop rule. |
+| [PostgreSQL Idempotency and Transaction-Lifecycle Supplemental Report](postgres_idempotency_transaction_lifecycle_report.md) | Valid post-PR6 Layer-1/2/3 evidence, bounded explanation, limitations, counterfactual deferrals, and supplemental closeout. |
 | [PostgreSQL Bounded Concurrency Method](postgres_bounded_concurrency_method.md) | PR7 bounded synchronized-burst protocol, preflight, runtime, smoke, canonical evidence contract, execution lineage, validity review, and closeout boundary. |
 | [PostgreSQL Bounded Concurrency Report](postgres_bounded_concurrency_report.md) | PR7 canonical Level-C evidence, separate general-concurrency and hot-stream findings, phase placement, release-skew review, limitations, and future load-admission boundary. |
 | [Stage 4B.2 PR Breakdown](pr_breakdown.md) | PR1–PR8 branch sequence, responsibilities, dependencies, non-goals, and stop conditions. |
+| [Why Strategy Cost Requires Empirical and Explanatory Evidence](why_strategy_cost_requires_empirical_and_explanatory_evidence.md) | Public rationale for empirical comparison, separate explanation, evidence qualification, and the no-winner boundary. |
+| [Why Bounded Concurrency Evidence Precedes Load Admission](why_bounded_concurrency_evidence_precedes_load_admission.md) | Public rationale for Level-C evidence before separately owned production load-admission policy. |
+| [Stage 4B.2 Closeout](stage_4b_2_closeout.md) | Final Stage 4B.2 completion authority, accepted evidence boundaries, limitations, deferrals, and neutral Stage 4B.5 handoff. |
 
 ## Predecessor and Roadmap
 
@@ -174,6 +180,6 @@ preserving the existing unmeasured APIs and shared PRE/IN algorithms. PR5 adds
 correctness tests and their evidence record without changing production code.
 PR6 records the fixed Level-B comparison without selecting a strategy. PR7 now
 records the bounded worker-count characterization without selecting a strategy
-or deriving capacity or rate admission. PR8 remains responsible for final
-Stage 4B.2 closeout. No completed PR through PR7 adds production telemetry,
-strategy policy, retry governance, or rate-admission policy.
+or deriving capacity or rate admission. PR8 records the final Stage 4B.2
+closeout without adding production telemetry, strategy policy, retry governance,
+or rate-admission policy.

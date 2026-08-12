@@ -21,15 +21,28 @@ For project-wide sequencing, see:
 
 ## Current Position
 
-Stage 4A, Stage 4B PR1–PR7, and Stage 4B.1 PR1–PR7 are complete.
+Stage 4A, Stage 4B PR1–PR7, Stage 4B.1 PR1–PR7, and Stage 4B.2 PR1–PR8 are
+complete.
 
 Stage 4 Interlude PR0 — test helper consolidation before Stage 4B — is complete.
 
-The current formal development stage is:
+Stage 4B.2 is complete and closed. Its final delivery record is the
+[Stage 4B.2 closeout](stage_4b_2/stage_4b_2_closeout.md).
+
+The next Stage 4 foundation work is:
 
 ```text
-Stage 4B.2 — Measurement Evidence
+Stage 4B.3
+= Projection Trust Boundary and Continuation
+
+Stage 4B.5
+= Order Correctness Contract v0
+
+Stage 4B.3 and Stage 4B.5
+= SEPARATELY OWNED PARALLEL FOUNDATION WORK
 ```
+
+Neither stage has begun.
 
 Stage 4A introduced the stable `SemanticOutcome` core, runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
 
@@ -39,9 +52,9 @@ Stage 4B.1 preserves bounded producer-specific execution topology separately
 from primary results and receipts. Its completed delivery record is the
 [Stage 4B.1 closeout](stage_4b_1/stage_4b_1_closeout.md).
 
-Stage 4B.2 begins with a documentation-only responsibility boundary for
-producer-specific single-execution measurement, controlled PostgreSQL strategy
-comparison, and bounded concurrency characterization. Its current entry point is
+Stage 4B.2 completed producer-specific single-execution measurement,
+controlled PostgreSQL strategy comparison, explanatory characterization,
+bounded concurrency evidence, and documentation closeout. Its entry point is
 the [Stage 4B.2 implementation index](stage_4b_2/README.md).
 
 Stage 4B should not reopen Stage 4A mapping scope unless receipt requirements expose a missing evidence contract.
@@ -49,9 +62,10 @@ Stage 4B should not reopen Stage 4A mapping scope unless receipt requirements ex
 Stage 4B should also not collapse later Stage 4 layers into the receipt boundary.
 
 ```text
-Current and later Stage 4 work remains separate:
-Stage 4B.2 — Measurement Evidence
-Stage 4B.5 — Order Domain Policy Contract v0
+Completed and later Stage 4 work remains separate:
+Stage 4B.2 — Measurement Evidence — COMPLETE / CLOSED
+Stage 4B.3 — Projection Trust Boundary and Continuation — PARALLEL / NOT STARTED
+Stage 4B.5 — Order Correctness Contract v0 — PARALLEL / NOT STARTED
 Stage 4C   — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 Stage 4D   — StrategySelector / Fast-Path Health Policy
