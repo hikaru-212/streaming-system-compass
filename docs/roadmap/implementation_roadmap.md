@@ -9,7 +9,8 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the completion of Stage 4B.2:
+This version reflects the project position after the completion of Stage 4B.2
+and the start of Stage 4B.3 PR1 documentation work:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
@@ -19,9 +20,12 @@ This version reflects the project position after the completion of Stage 4B.2:
 - Stage 4B DecisionReceipt PR1–PR7 is complete.
 - Stage 4B.1 DiagnosticTrace / ResolutionTrace PR1–PR7 is complete.
 - Stage 4B.2 Measurement Evidence PR1–PR8 is complete and closed.
-- Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
-  Correctness Contract v0 are separately owned parallel Stage 4 foundation
-  work; neither has begun.
+- Stage 4B.3 Projection Trust Boundary and Continuation is in progress through
+  documentation-only PR1 responsibility-boundary work; no production Stage
+  4B.3 runtime implementation exists yet.
+- Stage 4B.5 Order Correctness Contract v0 remains separately owned parallel
+  Stage 4 foundation work and has not started. No semantic dependency is
+  created between Stage 4B.3 and Stage 4B.5.
 - Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
@@ -66,14 +70,15 @@ Detailed completed-stage and current-stage records now live under:
 - [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
 - [Stage 4B.1 Implementation Notes](../implementation_notes/stage_4b_1/)
 - [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
+- [Stage 4B.3 Implementation Notes](../implementation_notes/stage_4b_3/)
 
-The completed stage and next Stage 4 foundation work are:
+The completed stage and current Stage 4 foundation work are:
 
 - **Stage 4B.2 — COMPLETE / CLOSED**
-- **Stage 4B.3 — PARALLEL FOUNDATION WORK / NOT STARTED**
+- **Stage 4B.3 — IN PROGRESS / PR1 DOCUMENTATION AND RESPONSIBILITY BOUNDARY**
 - **Stage 4B.5 — PARALLEL FOUNDATION WORK / NOT STARTED**
 
-With Stage 4B.2 complete, the later responsibilities are:
+With Stage 4B.2 complete, the current and later responsibilities are:
 
 - Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
   Correctness Contract as separately owned parallel foundation work
@@ -837,7 +842,9 @@ not become policy merely because one composition measured lower cost.
 
 ### Status
 
-Separately owned parallel Stage 4 foundation work. Not started.
+In progress through PR1 documentation and responsibility-boundary work. No
+production Stage 4B.3 runtime implementation exists yet. See the
+[Stage 4B.3 implementation notes](../implementation_notes/stage_4b_3/).
 
 ### Goal
 
@@ -845,7 +852,8 @@ Stage 4B.3 owns the high-level Projection Trust Boundary and Continuation
 responsibility. Its detailed design and implementation shape belong to
 separately reviewed stage-specific work, not this sequencing update.
 
-Stage 4B.3 does not impose an ordering on the separately owned Stage 4B.5 work.
+Stage 4B.3 does not impose an ordering or semantic dependency on the separately
+owned Stage 4B.5 work.
 
 ---
 

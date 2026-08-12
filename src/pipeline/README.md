@@ -152,10 +152,10 @@ The current PostgreSQL-backed projection worker connects:
 
 ```text
 order_events
-→ PostgresProjectionEventSource
+→ PostgresProjectionEligibleEventSource
 → canonical reducer
 → PostgresProjectionStore
-→ PostgresCheckpointStore
+→ PostgresProjectionProgressStore
 ```
 
 and persists:
@@ -163,19 +163,21 @@ and persists:
 ```text
 projection state
 +
-checkpoint progress
+exact-next per-order progress
 ```
 
 inside one read-side transaction boundary.
 
-The PostgreSQL-backed worker uses:
+The repaired worker uses:
 
 ```text
-cursor_kind = GLOBAL_POSITION
-cursor_value = latest processed order_events.global_position
+(projection_name = order_state_projection, projection_epoch = 1, order_id)
+→ last applied local sequence + accepted-event lineage
 ```
 
-as the first durable accepted-history consumption strategy.
+`global_position` remains accepted-event lineage and deterministic scheduling
+metadata. It is not a restart cursor or complete committed-history frontier.
+Legacy global checkpoint rows do not bootstrap repaired progress.
 
 Durable replay validation compares:
 
@@ -198,12 +200,15 @@ Snapshot-assisted state resolution reconstructs read-side state through:
 ```text
 qualified projection snapshot
 → hydrate snapshot state
-→ load tail events after snapshot.source_global_position
+→ load same-order tail events after snapshot.source_event_sequence
 → replay tail through canonical reducer
 → resolved projection state
 ```
 
-This prepares the project for future Compass Layer 2 projection-drift validation without implementing full Layer 2 runtime governance yet.
+Stage 4A and Stage 4B now map the current read-side validation evidence into
+`SemanticOutcome` and `DecisionReceipt`. Those mappings remain point-in-time
+governance evidence; they do not establish projection trust continuation or
+runtime action authority.
 
 For the higher-level projection design, see:
 
@@ -212,6 +217,7 @@ For the higher-level projection design, see:
 - [Global-Position Projection Worker Boundary](../../docs/boundary_notes/global_position_projection_worker_boundary.md)
 - [ADR 0013 — Snapshot Runtime Eligibility and Validation Receipt Boundary](../../docs/adr/0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md)
 - [Projection README](projection/README.md)
+- [Stage 4B.3 Projection Trust Boundary](../../docs/implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md)
 
 ---
 
@@ -310,17 +316,20 @@ The Stage 3 in-memory projection baseline supports:
 - checkpoint-aware sequencing
 - deterministic replay / rebuild through the same runtime path
 
-Stage 3.5C PR4 extends the projection path into a PostgreSQL-backed durable runtime baseline.
+Stage 3.5C PR4 introduced the first PostgreSQL-backed worker. ADR 0020 later
+repaired its progress boundary after the scalar global-position checkpoint was
+shown not to be a commit-safe completeness cursor.
 
 It supports:
 
-- durable accepted-history scanning through `order_events.global_position`
-- storage-side event loading through `PostgresProjectionEventSource`
+- currently visible exact-next accepted-event discovery through `PostgresProjectionEligibleEventSource`
 - shared order-event hydration through `order_event_hydration.py`
 - durable projection state through `PostgresProjectionStore`
-- durable checkpoint progress through `PostgresCheckpointStore`
-- atomic projection-state and checkpoint-progress persistence through `PostgresProjectionWorker`
-- fail-fast handling for projection-state / checkpoint mismatch
+- durable repaired progress through `PostgresProjectionProgressStore`
+- progress identity `(projection_name, projection_epoch, order_id)`
+- atomic projection-state and per-order-progress persistence through `PostgresProjectionWorker`
+- fail-fast handling for projection-state / progress mismatch
+- `global_position` as lineage and scheduling metadata rather than completeness proof
 
 Stage 3.5C PR5 adds durable replay / rebuild validation.
 
@@ -345,10 +354,9 @@ It supports:
 - explicit result states for match, missing snapshot, invalid boundary, tail contract violation, drift, unresolved resolver paths, and compatibility failures
 - aggregate snapshot trust deferral because write-side aggregate snapshots can affect command validation and accepted-history admission
 
-It still does **not yet** include:
+The projection path still does **not yet** include:
 
-- full Compass Layer 2 runtime governance
-- structured `SemanticOutcome`
+- projection trust continuation or durable projection-trust checkpoints
 - runtime decision policy
 - action safety gate
 - out-of-order buffering
@@ -357,9 +365,11 @@ It still does **not yet** include:
 - worker leasing
 - checkpoint row locking
 - multi-worker coordination
-- production database role hardening
+- a production projection runner
 
-Those concerns are intentionally deferred until after the durable read-side and snapshot trust baselines.
+Stage 4A and Stage 4B already provide structured semantic and receipt mappings
+for current validation results. The remaining concerns stay separately owned by
+Stage 4B.3, later runtime-governance stages, or production hardening.
 
 ---
 
@@ -427,20 +437,24 @@ Later, this module will also connect heavily with:
 
 To strengthen write-side and read-side restart semantics beyond the current durable baseline.
 
-### `src/compass/state/`
+### Stage 4B.3 projection trust continuation
 
-To validate projection correctness and checkpoint semantics as a formal Compass Layer 2 runtime subsystem.
+To define whether a previously qualified per-order projection boundary remains
+qualified after one exact-next committed advance. The current `MATCH` and
+`APPLIED` results are inputs to that design, not continuation evidence by
+themselves.
 
 ### Stage 4 runtime governance
 
-To convert validation results into:
+The current foundation already converts selected validation results into:
 
 ```text
 SemanticOutcome
-→ RuntimeDecisionPolicy
-→ RuntimeDecision
-→ ActionSafetyGate
+→ DecisionReceipt
 ```
+
+Later stages own runtime decisions, strategy selection, retry governance, and
+action safety.
 
 ### `chaos_engine/`
 
@@ -466,8 +480,8 @@ At the current stage, the main pipeline-related invariants include:
 - Compass Layer 1 validation must block invalid candidate events before accepted-history mutation
 - admission must reject stale or unprepared writers
 - projection must produce state consistent with processed accepted history
-- projection progress must align with the actual accepted-history cursor
-- PostgreSQL-backed projection must persist projection state and checkpoint progress atomically
+- repaired projection progress must advance by exact-next order-local sequence and accepted-event lineage
+- PostgreSQL-backed projection must persist projection state and per-order progress atomically
 - replay / rebuild must follow the same baseline projection semantics as incremental processing
 - snapshot-assisted replay must not treat snapshot rows as authority
 - snapshot-assisted state resolution must replay tail events through the canonical reducer
@@ -509,4 +523,8 @@ This module is where semantic rules turn into runtime flow.
 
 If the core defines what the system means, the pipeline defines how that meaning moves through time.
 
-After Stage 3.5D, the pipeline layer includes durable write-side orchestration, durable read-side projection orchestration, replay validation, and snapshot-assisted read-side resolution. It remains intentionally short of full Compass Layer 2 governance, structured outcomes, runtime decision policy, and Stage 3.5E permission hardening.
+The pipeline layer includes durable write-side orchestration, durable read-side
+projection orchestration, replay validation, snapshot-assisted read-side
+resolution, and Stage 4A/4B mapping into structured governance evidence. It
+remains intentionally short of projection trust continuation, runtime decision
+policy, strategy selection, retry governance, and action safety.

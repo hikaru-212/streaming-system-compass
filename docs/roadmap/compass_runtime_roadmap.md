@@ -12,7 +12,7 @@ For project-wide implementation sequencing, see:
 
 - [Implementation Roadmap](implementation_roadmap.md)
 
-For completed stage execution notes, see:
+For completed and current stage execution notes, see:
 
 - [Stage 3.5B Implementation Notes](../implementation_notes/stage_3_5b/)
 - [Stage 3.5C Implementation Notes](../implementation_notes/stage_3_5c/)
@@ -20,6 +20,7 @@ For completed stage execution notes, see:
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 - [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 - [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
+- [Stage 4B.3 Implementation Notes](../implementation_notes/stage_4b_3/)
 
 This document focuses on a narrower question:
 
@@ -156,9 +157,11 @@ serialization, and explicit PostgreSQL persistence foundation. Stage 4B.1 then
 completed producer-specific diagnostic and resolution trace boundaries while
 keeping traces separate from receipts. Stage 4B.2 then completed
 producer-specific measurement, controlled comparison, explanatory
-characterization, and bounded concurrency evidence. Stage 4B.3 and Stage 4B.5
-are the next separately owned Stage 4 foundation responsibilities and may
-proceed in parallel; neither has begun.
+characterization, and bounded concurrency evidence. Stage 4B.3 is now in
+progress through documentation-only PR1 responsibility-boundary work; no
+production Stage 4B.3 runtime implementation exists yet. Stage 4B.5 remains
+separately owned parallel foundation work and not started. No semantic
+dependency is created between Stage 4B.3 and Stage 4B.5.
 
 ---
 
@@ -544,10 +547,12 @@ The capability path is:
 
 Stage 4B.2 is complete and closed after producer-specific write-side
 measurement semantics, controlled PostgreSQL strategy comparison, explanatory
-characterization, and bounded concurrency evidence. Stage 4B.3 and Stage 4B.5
-are separately owned parallel foundation work and have not begun. Stage 4B.2
-did not implement policy, strategy selection, retry governance, or rate
-admission.
+characterization, and bounded concurrency evidence. Stage 4B.3 PR1
+documentation and responsibility-boundary work is in progress; no production
+Stage 4B.3 runtime implementation exists yet. Stage 4B.5 remains separately
+owned parallel foundation work and not started, with no semantic dependency
+between the two stages. Stage 4B.2 did not implement policy, strategy selection,
+retry governance, or rate admission.
 
 ---
 

@@ -2,6 +2,16 @@
 
 [← Back to Boundary Notes Index](README.md)
 
+> **Current implementation note:** The body below preserves the original Stage
+> 3 reducer / worker responsibility design. The current PostgreSQL worker is
+> implemented and uses exact-next per-order progress keyed by projection name,
+> epoch, and `order_id`; it does not use the historical scalar checkpoint as its
+> restart boundary. Projection state and per-order progress commit in one
+> worker-owned transaction. Current replay validation is mapped into Stage 4A
+> `SemanticOutcome`, while Stage 4B.3 separately defines projection trust
+> continuation. See [ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+> and the [Stage 4B.3 responsibility boundary](../implementation_notes/stage_4b_3/projection_trust_continuation_boundary.md).
+
 ## Purpose
 
 This note defines the responsibility boundary inside the projection subsystem before the first projection runtime implementation begins.
@@ -30,7 +40,7 @@ For the higher-level module responsibility of projection as a whole, see [Projec
 
 ---
 
-## Current Position
+## Historical Stage 3 Position
 
 The repository already has an executable baseline for:
 
@@ -397,7 +407,8 @@ This makes replay correctness impossible to reason about.
 
 ## Relation to Compass
 
-At the current stage, Compass Layer 1 is still a write-side boundary.
+In this original Stage 3 boundary, Compass Layer 1 was the implemented
+write-side boundary.
 
 It validates whether a candidate event truthfully follows accepted history **before** persistence.
 
@@ -405,17 +416,20 @@ Projection runtime begins only **after** accepted history already exists.
 
 Therefore, the first projection runtime does not re-run write-side Compass Layer 1.
 
-However, this boundary note is intentionally preparing the next stage:
+This boundary note prepared the later stages:
 
 - projection reducer establishes deterministic state evolution
 - projection worker establishes checkpoint-aware runtime orchestration
-- later, Compass Layer 2 can validate projected state correctness
+- later, read-side validation can qualify projected state against accepted history
 
-So the projection boundary is a prerequisite for future state-level Compass validation.
+That prerequisite is now implemented through durable replay validation and its
+Stage 4A mapping. A successful `ReplayValidationResult.MATCH` remains one
+point-in-time state-consistency observation, not a continuation-capable
+validated projection boundary.
 
 ---
 
-## Stage 3 Internal Sequencing
+## Historical Stage 3 Internal Sequencing
 
 Within Stage 3, the implementation should evolve in the following order.
 
