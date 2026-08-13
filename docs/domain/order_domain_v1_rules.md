@@ -447,6 +447,48 @@ This separation keeps rehydration deterministic and simple.
 
 ---
 
+## Semantic Clarification — Event Sequence vs Business-State Version
+
+Event sequence is the aggregate-local ordinal of accepted events. Every newly
+accepted event advances that sequence.
+
+Business-state version is a conceptually distinct generation of meaningful
+business state. It may remain unchanged when an accepted event does not change
+business state, and it is not currently implemented as a separate v1 field.
+
+Current Order v1 has no legal accepted state-preserving event. Therefore the
+current numerical equality:
+
+```text
+aggregate.current_version
+==
+last applied event.sequence
+```
+
+is a v1 implementation/model property. The current `aggregate.current_version`
+field is the implementation's aggregate-local accepted-event stream
+progress/version coordinate. This property must not be generalized as the
+semantic identity:
+
+```text
+event sequence
+==
+business-state version
+```
+
+A pure query is read-only and is not an accepted event:
+
+```text
+read-only query
+!=
+accepted event
+```
+
+A pure query appends no accepted history and therefore advances no event
+sequence.
+
+---
+
 # 8. Replay / Rehydration Rules
 
 ## Rule R1 — Accepted history must be deterministically replayable
