@@ -4,10 +4,10 @@
 
 This directory contains the design philosophy behind **Streaming System + Compass**.
 
-These notes are not ADRs, architecture specifications, or implementation documents. They explain the mental models and working methodology that guide how the project separates meaning, execution, validation, reliability, recovery, and implementation sequencing.
+These notes are not ADRs, architecture specifications, or implementation documents. They explain the mental models and working methodology that guide how the project separates meaning, execution, validation, reliability, recovery, implementation sequencing, and human review responsibility.
 
 The philosophy in this repository did not begin as a formal software-design theory.
-It grew from practical debugging, self-directed system design, and repeated attempts to clarify what each layer should and should not own before implementation.
+It grew from practical debugging, self-directed system design, repeated attempts to clarify what each layer should and should not own before implementation, and the gradual evolution of AI-assisted engineering from conversational support toward repository-aware verification.
 
 ---
 
@@ -24,6 +24,7 @@ It grew from practical debugging, self-directed system design, and repeated atte
 | [AI Suggestions Are Candidate Actions](06_ai_suggestions_are_candidate_actions.md) | Records a methodology case study showing why AI-generated explanations and designs are treated as candidate actions that must pass repository-specific admission before becoming accepted documentation or implementation. |
 | [From Local ETL to Streaming System + Compass](07_from_local_etl_to_streaming_system_compass.md) | Records the project-origin path from local ETL friction and Airflow debugging into Core vs Enablers, semantic correctness, and streaming / event sourcing as the runtime body for Compass. |
 | [Prompt Engineering and the Trade-off Boundary](08_prompt_engineering_and_tradeoff_boundary.md) | Explains why prompt engineering can improve candidate generation but cannot replace project-specific architectural trade-off judgment. |
+| [From Line-by-Line Review to Risk-Based Verification](09_from_line_by_line_review_to_risk_based_verification.md) | Records how review intensity evolved as the architecture stabilized: deep human review remains concentrated around semantic authority and representation design, while bounded propagation and integration work increasingly relies on adversarial tests, repository-wide regression, and explicit blast-radius reasoning. |
 
 ---
 
@@ -38,10 +39,11 @@ It grew from practical debugging, self-directed system design, and repeated atte
 7. [Policy Evolution to Runtime Truth](05_policy_evolution_to_runtime_truth.md)
 8. [AI Suggestions Are Candidate Actions](06_ai_suggestions_are_candidate_actions.md)
 9. [Prompt Engineering and the Trade-off Boundary](08_prompt_engineering_and_tradeoff_boundary.md)
+10. [From Line-by-Line Review to Risk-Based Verification](09_from_line_by_line_review_to_risk_based_verification.md)
 
 This order matters because the philosophy in this repository has two layers:
 
-* first, how the project is actually learned, clarified, and implemented
+* first, how the project is actually learned, clarified, implemented, and reviewed
 * second, the conceptual models that emerged from that process
 
 The methodology note comes first because it explains how unclear concepts are stabilized before implementation.
@@ -83,6 +85,20 @@ better prompt
 ≠ accepted architecture
 ```
 
+The Risk-Based Verification note records the next evolution of that methodology:
+
+```text
+closer to semantic authority
+→ stronger direct human review
+
+frozen upstream contract
++
+bounded downstream propagation
+→ more reliance on adversarial tests, regression, and blast-radius analysis
+```
+
+It does not argue that green tests replace engineering judgment. It records how engineering judgment moves toward the highest-risk boundaries as the architecture becomes more constrained.
+
 ---
 
 ## How These Notes Relate to the Project
@@ -92,6 +108,8 @@ better prompt
 | Definition alignment before implementation | Boundary notes, ADRs, and staged implementation before code expansion |
 | AI suggestions as candidate actions | AI-generated explanations are reviewed against actual schema, dependency direction, and repository boundaries before becoming accepted docs or code |
 | Prompt engineering as candidate shaping | Prompts can improve generated candidates, but architectural admission still depends on project stage, cost, scope, and trade-off judgment |
+| Risk-based review | Semantic / representation changes receive deeper human review; bounded propagation and integration changes rely more heavily on targeted adversarial tests, full regression, and blast-radius checks |
+| Green tests as bounded evidence | A green suite supports the defined contract and regression surface but does not prove that the semantic model itself is universally correct |
 | Input → Bridge → Output | Command → Transactional Pipeline → Accepted Event / Derived State |
 | Core | Domain rules, aggregate legality, event semantics, pure state transition logic |
 | Enablers | Idempotency, validation, concurrency gate, projection worker, checkpointing, recovery mechanisms |
@@ -123,6 +141,8 @@ They explain why the project emphasizes:
 * defensive review before coding
 * AI-assisted design review without surrendering architectural ownership
 * prompt engineering as candidate shaping rather than architectural authority
+* review intensity proportional to semantic authority and blast radius
+* adversarial testing and repository-wide regression as evidence for bounded downstream change
 * future separation between physical infrastructure and semantic governance
 * future connection between policy evolution, runtime admission, structured outcomes, and recovery evidence
 
