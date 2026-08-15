@@ -18,6 +18,7 @@ For project-wide sequencing, see:
 - [Stage 4B — DecisionReceipt / Runtime Evidence Record](./stage_4b/)
 - [Stage 4B.1 — DiagnosticTrace / ResolutionTrace](./stage_4b_1/)
 - [Stage 4B.2 — Measurement Evidence](./stage_4b_2/)
+- [Stage 4B.3 — Projection Trust Boundary and Continuation Closeout](./stage_4b_3/)
 - [Stage 4B.5 — Order Correctness Contract v0](./stage_4b_5/)
 
 ## Current Position
@@ -30,21 +31,23 @@ Stage 4 Interlude PR0 — test helper consolidation before Stage 4B — is compl
 Stage 4B.2 is complete and closed. Its final delivery record is the
 [Stage 4B.2 closeout](stage_4b_2/stage_4b_2_closeout.md).
 
-The remaining Stage 4 foundation work is:
+The current Stage 4 foundation position is:
 
 ```text
 Stage 4B.3
 = Projection Trust Boundary and Continuation
+= COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED
 
 Stage 4B.5
 = Order Correctness Contract v0 — COMPLETE / CLOSED
-
-Stage 4B.3
-= SEPARATELY OWNED / NOT STARTED
 ```
 
-Stage 4B.5 completed without imposing an ordering on the separately owned
-Stage 4B.3 work.
+Stage 4B.3 PR1 responsibility-boundary work and PR2 executable mechanics
+characterization remain complete historical/reference investigation. The
+canonical [ADR 0026 closeout](../adr/0026_projection_trust_continuation_is_not_currently_justified.md)
+records why PR3+ do not proceed. Stage 4B.5 completed in a separately owned
+parallel development stream and remains technically independent from the closed
+Stage 4B.3 stage.
 
 Stage 4A introduced the stable `SemanticOutcome` core, runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
 
@@ -72,7 +75,7 @@ Stage 4B should also not collapse later Stage 4 layers into the receipt boundary
 ```text
 Completed and later Stage 4 work remains separate:
 Stage 4B.2 — Measurement Evidence — COMPLETE / CLOSED
-Stage 4B.3 — Projection Trust Boundary and Continuation — PARALLEL / NOT STARTED
+Stage 4B.3 — Projection Trust Boundary and Continuation — COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED
 Stage 4B.5 — Order Correctness Contract v0 — COMPLETE / CLOSED
 Stage 4C   — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment

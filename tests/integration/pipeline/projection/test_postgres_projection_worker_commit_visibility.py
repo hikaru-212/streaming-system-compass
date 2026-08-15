@@ -2,7 +2,9 @@ from collections.abc import Callable
 from contextlib import closing
 from uuid import uuid4
 
+import pytest
 from psycopg import Connection
+from psycopg import errors
 
 from src.core.order.enums import OrderStatus
 from src.pipeline.projection.order_projection_definition import (
@@ -46,6 +48,97 @@ def load_global_position(
         return None
 
     return int(row[0])
+
+
+def test_commit_failure_prevents_applied_delivery_and_rolls_back_state_and_progress(
+    db_connection: Connection,
+    db_connection_factory: Callable[[], Connection],
+    clean_database: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failure at transaction exit prevents a caller-visible applied result."""
+    run_id = uuid4().hex
+    event = make_created_event(
+        request_id=f"commit-failure-request-{run_id}",
+        order_id=f"commit-failure-order-{run_id}",
+    )
+    worker_name = f"commit-failure-worker-{run_id}"
+
+    PostgresEventStore(db_connection).append(event, expected_current_version=0)
+    db_connection.commit()
+    db_connection.execute(
+        """
+        CREATE TEMPORARY TABLE projection_commit_failure_probe (
+            probe_value INTEGER NOT NULL,
+            CONSTRAINT uq_projection_commit_failure_probe_value
+                UNIQUE (probe_value)
+                DEFERRABLE INITIALLY DEFERRED
+        ) ON COMMIT PRESERVE ROWS
+        """
+    )
+    db_connection.commit()
+
+    projection_store = PostgresProjectionStore(db_connection)
+    progress_store = PostgresProjectionProgressStore(db_connection)
+    worker = PostgresProjectionWorker(
+        db_connection,
+        worker_name=worker_name,
+        projection_store=projection_store,
+        progress_store=progress_store,
+    )
+    advance_progress = progress_store.advance_progress
+    worker_body_completed = False
+
+    def advance_progress_then_schedule_commit_failure(progress) -> None:
+        nonlocal worker_body_completed
+        advance_progress(progress)
+
+        pending_state = projection_store.load_state(event.order_id)
+        pending_progress = progress_store.load_progress(
+            projection_name=ORDER_STATE_PROJECTION_NAME,
+            projection_epoch=ORDER_STATE_PROJECTION_EPOCH,
+            order_id=event.order_id,
+        )
+        assert pending_state is not None
+        assert pending_state.version == 1
+        assert pending_progress is not None
+        assert pending_progress.last_sequence == 1
+
+        # The duplicate is valid until transaction exit because the test-local
+        # unique constraint is initially deferred.
+        db_connection.execute(
+            """
+            INSERT INTO projection_commit_failure_probe (probe_value)
+            VALUES (1), (1)
+            """
+        )
+        worker_body_completed = True
+
+    monkeypatch.setattr(
+        progress_store,
+        "advance_progress",
+        advance_progress_then_schedule_commit_failure,
+    )
+
+    with pytest.raises(errors.UniqueViolation):
+        worker.process_next()
+
+    assert worker_body_completed is True
+
+    with closing(db_connection_factory()) as observer_connection:
+        observer_connection.rollback()
+        observer_projection_store = PostgresProjectionStore(observer_connection)
+        observer_progress_store = PostgresProjectionProgressStore(observer_connection)
+
+        assert observer_projection_store.load_state(event.order_id) is None
+        assert (
+            observer_progress_store.load_progress(
+                projection_name=ORDER_STATE_PROJECTION_NAME,
+                projection_epoch=ORDER_STATE_PROJECTION_EPOCH,
+                order_id=event.order_id,
+            )
+            is None
+        )
 
 
 def test_worker_processes_late_committing_lower_global_position_per_order(

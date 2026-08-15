@@ -12,7 +12,7 @@ Use roadmap documents to understand:
 * what depends on what
 * which features are intentionally deferred
 * how the project moves from durable truth toward runtime governance
-* how the project completed Stage 4B.2 measurement and bounded empirical cost-evidence work, completed Stage 4B.5 correctness-contract work, and retains Stage 4B.3 as separately owned foundation work
+* how the project completed Stage 4B.2 measurement, closed Stage 4B.3 after an evidence-first necessity review, and completed the separately owned Stage 4B.5 correctness-contract work
 
 ---
 
@@ -56,13 +56,14 @@ ResolutionTrace boundary, PostgreSQL write-side execution characterization,
 immutable write-side trace contract, traced Result + Trace integration, and
 closeout. Stage 4B.2 PR1–PR8 then completed producer-specific measurement,
 controlled comparison, explanatory characterization, bounded concurrency
-evidence, and closeout. Stage 4B.5 then completed the Order correctness
-contract, exact FullProof evidence path, runtime/write-side propagation,
-terminal refinement, YAML projection, overhead characterization, and closeout.
-Stage 4B.3 remains a separately owned foundation responsibility and has not
-started.
+evidence, and closeout. Stage 4B.3 PR1/PR2 then bounded and characterized
+projection-trust continuation before ADR 0026 closed the stage as not currently
+justified. Stage 4B.5 independently completed the Order correctness contract,
+exact FullProof evidence path, runtime/write-side propagation, terminal
+refinement, YAML projection, overhead characterization, and closeout.
 
-Completed Stage 4B.5 work is recorded in the
+Completed work is recorded in the
+[Stage 4B.3 implementation notes](../implementation_notes/stage_4b_3/) and
 [Stage 4B.5 implementation notes](../implementation_notes/stage_4b_5/).
 
 ---
@@ -100,13 +101,10 @@ Stage 4B.2
 = COMPLETE / CLOSED
 
 Stage 4B.3
-= PROJECTION TRUST BOUNDARY AND CONTINUATION / NOT STARTED
+= PROJECTION TRUST BOUNDARY AND CONTINUATION / COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED
 
 Stage 4B.5
 = ORDER CORRECTNESS CONTRACT V0 / COMPLETE / CLOSED
-
-Stage 4B.3
-= SEPARATELY OWNED / NOT STARTED
 ```
 
 Stage 4B, Stage 4B.1, Stage 4B.2, and Stage 4B.5 are complete. Stage 4B.2 consumed a stable
@@ -196,8 +194,8 @@ Stage 4 proceeds through:
 * Stage 4B — DecisionReceipt / Runtime Evidence Record — complete
 * Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary — complete
 * Stage 4B.2 — Measurement Evidence — complete / closed
-* Stage 4B.3 — Projection Trust Boundary and Continuation — parallel / not started
-* Stage 4B.5 — Order Correctness Contract v0 — complete / closed
+* Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified; PR1/PR2 retained as reference, PR3+ not proceeding
+* Stage 4B.5 — Order Correctness Contract v0 — complete / closed / independently delivered
 * Stage 4C — RuntimeDecisionPolicy
 * Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 * Stage 4D — StrategySelector / Fast-Path Health Policy

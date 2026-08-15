@@ -45,6 +45,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0023 | [Measurement Availability Does Not Govern Business Truth](0023_measurement_availability_does_not_govern_business_truth.md) | Accepted | Keeps post-UOW measurement construction and availability from rewriting exact normal producer values, transaction finalization, or existing exception behavior. |
 | 0024 | [Detailed PostgreSQL Write Measurement Is an Opt-In Capability](0024_detailed_postgres_write_measurement_is_opt_in.md) | Accepted | Preserves existing unmeasured writes and makes detailed Stage 4B.2 measurement an explicit execution-level capability. |
 | 0025 | [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) | Accepted | Preserves PR6 as complete comparison evidence while assigning causal decomposition to a separate post-PR6 supplemental investigation. |
+| 0026 | [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) | Accepted | Closes Stage 4B.3 after source-grounded necessity review because the current exact-next projection runtime already owns normal materialization correctness and no concrete consumer requires incremental qualification. |
 
 ---
 
@@ -86,6 +87,7 @@ Recommended order:
 24. [Measurement Availability Does Not Govern Business Truth](0023_measurement_availability_does_not_govern_business_truth.md) — explains why final measurement construction follows normal producer return and cannot rewrite exact business results or current finalization and exception behavior.
 25. [Detailed PostgreSQL Write Measurement Is an Opt-In Capability](0024_detailed_postgres_write_measurement_is_opt_in.md) — explains why detailed Stage 4B.2 collection uses an explicit measured surface while existing unmeasured execution remains valid.
 26. [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) — explains why the unexpected PR6 latency ordering is preserved as comparison evidence and investigated through a separate bounded explanatory supplement instead of being promoted directly into an architecture conclusion.
+27. [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) — explains why accepted-history authority, exact-next per-order progress, canonical reduction, atomic state/progress persistence, permissions, and replay/rebuild already form the required current projection correctness model without another trust-continuation layer.
 
 ---
 
@@ -156,6 +158,14 @@ separating its unexpected latency ordering from causal interpretation. It
 assigns current single-execution mechanism decomposition to the post-PR6
 supplement, leaves bounded concurrency to PR7, and keeps counterfactual
 compositions optional unless the current Layer 1–3 evidence is insufficient.
+
+ADR 0026 closes Stage 4B.3 as not currently justified. It preserves ADR 0020's
+exact-next per-order progress repair and ADR 0021's optional-snapshot decision,
+while recording that the current projection worker, reducer, progress lineage,
+transaction, permission, and replay boundaries already own normal projection
+correctness. PR1 and PR2 remain historical/reference investigation; PR3 and
+later Stage 4B.3 implementation work do not proceed without a concrete consumer
+and a newly demonstrated correctness need.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -235,6 +245,7 @@ Recommended pattern:
 0023_measurement_availability_does_not_govern_business_truth.md
 0024_detailed_postgres_write_measurement_is_opt_in.md
 0025_pr6_comparison_requires_separate_explanatory_characterization.md
+0026_projection_trust_continuation_is_not_currently_justified.md
 ```
 
 Evolution or supporting notes may be kept as separate files:
