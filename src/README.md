@@ -22,6 +22,12 @@ The purpose of `src/` is to hold the executable system boundaries for:
 
 This is the implementation center of the repository.
 
+Current status: Stage 4A, Stage 4B PR1–PR7, and Stage 4B.1 PR1–PR7 are complete.
+The source tree now includes `SemanticOutcome`, `DecisionReceipt`, generic and
+producer-specific receipt mapping, strict serializer v1, explicit receipt
+persistence boundaries, producer-specific trace contracts, and PostgreSQL
+write-side Result + Trace execution. Stage 4B.2 is next.
+
 ---
 
 ## Top-Level Structure
@@ -59,14 +65,14 @@ The core should remain independent of PostgreSQL, worker orchestration, projecti
 
 ### [storage/](storage/README.md)
 
-Persistence boundaries for accepted history, idempotency memory, projection state, checkpoint progress, and projection snapshots.
+Persistence boundaries for accepted history, idempotency memory, projection state, per-order progress, projection snapshots, and decision receipts.
 
 Use this directory when you want to understand:
 
 - how accepted history is persisted
 - how idempotency records are stored
 - how projection state is stored
-- how checkpoint progress is tracked
+- how exact-next per-order progress and legacy checkpoint evidence are tracked
 - how projection snapshots are persisted
 - how PostgreSQL-backed durable storage is introduced without making storage own business meaning
 - how accepted history is loaded for durable projection workers and snapshot-assisted replay paths
@@ -76,9 +82,12 @@ At the current baseline, storage includes:
 - PostgreSQL-backed accepted-history persistence through `PostgresEventStore`
 - PostgreSQL-backed idempotency memory through `PostgresIdempotencyStore`
 - PostgreSQL-backed projection state through `PostgresProjectionStore`
-- PostgreSQL-backed checkpoint progress through `PostgresCheckpointStore`
-- global-position accepted-history loading through `PostgresProjectionEventSource`
+- PostgreSQL-backed per-order progress through `PostgresProjectionProgressStore`
+- exact-next accepted-history discovery through `PostgresProjectionEligibleEventSource`
+- legacy checkpoint and global-position scan infrastructure for other consumers
 - projection snapshot persistence through `PostgresProjectionSnapshotStore`
+- storage-neutral DecisionReceipt contracts through `decision_receipt_store.py`
+- PostgreSQL DecisionReceipt persistence through `postgres_decision_receipt_store.py`
 - shared database-row-to-domain-event hydration through `order_event_hydration.py`
 
 Storage preserves durable facts and durable runtime progress. It does not decide whether those facts are semantically valid.
@@ -125,7 +134,7 @@ Use this directory when you want to understand:
 - how semantic trust is checked separately from persistence and flow
 - how future structured outcomes and runtime decisions may be produced
 
-At the current baseline, Compass Layer 1 protects accepted-history admission on the write side.
+At the current baseline, Compass Layer 1 protects accepted-history admission on the write side, while `compass.runtime` implements Stage 4A semantic outcomes and the completed Stage 4B receipt contracts and mappers.
 
 Stage 3.5D does not implement full Compass Layer 2. However, the snapshot-assisted replay validator and resolver provide important read-side evidence substrates for future Layer 2 validation:
 
@@ -134,10 +143,31 @@ accepted history
 → projection reducer
 → projection snapshot / projection state
 → validator / resolver evidence
-→ future Layer 2 outcome
+→ SemanticOutcome
+→ DecisionReceipt
 ```
 
-Future Compass layers will validate derived read-side state, structured semantic outcomes, runtime decisions, action safety, and dual-dimension governance.
+Current producer adapters preserve typed evidence and leave governance flags `NOT_EVALUATED`. Future Compass layers own traces, policy, decisions, strategy, retry, action safety, and dual-dimension governance.
+
+### Runtime Import Boundaries
+
+Core runtime contracts and the generic mapper use the public package surface:
+
+```python
+from src.compass.runtime import DecisionReceipt, SemanticOutcome
+from src.compass.runtime import map_semantic_outcome_to_decision_receipt
+```
+
+Producer mappers, serializer v1, and storage contracts are intentionally
+imported from their owning modules; no new root-package export is implied:
+
+```python
+from src.compass.runtime.decision_receipt_serialization import serialize_decision_receipt
+from src.compass.runtime.read_side_decision_receipt_mapping import map_replay_validation_result_to_decision_receipt
+from src.compass.runtime.write_side_decision_receipt_mapping import map_postgres_write_side_result_to_decision_receipt
+from src.storage.decision_receipt_store import PersistedDecisionReceipt
+from src.storage.postgres_decision_receipt_store import PostgresDecisionReceiptStore
+```
 
 ---
 
@@ -187,7 +217,7 @@ Another useful way to think about it is:
 
 ## Current Baseline
 
-At the current stage, after Stage 3.5D completion, `src/` contains an executable baseline across:
+At the current stage, after Stage 4B.1 completion, `src/` contains an executable baseline across:
 
 - transactional write-side semantics
 - accepted-history persistence and replay
@@ -200,13 +230,17 @@ At the current stage, after Stage 3.5D completion, `src/` contains an executable
 - Stage 3.5B durable write-side baseline through PostgreSQL
 - Stage 3.5C durable read-side schema baseline
 - PostgreSQL-backed projection state persistence
-- PostgreSQL-backed checkpoint progress persistence
-- PostgreSQL-backed global-position projection worker baseline
+- PostgreSQL-backed exact-next per-order projection progress persistence
+- PostgreSQL-backed per-order projection worker correctness under ADR 0020
 - durable replay / rebuild validation against accepted history
 - Stage 3.5D projection snapshot schema and store baseline
+- immutable snapshot-assisted resolution trace and execution-envelope contracts
+- producer-specific PostgreSQL write-side trace and Result + Trace execution
 - Stage 3.5D projection snapshot-assisted replay validation
 - Stage 3.5D projection snapshot-assisted state resolution
 - explicit aggregate snapshot trust deferral
+- Stage 4A `SemanticOutcome` production mappings
+- Stage 4B `DecisionReceipt` contract, generic and producer mappings, strict serialization, and PostgreSQL persistence
 
 This means `src/` is no longer only a semantic skeleton.
 
@@ -256,11 +290,11 @@ Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision ✅
 The current read-side durable worker path is:
 
 ```text
-order_events
-→ PostgresProjectionEventSource
+order_events + projection_order_progress
+→ PostgresProjectionEligibleEventSource
 → canonical reducer
 → PostgresProjectionStore
-→ PostgresCheckpointStore
+→ PostgresProjectionProgressStore
 
 accepted history
 → durable replay validator
@@ -287,7 +321,7 @@ The worker persists:
 ```text
 projection state
 +
-checkpoint progress
+per-order progress
 ```
 
 inside one PostgreSQL transaction boundary.
@@ -326,13 +360,13 @@ This separation is especially important because the project is concerned with co
 
 ## What `src/` Does Not Yet Fully Solve
 
-After the completed Stage 3.5D snapshot trust / replay-efficiency baseline, the source tree does **not yet** fully solve:
+After the completed Stage 4B.1 trace stage, the source tree does **not yet** fully solve:
 
-- Stage 3.5E durable history / permission hardening
-- database role separation for accepted-history protection
-- production-grade append-only enforcement at the database permission / trigger layer
 - state-level Compass Layer 2 validation as a general runtime subsystem
-- structured `SemanticOutcome`
+- automatic DecisionReceipt materialization or accepted-history reconciliation
+- a repository-wide generic `DiagnosticTrace` abstraction
+- snapshot traced-resolver runtime integration or projection-worker trace delivery
+- trace persistence or cross-process same-execution provenance
 - runtime decision policy
 - action safety
 - advanced runtime concerns such as DLQ, buffering, watermarking, worker leasing, checkpoint row locking, or multi-worker coordination
@@ -354,13 +388,13 @@ core/
 = domain meaning and transition legality
 
 storage/
-= durable accepted history, idempotency memory, projection state, checkpoint progress, snapshot rows, and accepted-history loading
+= durable accepted history, idempotency memory, projection state, per-order progress, legacy checkpoint evidence, snapshot rows, DecisionReceipt rows, and accepted-history loading
 
 pipeline/
 = runtime orchestration for write-side commands, read-side projection workers, replay validation, and snapshot-assisted read-side resolution
 
 compass/
-= semantic validation and future governance
+= semantic validation, SemanticOutcome interpretation, DecisionReceipt contracts and mapping, and future governance
 
 bootstrap/
 = concrete runtime wiring
@@ -375,8 +409,11 @@ order_events
 projection_states
 = derived runtime view
 
+projection_order_progress
+= current per-order projection completeness evidence
+
 projection_checkpoints
-= operational worker progress
+= legacy / generic operational progress metadata
 
 projection_snapshots
 = derived state compression / replay-efficiency artifact
@@ -400,4 +437,8 @@ If the top-level README explains what the project is about, `src/` shows how tha
 
 That partition is the main reason the project can evolve without collapsing its own boundaries.
 
-After Stage 3.5D, the source tree has durable write-side, durable read-side, and snapshot-assisted read-side replay / resolution baselines. The next implementation stage is Stage 3.5E, which should harden durable accepted-history authority through minimal actor / permission boundaries without turning the project into a full access-control platform.
+After Stage 4B.1, the source tree has durable write-side, repaired per-order
+read-side progress, snapshot-assisted read-side replay / resolution,
+`SemanticOutcome`, explicit `DecisionReceipt` persistence, producer-specific
+trace contracts, and PostgreSQL Result + Trace execution baselines. The next
+implementation stage is Stage 4B.2.

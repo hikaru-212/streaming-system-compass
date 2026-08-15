@@ -20,10 +20,14 @@ It now also serves as the reference frame for an executable baseline covering:
 - PostgreSQL-backed two-phase concurrency admission
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - Stage 3.5C durable read-side baseline
-- Stage 3.5D snapshot trust contract and read-side replay-efficiency baseline
+- Stage 3.5D snapshot trust contract and optional read-side reconstruction baseline for the current Order workload
 - projection snapshot schema, store, replay validator, and snapshot-assisted state resolver
 - aggregate snapshot trust deferral decision
 - Stage 3.5E durable history / permission hardening and minimal actor metadata boundary
+- Stage 4A SemanticOutcome core as completed runtime semantic interpretation work
+- Stage 4B DecisionReceipt PR1–PR7 as a completed runtime-evidence and persistence foundation
+- [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md) as a completed producer-specific trace stage, with snapshot runtime integration intentionally deferred and PostgreSQL write-side Result + Trace integration complete
+- [Stage 4B.2 Measurement Evidence](implementation_notes/stage_4b_2/README.md) as a completed producer-measurement and bounded empirical cost-evidence stage
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -49,21 +53,83 @@ The repository currently has an implemented baseline for:
 - PostgreSQL-backed two-phase concurrency admission through `prepare_stream(order_id)` and `append_if_admitted(candidate_event, expected_current_version)`
 - validation placement strategy for `IN_TRANSACTION` and `PRE_TRANSACTION` write-side orchestration
 - executable tests across unit, integration, semantic-case, adversarial-baseline, Stage 3 projection-baseline, storage integration, transactional PostgreSQL-backed write-side, and admission-boundary layers
-- Stage 3.5C durable read-side baseline, including durable order-event vocabulary hardening, read-side schema, `PostgresProjectionStore`, `PostgresCheckpointStore`, global-position projection worker orchestration, and durable replay / rebuild validation
-- Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral
+- Stage 3.5C durable read-side baseline, including durable order-event vocabulary hardening, read-side schema, `PostgresProjectionStore`, historical checkpoint infrastructure, ADR 0020 per-order progress repair, and durable replay / rebuild validation
+- Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral; ADR 0021 now classifies projection snapshots as optional for the current Order workload
+- Stage 4A `SemanticOutcome` and Stage 4B `DecisionReceipt` mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
 
 The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **Stage 3.5C — Durable Read-Side Baseline**, **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**, and **Stage 3.5E — Durable History and Permission Hardening**.
 
 Stage 3.5E is now complete at the minimal actor / permission boundary level.
 
-The current focus is now:
+Stage 4B.2 is complete and closed. Its final completion authority is the
+[Stage 4B.2 closeout](implementation_notes/stage_4b_2/stage_4b_2_closeout.md).
 
-- Stage 4 runtime semantic governance
-- structured `SemanticOutcome` mapping
-- durable `DecisionReceipt` / runtime evidence records
-- runtime decision policy, strategy selection, and retry governance
+Stage 4B.5 is complete and closed. Its implementation index and closeout status
+are in [Stage 4B.5 — Order Correctness Contract v0](implementation_notes/stage_4b_5/).
 
-Stage 3.5E intentionally stops before Compass Layer 2 governance objects. It provides the durable permission and actor-boundary foundation that Stage 4 can build on.
+The current Stage 4 foundation position is:
+
+- Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
+- Stage 4B.5 — Order Correctness Contract v0 — complete / closed
+- later runtime policy, strategy selection, and retry governance in roadmap order
+
+Stage 4B.3 PR1 and PR2 remain historical/reference investigation. The canonical
+[ADR 0026 closeout](adr/0026_projection_trust_continuation_is_not_currently_justified.md)
+records why PR3+ do not proceed. Stage 4B.5 completed in a separately owned
+parallel development stream; it is technically independent from and was not
+moved under the closed Stage 4B.3 stage. It does not implement the later
+retry-governance layer.
+
+Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
+Stage 4B preserves selected evidence through explicit mapping, serialization,
+and persistence boundaries without automatic materialization or reconciliation.
+See the [Stage 4B implementation index](implementation_notes/stage_4b/README.md)
+and [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md).
+
+---
+
+## Current Engineering Checkpoint
+
+Stage 4B and Stage 4B.1 are complete. Stage 4B.1 retains the immutable
+snapshot-assisted trace contract while intentionally deferring its parallel
+runtime integration, records projection-worker trace as `DO NOT ADD` for the
+stage, and completes producer-specific PostgreSQL write-side Result + Trace
+integration. The
+[Stage 4B.1 closeout](implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
+is the current completion authority for Stage 4B.1. Stage 4B.2 Measurement
+Evidence and Stage 4B.5 Order Correctness Contract v0 are complete and closed.
+Stage 4B.3 is complete and closed as not currently
+justified after PR1 boundary work, PR2 mechanics characterization, and the
+accepted architecture-necessity audit. The two completed stages remain
+separately owned and independent. Separately, the repository has completed an
+independent
+PostgreSQL Level 1 characterization experiment for a live-but-idle
+DecisionReceipt transaction owner and a blocked uniqueness contender.
+
+The transaction-local mechanism is experimentally verified: PostgreSQL
+terminates and rolls back the idle owner transaction, releases the blocked
+contender, permits contender progress, and leaves durable state verifiable from
+a fresh connection. The terminated owner connection is closed, broken, and
+unusable.
+
+This evidence originally proved the physical cleanup mechanism only. The
+resulting `PostgresDecisionReceiptTransactionOwner` component is now implemented,
+tested, and merged under the current specialized
+[DecisionReceipt PostgreSQL Transaction Safety and Liveness Boundary](boundary_notes/decision_receipt_postgres_transaction_safety_and_liveness_boundary.md).
+The historical design chronology remains in the
+[DecisionReceipt Transaction-Owner Liveness Hardening implementation note](implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md).
+
+The component owns one already-complete receipt's separate governance
+transaction. Production timeout calibration and configuration ownership,
+automatic materialization, runtime bootstrap wiring, connection-pool
+integration, and reconciliation remain unimplemented. The owner does not reopen
+Stage 4B contracts or authorize retry. See also the non-authoritative derivation
+in
+[From Statement Success to Owner-Liveness](reasoning_notes/from_statement_success_to_owner_liveness.md).
+
+This abnormal-path transaction-liveness question remains separate from
+capacity-pressure work such as rate limiting, queues, bounded concurrency, and
+backpressure, which remains deferred.
 
 ---
 
@@ -71,9 +137,23 @@ Stage 3.5E intentionally stops before Compass Layer 2 governance objects. It pro
 
 Different readers may enter the documentation from different angles.
 
+For high-level public orientation, start with the non-authoritative
+[Overview](overview/README.md).
+
+For non-authoritative reading paths and cross-topic indexes, use
+[Documentation Navigation](navigation/README.md).
+
 If you want the shortest entry point into the AI governance framing of Compass, start with [Semantic Admission](semantic_admission/README.md).
 
 If you want exploratory AI governance research notes that are not implementation commitments, see [Research Notes](research/README.md).
+
+If you want non-authoritative records of how repository assumptions, missing
+premises, or responsibility boundaries were derived, see
+[Reasoning Notes](reasoning_notes/README.md).
+
+For non-authoritative candidate proof obligations derived from accepted
+architecture, contracts, and executable evidence, see
+[Test Specifications](test_specs/README.md).
 
 If you want to understand the core system architecture and implementation sequence, follow the reading order below.
 
@@ -95,9 +175,11 @@ Recommended reading order for the core system:
 14. [Implementation Roadmap](roadmap/implementation_roadmap.md)
 15. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
 16. [Implementation Notes](implementation_notes/README.md)
-17. [Boundary Notes](boundary_notes/README.md)
-18. [Development Setup](development/README.md)
-19. [Postmortems](postmortems/README.md)
+17. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
+18. [Boundary Notes](boundary_notes/README.md)
+19. [Development Setup](development/README.md)
+20. [Reasoning Notes](reasoning_notes/README.md)
+21. [Postmortems](postmortems/README.md)
 
 This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, stage / PR implementation details, module-boundary notes, local development setup, and finally postmortems.
 
@@ -124,9 +206,16 @@ top-level system structure
 → implementation notes for completed stage / PR execution
 → pre-Stage 3.5E documentation alignment
 → completed minimal actor / permission boundary
-→ runtime semantic validation and outcome structuring
+→ completed SemanticOutcome core
+→ completed DecisionReceipt foundation
+→ completed DiagnosticTrace / ResolutionTrace
+→ completed Measurement Evidence
+→ Stage 4B.3 Projection Trust Boundary and Continuation
+  closed as not currently justified after evidence-first investigation
+→ separately owned Order Correctness Contract work
 → runtime decision policy and action safety
 → boundary clarification
+→ reasoning derivations
 → postmortem lessons
 ```
 
@@ -136,6 +225,8 @@ top-level system structure
 
 ```text
 docs/
+├── overview/               # High-level public, non-authoritative orientation
+├── navigation/             # Non-authoritative reading paths and topic indexes
 ├── philosophy/             # Design philosophy and mental models
 ├── architecture/           # Subsystem-level architecture notes
 ├── adr/                    # Architecture Decision Records
@@ -146,12 +237,31 @@ docs/
 ├── roadmap/                # Implementation sequencing and evolution plans
 ├── semantic_admission/     # AI governance entry point for candidate actions and accepted facts
 ├── research/               # Exploratory research notes and architecture observations
-└── postmortems/            # Design lessons, mistakes, and boundary reflections
+├── reasoning_notes/        # Non-authoritative derivation and inference records
+├── test_specs/             # Non-authoritative proof-obligation candidates
+└── postmortems/            # Concrete engineering episodes and preventive discoveries
 ```
 
 ---
 
 ## Directory Purposes
+
+### [overview/](overview/README.md)
+
+High-level public orientation to the project's purpose and broad architecture.
+Overview documents help readers enter the project, but source, tests,
+migrations, accepted ADRs, current boundary notes, and stage closeouts govern
+exact implementation truth.
+
+---
+
+### [navigation/](navigation/README.md)
+
+Non-authoritative reading paths and cross-topic indexes. Navigation routes
+readers across the existing document categories without changing the authority
+or ownership of the linked documents.
+
+---
 
 ### [philosophy/](philosophy/README.md)
 
@@ -321,16 +431,56 @@ They should not be read as current Compass implementation scope.
 
 ---
 
-### [postmortems/](postmortems/README.md)
+### [reasoning_notes/](reasoning_notes/README.md)
 
-Reflection documents that preserve design mistakes, confusion points, and lessons learned.
+Non-authoritative, usually source-grounded records whose dominant value is the
+derivation or inference path without one dominant concrete episode that
+actually occurred.
 
 Use these documents when you want to understand:
 
-- why a previous interpretation was confusing
-- what boundary mistake occurred
-- what reusable lesson should be preserved
-- how future implementation should avoid similar mistakes
+- how an assumption was challenged;
+- how a missing premise or responsibility became visible;
+- how multiple states, guarantees, or ownership boundaries were separated;
+- what reusable diagnostic model emerged; or
+- how reasoning contributed to a later test, repair, ADR, or boundary note.
+
+Reasoning notes do not establish current runtime behavior, accepted decisions,
+or implementation commitments. Current source, tests, migrations, accepted
+ADRs, boundary notes, and stage closeouts remain authoritative for those claims.
+Substantial reasoning does not by itself move a concrete engineering,
+architectural, or learning episode out of postmortems.
+
+---
+
+### [test_specs/](test_specs/README.md)
+
+Non-authoritative proof-obligation candidates derived from accepted
+architecture, contracts, and executable evidence.
+
+Use these documents to inspect candidate adversarial scenarios and their
+derivation premises. They do not change system semantics or inherit
+architecture authority merely because an AI can derive them.
+
+---
+
+### [postmortems/](postmortems/README.md)
+
+Concrete engineering episodes, including actual incidents and preventive
+discoveries that found and repaired a real unsafe path, failed test,
+inconsistency, missing guarantee, architectural-model error, recurring
+engineering-learning failure, or stage-premise drift.
+
+Use these documents when you want to understand:
+
+- what concrete problem occurred or was discovered;
+- what evidence exposed it;
+- what repair or resolution followed; and
+- what reusable engineering lesson should be preserved.
+
+A postmortem requires one identifiable episode that can be reconstructed
+through context, problem, correction, and lesson. General reusable derivations
+without one dominant concrete episode belong in reasoning notes.
 
 ---
 
@@ -348,7 +498,8 @@ Use these documents when you want to understand:
 | What has already been built and what comes next? | [Roadmaps](roadmap/README.md) |
 | What is the AI governance framing behind candidate actions and accepted facts? | [Semantic Admission](semantic_admission/README.md) |
 | What exploratory ideas are not implementation commitments yet? | [Research Notes](research/README.md) |
-| What mistake or confusion should not be repeated? | [Postmortems](postmortems/README.md) |
+| How was an assumption, missing premise, or responsibility boundary derived? | [Reasoning Notes](reasoning_notes/README.md) |
+| What concrete incident or preventive engineering discovery should not be repeated? | [Postmortems](postmortems/README.md) |
 
 ---
 

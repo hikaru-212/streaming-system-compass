@@ -6,10 +6,8 @@ from uuid import uuid4
 
 import pytest
 
-from src.core.order.enums import EventType
 from src.core.order.enums import OrderStatus
 from src.core.order.events import OrderEvent
-from src.core.order.proofs import Proof
 from src.core.order.state import OrderState
 from src.pipeline.projection.projection_snapshot_replay_validator import (
     ProjectionSnapshotReplayValidationResult,
@@ -18,6 +16,10 @@ from src.pipeline.projection.projection_snapshot_replay_validator import (
 )
 from src.storage.postgres_projection_event_source import ProjectionEventRecord
 from src.storage.postgres_projection_snapshot_store import ProjectionSnapshot
+from tests.shared.order_events import make_created_event
+from tests.shared.order_events import make_paid_event
+from tests.shared.order_states import make_order_state
+from tests.shared.projection_snapshots import make_snapshot
 
 
 class FakeSnapshotStore:
@@ -47,160 +49,73 @@ class FakeAcceptedHistoryStore:
 class FakeTailEventSource:
     def __init__(self, records: list[ProjectionEventRecord]) -> None:
         self.records = records
-        self.load_after_calls: list[tuple[int, int]] = []
+        self.load_after_calls: list[tuple[str, int, int]] = []
 
-    def load_after(
+    def load_after_sequence(
         self,
-        global_position: int,
+        order_id: str,
+        sequence: int,
         *,
         limit: int,
     ) -> list[ProjectionEventRecord]:
-        self.load_after_calls.append((global_position, limit))
+        self.load_after_calls.append((order_id, sequence, limit))
         return [
             record
             for record in self.records
-            if record.global_position > global_position
+            if record.event.order_id == order_id
+            and record.event.sequence > sequence
         ][:limit]
 
 
 class NonAdvancingTailEventSource:
-    def load_after(
+    def load_after_sequence(
         self,
-        global_position: int,
+        order_id: str,
+        sequence: int,
         *,
         limit: int,
     ) -> list[ProjectionEventRecord]:
-        created_event = make_created_event()
+        created_event = make_created_event(
+            order_id=order_id,
+            sequence=sequence,
+        )
         return [
             ProjectionEventRecord(
-                global_position=global_position,
+                global_position=100,
                 event=created_event,
             )
         ]
 
 
 class OutOfOrderTailEventSource:
-    def load_after(
+    def load_after_sequence(
         self,
-        global_position: int,
+        order_id: str,
+        sequence: int,
         *,
         limit: int,
     ) -> list[ProjectionEventRecord]:
-        created_event = make_created_event()
-        paid_event = make_paid_event(previous_event=created_event)
+        later_event = make_created_event(
+            request_id="later-request",
+            order_id=order_id,
+            sequence=sequence + 2,
+        )
+        next_event = make_created_event(
+            request_id="next-request",
+            order_id=order_id,
+            sequence=sequence + 1,
+        )
 
         return [
             ProjectionEventRecord(
-                global_position=global_position + 2,
-                event=paid_event,
+                global_position=102,
+                event=later_event,
             ),
             ProjectionEventRecord(
-                global_position=global_position + 1,
-                event=created_event,
+                global_position=101,
+                event=next_event,
             ),
         ]
-
-
-def make_order_state(
-    *,
-    order_id: str = "order-001",
-    status: OrderStatus = OrderStatus.CREATED,
-    total_amount: Decimal = Decimal("100.00"),
-    paid_amount: Decimal = Decimal("0.00"),
-    version: int = 1,
-) -> OrderState:
-    return OrderState(
-        order_id=order_id,
-        status=status,
-        total_amount=total_amount,
-        paid_amount=paid_amount,
-        version=version,
-    )
-
-
-def make_snapshot(
-    *,
-    snapshot_id: UUID | None = None,
-    order_id: str = "order-001",
-    source_event_id: UUID | None = None,
-    source_event_sequence: int = 1,
-    source_global_position: int = 1,
-    state_status: str = "CREATED",
-    total_amount: Decimal = Decimal("100.00"),
-    paid_amount: Decimal = Decimal("0.00"),
-    state_version: int = 1,
-    snapshot_schema_version: int = 1,
-    reducer_version: str = "order_projection_reducer:v1",
-    payload_hash: str = "sha256:test-payload-hash",
-    metadata: dict | None = None,
-    created_by: str = "test",
-) -> ProjectionSnapshot:
-    if snapshot_id is None:
-        snapshot_id = uuid4()
-
-    if source_event_id is None:
-        source_event_id = uuid4()
-
-    if metadata is None:
-        metadata = {}
-
-    return ProjectionSnapshot(
-        snapshot_id=snapshot_id,
-        order_id=order_id,
-        source_event_id=source_event_id,
-        source_event_sequence=source_event_sequence,
-        source_global_position=source_global_position,
-        state_status=state_status,
-        total_amount=total_amount,
-        paid_amount=paid_amount,
-        state_version=state_version,
-        snapshot_schema_version=snapshot_schema_version,
-        reducer_version=reducer_version,
-        payload_hash=payload_hash,
-        metadata=metadata,
-        created_by=created_by,
-    )
-
-
-def make_created_event(
-    *,
-    order_id: str = "order-001",
-    request_id: str = "create-001",
-    sequence: int = 1,
-    amount: Decimal = Decimal("100.00"),
-) -> OrderEvent:
-    return OrderEvent.create(
-        request_id=request_id,
-        order_id=order_id,
-        sequence=sequence,
-        event_type=EventType.CREATED,
-        amount=amount,
-        proof=Proof(
-            prev_status=OrderStatus.INIT,
-            prev_version=0,
-            prev_event_id=None,
-        ),
-    )
-
-
-def make_paid_event(
-    *,
-    previous_event: OrderEvent,
-    request_id: str = "pay-001",
-    amount: Decimal = Decimal("100.00"),
-) -> OrderEvent:
-    return OrderEvent.create(
-        request_id=request_id,
-        order_id=previous_event.order_id,
-        sequence=previous_event.sequence + 1,
-        event_type=EventType.PAID,
-        amount=amount,
-        proof=Proof(
-            prev_status=OrderStatus.CREATED,
-            prev_version=previous_event.sequence,
-            prev_event_id=previous_event.event_id,
-        ),
-    )
 
 
 def make_validator(
@@ -361,7 +276,7 @@ def test_tail_event_source_contract_violation_result_preserves_states() -> None:
         source_global_position=10,
         snapshot_assisted_state=snapshot_assisted_state,
         authority_state=authority_state,
-        reason="Tail event source returned non-advancing global_position.",
+        reason="Snapshot tail violated the order-local source contract.",
     )
 
     assert result.is_match is False
@@ -375,7 +290,7 @@ def test_tail_event_source_contract_violation_result_preserves_states() -> None:
     assert result.snapshot_assisted_state == snapshot_assisted_state
     assert result.authority_state == authority_state
     assert result.reason == (
-        "Tail event source returned non-advancing global_position."
+        "Snapshot tail violated the order-local source contract."
     )
 
 
@@ -744,7 +659,7 @@ def test_validator_rejects_snapshot_state_version_behind_source_sequence() -> No
     assert "source_event_sequence" in result.reason
 
 
-def test_validator_uses_tail_events_after_snapshot_global_position() -> None:
+def test_validator_uses_order_local_tail_after_snapshot_sequence() -> None:
     created_event = make_created_event()
     paid_event = make_paid_event(previous_event=created_event)
 
@@ -779,7 +694,10 @@ def test_validator_uses_tail_events_after_snapshot_global_position() -> None:
     result = validator.validate_order("order-001")
 
     assert result.status == ProjectionSnapshotReplayValidationStatus.MATCH
-    assert tail_source.load_after_calls == [(10, 25), (11, 25)]
+    assert tail_source.load_after_calls == [
+        ("order-001", 1, 25),
+        ("order-001", 2, 25),
+    ]
     assert result.snapshot_assisted_state == make_order_state(
         status=OrderStatus.PAID,
         paid_amount=Decimal("100.00"),
@@ -825,7 +743,10 @@ def test_validator_loads_tail_records_across_pages() -> None:
         paid_amount=Decimal("100.00"),
         version=2,
     )
-    assert tail_source.load_after_calls == [(1, 1), (2, 1)]
+    assert tail_source.load_after_calls == [
+        ("order-001", 1, 1),
+        ("order-001", 2, 1),
+    ]
 
 
 def test_validator_reports_tail_contract_violation_when_tail_event_source_does_not_advance() -> None:
@@ -857,10 +778,10 @@ def test_validator_reports_tail_contract_violation_when_tail_event_source_does_n
     assert result.snapshot_assisted_state == make_order_state()
     assert result.authority_state == make_order_state()
     assert result.reason is not None
-    assert "non-advancing global_position" in result.reason
+    assert "non-contiguous order-local sequence" in result.reason
 
 
-def test_validator_reports_tail_contract_violation_when_tail_event_source_returns_out_of_order_positions() -> None:
+def test_validator_reports_tail_contract_violation_for_local_sequence_gap() -> None:
     created_event = make_created_event()
     snapshot = make_snapshot(
         source_event_sequence=1,
@@ -889,7 +810,7 @@ def test_validator_reports_tail_contract_violation_when_tail_event_source_return
     assert result.snapshot_assisted_state == make_order_state()
     assert result.authority_state == make_order_state()
     assert result.reason is not None
-    assert "non-advancing global_position" in result.reason
+    assert "non-contiguous order-local sequence" in result.reason
 
 
 def test_validator_returns_drift_when_tail_replay_violates_transition_rule() -> None:

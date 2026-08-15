@@ -202,21 +202,73 @@ PostgresWriteSideUnitOfWork
 + PostgresWriteSideConfig
 ```
 
-The default behavior remains:
+The default behavior is:
 
 ```text
 ValidationMode.STRICT
-ValidationPlacement.IN_TRANSACTION
+ValidationPlacement.PRE_TRANSACTION
 PostgresOptimisticAdmissionGate
 ```
 
-It also supports a minimal `PRE_TRANSACTION` validation path guarded by an authoritative in-transaction idempotency re-check and append-time admission.
+`IN_TRANSACTION` remains available through explicit configuration.
+The default `PRE_TRANSACTION` path remains guarded by an authoritative
+in-transaction idempotency re-check and append-time admission.
+
+---
+
+### `postgres_write_side_measurement.py`
+
+Defines the immutable Stage 4B.2 Level-A PostgreSQL write measurement contract.
+
+It owns:
+
+- explicit not-applicable, not-reached, not-collected, and measured states;
+- integer-nanosecond elapsed representation;
+- the complete producer-specific first-contract phase surface;
+- normal-return reach-topology invariants; and
+- result-first available/unavailable delivery for exact legacy or traced
+  producer values.
+
+It does not call a clock, instrument `postgres_write_side.py`, add measured
+producer methods, modify traces, or persist evidence. Existing unmeasured write
+surfaces remain unchanged. Stage 4B.2 PR4 implements collection separately.
+
+---
+
+### `postgres_write_side_measurement_instrumentation.py`
+
+Defines the producer-specific, invocation-local Stage 4B.2 PostgreSQL write
+measurement machinery used only by explicit measured execution.
+
+`PostgresTransactionalWriteSide` exposes:
+
+- `create_order_with_measurement(...)`;
+- `pay_order_with_measurement(...)`;
+- `create_order_with_trace_and_measurement(...)`; and
+- `pay_order_with_trace_and_measurement(...)`.
+
+Detailed measurement is opt-in. Existing legacy and traced APIs remain valid
+and create no measurement recorder, perform no measurement clock reads, and
+construct no measurement artifact. The measured methods preserve the exact
+existing result or traced-execution object and attempt final measurement
+construction only after normal producer return, so measurement availability
+does not govern business truth.
+
+Stage 4B.2 measured interpretation is limited to the canonical compositions:
+
+```text
+PRE_TRANSACTION + current optimistic/OCC admission
+IN_TRANSACTION + current concrete PostgreSQL pessimistic admission
+```
+
+Other placement/admission cross-combinations remain outside the Stage 4B.2
+measurement interpretation boundary.
 
 ---
 
 ## In-Transaction Write-Side Flow
 
-The default durable write-side flow is:
+The explicitly selected `IN_TRANSACTION` durable write-side flow is:
 
 ```text
 BEGIN
@@ -267,7 +319,8 @@ must commit or roll back together.
 
 ## Pre-Transaction Validation Flow
 
-The `PRE_TRANSACTION` path intentionally separates CPU-side validation from the final write transaction.
+The default `PRE_TRANSACTION` path intentionally separates CPU-side validation
+from the final write transaction.
 
 It performs:
 
@@ -335,7 +388,8 @@ IN_TRANSACTION
 PRE_TRANSACTION
 ```
 
-`IN_TRANSACTION` remains the default.
+`PRE_TRANSACTION` is the default. `IN_TRANSACTION` remains an explicitly
+selectable placement.
 
 ---
 

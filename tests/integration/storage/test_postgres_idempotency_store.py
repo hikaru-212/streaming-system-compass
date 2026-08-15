@@ -3,10 +3,11 @@ from decimal import Decimal
 import pytest
 from psycopg.errors import ForeignKeyViolation
 
-from src.core.order.enums import CommandType, EventType, OrderStatus
+from src.core.order.enums import CommandType
 from src.core.order.events import OrderEvent
-from src.core.order.proofs import Proof
 from src.storage.idempotency_store import IdempotencyVerdict, RequestSignature
+from tests.shared.order_events import make_created_event
+from tests.shared.request_signatures import make_request_signature
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_idempotency_store import (
     FINGERPRINT_VERSION,
@@ -18,21 +19,6 @@ from src.storage.postgres_idempotency_store import (
 pytestmark = pytest.mark.usefixtures("clean_database")
 
 
-def build_created_event(order_id: str = "order-idem-1") -> OrderEvent:
-    return OrderEvent.create(
-        request_id="create-request-001",
-        order_id=order_id,
-        sequence=1,
-        event_type=EventType.CREATED,
-        amount=Decimal("100.00"),
-        proof=Proof(
-            prev_status=OrderStatus.INIT,
-            prev_version=0,
-            prev_event_id=None,
-        ),
-    )
-
-
 def build_signature(
     *,
     request_id: str = "idem-request-001",
@@ -40,7 +26,7 @@ def build_signature(
     order_id: str = "order-idem-1",
     amount: Decimal = Decimal("100.00"),
 ) -> RequestSignature:
-    return RequestSignature(
+    return make_request_signature(
         request_id=request_id,
         command_type=command_type,
         order_id=order_id,
@@ -57,7 +43,12 @@ def persist_accepted_event(db_connection, event: OrderEvent) -> None:
 def test_unseen_request_returns_miss(db_connection):
     store = PostgresIdempotencyStore(db_connection)
 
-    signature = build_signature()
+    signature = build_signature(
+        request_id="idem-request-001",
+        command_type=CommandType.CREATE,
+        order_id="order-idem-1",
+        amount=Decimal("100.00"),
+    )
 
     decision = store.check(signature)
 
@@ -69,7 +60,10 @@ def test_unseen_request_returns_miss(db_connection):
 def test_record_then_same_signature_returns_replay(db_connection):
     store = PostgresIdempotencyStore(db_connection)
 
-    event = build_created_event()
+    event = make_created_event(
+        request_id="create-request-001",
+        order_id="order-idem-1",
+    )
     persist_accepted_event(db_connection, event)
 
     signature = build_signature(order_id=event.order_id, amount=event.amount)
@@ -88,7 +82,10 @@ def test_record_then_same_signature_returns_replay(db_connection):
 def test_same_request_id_with_different_amount_returns_conflict(db_connection):
     store = PostgresIdempotencyStore(db_connection)
 
-    event = build_created_event()
+    event = make_created_event(
+        request_id="create-request-001",
+        order_id="order-idem-1",
+    )
     persist_accepted_event(db_connection, event)
 
     original_signature = build_signature(order_id=event.order_id, amount=event.amount)
@@ -112,7 +109,10 @@ def test_same_request_id_with_different_amount_returns_conflict(db_connection):
 def test_same_request_id_with_different_order_id_returns_conflict(db_connection):
     store = PostgresIdempotencyStore(db_connection)
 
-    event = build_created_event()
+    event = make_created_event(
+        request_id="create-request-001",
+        order_id="order-idem-1",
+    )
     persist_accepted_event(db_connection, event)
 
     original_signature = build_signature(order_id=event.order_id, amount=event.amount)
@@ -136,7 +136,10 @@ def test_same_request_id_with_different_order_id_returns_conflict(db_connection)
 def test_same_request_id_with_different_command_type_returns_conflict(db_connection):
     store = PostgresIdempotencyStore(db_connection)
 
-    event = build_created_event()
+    event = make_created_event(
+        request_id="create-request-001",
+        order_id="order-idem-1",
+    )
     persist_accepted_event(db_connection, event)
 
     original_signature = build_signature(
@@ -166,7 +169,10 @@ def test_idempotency_record_survives_new_connection(
     db_connection,
     db_connection_factory,
 ):
-    event = build_created_event()
+    event = make_created_event(
+        request_id="create-request-001",
+        order_id="order-idem-1",
+    )
     persist_accepted_event(db_connection, event)
 
     signature = build_signature(order_id=event.order_id, amount=event.amount)
@@ -192,7 +198,10 @@ def test_idempotency_record_survives_new_connection(
 def test_record_requires_existing_accepted_event(db_connection):
     store = PostgresIdempotencyStore(db_connection)
 
-    event = build_created_event()
+    event = make_created_event(
+        request_id="create-request-001",
+        order_id="order-idem-1",
+    )
     signature = build_signature(order_id=event.order_id, amount=event.amount)
 
     with pytest.raises(ForeignKeyViolation):
@@ -223,7 +232,12 @@ def test_semantic_fingerprint_changes_when_semantic_payload_changes():
 
 
 def test_semantic_fingerprint_uses_current_version_prefix():
-    signature = build_signature()
+    signature = build_signature(
+        request_id="idem-request-001",
+        command_type=CommandType.CREATE,
+        order_id="order-idem-1",
+        amount=Decimal("100.00"),
+    )
 
     fingerprint = build_semantic_fingerprint(signature)
 
@@ -233,7 +247,10 @@ def test_semantic_fingerprint_uses_current_version_prefix():
 def test_conflict_does_not_overwrite_existing_record(db_connection):
     store = PostgresIdempotencyStore(db_connection)
 
-    event = build_created_event()
+    event = make_created_event(
+        request_id="create-request-001",
+        order_id="order-idem-1",
+    )
     persist_accepted_event(db_connection, event)
 
     original_signature = build_signature(order_id=event.order_id, amount=event.amount)

@@ -1,0 +1,575 @@
+{
+  "groups": [
+    {
+      "external_elapsed": {
+        "count": 10,
+        "max_ns": 6364708,
+        "mean_ns": 3922924.9,
+        "median_ns": 3315145.5,
+        "min_ns": 2998416
+      },
+      "path": "A",
+      "phases": [
+        {
+          "phase_name": "producer_write_invocation",
+          "statistics": {
+            "count": 10,
+            "max_ns": 5898375,
+            "mean_ns": 3699475.1,
+            "median_ns": 3276750.0,
+            "min_ns": 2958834
+          }
+        },
+        {
+          "phase_name": "business_uow",
+          "statistics": {
+            "count": 10,
+            "max_ns": 4624458,
+            "mean_ns": 2397075.0,
+            "median_ns": 1969396.0,
+            "min_ns": 1860291
+          }
+        },
+        {
+          "phase_name": "validation_runtime_call",
+          "statistics": {
+            "count": 10,
+            "max_ns": 15792,
+            "mean_ns": 9520.7,
+            "median_ns": 8854.0,
+            "min_ns": 7458
+          }
+        },
+        {
+          "phase_name": "preliminary_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1215542,
+            "mean_ns": 678874.9,
+            "median_ns": 614416.5,
+            "min_ns": 556083
+          }
+        },
+        {
+          "phase_name": "preliminary_read_cleanup",
+          "statistics": {
+            "count": 10,
+            "max_ns": 296250,
+            "mean_ns": 217933.3,
+            "median_ns": 207833.5,
+            "min_ns": 189625
+          }
+        },
+        {
+          "phase_name": "authoritative_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1010750,
+            "mean_ns": 573620.8,
+            "median_ns": 535916.5,
+            "min_ns": 468750
+          }
+        },
+        {
+          "phase_name": "accepted_history_load",
+          "statistics": {
+            "count": 10,
+            "max_ns": 762833,
+            "mean_ns": 334850.0,
+            "median_ns": 262396.0,
+            "min_ns": 255667
+          }
+        },
+        {
+          "phase_name": "concurrency_preparation_call",
+          "statistics": {
+            "count": 10,
+            "max_ns": 4250,
+            "mean_ns": 2175.1,
+            "median_ns": 1937.5,
+            "min_ns": 1792
+          }
+        },
+        {
+          "phase_name": "append_admission_call",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1137041,
+            "mean_ns": 778266.6,
+            "median_ns": 696791.5,
+            "min_ns": 677459
+          }
+        },
+        {
+          "phase_name": "idempotency_record_call",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1267792,
+            "mean_ns": 494312.7,
+            "median_ns": 378083.5,
+            "min_ns": 344709
+          }
+        },
+        {
+          "phase_name": "commit_finalization",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1837416,
+            "mean_ns": 532337.3,
+            "median_ns": 352250.0,
+            "min_ns": 336375
+          }
+        }
+      ],
+      "unavailable_timing_fields": []
+    },
+    {
+      "external_elapsed": {
+        "count": 10,
+        "max_ns": 1103792,
+        "mean_ns": 916416.8,
+        "median_ns": 902646.0,
+        "min_ns": 765041
+      },
+      "path": "B",
+      "phases": [
+        {
+          "phase_name": "producer_write_invocation",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1052750,
+            "mean_ns": 879691.7,
+            "median_ns": 867562.5,
+            "min_ns": 733584
+          }
+        },
+        {
+          "phase_name": "preliminary_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 819958,
+            "mean_ns": 652816.8,
+            "median_ns": 637521.0,
+            "min_ns": 545917
+          }
+        },
+        {
+          "phase_name": "preliminary_read_cleanup",
+          "statistics": {
+            "count": 10,
+            "max_ns": 320791,
+            "mean_ns": 218087.5,
+            "median_ns": 210562.0,
+            "min_ns": 172875
+          }
+        }
+      ],
+      "unavailable_timing_fields": []
+    },
+    {
+      "external_elapsed": {
+        "count": 10,
+        "max_ns": 1293458,
+        "mean_ns": 1016295.9,
+        "median_ns": 960187.5,
+        "min_ns": 865250
+      },
+      "path": "C",
+      "phases": [
+        {
+          "phase_name": "producer_write_invocation",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1247250,
+            "mean_ns": 976945.8,
+            "median_ns": 921729.0,
+            "min_ns": 831375
+          }
+        },
+        {
+          "phase_name": "preliminary_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 953833,
+            "mean_ns": 694054.2,
+            "median_ns": 684458.0,
+            "min_ns": 619959
+          }
+        },
+        {
+          "phase_name": "preliminary_read_cleanup",
+          "statistics": {
+            "count": 10,
+            "max_ns": 599583,
+            "mean_ns": 273108.3,
+            "median_ns": 236479.0,
+            "min_ns": 195958
+          }
+        }
+      ],
+      "unavailable_timing_fields": []
+    },
+    {
+      "path": "D",
+      "phases": [
+        {
+          "phase_name": "business_uow",
+          "statistics": {
+            "count": 10,
+            "max_ns": 947125,
+            "mean_ns": 807320.7,
+            "median_ns": 791062.5,
+            "min_ns": 676625
+          }
+        },
+        {
+          "phase_name": "preliminary_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 3091625,
+            "mean_ns": 1011325.0,
+            "median_ns": 690937.5,
+            "min_ns": 597542
+          }
+        },
+        {
+          "phase_name": "preliminary_read_cleanup",
+          "statistics": {
+            "count": 10,
+            "max_ns": 618458,
+            "mean_ns": 305062.5,
+            "median_ns": 228646.0,
+            "min_ns": 186542
+          }
+        },
+        {
+          "phase_name": "authoritative_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 656709,
+            "mean_ns": 578983.5,
+            "median_ns": 573729.0,
+            "min_ns": 500084
+          }
+        },
+        {
+          "phase_name": "accepted_history_load",
+          "statistics": {
+            "count": 10,
+            "max_ns": 808208,
+            "mean_ns": 340574.8,
+            "median_ns": 285729.0,
+            "min_ns": 252541
+          }
+        },
+        {
+          "phase_name": "rollback_finalization",
+          "statistics": {
+            "count": 10,
+            "max_ns": 280875,
+            "mean_ns": 220041.7,
+            "median_ns": 210146.0,
+            "min_ns": 170417
+          }
+        }
+      ],
+      "unavailable_timing_fields": [
+        "external_elapsed_ns",
+        "producer_write_invocation",
+        "validation_runtime_call"
+      ]
+    },
+    {
+      "path": "E",
+      "phases": [
+        {
+          "phase_name": "business_uow",
+          "statistics": {
+            "count": 10,
+            "max_ns": 2216667,
+            "mean_ns": 972812.4,
+            "median_ns": 824687.0,
+            "min_ns": 748417
+          }
+        },
+        {
+          "phase_name": "preliminary_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 847958,
+            "mean_ns": 652045.8,
+            "median_ns": 632146.0,
+            "min_ns": 519916
+          }
+        },
+        {
+          "phase_name": "preliminary_read_cleanup",
+          "statistics": {
+            "count": 10,
+            "max_ns": 302792,
+            "mean_ns": 215416.8,
+            "median_ns": 206104.0,
+            "min_ns": 167833
+          }
+        },
+        {
+          "phase_name": "authoritative_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1667709,
+            "mean_ns": 696316.8,
+            "median_ns": 588021.0,
+            "min_ns": 492375
+          }
+        },
+        {
+          "phase_name": "accepted_history_load",
+          "statistics": {
+            "count": 10,
+            "max_ns": 483000,
+            "mean_ns": 303612.3,
+            "median_ns": 280000.0,
+            "min_ns": 223625
+          }
+        },
+        {
+          "phase_name": "rollback_finalization",
+          "statistics": {
+            "count": 10,
+            "max_ns": 527875,
+            "mean_ns": 267737.7,
+            "median_ns": 238750.0,
+            "min_ns": 205458
+          }
+        }
+      ],
+      "unavailable_timing_fields": [
+        "external_elapsed_ns",
+        "producer_write_invocation",
+        "validation_runtime_call"
+      ]
+    },
+    {
+      "external_elapsed": {
+        "count": 10,
+        "max_ns": 4400083,
+        "mean_ns": 3300487.4,
+        "median_ns": 3102916.5,
+        "min_ns": 2702959
+      },
+      "path": "F",
+      "phases": [
+        {
+          "phase_name": "producer_write_invocation",
+          "statistics": {
+            "count": 10,
+            "max_ns": 4301667,
+            "mean_ns": 3256129.1,
+            "median_ns": 3062916.5,
+            "min_ns": 2664250
+          }
+        },
+        {
+          "phase_name": "business_uow",
+          "statistics": {
+            "count": 10,
+            "max_ns": 4283583,
+            "mean_ns": 3246999.9,
+            "median_ns": 3054875.0,
+            "min_ns": 2654917
+          }
+        },
+        {
+          "phase_name": "validation_runtime_call",
+          "statistics": {
+            "count": 10,
+            "max_ns": 16000,
+            "mean_ns": 8925.1,
+            "median_ns": 8187.5,
+            "min_ns": 7291
+          }
+        },
+        {
+          "phase_name": "authoritative_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1774958,
+            "mean_ns": 741466.7,
+            "median_ns": 623479.5,
+            "min_ns": 561833
+          }
+        },
+        {
+          "phase_name": "accepted_history_load",
+          "statistics": {
+            "count": 10,
+            "max_ns": 360875,
+            "mean_ns": 302750.1,
+            "median_ns": 297750.0,
+            "min_ns": 256792
+          }
+        },
+        {
+          "phase_name": "concurrency_preparation_call",
+          "statistics": {
+            "count": 10,
+            "max_ns": 420000,
+            "mean_ns": 307220.8,
+            "median_ns": 275208.0,
+            "min_ns": 249625
+          }
+        },
+        {
+          "phase_name": "pessimistic_advisory_try_lock_call",
+          "statistics": {
+            "count": 10,
+            "max_ns": 411625,
+            "mean_ns": 299991.9,
+            "median_ns": 270458.5,
+            "min_ns": 243000
+          }
+        },
+        {
+          "phase_name": "append_admission_call",
+          "statistics": {
+            "count": 10,
+            "max_ns": 930500,
+            "mean_ns": 835366.6,
+            "median_ns": 873416.5,
+            "min_ns": 683125
+          }
+        },
+        {
+          "phase_name": "idempotency_record_call",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1419292,
+            "mean_ns": 493308.5,
+            "median_ns": 370500.0,
+            "min_ns": 314084
+          }
+        },
+        {
+          "phase_name": "commit_finalization",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1387666,
+            "mean_ns": 489433.2,
+            "median_ns": 366937.5,
+            "min_ns": 344750
+          }
+        }
+      ],
+      "unavailable_timing_fields": []
+    },
+    {
+      "external_elapsed": {
+        "count": 10,
+        "max_ns": 1604416,
+        "mean_ns": 1102437.4,
+        "median_ns": 1075021.0,
+        "min_ns": 806125
+      },
+      "path": "G",
+      "phases": [
+        {
+          "phase_name": "producer_write_invocation",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1567042,
+            "mean_ns": 1061962.4,
+            "median_ns": 1037145.5,
+            "min_ns": 773334
+          }
+        },
+        {
+          "phase_name": "business_uow",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1560417,
+            "mean_ns": 1055175.3,
+            "median_ns": 1030750.5,
+            "min_ns": 768375
+          }
+        },
+        {
+          "phase_name": "authoritative_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1033500,
+            "mean_ns": 744991.7,
+            "median_ns": 682563.0,
+            "min_ns": 576750
+          }
+        },
+        {
+          "phase_name": "rollback_finalization",
+          "statistics": {
+            "count": 10,
+            "max_ns": 916750,
+            "mean_ns": 300154.2,
+            "median_ns": 239354.0,
+            "min_ns": 179417
+          }
+        }
+      ],
+      "unavailable_timing_fields": []
+    },
+    {
+      "external_elapsed": {
+        "count": 10,
+        "max_ns": 2345458,
+        "mean_ns": 1154250.1,
+        "median_ns": 1053041.5,
+        "min_ns": 820459
+      },
+      "path": "H",
+      "phases": [
+        {
+          "phase_name": "producer_write_invocation",
+          "statistics": {
+            "count": 10,
+            "max_ns": 2311084,
+            "mean_ns": 1118033.3,
+            "median_ns": 1017624.5,
+            "min_ns": 786417
+          }
+        },
+        {
+          "phase_name": "business_uow",
+          "statistics": {
+            "count": 10,
+            "max_ns": 2305000,
+            "mean_ns": 1111787.6,
+            "median_ns": 1010958.5,
+            "min_ns": 781792
+          }
+        },
+        {
+          "phase_name": "authoritative_idempotency_check",
+          "statistics": {
+            "count": 10,
+            "max_ns": 1676208,
+            "mean_ns": 828887.6,
+            "median_ns": 751979.0,
+            "min_ns": 582834
+          }
+        },
+        {
+          "phase_name": "rollback_finalization",
+          "statistics": {
+            "count": 10,
+            "max_ns": 619625,
+            "mean_ns": 273600.0,
+            "median_ns": 229979.0,
+            "min_ns": 188542
+          }
+        }
+      ],
+      "unavailable_timing_fields": []
+    }
+  ],
+  "run_id": "stage4b2-post-pr6-idempotency-layer1-0db85c3",
+  "schema_name": "stage4b2.post_pr6.postgres_idempotency_lifecycle.layer1.aggregates",
+  "schema_version": 1
+}

@@ -81,6 +81,44 @@ not as a substitute for ownership.
 
 ---
 
+## Historical Evolution of the AI-Assisted Workflow
+
+The AI-assisted workflow evolved in two broad phases.
+
+### Phase 1 — Through Stage 4B PR2
+
+ChatGPT was the primary conversational partner for architectural reasoning,
+definition clarification, drafting, and development collaboration.
+
+### Phase 2 — Beginning Around Stage 4B PR3
+
+Codex was added as a repository-aware audit and implementation collaborator.
+This made it practical to combine conversational architectural reasoning with
+direct source inspection, explicitly scoped implementation, and executable or
+documentary validation evidence.
+
+The development workflow changed; the authority model did not.
+
+AI may clarify, inspect, derive, challenge, draft, implement within explicit
+scope, and run validation. Human ownership remains responsible for semantic
+scope, architectural acceptance, rejecting misleading abstractions, deciding
+what becomes project authority, and making Git commit, push, and merge
+decisions.
+
+Later work therefore increasingly follows this combined pattern:
+
+```text
+conversational architectural reasoning
++ repository-aware source inspection
++ AI-generated executable or documentary evidence
++ human acceptance
+```
+
+This history records methodology provenance. It is not a tool comparison or a
+claim that AI-generated work inherits architectural authority.
+
+---
+
 ## Definitions Before Implementation
 
 A recurring pattern in this project is:

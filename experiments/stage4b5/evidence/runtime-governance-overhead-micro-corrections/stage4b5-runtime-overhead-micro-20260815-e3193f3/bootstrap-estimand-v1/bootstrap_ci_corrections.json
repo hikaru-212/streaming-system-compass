@@ -1,0 +1,328 @@
+{
+  "absolute_total_elapsed_ns": [
+    {
+      "aggregate_key": "CREATE_ACCEPTED/A",
+      "corrected_lower": 3291,
+      "corrected_upper": 3333,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 3291,
+      "original_upper": 3333,
+      "reported_pooled_unit_p50": 3292,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_ACCEPTED/B",
+      "corrected_lower": 4417,
+      "corrected_upper": 4500,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 4417,
+      "original_upper": 4500,
+      "reported_pooled_unit_p50": 4458,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_ACCEPTED/C",
+      "corrected_lower": 17459,
+      "corrected_upper": 18000,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 17291,
+      "original_upper": 18209,
+      "reported_pooled_unit_p50": 17667,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_VALIDATION_BLOCKED/A",
+      "corrected_lower": 2292,
+      "corrected_upper": 2333,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 2292,
+      "original_upper": 2333,
+      "reported_pooled_unit_p50": 2292,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_VALIDATION_BLOCKED/B",
+      "corrected_lower": 4084,
+      "corrected_upper": 4166,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 4083,
+      "original_upper": 4125,
+      "reported_pooled_unit_p50": 4125,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_VALIDATION_BLOCKED/C",
+      "corrected_lower": 17292,
+      "corrected_upper": 18000,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 17166,
+      "original_upper": 18084,
+      "reported_pooled_unit_p50": 17584,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_ACCEPTED/A",
+      "corrected_lower": 3334,
+      "corrected_upper": 3375,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 3333,
+      "original_upper": 3375,
+      "reported_pooled_unit_p50": 3375,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_ACCEPTED/B",
+      "corrected_lower": 4458,
+      "corrected_upper": 4542,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 4458,
+      "original_upper": 4500,
+      "reported_pooled_unit_p50": 4500,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_ACCEPTED/C",
+      "corrected_lower": 17958,
+      "corrected_upper": 18292,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 17791,
+      "original_upper": 18208,
+      "reported_pooled_unit_p50": 18166,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_VALIDATION_BLOCKED/A",
+      "corrected_lower": 2333,
+      "corrected_upper": 2375,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 2292,
+      "original_upper": 2334,
+      "reported_pooled_unit_p50": 2334,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_VALIDATION_BLOCKED/B",
+      "corrected_lower": 4125,
+      "corrected_upper": 4167,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 4084,
+      "original_upper": 4166,
+      "reported_pooled_unit_p50": 4125,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_VALIDATION_BLOCKED/C",
+      "corrected_lower": 17875,
+      "corrected_upper": 18250,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "total_elapsed_ns",
+      "original_lower": 17709,
+      "original_upper": 18041,
+      "reported_pooled_unit_p50": 18125,
+      "unit": "nanoseconds"
+    }
+  ],
+  "batch_comparison_estimate_ns": [
+    {
+      "aggregate_key": "CREATE_ACCEPTED/B-A_END_TO_END",
+      "corrected_lower": 1125,
+      "corrected_upper": 1167,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 1083,
+      "original_upper": 1125,
+      "reported_pooled_unit_p50": 1166,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_ACCEPTED/C-A_END_TO_END",
+      "corrected_lower": 14000,
+      "corrected_upper": 14542,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 13834,
+      "original_upper": 14666,
+      "reported_pooled_unit_p50": 14250,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_ACCEPTED/C-B_COMPOSITION_LAP",
+      "corrected_lower": 12667,
+      "corrected_upper": 13042,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 12625,
+      "original_upper": 13000,
+      "reported_pooled_unit_p50": 12833,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_ACCEPTED/C-B_TOTAL_SECONDARY",
+      "corrected_lower": 12751,
+      "corrected_upper": 13417,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 12625,
+      "original_upper": 13250,
+      "reported_pooled_unit_p50": 13000,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_VALIDATION_BLOCKED/B-A_END_TO_END",
+      "corrected_lower": 1791,
+      "corrected_upper": 1834,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 1750,
+      "original_upper": 1792,
+      "reported_pooled_unit_p50": 1833,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_VALIDATION_BLOCKED/C-A_END_TO_END",
+      "corrected_lower": 14917,
+      "corrected_upper": 15667,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 14666,
+      "original_upper": 15000,
+      "reported_pooled_unit_p50": 15125,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_VALIDATION_BLOCKED/C-B_COMPOSITION_LAP",
+      "corrected_lower": 12916,
+      "corrected_upper": 13333,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 12708,
+      "original_upper": 13041,
+      "reported_pooled_unit_p50": 13083,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "CREATE_VALIDATION_BLOCKED/C-B_TOTAL_SECONDARY",
+      "corrected_lower": 13000,
+      "corrected_upper": 13791,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 12791,
+      "original_upper": 13333,
+      "reported_pooled_unit_p50": 13333,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_ACCEPTED/B-A_END_TO_END",
+      "corrected_lower": 1083,
+      "corrected_upper": 1167,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 1041,
+      "original_upper": 1084,
+      "reported_pooled_unit_p50": 1125,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_ACCEPTED/C-A_END_TO_END",
+      "corrected_lower": 14500,
+      "corrected_upper": 14833,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 14250,
+      "original_upper": 14666,
+      "reported_pooled_unit_p50": 14666,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_ACCEPTED/C-B_COMPOSITION_LAP",
+      "corrected_lower": 13042,
+      "corrected_upper": 13292,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 12958,
+      "original_upper": 13083,
+      "reported_pooled_unit_p50": 13167,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_ACCEPTED/C-B_TOTAL_SECONDARY",
+      "corrected_lower": 13458,
+      "corrected_upper": 13668,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 13125,
+      "original_upper": 13583,
+      "reported_pooled_unit_p50": 13543,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_VALIDATION_BLOCKED/B-A_END_TO_END",
+      "corrected_lower": 1750,
+      "corrected_upper": 1834,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 1709,
+      "original_upper": 1792,
+      "reported_pooled_unit_p50": 1792,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_VALIDATION_BLOCKED/C-A_END_TO_END",
+      "corrected_lower": 15209,
+      "corrected_upper": 15709,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 15000,
+      "original_upper": 15459,
+      "reported_pooled_unit_p50": 15417,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_VALIDATION_BLOCKED/C-B_COMPOSITION_LAP",
+      "corrected_lower": 13083,
+      "corrected_upper": 13542,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 12958,
+      "original_upper": 13333,
+      "reported_pooled_unit_p50": 13292,
+      "unit": "nanoseconds"
+    },
+    {
+      "aggregate_key": "PAY_VALIDATION_BLOCKED/C-B_TOTAL_SECONDARY",
+      "corrected_lower": 13416,
+      "corrected_upper": 13916,
+      "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+      "metric": "estimate_ns",
+      "original_lower": 13209,
+      "original_upper": 13708,
+      "reported_pooled_unit_p50": 13750,
+      "unit": "nanoseconds"
+    }
+  ],
+  "bootstrap": {
+    "confidence": 0.95,
+    "percentile_method": "empirical nearest-rank",
+    "repetitions": 2000,
+    "resampling_unit": "recorded block",
+    "seed": 4500951,
+    "within_block_units": "retained in full"
+  },
+  "correction_id": "bootstrap-estimand-v1",
+  "correction_reason": "original bootstrap reduced every recorded block to a median before resampling, changing the estimand from the reported pooled-unit median",
+  "original_run_id": "stage4b5-runtime-overhead-micro-20260815-e3193f3",
+  "schema": "stage4b5-runtime-governance-bootstrap-ci-corrections",
+  "schema_version": 1,
+  "unit": "nanoseconds"
+}

@@ -2,6 +2,11 @@
 
 [← Back to Stage 3.5D Notes](README.md)
 
+> Current repair note: ADR 0020 supersedes latest-snapshot selection by global
+> position. The implemented store selects the highest
+> `source_event_sequence` for the requested `order_id`.
+> `source_global_position` remains unique lineage metadata.
+
 ## Purpose
 
 This note defines the storage boundary for **Stage 3.5D PR3 — PostgresProjectionSnapshotStore**.
@@ -239,7 +244,7 @@ The latest usable snapshot is therefore determined by accepted-history progress,
 
 This boundary is recorded in:
 
-- [From `created_at` Freshness to Committed-History Boundaries](../../postmortems/from_created_at_freshness_to_committed_history_boundaries.md)
+- [From `created_at` Freshness to Committed-History Boundaries](../../reasoning_notes/from_created_at_freshness_to_committed_history_boundaries.md)
 
 ---
 

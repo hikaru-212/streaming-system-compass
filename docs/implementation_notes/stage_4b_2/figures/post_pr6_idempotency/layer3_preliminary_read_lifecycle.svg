@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" role="img"
+     aria-labelledby="title desc">
+  <title id="title">Layer-3 preliminary read-lifecycle medians</title>
+  <desc id="desc">Independent horizontal bars show median idle rollback,
+  idempotency check, accepted-history load, active read cleanup, and directly
+  measured lifecycle elapsed. The lifecycle is not a sum of the components.</desc>
+  <style>
+    text { font-family: system-ui, -apple-system, sans-serif; fill: #24313b; }
+    .title { font-size: 22px; font-weight: 650; }
+    .subtitle { font-size: 13px; fill: #5c6872; }
+    .axis { stroke: #aeb8bf; stroke-width: 1; }
+    .grid { stroke: #dfe5e9; stroke-width: 1; }
+    .label { font-size: 13px; font-weight: 600; }
+    .tick { font-size: 12px; fill: #5c6872; }
+    .value { font-size: 12px; font-variant-numeric: tabular-nums; }
+    .baseline { fill: #87939c; stroke: #66737d; stroke-width: 1; }
+    .component { fill: #3f6682; }
+    .lifecycle { fill: #b88a4b; }
+    .frame { fill: none; stroke: #c8d0d5; stroke-width: 1; }
+  </style>
+
+  <text class="title" x="40" y="38">Layer 3 — PRE-like read lifecycle</text>
+  <text class="subtitle" x="40" y="62">
+    Independent median observations; no stacking or component sum
+  </text>
+
+  <rect class="frame" x="300" y="96" width="560" height="320"/>
+  <line class="grid" x1="300" y1="96" x2="300" y2="416"/>
+  <line class="grid" x1="420" y1="96" x2="420" y2="416"/>
+  <line class="grid" x1="540" y1="96" x2="540" y2="416"/>
+  <line class="grid" x1="660" y1="96" x2="660" y2="416"/>
+  <line class="grid" x1="780" y1="96" x2="780" y2="416"/>
+  <line class="grid" x1="860" y1="96" x2="860" y2="416"/>
+
+  <text class="tick" x="300" y="438" text-anchor="middle">0</text>
+  <text class="tick" x="420" y="438" text-anchor="middle">300</text>
+  <text class="tick" x="540" y="438" text-anchor="middle">600</text>
+  <text class="tick" x="660" y="438" text-anchor="middle">900</text>
+  <text class="tick" x="780" y="438" text-anchor="middle">1,200</text>
+  <text class="tick" x="860" y="438" text-anchor="middle">1,400</text>
+  <text class="label" x="580" y="470" text-anchor="middle">
+    Median elapsed (µs)
+  </text>
+
+  <text class="label" x="284" y="132" text-anchor="end">IDLE rollback baseline</text>
+  <rect class="baseline" x="300" y="112" width="1.267" height="26"/>
+  <text class="value" x="310" y="130">3.167 µs</text>
+
+  <text class="label" x="284" y="192" text-anchor="end">Idempotency check</text>
+  <rect class="component" x="300" y="172" width="288" height="26"/>
+  <text class="value" x="596" y="190">719.854 µs</text>
+
+  <text class="label" x="284" y="252" text-anchor="end">Accepted-history load</text>
+  <rect class="component" x="300" y="232" width="128" height="26"/>
+  <text class="value" x="436" y="250">319.188 µs</text>
+
+  <text class="label" x="284" y="312" text-anchor="end">Active read cleanup</text>
+  <rect class="component" x="300" y="292" width="86" height="26"/>
+  <text class="value" x="394" y="310">214.334 µs</text>
+
+  <text class="label" x="284" y="372" text-anchor="end">Direct lifecycle</text>
+  <rect class="lifecycle" x="300" y="352" width="505" height="26"/>
+  <text class="value" x="813" y="370">1,263.626 µs</text>
+
+  <text class="subtitle" x="300" y="500">
+    Direct lifecycle is independently timed; it is not check + history + cleanup.
+  </text>
+</svg>

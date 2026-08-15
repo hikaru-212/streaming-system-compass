@@ -29,6 +29,10 @@ class PostgresWriteSideConfig:
     """
     Configuration for PostgreSQL-backed transactional write-side execution.
 
+    Default validation mode: ValidationMode.STRICT.
+    Default validation placement: ValidationPlacement.PRE_TRANSACTION.
+    Default admission gate: optimistic, owned independently by the write side.
+
     This config intentionally does not own:
     - concrete database connections
     - concrete admission gate instances
@@ -40,4 +44,4 @@ class PostgresWriteSideConfig:
     """
 
     validation_mode: ValidationMode = ValidationMode.STRICT
-    validation_placement: ValidationPlacement = ValidationPlacement.IN_TRANSACTION
+    validation_placement: ValidationPlacement = ValidationPlacement.PRE_TRANSACTION

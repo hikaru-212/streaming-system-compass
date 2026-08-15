@@ -2,6 +2,30 @@
 
 [← Back to Boundary Notes](README.md)
 
+## Current Repaired Tail Contract
+
+[ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+supersedes this boundary's original global-position snapshot-tail mechanism.
+The broader authority hierarchy remains unchanged: accepted history is
+authority, while projection state, projection progress, snapshots, snapshot
+qualification, and validation evidence remain derived evidence.
+
+For the current aggregate-local order projection, a snapshot tail is selected
+from the same `order_id` using:
+
+```text
+event.sequence > snapshot.source_event_sequence
+ORDER BY event.sequence ASC
+```
+
+Every returned event must be the exact next contiguous order-local sequence.
+An unrelated order's higher `global_position` cannot advance the target
+order's tail. `snapshot.source_global_position` remains valid snapshot lineage
+metadata, but it is not a tail cursor or complete committed-history frontier.
+This does not define a total global projection order.
+
+---
+
 ## Purpose
 
 This note defines the trust boundary for snapshot-assisted replay and rehydration.
@@ -207,7 +231,8 @@ snapshot.state_version >= 0
 snapshot.state_version <= snapshot.source_event_sequence
 snapshot.state_version == snapshot.source_event_sequence under the current reducer
 snapshot.state_status is supported by the current projection state model
-tail event source returns strictly advancing global_position values
+tail event source returns only the same order_id
+tail event source returns exact contiguous order-local sequence values
 snapshot-assisted replay result matches accepted-history replay result
 ```
 
@@ -229,7 +254,6 @@ source_global_position matches accepted history
 snapshot_schema_version is supported
 logic_version is supported
 payload_hash matches canonical snapshot payload
-tail gaps are explained by an aborted-position / hole registry
 snapshot state satisfies projection-domain invariants at the claimed boundary
 ```
 
@@ -302,21 +326,29 @@ This prevents cache-stampede races from crashing normal execution while still de
 
 ## Tail Continuity
 
-For projection-side replay, the snapshot preserves `source_global_position` so the tail event source can load events strictly after the snapshot boundary:
+For projection-side replay, the snapshot's aggregate-local boundary is
+`source_event_sequence` for the same `order_id`:
 
 ```text
-event.global_position > snapshot.source_global_position
+event.order_id = snapshot.order_id
+event.sequence > snapshot.source_event_sequence
+ORDER BY event.sequence ASC
 ```
 
-PR4 validates the tail source cursor contract:
+PR4 validates exact contiguous order-local sequence:
 
 ```text
-next global_position must strictly advance
+next event.sequence = previous event.sequence + 1
 ```
 
-It does not yet validate every global-position gap.
+An order-local sequence gap fails explicitly. PostgreSQL global-position
+allocation gaps, whether caused by rollback or cross-order commit inversion,
+do not define continuity for this aggregate-local tail. No global-position hole
+registry is required by the current snapshot-tail contract.
 
-That requires a future aborted-position / hole registry so the system can distinguish legitimate gaps from unexplained source discontinuity.
+`snapshot.source_global_position` remains lineage metadata that can be checked
+against accepted history. It does not establish a complete committed-history
+frontier.
 
 ---
 

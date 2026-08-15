@@ -7,6 +7,23 @@ This module provides the persistence abstractions that surround both the transac
 It does **not** define domain meaning by itself.  
 Instead, it preserves, retrieves, and checkpoints the semantic artifacts produced by the core and used by the pipeline.
 
+## Current repaired read-side contract
+
+[ADR 0020](../../docs/adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+replaces the historical global-checkpoint completeness cursor for the current
+order-state projection. The worker discovers exact-next events by order-local
+sequence and commits projection state with progress scoped to projection
+definition, epoch, and `order_id` on one connection and transaction.
+`global_position` remains accepted-event lineage and deterministic scheduling
+metadata among eligible events; it is not commit order or a complete
+committed-history frontier. Legacy checkpoint stores remain available as
+generic infrastructure but are not used by the repaired worker for correctness
+or restart.
+
+A worker `no_event` result means only that no currently visible accepted event
+is the exact next event for the supported projection definition and epoch. It
+does not prove global catch-up or exclude a later commit.
+
 ---
 
 ## Purpose
@@ -16,8 +33,10 @@ The purpose of this module is to provide storage boundaries for:
 - accepted event history
 - idempotency records
 - projection state
+- per-order projection progress
 - projection checkpoints / offsets
 - projection snapshots
+- decision receipts
 
 This layer exists so that domain logic and runtime orchestration do not need to directly depend on concrete persistence details.
 
@@ -31,9 +50,11 @@ This module is responsible for:
 - version-aware event persistence
 - idempotency record persistence
 - projection state persistence
+- exact-next projection progress persistence
 - checkpoint / offset persistence
 - projection snapshot persistence
 - PostgreSQL-backed persistence implementations where the current stage requires durability
+- caller-transaction-owned DecisionReceipt insert and load contracts
 
 Typical submodules or files include:
 
@@ -45,9 +66,15 @@ Typical submodules or files include:
 - `postgres_idempotency_store.py`
 - `projection_store.py`
 - `postgres_projection_store.py`
+- `projection_progress_store.py`
+- `postgres_projection_progress_store.py`
+- `postgres_projection_eligible_event_source.py`
+- `postgres_order_event_tail_source.py`
 - `checkpoint_store.py`
 - `postgres_checkpoint_store.py`
 - `postgres_projection_snapshot_store.py`
+- `decision_receipt_store.py`
+- `postgres_decision_receipt_store.py`
 
 ---
 
@@ -59,7 +86,7 @@ Provides the PostgreSQL-backed projection snapshot store.
 Typical responsibilities:
 
 - persist `ProjectionSnapshot` records into `projection_snapshots`
-- load the latest snapshot for one order by highest `source_global_position`
+- load the latest snapshot for one order by highest `source_event_sequence`
 - clear projection snapshots for one order
 - preserve Decimal amount, metadata JSON, snapshot schema version, reducer version, payload hash, and database-created `created_at`
 - treat duplicate writes with the same complete source boundary and same snapshot evidence as idempotent success
@@ -120,6 +147,20 @@ It is the boundary that preserves and restores semantic artifacts across time.
 
 ## Main Storage Boundaries
 
+### `decision_receipt_store.py`
+
+Defines storage-neutral persistence envelopes, insertion outcomes, conflict
+categories, and materialization provenance. Callers pass strict serialized
+receipt data; this boundary does not map producer results or evaluate
+governance.
+
+### `postgres_decision_receipt_store.py`
+
+Persists and loads version-1 DecisionReceipt envelopes through a caller-owned
+PostgreSQL connection and transaction. It does not commit, roll back,
+automatically materialize mapper output, scan accepted history, or reconcile
+missing receipts.
+
 ### `event_store.py`
 
 Stores the append-only accepted history.
@@ -162,7 +203,7 @@ This helper prevents multiple PostgreSQL readers from copying their own row-to-e
 
 ### `postgres_projection_event_source.py`
 
-Provides the PostgreSQL-backed accepted-history event source for projection workers.
+Provides the PostgreSQL-backed accepted-history event source for legacy global-position scans.
 
 Typical responsibilities:
 
@@ -173,6 +214,11 @@ Typical responsibilities:
   - `OrderEvent` as domain event meaning
 
 This source only reads accepted history.
+
+The repaired order-state worker uses
+`PostgresProjectionEligibleEventSource` instead. That source joins accepted
+events to per-order progress and selects only exact-next local sequences;
+`global_position` is only its deterministic scheduling tie-breaker.
 
 It does **not**:
 
@@ -290,12 +336,12 @@ projection schema version
 
 ### `checkpoint_store.py`
 
-Stores consumer position / projection progress.
+Stores generic consumer cursor / checkpoint evidence.
 
 Typical responsibilities:
 
 - save last processed offset or sequence
-- restore projection progress after restart
+- restore cursor state for consumers that use this generic abstraction
 - support replay / rebuild boundaries
 
 At the current stage, this exists as part of the Stage 3 baseline projection runtime in a deterministic in-memory form.
@@ -306,12 +352,16 @@ Provides the PostgreSQL-backed projection checkpoint store.
 
 Typical responsibilities:
 
-- persist projection worker progress into `projection_checkpoints`
+- persist generic worker checkpoint evidence into `projection_checkpoints`
 - load projection worker progress by `worker_name`
 - upsert checkpoint cursor state
 - clear checkpoint progress for tests and future rebuild paths
 
 This store owns durable checkpoint persistence only.
+
+The repaired order-state projection worker does not use this store for
+correctness or restart; its durable restart evidence is
+`projection_order_progress`.
 
 It does **not**:
 
@@ -339,7 +389,7 @@ inside one read-side transaction boundary.
 
 ## Current Implementation Scope
 
-At the current stage, after Stage 3.5D completion, this module supports write-side persistence, read-side persistence, and projection snapshot persistence boundaries.
+At the current stage, after Stage 4B completion, this module supports write-side persistence, read-side persistence, projection snapshot persistence, and explicit DecisionReceipt persistence boundaries.
 
 Write-side storage currently includes:
 
@@ -353,15 +403,24 @@ Read-side storage currently includes:
 
 - `projection_store.py` — projection state protocol and in-memory projection state store
 - `postgres_projection_store.py` — PostgreSQL-backed projection state store
+- `projection_progress_store.py` — per-order progress model and protocol
+- `postgres_projection_progress_store.py` — PostgreSQL-backed exact-next per-order progress store
+- `postgres_projection_eligible_event_source.py` — currently visible exact-next event discovery
+- `postgres_order_event_tail_source.py` — same-order local-sequence snapshot-tail loading
 - `checkpoint_store.py` — checkpoint / offset protocol and in-memory checkpoint store
-- `postgres_checkpoint_store.py` — PostgreSQL-backed checkpoint store
-- `postgres_projection_event_source.py` — PostgreSQL-backed accepted-history event source for projection workers
+- `postgres_checkpoint_store.py` — PostgreSQL-backed generic / legacy checkpoint store
+- `postgres_projection_event_source.py` — PostgreSQL-backed legacy global-position event source
 - `order_event_hydration.py` — shared database-row-to-domain-event hydration helper
 - `postgres_projection_snapshot_store.py` — PostgreSQL-backed projection snapshot store
 
 Snapshot-related storage currently includes:
 
 - `postgres_projection_snapshot_store.py` — projection snapshot persistence for derived read-side state compression
+
+DecisionReceipt storage currently includes:
+
+- `decision_receipt_store.py` — storage-neutral persistence envelopes and conflict contracts
+- `postgres_decision_receipt_store.py` — caller-transaction-owned PostgreSQL insert and load behavior
 
 The current durable write-side progress is:
 
@@ -395,7 +454,7 @@ Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver ✅
 Stage 3.5D PR5 — Aggregate Snapshot Trust Boundary / Deferral Decision ✅
 ```
 
-Stage 3.5C PR4 adds storage-side accepted-history consumption for the durable projection worker:
+Stage 3.5C PR4 historically added storage-side accepted-history consumption:
 
 ```text
 order_events.global_position
@@ -403,7 +462,22 @@ order_events.global_position
 → ProjectionEventRecord
 ```
 
-The event source keeps global worker cursor metadata outside `OrderEvent`.
+The historical event source keeps its global scan coordinate outside
+`OrderEvent`; that coordinate remains storage lineage rather than domain
+meaning.
+
+The repaired worker now uses:
+
+```text
+order_events + projection_order_progress
+→ PostgresProjectionEligibleEventSource
+→ exact-next OrderEvent for one order
+→ projection state + PostgresProjectionProgressStore in one transaction
+```
+
+No progress row means sequence zero for that order. Processing another order
+cannot exclude a late-committing event, and a rolled-back global-position
+allocation does not block unrelated orders.
 
 Stage 3.5D adds projection snapshot persistence as a derived-state compression boundary:
 
@@ -458,9 +532,13 @@ As the source of actual accepted history used to validate predecessor claims and
 
 ### `src/pipeline/projection/`
 
-As the read-side path that depends on projection-state and checkpoint persistence boundaries.
+As the read-side path that depends on projection-state and exact-next
+per-order progress persistence boundaries. Generic checkpoint infrastructure
+remains available for other consumers.
 
-Stage 3.5C PR2 makes `projection_states` usable through a Python storage boundary, but it does not yet connect that store to a PostgreSQL-backed projection worker.
+Stage 3.5C PR2 historically made `projection_states` usable through a Python
+storage boundary. The current repaired worker connects that state store to
+exact-next per-order progress under ADR 0020.
 
 ---
 
@@ -474,7 +552,9 @@ For durable accepted-history and idempotency semantics across restart.
 
 ### persistence-backed projection flow
 
-For durable projection-state and checkpoint semantics across restart. This is now established at the Stage 3.5C baseline level.
+For durable projection-state and per-order progress semantics across restart.
+This is established for the current aggregate-local projection; a legacy
+global checkpoint is not repaired-worker restart evidence.
 
 ### projection snapshot persistence
 
@@ -506,19 +586,20 @@ At the current stage, the main storage-related invariants include:
 - projection state must remain derived and rebuildable
 - PostgreSQL-backed projection state must round-trip status, Decimal money values, and version evidence correctly
 - `projection_states.last_sequence` currently reflects `OrderState.version`
-- checkpoint position must reflect actual projection progress
-- projection state and checkpoint progress should be committed atomically by the PostgreSQL-backed projection worker
+- repaired projection progress must advance by exact-next order-local sequence
+- projection state and matching per-order progress must be committed atomically by the PostgreSQL-backed projection worker
 - persistence-backed replay and incremental state must remain equivalent
-- durable checkpoint position must survive restart correctly
+- durable per-order progress must survive restart correctly
 - projection snapshots must remain derived state compression, not accepted-history authority
 - projection snapshot duplicate writes must distinguish benign idempotent writes from inconsistent evidence collisions
 - write-side and read-side persistence semantics must remain mutually consistent
+- database role boundaries prevent runtime roles from casually updating or deleting accepted history
+- DecisionReceipt serialization and persistence must preserve exact versioned semantic evidence and caller-owned transaction boundaries
 
 Later invariants will include:
 
-- database role boundaries should prevent runtime code from casually updating or deleting accepted history
 - append-only hardening should protect `order_events` without freezing mutable derived read-side tables
-- future validation receipts may harden snapshot runtime trust without turning snapshot rows into authority
+- future governance may consume validation receipts without turning snapshot rows into authority
 
 ---
 
@@ -532,19 +613,25 @@ If reading this module from scratch, the recommended order is:
 4. `postgres_idempotency_store.py`
 5. `projection_store.py`
 6. `postgres_projection_store.py`
-7. `checkpoint_store.py`
-8. `postgres_checkpoint_store.py`
-9. `postgres_projection_event_source.py`
-10. `postgres_projection_snapshot_store.py`
+7. `projection_progress_store.py`
+8. `postgres_projection_progress_store.py`
+9. `postgres_projection_eligible_event_source.py`
+10. `checkpoint_store.py`
+11. `postgres_checkpoint_store.py`
+12. `postgres_projection_event_source.py`
+13. `postgres_projection_snapshot_store.py`
+14. `decision_receipt_store.py`
+15. `postgres_decision_receipt_store.py`
 
 This reflects the current project evolution:
 
 - transactional persistence first
 - durable read-side projection state second
-- durable checkpoint progress next
-- worker orchestration after both durable stores exist
+- durable per-order progress and worker orchestration
+- legacy checkpoint infrastructure retained for generic consumers
 - replay validation after durable worker semantics exist
 - snapshot persistence and snapshot-assisted replay after accepted-history authority is clear
+- DecisionReceipt persistence after the semantic contract and producer mappings stabilize
 
 ---
 
@@ -555,4 +642,7 @@ It defines where semantic truth and runtime progress are persisted, recovered, a
 
 If the core is the system's semantic source, storage is the memory boundary that preserves that source across time.
 
-After Stage 3.5D, storage also preserves projection snapshot artifacts for replay efficiency. Those artifacts are useful only because accepted history remains the authority path that can validate or reject them.
+After Stage 4B, storage also preserves projection snapshot artifacts for replay
+efficiency and versioned DecisionReceipt governance evidence. Snapshot artifacts
+remain subordinate to accepted history, and receipt persistence remains an
+explicit caller-owned operation rather than automatic materialization.

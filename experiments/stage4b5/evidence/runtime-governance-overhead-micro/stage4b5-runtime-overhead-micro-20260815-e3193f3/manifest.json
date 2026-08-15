@@ -1,0 +1,278 @@
+{
+  "environment": {
+    "garbage_collection_enabled": true,
+    "logical_cpu_count": 12,
+    "platform_machine": "arm64",
+    "platform_processor": "arm",
+    "platform_release": "25.5.0",
+    "platform_system": "Darwin",
+    "python_executable": "/Users/yenhuachen/projects/streaming_system_compass/.venv/bin/python",
+    "python_implementation": "CPython",
+    "python_version": "3.12.7",
+    "timer": "time.perf_counter_ns",
+    "timer_adjustable": false,
+    "timer_implementation": "mach_absolute_time()",
+    "timer_monotonic": true,
+    "timer_resolution_seconds": 4.166666666666667e-08
+  },
+  "environment_limitations": [
+    "historical committed Stage 4B.2 values are context only and are not subtracted",
+    "A shares audited-unchanged transitive modules from the current checkout",
+    "A/B/C run in separate processes, so process-level jitter remains measurement noise",
+    "independent C-B full-path subtraction is secondary and not the primary composition estimate",
+    "single-host PostgreSQL results remain specific to the recorded machine and database",
+    "the deterministic blocked context perturbation is benchmark-owned and equal across A/B/C"
+  ],
+  "layer": "MICRO",
+  "postgresql": null,
+  "run_id": "stage4b5-runtime-overhead-micro-20260815-e3193f3",
+  "scenario_definitions": [
+    {
+      "blocked_perturbation": null,
+      "command": "CREATE",
+      "name": "CREATE_ACCEPTED",
+      "placement": null,
+      "terminal": "ACCEPTED"
+    },
+    {
+      "blocked_perturbation": "accepted-history ValidationContext.actual_prev_version + 1",
+      "command": "CREATE",
+      "name": "CREATE_VALIDATION_BLOCKED",
+      "placement": null,
+      "terminal": "VALIDATION_BLOCKED"
+    },
+    {
+      "blocked_perturbation": null,
+      "command": "PAY",
+      "name": "PAY_ACCEPTED",
+      "placement": null,
+      "terminal": "ACCEPTED"
+    },
+    {
+      "blocked_perturbation": "accepted-history ValidationContext.actual_prev_version + 1",
+      "command": "PAY",
+      "name": "PAY_VALIDATION_BLOCKED",
+      "placement": null,
+      "terminal": "VALIDATION_BLOCKED"
+    }
+  ],
+  "schedule": {
+    "adaptive_extension": false,
+    "comparison_units_per_scenario": 180,
+    "recorded_blocks": 30,
+    "repetitions_per_permutation": 100,
+    "schedule_seed": 4500617,
+    "surface_permutations": [
+      [
+        "C",
+        "A",
+        "B"
+      ],
+      [
+        "A",
+        "C",
+        "B"
+      ],
+      [
+        "B",
+        "C",
+        "A"
+      ],
+      [
+        "A",
+        "B",
+        "C"
+      ],
+      [
+        "B",
+        "A",
+        "C"
+      ],
+      [
+        "C",
+        "B",
+        "A"
+      ]
+    ],
+    "warmup_blocks_or_cycles": 5
+  },
+  "schema": "stage4b5-runtime-governance-overhead-run",
+  "schema_level": "migrations-through-007",
+  "schema_version": 2,
+  "source_identities": {
+    "A": {
+      "allowed_current_source_differences": [
+        "src/compass/runtime/__init__.py",
+        "src/compass/runtime/write_side_rule_feedback.py",
+        "src/compass/transition/rule_evaluation_evidence.py",
+        "src/compass/transition/runtime.py",
+        "src/compass/transition/validators.py",
+        "src/core/order/correctness_contract.py",
+        "src/core/order/correctness_contract_yaml_projection.py",
+        "src/core/order/rule_violation_evidence.py",
+        "src/pipeline/transactional/postgres_write_side.py",
+        "src/pipeline/transactional/postgres_write_side_measurement.py"
+      ],
+      "modules": [
+        {
+          "git_blob": "1af582ce26ab622d452880ed280885f172001f73",
+          "module": "src.compass.transition.validators",
+          "path": "src/compass/transition/validators.py",
+          "sha256": "aced29031b0b07f39a47c6c27714da6569ae1ea8bdf8ad9641dfb8fe026b545d"
+        },
+        {
+          "git_blob": "c9253299d3bcb91bd7f99da4bbab658d90458724",
+          "module": "src.compass.transition.runtime",
+          "path": "src/compass/transition/runtime.py",
+          "sha256": "e6b72c5b4702dd68f835123392e68d507b6e1b1da333563c6fb876c457e1d889"
+        },
+        {
+          "git_blob": "e20cfb881ead9293c266bdabf5e3d9b79441b777",
+          "module": "src.pipeline.transactional.postgres_write_side",
+          "path": "src/pipeline/transactional/postgres_write_side.py",
+          "sha256": "374839bb5ff14ee257453d5d4b79d86dff948c16ddb36fbc00f7df85370a53cf"
+        }
+      ],
+      "schema": "stage4b5-runtime-governance-a-source-provenance",
+      "schema_version": 1,
+      "source_commit": "0bd2f515bcc49e8e1f0e9d2f9dba4a294adadd0d"
+    },
+    "B_C": {
+      "branch": "experiment/stage4b5-runtime-governance-overhead",
+      "commit": "e3193f374bea0ac4190f87499945b58cd99638c2",
+      "harness_blobs": {
+        "experiments/stage4b5/runtime_governance_overhead.py": "724d8fad9c03ec5d273e09bc2dd5d108d2453f00",
+        "experiments/stage4b5/runtime_governance_overhead_recorded_run.py": "6ec01997ed962e340ccf9a4f6cba9d6f452e61cd"
+      },
+      "production_src_tree": "e608a3214b636a68ff1f2a2e39f726cd99906909",
+      "working_tree_clean": true
+    },
+    "shared_transitive_import_basis": "source-diff audit found protected execution-closure changes only in the three A-pinned modules; normal APIs do not import the separately changed Stage 4B.2 measurement module",
+    "worker_processes": {
+      "A": {
+        "a_source_provenance": {
+          "allowed_current_source_differences": [
+            "src/compass/runtime/__init__.py",
+            "src/compass/runtime/write_side_rule_feedback.py",
+            "src/compass/transition/rule_evaluation_evidence.py",
+            "src/compass/transition/runtime.py",
+            "src/compass/transition/validators.py",
+            "src/core/order/correctness_contract.py",
+            "src/core/order/correctness_contract_yaml_projection.py",
+            "src/core/order/rule_violation_evidence.py",
+            "src/pipeline/transactional/postgres_write_side.py",
+            "src/pipeline/transactional/postgres_write_side_measurement.py"
+          ],
+          "modules": [
+            {
+              "git_blob": "1af582ce26ab622d452880ed280885f172001f73",
+              "module": "src.compass.transition.validators",
+              "path": "src/compass/transition/validators.py",
+              "sha256": "aced29031b0b07f39a47c6c27714da6569ae1ea8bdf8ad9641dfb8fe026b545d"
+            },
+            {
+              "git_blob": "c9253299d3bcb91bd7f99da4bbab658d90458724",
+              "module": "src.compass.transition.runtime",
+              "path": "src/compass/transition/runtime.py",
+              "sha256": "e6b72c5b4702dd68f835123392e68d507b6e1b1da333563c6fb876c457e1d889"
+            },
+            {
+              "git_blob": "e20cfb881ead9293c266bdabf5e3d9b79441b777",
+              "module": "src.pipeline.transactional.postgres_write_side",
+              "path": "src/pipeline/transactional/postgres_write_side.py",
+              "sha256": "374839bb5ff14ee257453d5d4b79d86dff948c16ddb36fbc00f7df85370a53cf"
+            }
+          ],
+          "schema": "stage4b5-runtime-governance-a-source-provenance",
+          "schema_version": 1,
+          "source_commit": "0bd2f515bcc49e8e1f0e9d2f9dba4a294adadd0d"
+        },
+        "garbage_collection_enabled": true,
+        "protected_module_files": {
+          "postgres_write_side": "git:0bd2f515bcc49e8e1f0e9d2f9dba4a294adadd0d:src/pipeline/transactional/postgres_write_side.py",
+          "runtime": "git:0bd2f515bcc49e8e1f0e9d2f9dba4a294adadd0d:src/compass/transition/runtime.py",
+          "validators": "git:0bd2f515bcc49e8e1f0e9d2f9dba4a294adadd0d:src/compass/transition/validators.py"
+        },
+        "python_executable": "/Users/yenhuachen/projects/streaming_system_compass/.venv/bin/python",
+        "python_implementation": "CPython",
+        "python_version": "3.12.7",
+        "surface": "A"
+      },
+      "B": {
+        "a_source_provenance": null,
+        "garbage_collection_enabled": true,
+        "protected_module_files": {
+          "postgres_write_side": "/Users/yenhuachen/projects/streaming_system_compass-stage4b5/src/pipeline/transactional/postgres_write_side.py",
+          "runtime": "/Users/yenhuachen/projects/streaming_system_compass-stage4b5/src/compass/transition/runtime.py",
+          "validators": "/Users/yenhuachen/projects/streaming_system_compass-stage4b5/src/compass/transition/validators.py"
+        },
+        "python_executable": "/Users/yenhuachen/projects/streaming_system_compass/.venv/bin/python",
+        "python_implementation": "CPython",
+        "python_version": "3.12.7",
+        "surface": "B"
+      },
+      "C": {
+        "a_source_provenance": null,
+        "garbage_collection_enabled": true,
+        "protected_module_files": {
+          "postgres_write_side": "/Users/yenhuachen/projects/streaming_system_compass-stage4b5/src/pipeline/transactional/postgres_write_side.py",
+          "runtime": "/Users/yenhuachen/projects/streaming_system_compass-stage4b5/src/compass/transition/runtime.py",
+          "validators": "/Users/yenhuachen/projects/streaming_system_compass-stage4b5/src/compass/transition/validators.py"
+        },
+        "python_executable": "/Users/yenhuachen/projects/streaming_system_compass/.venv/bin/python",
+        "python_implementation": "CPython",
+        "python_version": "3.12.7",
+        "surface": "C"
+      }
+    }
+  },
+  "statistics": {
+    "batch_comparison_p99": "withheld because each scenario/comparison has 180 batch units",
+    "batch_comparison_percentiles": [
+      50,
+      95
+    ],
+    "bootstrap": {
+      "method": "fixed-seed bootstrap of recorded-block medians",
+      "repetitions": 2000
+    },
+    "comparison_semantics": {
+      "B-A_END_TO_END": "difference of matched A/B block-permutation batch medians",
+      "C-A_END_TO_END": "difference of matched A/C block-permutation batch medians",
+      "C-B_COMPOSITION_LAP": "primary direct same-invocation C composition lap",
+      "C-B_TOTAL_SECONDARY": "secondary noise-sensitive difference of independent full-path B/C batch medians"
+    },
+    "dispersion": [
+      "IQR",
+      "MAD",
+      "per-block median variation"
+    ],
+    "experimental_pairing_unit": "recorded block/permutation batch median; repetition indexes across independently executed surfaces are not paired",
+    "percentiles": "empirical nearest-rank",
+    "postgres_p99": "withheld because the fixed per-cell population does not meet the predeclared credibility threshold",
+    "raw_micro_absolute_percentiles": [
+      50,
+      95,
+      99
+    ],
+    "raw_postgres_absolute_percentiles": [
+      50,
+      95
+    ]
+  },
+  "timer": "time.perf_counter_ns",
+  "timing_boundaries": {
+    "A": "historical ValidationRuntime/write invocation through historical PostgresWriteSideResult return",
+    "B": "current evidence-aware ValidationRuntime/write invocation through current PostgresWriteSideResult return",
+    "C": "start -> current normal producer -> producer_return lap -> map_postgres_write_side_result_to_semantic_rule_feedback -> stop",
+    "C_fields": "producer_elapsed_ns, composition_elapsed_ns, total_elapsed_ns; the first two sum exactly to total_elapsed_ns",
+    "excluded": [
+      "candidate/setup construction",
+      "PAY accepted-history seeding",
+      "database reset",
+      "verification",
+      "YAML parsing or projection"
+    ],
+    "postgres_timer_location": "external time.perf_counter_ns around normal unmeasured production API"
+  }
+}

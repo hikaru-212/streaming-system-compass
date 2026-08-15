@@ -149,18 +149,18 @@ This PR does not implement:
 
 #### Related Postmortems
 
-These postmortems explain why Stage 3.5B is not merely a database setup step:
+These reasoning notes explain why Stage 3.5B is not merely a database setup step:
 
-- [From In-Memory Correctness to Durable Consistency](../../postmortems/from_in_memory_correctness_to_durable_consistency.md)  
+- [From In-Memory Correctness to Durable Consistency](../../reasoning_notes/from_in_memory_correctness_to_durable_consistency.md)
   Explains why persistence is not a backend swap and why durable systems must handle restart and partial failure explicitly.
 
-- [From Git Local–Remote Drift to Database Immutability Boundaries](../../postmortems/from_git_sync_to_db_immutability.md)  
+- [From Git Local–Remote Drift to Database Immutability Boundaries](../../reasoning_notes/from_git_sync_to_db_immutability.md)
   Explains why Python-side guarantees such as `frozen=True` and append-only history must be re-declared at the PostgreSQL boundary.
 
-- [From Local PostgreSQL Setup to Defense-in-Depth Boundaries](../../postmortems/from_local_postgres_to_defense_in_depth.md)  
+- [From Local PostgreSQL Setup to Defense-in-Depth Boundaries](../../reasoning_notes/from_local_postgres_to_defense_in_depth.md)
   Explains why Docker Compose, `.env`, least privilege, SQL migrations, Compass validation, and transactions each protect different boundaries.
 
-- [From Runtime Behavior to Durable Evidence](../../postmortems/from_runtime_behavior_to_durable_evidence.md)  
+- [From Runtime Behavior to Durable Evidence](../../reasoning_notes/from_runtime_behavior_to_durable_evidence.md)
   Explains why Python runtime behavior is not durable evidence unless selected facts are persisted into database records, metadata, logs, metrics, traces, or audit channels.
 
 ---
@@ -470,7 +470,7 @@ PR5 should verify:
 - [ADR 0010 — Separate Transaction Atomicity from Concurrency Admission](../../adr/0010_transaction_atomicity_vs_concurrency_admission.md)
 - [ADR 0011 — Separate Validation Mode from Validation Placement Strategy](../../adr/0011_validation_mode_vs_validation_placement.md)
 - [ADR 0012 — Two-Phase Concurrency Admission for PostgreSQL Write-Side](../../adr/0012_two_phase_concurrency_admission.md)
-- [Postmortem — Autocommit, Transaction Boundaries, and Partial-Write Risk](../../postmortems/autocommit_boundary_and_partial_write_risk.md)
+- [Reasoning Note — Autocommit, Transaction Boundaries, and Partial-Write Risk](../../reasoning_notes/autocommit_boundary_and_partial_write_risk.md)
 
 #### Non-goals
 
@@ -524,11 +524,11 @@ Without validation placement strategy, Stage 4 timing or evidence tables would o
 
 - define `ValidationPlacement`
 - keep `ValidationMode` separate from `ValidationPlacement`
-- preserve `IN_TRANSACTION` as the default validation placement
+- use `PRE_TRANSACTION` as the default validation placement
 - support a minimal `PRE_TRANSACTION` validation + append-time admission path
 - introduce `PostgresWriteSideConfig` / `ValidationPlacement` as the configuration boundary
 - ensure stale pre-validated candidates cannot enter accepted history
-- preserve `IN_TRANSACTION` as the default behavior
+- retain `IN_TRANSACTION` as an explicit behavior
 - keep `append_if_admitted(...)` as the final accepted-history mutation boundary
 - clean up implicit read transactions before CPU-side `PRE_TRANSACTION` validation
 - enable latency and safety comparison without duplicating storage logic
@@ -538,7 +538,7 @@ Without validation placement strategy, Stage 4 timing or evidence tables would o
 ```python
 PostgresWriteSideConfig(
     validation_mode=ValidationMode.STRICT,
-    validation_placement=ValidationPlacement.IN_TRANSACTION,
+    validation_placement=ValidationPlacement.PRE_TRANSACTION,
     admission_strategy=AdmissionStrategy.OPTIMISTIC,
 )
 ```

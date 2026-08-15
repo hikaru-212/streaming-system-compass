@@ -1,0 +1,10 @@
+{
+  "artifact_role": "frozen experiment-only pre-PR4 source reference",
+  "source_path": "src/pipeline/transactional/postgres_write_side.py",
+  "snapshot_path": "tests/fixtures/stage4b2_measurement/postgres_write_side_pr3_baseline.py.source",
+  "sha256": "34bac8a3e67d6a43f870d26ae48642ff1893c5360cbf3ec2c0e1f1cd6630196d",
+  "git_blob": "c1706c1ce5f498d45301263450b4df2f27d28753",
+  "pr4_base_head": "fd3733d57ff82beeaf9d54446924f8830c49db76",
+  "source_state": "committed Stage 4B.2 PR3 parent before PR4 instrumentation",
+  "maintenance_policy": "intentionally frozen; never track production changes or receive bug fixes"
+}

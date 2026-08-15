@@ -3,25 +3,8 @@ from decimal import Decimal
 from psycopg import Connection
 
 from src.core.order.enums import OrderStatus
-from src.core.order.state import OrderState
 from src.storage.postgres_projection_store import PostgresProjectionStore
-
-
-def make_state(
-    *,
-    order_id: str,
-    status: OrderStatus,
-    total_amount: Decimal,
-    paid_amount: Decimal,
-    version: int,
-) -> OrderState:
-    return OrderState(
-        order_id=order_id,
-        status=status,
-        total_amount=total_amount,
-        paid_amount=paid_amount,
-        version=version,
-    )
+from tests.shared.order_states import make_order_state as make_state
 
 
 def test_load_missing_projection_state_returns_none(

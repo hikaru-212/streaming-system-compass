@@ -34,6 +34,18 @@ PR5 — Durable Replay / Rebuild Validation Baseline
 
 This architecture note should now be read as the schema foundation that enabled PR2–PR5.
 
+### Current repaired progress contract
+
+[ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+supersedes the PR4 global-checkpoint mechanism for the current order-state
+projection worker. Durable progress is now keyed by projection definition,
+projection epoch, and `order_id`, and advances only by exact-next order-local
+sequence. `global_position` remains globally unique lineage and deterministic
+eligible-work scheduling metadata; it is not commit order or a complete
+committed-history frontier. Legacy `projection_checkpoints` remain generic,
+historical progress evidence and do not provide repaired-worker correctness or
+restart state.
+
 The next stage is:
 
 ```text
@@ -52,12 +64,13 @@ Stage 3.5C now begins moving the read-side baseline from in-memory stores toward
 
 This move is not only a storage change.
 
-It forces the project to clarify three different meanings:
+It forces the project to clarify four different meanings:
 
 ```text
 order_events = accepted-history source of truth
 projection_states = derived runtime view
-projection_checkpoints = worker progress metadata
+projection_order_progress = repaired per-order processing progress
+projection_checkpoints = legacy / generic cursor evidence
 ```
 
 The read-side schema must support durability without accidentally redefining business truth.
@@ -106,9 +119,11 @@ The durable source of truth remains accepted history in `order_events`.
 
 Projection state exists to make the current derived view queryable and restart-safe.
 
-Checkpoint state exists to make worker progress restart-safe.
+Per-order projection progress exists to make repaired-worker progress
+restart-safe. Legacy checkpoint state remains generic cursor evidence for
+consumers that still use that abstraction.
 
-Neither one should become a replacement for accepted history.
+None of these derived records should become a replacement for accepted history.
 
 ---
 
@@ -117,7 +132,8 @@ Neither one should become a replacement for accepted history.
 The baseline read-side schema should support:
 
 - durable latest projection state per order
-- durable projection worker progress
+- durable exact-next projection progress per order
+- generic legacy checkpoint evidence
 - restart survival
 - future PostgreSQL-backed projection store implementation
 - future PostgreSQL-backed checkpoint store implementation
@@ -292,7 +308,9 @@ It is **not**:
 
 ## Purpose
 
-The `projection_checkpoints` table stores durable projection worker progress.
+At PR1, the `projection_checkpoints` table was designed to store durable
+projection worker cursor progress. It now remains generic / legacy evidence;
+the repaired order-state worker uses `projection_order_progress` instead.
 
 It answers:
 
@@ -438,7 +456,7 @@ CREATE TABLE IF NOT EXISTS projection_checkpoints (
 
 ---
 
-## Checkpoint Cursor Strategy
+## Historical PR1 Checkpoint Cursor Strategy
 
 Stage 3.5C PR1 does not decide the final PostgreSQL worker scanning strategy.
 
@@ -482,7 +500,7 @@ This is intentionally outside Stage 3.5C PR1.
 
 ---
 
-## Preferred Future Direction
+## Historical PR1 Preferred Future Direction
 
 For this project's current goals, the preferred future direction is likely `GLOBAL_POSITION`.
 
@@ -611,11 +629,14 @@ At the current stage, the following are directionally accepted:
 
 - `projection_states` stores latest derived state per order
 - `projection_states.last_sequence` is aggregate-local progress
-- `projection_checkpoints` stores worker-level scan cursor state
-- `projection_checkpoints` must not use aggregate-local `sequence` as a global worker offset
-- final cursor strategy is deferred until the PostgreSQL-backed worker exists
-- `cursor_kind` and `cursor_value` preserve cursor flexibility without lying about current event-log shape
-- future `GLOBAL_POSITION` is likely preferred if the project continues to prioritize deterministic replay and auditability
+- `projection_order_progress` stores exact-next progress per projection
+  definition, projection epoch, and order
+- projection state and matching per-order progress are committed in one worker
+  transaction on one connection
+- `global_position` is unique lineage and a deterministic scheduling
+  tie-breaker among eligible events, not a completeness watermark
+- `projection_checkpoints` preserves a generic cursor abstraction, but the
+  repaired worker does not use it for correctness or restart
 - read-side state remains derived and rebuildable
 
 ---
@@ -625,8 +646,12 @@ At the current stage, the following are directionally accepted:
 Stage 3.5C resolved the following questions:
 
 - Stage 3.5C PR4 introduced `order_events.global_position`.
-- PR4 chose `GLOBAL_POSITION` as the first PostgreSQL-backed projection worker cursor strategy.
-- PR4 coordinated projection state and checkpoint progress in one read-side transaction.
+- PR4 historically chose `GLOBAL_POSITION` as the first PostgreSQL-backed
+  projection worker cursor strategy.
+- ADR 0020 replaced that unsafe completeness assumption with exact-next,
+  per-order projection progress.
+- The repaired worker coordinates projection state and per-order progress in
+  one read-side transaction.
 - PR5 added durable replay / rebuild validation against accepted history.
 
 The following remain deferred:
@@ -634,8 +659,8 @@ The following remain deferred:
 - whether `APPENDED_AT` polling is ever needed for a different workload
 - whether `accepted_event_id` should be used as a tie-breaker for future cursor strategies
 - whether checkpoint rows should eventually include heartbeat / freshness fields
-- whether one worker checkpoint is sufficient for multiple future projection pipelines
-- whether rebuild should reset checkpoints or use a separate rebuild cursor
+- whether generic legacy checkpoint infrastructure has future consumers
+- whether future rebuild tooling should retain a separately designed cursor
 - how snapshot-assisted replay should be trusted in Stage 3.5D
 
 ---
@@ -648,7 +673,7 @@ It should preserve:
 
 - source-of-truth separation
 - derived state semantics
-- worker checkpoint semantics
+- exact-next per-order progress semantics
 - restart survival
 - future replay / rebuild ability
 - future Layer 2 comparability
@@ -659,17 +684,23 @@ That is why the initial durable read-side schema separates:
 projection_states
 = derived per-order runtime view
 
+projection_order_progress
+= exact-next per-order progress for one projection definition and epoch
+
 projection_checkpoints
-= worker-level scan cursor metadata
+= legacy / generic cursor evidence not used by the repaired worker
 ```
 
-The most important PR1 checkpoint decision is negative:
+The most important PR1 checkpoint decision remains negative for a worker-wide
+scalar cursor:
 
-> Do not store `last_processed_sequence` as the worker checkpoint.
+> Do not treat an unscoped `last_processed_sequence` as a global checkpoint.
 
 `order_events.sequence` is aggregate-local.
 
-The worker cursor must remain a separate concept.
+The repaired worker deliberately scopes `last_sequence` by projection
+definition, projection epoch, and `order_id`; it does not infer a global order
+from local sequence.
 
 ---
 
@@ -682,7 +713,7 @@ The most important reminder preserved from Stage 3.5C PR1 is:
 If the read-side currently depends on:
 
 - pure reducer logic
-- checkpoint-aware worker progress
+- exact-next per-order projection progress
 - replay / rebuild ability
 - projection state as derived view
 

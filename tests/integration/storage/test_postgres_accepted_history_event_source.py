@@ -6,53 +6,12 @@ from psycopg import Connection
 
 from src.core.order.enums import EventType
 from src.core.order.enums import OrderStatus
-from src.core.order.events import OrderEvent
-from src.core.order.proofs import Proof
 from src.storage.postgres_accepted_history_event_source import (
     PostgresAcceptedHistoryEventSource,
 )
 from src.storage.postgres_event_store import PostgresEventStore
-
-
-def make_created_event(
-    *,
-    order_id: str = "order-001",
-    request_id: str = "create-001",
-    sequence: int = 1,
-    amount: Decimal = Decimal("100.00"),
-) -> OrderEvent:
-    return OrderEvent.create(
-        request_id=request_id,
-        order_id=order_id,
-        sequence=sequence,
-        event_type=EventType.CREATED,
-        amount=amount,
-        proof=Proof(
-            prev_status=OrderStatus.INIT,
-            prev_version=0,
-            prev_event_id=None,
-        ),
-    )
-
-
-def make_paid_event(
-    *,
-    previous_event: OrderEvent,
-    request_id: str = "pay-001",
-    amount: Decimal = Decimal("100.00"),
-) -> OrderEvent:
-    return OrderEvent.create(
-        request_id=request_id,
-        order_id=previous_event.order_id,
-        sequence=previous_event.sequence + 1,
-        event_type=EventType.PAID,
-        amount=amount,
-        proof=Proof(
-            prev_status=OrderStatus.CREATED,
-            prev_version=previous_event.sequence,
-            prev_event_id=previous_event.event_id,
-        ),
-    )
+from tests.shared.order_events import make_created_event
+from tests.shared.order_events import make_paid_event
 
 
 def test_load_returns_empty_list_when_order_has_no_accepted_history(
@@ -73,8 +32,11 @@ def test_load_returns_accepted_events_ordered_by_sequence(
     event_store = PostgresEventStore(db_connection)
     source = PostgresAcceptedHistoryEventSource(db_connection)
 
-    created_event = make_created_event()
-    paid_event = make_paid_event(previous_event=created_event)
+    created_event = make_created_event(request_id="create-001")
+    paid_event = make_paid_event(
+        previous_event=created_event,
+        request_id="pay-001",
+    )
 
     event_store.append(created_event, expected_current_version=0)
     event_store.append(paid_event, expected_current_version=1)
@@ -170,7 +132,7 @@ def test_load_does_not_mutate_accepted_history(
     event_store = PostgresEventStore(db_connection)
     source = PostgresAcceptedHistoryEventSource(db_connection)
 
-    created_event = make_created_event()
+    created_event = make_created_event(request_id="create-001")
 
     event_store.append(created_event, expected_current_version=0)
 

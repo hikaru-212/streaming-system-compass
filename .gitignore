@@ -16,4 +16,4 @@ htmlcov/
 
 # macOS
 .DS_Store
-
+/.private/

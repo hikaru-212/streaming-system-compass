@@ -29,6 +29,7 @@ from src.pipeline.transactional.postgres_write_side_config import (
 from src.storage.idempotency_store import IdempotencyVerdict
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_idempotency_store import PostgresIdempotencyStore
+from tests.shared.postgres import count_rows
 
 
 def _status_value(status):
@@ -152,6 +153,22 @@ def build_pre_transaction_write_side(
     )
 
 
+def build_in_transaction_write_side(
+    db_connection,
+    *,
+    validation_runtime=None,
+    admission_gate_factory=None,
+):
+    return PostgresTransactionalWriteSide(
+        connection=db_connection,
+        validation_runtime=validation_runtime or FakeValidationRuntimeAllow(),
+        admission_gate_factory=admission_gate_factory,
+        config=PostgresWriteSideConfig(
+            validation_placement=ValidationPlacement.IN_TRANSACTION,
+        ),
+    )
+
+
 pytestmark = pytest.mark.usefixtures("clean_database")
 
 
@@ -163,15 +180,11 @@ def write_side(db_connection):
     )
 
 
-def count_rows(db_connection, table_name: str) -> int:
-    with db_connection.cursor() as cursor:
-        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-        result = cursor.fetchone()
 
-    return result[0]
-
-
-def test_create_order_accepts_event_and_records_idempotency(db_connection, write_side):
+def test_default_pre_transaction_create_order_accepts_and_records_idempotency(
+    db_connection,
+    write_side,
+):
     result = write_side.create_order(
         request_id="create-request-001",
         order_id="order-write-side-1",
@@ -193,42 +206,36 @@ def test_create_order_accepts_event_and_records_idempotency(db_connection, write
     assert count_rows(db_connection, "idempotency_records") == 1
 
 
-def test_explicit_in_transaction_config_preserves_write_side_behavior(
+def test_default_optimistic_write_side_rejects_autocommit_before_append(
+    db_connection,
+    write_side,
+):
+    db_connection.autocommit = True
+
+    try:
+        with pytest.raises(
+            RuntimeError,
+            match="requires connection.autocommit=False",
+        ):
+            write_side.create_order(
+                request_id="create-request-autocommit",
+                order_id="order-write-side-autocommit",
+                amount=Decimal("100.00"),
+            )
+
+        assert count_rows(db_connection, "order_events") == 0
+        assert count_rows(db_connection, "idempotency_records") == 0
+    finally:
+        db_connection.autocommit = False
+
+
+def test_in_transaction_create_order_accepts_and_records_idempotency(
     db_connection,
 ):
-    write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
+    write_side = build_in_transaction_write_side(
+        db_connection,
         validation_runtime=FakeValidationRuntimeAllow(),
-        config=PostgresWriteSideConfig(
-            validation_placement=ValidationPlacement.IN_TRANSACTION,
-        ),
     )
-
-    result = write_side.create_order(
-        request_id="create-request-001",
-        order_id="order-write-side-1",
-        amount=Decimal("100.00"),
-    )
-
-    assert result.outcome == PostgresWriteSideOutcome.ACCEPTED
-    assert result.accepted_event is not None
-    assert result.accepted_event.event_type == EventType.CREATED
-    assert result.idempotency_decision.verdict == IdempotencyVerdict.MISS
-    assert result.stream_admission_result is not None
-    assert result.stream_admission_result.verdict == AdmissionVerdict.ADMITTED
-    assert result.validation_decision is not None
-    assert result.validation_decision.action == EnforcementAction.ALLOW
-    assert result.admission_result is not None
-    assert result.admission_result.verdict == AdmissionVerdict.ADMITTED
-
-    assert count_rows(db_connection, "order_events") == 1
-    assert count_rows(db_connection, "idempotency_records") == 1
-
-
-def test_pre_transaction_create_order_accepts_event_and_records_idempotency(
-    db_connection,
-):
-    write_side = build_pre_transaction_write_side(db_connection)
 
     result = write_side.create_order(
         request_id="create-request-001",
@@ -286,9 +293,11 @@ def test_pre_transaction_pay_order_accepts_second_event_and_records_idempotency(
     assert count_rows(db_connection, "idempotency_records") == 2
 
 
-def test_pre_transaction_validation_block_does_not_create_rows(db_connection):
-    write_side = build_pre_transaction_write_side(
-        db_connection,
+def test_default_pre_transaction_validation_block_does_not_create_rows(
+    db_connection,
+):
+    write_side = PostgresTransactionalWriteSide(
+        connection=db_connection,
         validation_runtime=FakeValidationRuntimeBlock(),
     )
 
@@ -402,18 +411,20 @@ def test_create_order_replay_returns_previous_accepted_event_without_new_rows(
     assert count_rows(db_connection, "idempotency_records") == 1
 
 
-def test_create_order_replay_does_not_build_admission_gate(db_connection):
-    default_write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
+def test_in_transaction_create_replay_skips_validation_and_admission_gate(
+    db_connection,
+):
+    initial_write_side = build_in_transaction_write_side(
+        db_connection,
         validation_runtime=FakeValidationRuntimeAllow(),
     )
-    replay_write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
-        validation_runtime=FakeValidationRuntimeAllow(),
+    replay_write_side = build_in_transaction_write_side(
+        db_connection,
+        validation_runtime=RaisingValidationRuntime(),
         admission_gate_factory=RaisingGateFactory(),
     )
 
-    first_result = default_write_side.create_order(
+    first_result = initial_write_side.create_order(
         request_id="create-request-001",
         order_id="order-write-side-1",
         amount=Decimal("100.00"),
@@ -459,18 +470,20 @@ def test_create_order_conflict_does_not_create_new_rows(db_connection, write_sid
     assert count_rows(db_connection, "idempotency_records") == 1
 
 
-def test_create_order_conflict_does_not_build_admission_gate(db_connection):
-    default_write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
+def test_in_transaction_create_conflict_skips_validation_and_admission_gate(
+    db_connection,
+):
+    initial_write_side = build_in_transaction_write_side(
+        db_connection,
         validation_runtime=FakeValidationRuntimeAllow(),
     )
-    conflict_write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
-        validation_runtime=FakeValidationRuntimeAllow(),
+    conflict_write_side = build_in_transaction_write_side(
+        db_connection,
+        validation_runtime=RaisingValidationRuntime(),
         admission_gate_factory=RaisingGateFactory(),
     )
 
-    default_write_side.create_order(
+    initial_write_side.create_order(
         request_id="create-request-001",
         order_id="order-write-side-1",
         amount=Decimal("100.00"),
@@ -492,9 +505,11 @@ def test_create_order_conflict_does_not_build_admission_gate(db_connection):
     assert count_rows(db_connection, "idempotency_records") == 1
 
 
-def test_create_order_validation_block_does_not_create_new_rows(db_connection):
-    write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
+def test_in_transaction_create_order_validation_block_does_not_create_new_rows(
+    db_connection,
+):
+    write_side = build_in_transaction_write_side(
+        db_connection,
         validation_runtime=FakeValidationRuntimeBlock(),
     )
 
@@ -517,12 +532,12 @@ def test_create_order_validation_block_does_not_create_new_rows(db_connection):
     assert count_rows(db_connection, "idempotency_records") == 0
 
 
-def test_create_order_prepare_rejection_does_not_run_validation_or_create_rows(
+def test_in_transaction_prepare_rejection_skips_validation_and_creates_no_rows(
     db_connection,
 ):
-    write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
-        validation_runtime=FakeValidationRuntimeAllow(),
+    write_side = build_in_transaction_write_side(
+        db_connection,
+        validation_runtime=RaisingValidationRuntime(),
         admission_gate_factory=fake_prepare_rejected_gate_factory,
     )
 
@@ -544,11 +559,11 @@ def test_create_order_prepare_rejection_does_not_run_validation_or_create_rows(
     assert count_rows(db_connection, "idempotency_records") == 0
 
 
-def test_create_order_append_admission_rejection_does_not_record_idempotency(
+def test_in_transaction_append_stale_write_does_not_record_idempotency(
     db_connection,
 ):
-    write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
+    write_side = build_in_transaction_write_side(
+        db_connection,
         validation_runtime=FakeValidationRuntimeAllow(),
         admission_gate_factory=fake_append_rejected_gate_factory,
     )
@@ -573,11 +588,12 @@ def test_create_order_append_admission_rejection_does_not_record_idempotency(
     assert count_rows(db_connection, "idempotency_records") == 0
 
 
-def test_create_order_record_failure_rolls_back_appended_event(
+def test_in_transaction_record_failure_rolls_back_appended_event(
     db_connection,
-    write_side,
     monkeypatch,
 ):
+    write_side = build_in_transaction_write_side(db_connection)
+
     def fail_record(self, signature, accepted_event):
         raise RuntimeError("forced idempotency record failure")
 
@@ -691,15 +707,15 @@ def test_pay_order_conflict_does_not_create_new_rows(db_connection, write_side):
     assert count_rows(db_connection, "idempotency_records") == 2
 
 
-def test_pay_order_validation_block_does_not_create_second_event(
+def test_in_transaction_pay_validation_block_does_not_create_second_event(
     db_connection,
 ):
     create_write_side = PostgresTransactionalWriteSide(
         connection=db_connection,
         validation_runtime=FakeValidationRuntimeAllow(),
     )
-    block_write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
+    block_write_side = build_in_transaction_write_side(
+        db_connection,
         validation_runtime=FakeValidationRuntimeBlock(),
     )
 
@@ -728,16 +744,16 @@ def test_pay_order_validation_block_does_not_create_second_event(
     assert count_rows(db_connection, "idempotency_records") == 1
 
 
-def test_pay_order_prepare_rejection_does_not_create_second_event_or_idempotency(
+def test_in_transaction_pay_prepare_rejection_creates_no_event_or_idempotency(
     db_connection,
 ):
     create_write_side = PostgresTransactionalWriteSide(
         connection=db_connection,
         validation_runtime=FakeValidationRuntimeAllow(),
     )
-    lock_timeout_write_side = PostgresTransactionalWriteSide(
-        connection=db_connection,
-        validation_runtime=FakeValidationRuntimeAllow(),
+    lock_timeout_write_side = build_in_transaction_write_side(
+        db_connection,
+        validation_runtime=RaisingValidationRuntime(),
         admission_gate_factory=fake_prepare_rejected_gate_factory,
     )
 

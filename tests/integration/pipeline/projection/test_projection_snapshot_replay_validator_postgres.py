@@ -11,12 +11,11 @@ from src.core.order.enums import OrderStatus
 from src.core.order.events import OrderEvent
 from src.core.order.proofs import Proof
 from src.core.order.state import OrderState
+from src.pipeline.projection.postgres_snapshot_observation import (
+    PostgresProjectionSnapshotReplayValidator,
+)
 from src.pipeline.projection.projection_snapshot_replay_validator import (
     ProjectionSnapshotReplayValidationStatus,
-    ProjectionSnapshotReplayValidator,
-)
-from src.storage.postgres_accepted_history_event_source import (
-    PostgresAcceptedHistoryEventSource,
 )
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_projection_event_source import (
@@ -115,11 +114,9 @@ def make_validator(
     connection: Connection,
     *,
     tail_event_limit: int = 1000,
-) -> ProjectionSnapshotReplayValidator:
-    return ProjectionSnapshotReplayValidator(
-        snapshot_store=PostgresProjectionSnapshotStore(connection),
-        accepted_history_store=PostgresAcceptedHistoryEventSource(connection),
-        tail_event_source=PostgresProjectionEventSource(connection),
+) -> PostgresProjectionSnapshotReplayValidator:
+    return PostgresProjectionSnapshotReplayValidator(
+        connection,
         tail_event_limit=tail_event_limit,
     )
 
@@ -198,6 +195,7 @@ def test_postgres_validator_matches_snapshot_with_no_tail(
     )
     snapshot_store.save_snapshot(snapshot)
 
+    db_connection.commit()
     validator = make_validator(db_connection)
 
     result = validator.validate_order("order-001")
@@ -239,6 +237,7 @@ def test_postgres_validator_matches_snapshot_with_tail_replay(
     )
     snapshot_store.save_snapshot(snapshot)
 
+    db_connection.commit()
     validator = make_validator(
         db_connection,
         tail_event_limit=1,
@@ -286,6 +285,7 @@ def test_postgres_validator_detects_drift_when_snapshot_payload_disagrees_with_c
     )
     snapshot_store.save_snapshot(inconsistent_snapshot)
 
+    db_connection.commit()
     validator = make_validator(db_connection)
 
     result = validator.validate_order("order-001")
@@ -319,6 +319,7 @@ def test_postgres_validator_returns_missing_snapshot_when_history_exists(
 
     event_store.append(created_event, expected_current_version=0)
 
+    db_connection.commit()
     validator = make_validator(db_connection)
 
     result = validator.validate_order("order-001")
@@ -351,6 +352,7 @@ def test_postgres_validator_returns_no_accepted_history_when_snapshot_exists_wit
     )
     snapshot_store.save_snapshot(snapshot)
 
+    db_connection.commit()
     validator = make_validator(db_connection)
 
     result = validator.validate_order("order-001")
@@ -394,6 +396,7 @@ def test_postgres_validator_rejects_snapshot_when_state_version_does_not_match_s
     )
     snapshot_store.save_snapshot(incompatible_snapshot)
 
+    db_connection.commit()
     validator = make_validator(db_connection)
 
     result = validator.validate_order("order-001")
@@ -446,6 +449,7 @@ def test_postgres_validator_ignores_tail_events_for_other_orders(
     )
     snapshot_store.save_snapshot(snapshot)
 
+    db_connection.commit()
     validator = make_validator(db_connection)
 
     result = validator.validate_order("order-001")

@@ -12,6 +12,16 @@ However, snapshot is not only a performance optimization.
 
 Snapshot creates a trust boundary because it allows runtime reconstruction to start from derived state rather than from the beginning of accepted history.
 
+## Current repair supersession
+
+[ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+supersedes global-position snapshot-tail resumption for the current
+aggregate-local projection. A tail is selected for the same `order_id`, starts
+after `snapshot.source_event_sequence`, and advances by exact contiguous
+order-local sequence. `source_global_position` remains snapshot lineage only;
+it is not a complete committed-history frontier. An unrelated order's higher
+global-position allocation cannot advance the target order's tail.
+
 ---
 
 ## Current Baseline After Stage 3.5D PR4
@@ -25,8 +35,11 @@ order_events
 projection_states
 = durable derived read-side state
 
+projection_order_progress
+= durable exact-next per-order projection progress
+
 projection_checkpoints
-= durable projection worker progress
+= legacy / generic cursor evidence
 
 DurableReplayValidator
 = accepted-history replay compared with persisted projection state
@@ -59,7 +72,10 @@ snapshot is acceleration
 
 The snapshot path must be optional.
 
-If a snapshot is missing, invalid, stale, unsupported, suspicious, or generated non-deterministically, the system must be able to fall back to accepted-history replay.
+If a snapshot is missing, invalid, stale, unsupported, suspicious, or generated
+non-deterministically, accepted-history replay remains the authority path. The
+current validator and resolver return evidence or typed results; they do not
+automatically choose fallback, repair, quarantine, or other runtime action.
 
 PR4 validates this relationship for projection snapshots by comparing:
 
@@ -187,13 +203,18 @@ Projection snapshot-assisted replay is used to validate and later accelerate rea
 ```text
 projection snapshot
 → verify minimal boundary / reducer compatibility
-→ load tail events after source_global_position
+→ load same-order tail events after source_event_sequence
 → replay tail through canonical reducer
 → reconstructed projection state
 → compare against accepted-history authority replay
 ```
 
 PR4 implements this comparison as a read-side validator.
+
+`source_global_position` remains snapshot lineage metadata. It is not a
+snapshot-tail completeness cursor. PostgreSQL validator and resolver entry
+points perform their related reads on one exact connection inside one explicit
+top-level `REPEATABLE READ READ ONLY` transaction.
 
 It also distinguishes tail event source cursor contract violations from ordinary snapshot-assisted drift:
 
@@ -282,23 +303,25 @@ snapshot schema unsupported
 logic version unsupported
 payload hash mismatch
 tail event source cursor contract violation
-tail discontinuity that cannot be explained by a future hole registry
+non-contiguous same-order tail sequence
 snapshot state version incompatible
 snapshot-assisted state differs from authority replay
 same-boundary different-hash collision
 ```
 
-All trust failures should fall back to the authority path when fallback is possible.
+Trust failures preserve the authority path as the comparison basis. Any
+automatic fallback behavior belongs to a separately approved runtime policy.
 
 Write collisions should be surfaced explicitly because they indicate non-deterministic snapshot production or corrupted writers.
 
 ---
 
-## Future Relationship to Compass Layer 2
+## Current Relationship to Compass Runtime Evidence
 
-Stage 3.5D does not implement Compass Layer 2.
-
-However, snapshot trust failures are natural future evidence for Layer 2 and structured semantic outcomes.
+Stage 3.5D did not itself implement Compass Layer 2. Stage 4A and Stage 4B now
+map the implemented snapshot replay-validation and snapshot-assisted-resolution
+results into `SemanticOutcome` and `DecisionReceipt` without treating a
+point-in-time result as continuing trust.
 
 Examples:
 
@@ -313,7 +336,13 @@ TAIL_REPLAY_DOMAIN_FAILURE
 ACCEPTED_HISTORY_CONTRACT_VIOLATION
 ```
 
-Stage 4 may later classify these failures and map them to runtime decisions.
+`UNEXPLAINED_GLOBAL_POSITION_GAP` is not required by the current same-order
+snapshot-tail contract. It would apply only to a separately designed future
+contract that assigns completeness meaning to a global publication order.
+
+Later trust-continuation, policy, and strategy stages may consume these
+outcomes and receipts, but no current mapper executes fallback, rebuild, or
+another runtime decision.
 
 ---
 

@@ -1,0 +1,106 @@
+# Generated readability projection.
+# Canonical Python Order Correctness Contract V0 is authoritative.
+# Do not edit manually or load as production runtime authority.
+projection_version: 1
+
+contract:
+  id: "order.correctness"
+  version: 0
+  vocabulary:
+    statuses:
+      - "INIT"
+      - "CREATED"
+      - "PAID"
+    commands:
+      - "create"
+      - "pay"
+    event_types:
+      - "CREATED"
+      - "PAID"
+  parameters:
+    next_sequence_increment: 1
+    normalization_quantum: "0.01"
+    rounding_mode: "ROUND_HALF_EVEN"
+
+rules:
+  COMMAND_LEGALITY:
+    - rule_id: "order.command.create.allowed-from-init"
+      semantic_proposition: "A CREATE command is legal only when the aggregate status is INIT."
+      subject: "AGGREGATE_COMMAND"
+    - rule_id: "order.command.create.normalized-amount-positive"
+      semantic_proposition: "The normalized CREATE amount is greater than zero."
+      subject: "AGGREGATE_COMMAND"
+    - rule_id: "order.command.pay.allowed-from-created"
+      semantic_proposition: "A PAY command is legal only when the aggregate status is CREATED."
+      subject: "AGGREGATE_COMMAND"
+    - rule_id: "order.command.pay.normalized-amount-equals-total"
+      semantic_proposition: "The normalized PAY amount equals the aggregate's current total_amount."
+      subject: "AGGREGATE_COMMAND"
+    - rule_id: "order.command.pay.normalized-amount-positive"
+      semantic_proposition: "The normalized PAY amount is greater than zero."
+      subject: "AGGREGATE_COMMAND"
+  CANDIDATE_CONSTRUCTION:
+    - rule_id: "order.candidate.proof-derived-from-aggregate-predecessor"
+      semantic_proposition: "A candidate proof's prev_status, prev_version, and prev_event_id are derived from the aggregate's current status, current_version, and last_event_id."
+      subject: "PREDECESSOR_CLAIM"
+    - rule_id: "order.candidate.sequence-is-next-aggregate-version"
+      semantic_proposition: "A candidate event's sequence equals the aggregate's current_version plus next_sequence_increment."
+      subject: "CANDIDATE_EVENT"
+  TRUSTED_APPLICATION:
+    - rule_id: "order.trusted-application.created-establishes-state"
+      semantic_proposition: "Applying a trusted CREATED event sets status to CREATED and replaces total_amount with event.amount."
+      subject: "TRUSTED_EVENT_APPLICATION"
+    - rule_id: "order.trusted-application.event-order-id-matches-aggregate"
+      semantic_proposition: "A trusted event's order_id equals the aggregate's order_id before application."
+      subject: "TRUSTED_EVENT_APPLICATION"
+    - rule_id: "order.trusted-application.event-sequence-is-next-version"
+      semantic_proposition: "A trusted event's sequence equals the aggregate's current_version plus next_sequence_increment before application."
+      subject: "TRUSTED_EVENT_APPLICATION"
+    - rule_id: "order.trusted-application.paid-establishes-state"
+      semantic_proposition: "Applying a trusted PAID event sets status to PAID and replaces paid_amount with event.amount."
+      subject: "TRUSTED_EVENT_APPLICATION"
+    - rule_id: "order.trusted-application.updates-aggregate-history-head"
+      semantic_proposition: "Applying a trusted event updates the aggregate's local history head by setting current_version to event.sequence and last_event_id to event.event_id."
+      subject: "TRUSTED_EVENT_APPLICATION"
+  TRANSITION_TRUTH:
+    - rule_id: "order.transition.candidate-event-type-supported"
+      semantic_proposition: "A candidate event's event_type belongs to the contract's declared event_types."
+      subject: "CANDIDATE_EVENT"
+    - rule_id: "order.transition.event-type-legal-from-accepted-status"
+      semantic_proposition: "A candidate event's event_type is legal from the accepted context's previous status according to the allowed transition graph."
+      subject: "ACCEPTED_CONTEXT_COMPARISON"
+    - rule_id: "order.transition.proof-prev-event-id-matches-accepted"
+      semantic_proposition: "A candidate proof's prev_event_id equals the accepted context's predecessor event identity."
+      subject: "ACCEPTED_CONTEXT_COMPARISON"
+    - rule_id: "order.transition.proof-prev-status-matches-accepted"
+      semantic_proposition: "A candidate proof's prev_status equals the accepted context's previous status."
+      subject: "ACCEPTED_CONTEXT_COMPARISON"
+    - rule_id: "order.transition.proof-prev-version-matches-accepted"
+      semantic_proposition: "A candidate proof's prev_version equals the accepted context's previous version."
+      subject: "ACCEPTED_CONTEXT_COMPARISON"
+    - rule_id: "order.transition.sequence-matches-accepted-next-version"
+      semantic_proposition: "A candidate event's sequence equals the accepted context's previous version plus next_sequence_increment."
+      subject: "ACCEPTED_CONTEXT_COMPARISON"
+
+relationships:
+  allowed_transitions:
+    - rule_id: "order.command.create.allowed-from-init"
+      command: "create"
+      predecessor_status: "INIT"
+      candidate_event_type: "CREATED"
+      resulting_status: "CREATED"
+    - rule_id: "order.command.pay.allowed-from-created"
+      command: "pay"
+      predecessor_status: "CREATED"
+      candidate_event_type: "PAID"
+      resulting_status: "PAID"
+  amount_constraints:
+    - rule_id: "order.command.create.normalized-amount-positive"
+      command: "create"
+      constraint: "NORMALIZED_VALUE_GREATER_THAN_ZERO"
+    - rule_id: "order.command.pay.normalized-amount-equals-total"
+      command: "pay"
+      constraint: "NORMALIZED_VALUE_EQUALS_CURRENT_TOTAL_AMOUNT"
+    - rule_id: "order.command.pay.normalized-amount-positive"
+      command: "pay"
+      constraint: "NORMALIZED_VALUE_GREATER_THAN_ZERO"

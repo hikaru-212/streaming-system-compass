@@ -35,6 +35,17 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0013 | [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) | Accepted | Separates PR4.5 snapshot-assisted state resolution from future runtime eligibility policy and persisted validation receipts. |
 | 0014 | [Defer Separate Projection Event Model](0014_defer_projection_events_as_delivery_layer.md) | Accepted | Records why the project defers a separate projection-event / projection-delivery-log model until delivery, fanout, retry, DLQ, or operational-freshness needs become concrete. |
 | 0015 | [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) | Accepted | Records why Stage 3.5E uses test-time `SET ROLE` permission probes instead of introducing production-style login identities and role-specific connection pools. |
+| 0016 | [DecisionReceipt Is Governance Evidence, Not Application Logging](0016_decision_receipt_is_governance_evidence.md) | Accepted | Records why Stage 4B introduces DecisionReceipt as durable semantic governance evidence rather than application logging or a generic error table. |
+| 0017 | [Separate Evidence Path, Identity Provenance, and Event Admission Fate in DecisionReceipt](0017_separate_evidence_path_identity_provenance_and_admission_fate.md) | Accepted | Separates receipt evidence path, primary identity provenance, and typed write-side admission fate, including early idempotent replay and candidate / accepted-event invariants. |
+| 0018 | [Producer Receipt Adapters Preserve Evidence but Do Not Evaluate Governance Flags](0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md) | Accepted | Separates producer evidence preservation from governance-flag evaluation and keeps `TRUE`, `FALSE`, and `NOT_EVALUATED` distinct. |
+| 0019 | [Separate Accepted-Result Receipt Reconstruction from Immediate Typed-Observation Evidence Persistence](0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md) | Accepted | Separates reconstructible accepted-result receipts from non-reconstructible failed-attempt and observation evidence, records implemented foundational persistence, and defers reconciliation orchestration. |
+| 0020 | [Per-Order Projection Progress and Order-Local Snapshot Tails](0020_per_order_projection_progress_and_order_local_snapshot_tails.md) | Accepted | Uses per-order progress and order-local snapshot tails because global-position gaps do not prove missing order history. |
+| 0021 | [Projection Snapshots Are Optional for the Current Order Workload](0021_projection_snapshots_are_optional_for_current_order_workload.md) | Accepted | Retains the Snapshot Trust Contract while classifying projection snapshots as optional reference infrastructure for the current shallow Order workload. |
+| 0022 | [Traced Write-Side Execution Fails Closed Before Business Commit](0022_traced_write_side_execution_fails_closed_before_business_commit.md) | Accepted | Preserves strict pre-commit Result + Trace composition for the current PostgreSQL traced write-side APIs without treating diagnostic artifacts as durable business state. |
+| 0023 | [Measurement Availability Does Not Govern Business Truth](0023_measurement_availability_does_not_govern_business_truth.md) | Accepted | Keeps post-UOW measurement construction and availability from rewriting exact normal producer values, transaction finalization, or existing exception behavior. |
+| 0024 | [Detailed PostgreSQL Write Measurement Is an Opt-In Capability](0024_detailed_postgres_write_measurement_is_opt_in.md) | Accepted | Preserves existing unmeasured writes and makes detailed Stage 4B.2 measurement an explicit execution-level capability. |
+| 0025 | [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) | Accepted | Preserves PR6 as complete comparison evidence while assigning causal decomposition to a separate post-PR6 supplemental investigation. |
+| 0026 | [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) | Accepted | Closes Stage 4B.3 after source-grounded necessity review because the current exact-next projection runtime already owns normal materialization correctness and no concrete consumer requires incremental qualification. |
 
 ---
 
@@ -66,6 +77,17 @@ Recommended order:
 14. [Snapshot Runtime Eligibility and Validation Receipt Boundary](0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md) — explains why PR4.5 resolver usage must stay separate from future runtime eligibility policy, fallback decisions, and persisted validation receipts.
 15. [Defer Separate Projection Event Model](0014_defer_projection_events_as_delivery_layer.md) — explains why a separate projection-event / projection-delivery-log model is deferred until delivery and fanout complexity becomes concrete.
 16. [Permission Probing with SET ROLE](0015_permission_probing_with_set_role.md) — explains why Stage 3.5E validates effective database privileges through test-time `SET ROLE` probes instead of simulating production login identity topology.
+17. [DecisionReceipt Is Governance Evidence, Not Application Logging](0016_decision_receipt_is_governance_evidence.md) — explains why Stage 4B persists selected semantic outcomes as durable governance evidence instead of treating them as ordinary application logs, error logs, diagnostic traces, or retry attempt records.
+18. [Separate Evidence Path, Identity Provenance, and Event Admission Fate in DecisionReceipt](0017_separate_evidence_path_identity_provenance_and_admission_fate.md) — refines the Stage 4B receipt contract by separating evidence-path ownership, primary correlation provenance, and typed event-admission fate, including early idempotent replay and cross-field identity invariants.
+19. [Producer Receipt Adapters Preserve Evidence but Do Not Evaluate Governance Flags](0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md) — explains why producer adapters preserve typed evidence while `TRUE`, `FALSE`, and `NOT_EVALUATED` remain distinct and absence of evaluation is not false.
+20. [Separate Accepted-Result Receipt Reconstruction from Immediate Typed-Observation Evidence Persistence](0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md) — explains why accepted-result reconstruction and non-reconstructible failed-attempt or observation persistence require separate paths, with foundational persistence implemented and reconciliation orchestration deferred.
+21. [Per-Order Projection Progress and Order-Local Snapshot Tails](0020_per_order_projection_progress_and_order_local_snapshot_tails.md) — explains why aggregate-local progress and snapshot tails use order-local sequence instead of treating global-position gaps as missing order history.
+22. [Projection Snapshots Are Optional for the Current Order Workload](0021_projection_snapshots_are_optional_for_current_order_workload.md) — explains why the Snapshot Trust Contract remains valid while further snapshot-specific runtime expansion is evidence-gated for the current shallow Order workload.
+23. [Traced Write-Side Execution Fails Closed Before Business Commit](0022_traced_write_side_execution_fails_closed_before_business_commit.md) — explains why the current PostgreSQL traced APIs construct and validate Result + Trace before clean business-UOW exit while leaving future trace producers independently reviewable.
+24. [Measurement Availability Does Not Govern Business Truth](0023_measurement_availability_does_not_govern_business_truth.md) — explains why final measurement construction follows normal producer return and cannot rewrite exact business results or current finalization and exception behavior.
+25. [Detailed PostgreSQL Write Measurement Is an Opt-In Capability](0024_detailed_postgres_write_measurement_is_opt_in.md) — explains why detailed Stage 4B.2 collection uses an explicit measured surface while existing unmeasured execution remains valid.
+26. [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) — explains why the unexpected PR6 latency ordering is preserved as comparison evidence and investigated through a separate bounded explanatory supplement instead of being promoted directly into an architecture conclusion.
+27. [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) — explains why accepted-history authority, exact-next per-order progress, canonical reduction, atomic state/progress persistence, permissions, and replay/rebuild already form the required current projection correctness model without another trust-continuation layer.
 
 ---
 
@@ -102,6 +124,48 @@ ADR 0013 is related to Stage 3.5D PR4 / PR4.5. It records why projection snapsho
 ADR 0014 is related to Stage 3.5C / Stage 3.5D read-side boundaries. It records why accepted history remains the authoritative projection input and why a separate projection-event or projection-delivery-log model is deferred until delivery, fanout, retry, DLQ, or operational-freshness requirements become concrete.
 
 ADR 0015 is related to Stage 3.5E database role and permission hardening. It records why the project validates runtime responsibility-role privileges through test-owner `SET ROLE` probes, while deferring production login identities, role-specific database URLs, and connection-pool topology to future deployment hardening.
+
+ADR 0016 is related to Stage 4B DecisionReceipt / runtime evidence design. It records why selected `SemanticOutcome` values should become compact, durable, reviewable governance evidence, while ordinary logs, detailed diagnostic traces, retry attempt logs, runtime policy decisions, and execution strategies remain separate boundaries.
+
+ADR 0017 refines the Stage 4B DecisionReceipt runtime contract established after ADR 0016. It records why evidence path, primary identity provenance, and event admission fate must remain separate; why nullable candidate / accepted event identifiers cannot safely encode admission meaning by themselves; why early idempotent replay may reference an accepted event without a newly constructed candidate; and why field-level identity provenance remains deferred until future adapters, persistence, audit, or policy consumers require it.
+
+ADR 0018 keeps producer-specific receipt adapters responsible for typed evidence rather than governance-flag evaluation. It preserves `TRUE`, `FALSE`, and `NOT_EVALUATED` as distinct states so absence of evaluation is not interpreted as false.
+
+ADR 0019 separates reconstructible accepted-result receipts from failed-attempt and typed-observation evidence that accepted history cannot reconstruct. Foundational persistence contracts are implemented, while materialization and reconciliation orchestration remain deferred.
+
+ADR 0020 records why the order-state projection uses per-order progress and order-local snapshot tails. Global positions remain unique lineage and scheduling coordinates, but gaps do not prove missing order history or global committed-history completeness.
+
+ADR 0021 retains ADR 0013's Snapshot Trust Contract while separating trust correctness from workload necessity. It classifies projection snapshots as optional derived reconstruction and trust-reference infrastructure for the current Order workload and requires concrete consumer or workload evidence before further snapshot-specific expansion.
+
+ADR 0022 records the current PostgreSQL write-side traced-call transaction
+boundary. It requires valid synchronous Result + Trace composition before clean
+business-UOW exit, while keeping those in-memory diagnostic artifacts separate
+from durable business state and leaving best-effort or future producer models
+for separate review.
+
+ADR 0023 keeps Stage 4B.2 measurement availability subordinate to established
+business truth. It requires normal producer return and transaction finalization
+before final measurement construction, preserves the exact producer value when
+that construction is unavailable, and leaves ADR 0022 trace semantics intact.
+
+ADR 0024 separates detailed measurement capability from mandatory producer
+execution. Existing legacy and traced APIs remain valid unmeasured surfaces;
+future sampling or dynamic observability policy belongs above the explicit
+measured surface.
+
+ADR 0025 preserves the completed PR6 production-composition comparison while
+separating its unexpected latency ordering from causal interpretation. It
+assigns current single-execution mechanism decomposition to the post-PR6
+supplement, leaves bounded concurrency to PR7, and keeps counterfactual
+compositions optional unless the current Layer 1–3 evidence is insufficient.
+
+ADR 0026 closes Stage 4B.3 as not currently justified. It preserves ADR 0020's
+exact-next per-order progress repair and ADR 0021's optional-snapshot decision,
+while recording that the current projection worker, reducer, progress lineage,
+transaction, permission, and replay boundaries already own normal projection
+correctness. PR1 and PR2 remain historical/reference investigation; PR3 and
+later Stage 4B.3 implementation work do not proceed without a concrete consumer
+and a newly demonstrated correctness need.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -171,6 +235,17 @@ Recommended pattern:
 0013_snapshot_runtime_eligibility_and_validation_receipt_boundary.md
 0014_defer_projection_events_as_delivery_layer.md
 0015_permission_probing_with_set_role.md
+0016_decision_receipt_is_governance_evidence.md
+0017_separate_evidence_path_identity_provenance_and_admission_fate.md
+0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md
+0019_separate_accepted_receipt_reconstruction_from_failed_attempt_persistence.md
+0020_per_order_projection_progress_and_order_local_snapshot_tails.md
+0021_projection_snapshots_are_optional_for_current_order_workload.md
+0022_traced_write_side_execution_fails_closed_before_business_commit.md
+0023_measurement_availability_does_not_govern_business_truth.md
+0024_detailed_postgres_write_measurement_is_opt_in.md
+0025_pr6_comparison_requires_separate_explanatory_characterization.md
+0026_projection_trust_continuation_is_not_currently_justified.md
 ```
 
 Evolution or supporting notes may be kept as separate files:

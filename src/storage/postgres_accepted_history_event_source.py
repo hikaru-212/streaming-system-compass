@@ -32,6 +32,7 @@ class PostgresAcceptedHistoryEventSource:
     """
 
     def __init__(self, connection: Connection) -> None:
+        self.connection = connection
         self._event_store = PostgresEventStore(connection)
 
     def load(self, order_id: str) -> list[OrderEvent]:

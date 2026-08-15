@@ -10,11 +10,11 @@ At the current Stage 3.5C PR5 baseline, the tests cover both the PostgreSQL-back
 
 ```text
 order_events
-→ PostgresProjectionEventSource
+→ PostgresProjectionEligibleEventSource
 → PostgresProjectionWorker
 → canonical reducer
 → PostgresProjectionStore
-→ PostgresCheckpointStore
+→ PostgresProjectionProgressStore
 ```
 
 ---
@@ -28,7 +28,7 @@ The key invariant is:
 ```text
 projection state
 +
-checkpoint progress
+per-order projection progress
 ```
 
 must be persisted inside one read-side transaction boundary.
@@ -40,15 +40,15 @@ must be persisted inside one read-side transaction boundary.
 These tests verify:
 
 - PostgreSQL-backed projection worker behavior
-- accepted-history consumption after `GLOBAL_POSITION`
+- exact-next per-order accepted-event eligibility
 - canonical reducer integration
 - projection state persistence through `PostgresProjectionStore`
-- checkpoint progress persistence through `PostgresCheckpointStore`
-- worker resume from existing checkpoint
-- no-event behavior after checkpoint reaches the latest accepted event
-- rollback behavior when checkpoint saving fails after projection state save
-- fail-fast behavior for unsupported checkpoint cursor kinds
-- fail-fast behavior when projection state is ahead of checkpoint progress
+- progress persistence through `PostgresProjectionProgressStore`
+- safe resume from repaired per-order progress
+- commit-inversion and rollback-gap behavior
+- rollback behavior when progress saving fails after projection state save
+- fail-fast behavior for mixed connections and outer transactions
+- legacy checkpoints not bootstrapping repaired progress
 
 ---
 
@@ -86,12 +86,12 @@ It covers:
 - empty accepted history returns `no_event`
 - one `CREATED` event is applied to durable projection state
 - one `PAID` event is applied after `CREATED`
-- checkpoint progress advances to the processed `global_position`
-- a new worker instance resumes from existing checkpoint progress
-- no event is processed after checkpoint reaches the latest event
-- non-`GLOBAL_POSITION` checkpoints are rejected
-- projection-state / checkpoint mismatch fails fast
-- projection state and checkpoint progress roll back together when checkpoint persistence fails
+- exact-next per-order progress advances with accepted-event lineage
+- a new worker instance resumes from repaired progress
+- late lower-position commits remain eligible for their own order
+- rollback sequence gaps do not block unrelated orders
+- projection-state / progress mismatch fails fast
+- projection state and progress roll back together on progress failure
 
 ### `test_durable_replay_validation.py`
 
@@ -119,48 +119,46 @@ The worker must not leave behind:
 
 ```text
 projection state updated
-checkpoint not advanced
+progress not advanced
 ```
 
 or:
 
 ```text
-checkpoint advanced
+progress advanced
 projection state not updated
 ```
 
-The rollback test simulates checkpoint persistence failure after projection state saving.
+The rollback test simulates progress persistence failure after projection state saving.
 
 The expected result is:
 
 ```text
 no projection state
-no checkpoint progress
+no per-order progress
 ```
 
 after the failed transaction.
 
 ---
 
-## Cursor Boundary Claim
+## Progress Boundary Claim
 
-The worker only accepts:
-
-```text
-cursor_kind = GLOBAL_POSITION
-```
-
-because Stage 3.5C PR4 explicitly chooses `order_events.global_position` as the first durable accepted-history consumption cursor.
-
-Other cursor kinds may exist in the schema for future strategies, but this worker must fail fast if loaded checkpoint progress does not use `GLOBAL_POSITION`.
+The repaired worker uses `(projection_name, projection_epoch, order_id)` and
+advances only the exact next order-local sequence. Generic checkpoint rows
+remain available but are not a correctness cursor or repaired-progress seed.
+The production worker is fixed to `order_state_projection`, epoch 1; the
+current `projection_states` table does not support concurrent epochs.
 
 ---
 
 ## Fail-Fast Boundary Claim
 
-The PostgreSQL-backed worker intentionally does not silently repair projection-state / checkpoint mismatch.
+The PostgreSQL-backed worker intentionally does not silently repair
+projection-state / per-order-progress mismatch.
 
-If durable projection state is already ahead of checkpoint progress, the worker fails fast instead of silently skipping and advancing the checkpoint.
+If projection state cannot apply the exact-next event selected by repaired
+progress, the worker fails fast rather than silently skipping.
 
 Repair, rebuild, and recovery policy belong to later stages.
 
@@ -231,7 +229,7 @@ pytest -v --durations=10 --cov=src --cov-report=term-missing --cov-fail-under=80
 ## Current Stage Status
 
 ```text
-Stage 3.5C PR4 — Global-Position Projection Worker Baseline ✅
+Stage 3.5C repaired per-order projection progress ✅
 Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
 ```
 
@@ -239,4 +237,6 @@ Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline ✅
 
 ## Summary
 
-These tests prove that the PostgreSQL-backed projection worker can consume accepted history, derive durable read-side state, and advance checkpoint progress without violating the read-side transaction boundary.
+These tests prove that the PostgreSQL-backed projection worker can consume
+exact-next per-order accepted history and atomically persist derived state with
+repaired progress.

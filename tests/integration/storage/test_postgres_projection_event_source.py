@@ -1,35 +1,11 @@
-from decimal import Decimal
-
 import pytest
 from psycopg import Connection
 
-from src.core.order.enums import EventType, OrderStatus
-from src.core.order.events import OrderEvent
-from src.core.order.proofs import Proof
 from src.storage.postgres_event_store import PostgresEventStore
 from src.storage.postgres_projection_event_source import (
     PostgresProjectionEventSource,
 )
-
-
-def make_created_event(
-    *,
-    request_id: str,
-    order_id: str,
-    amount: Decimal = Decimal("100.00"),
-) -> OrderEvent:
-    return OrderEvent.create(
-        request_id=request_id,
-        order_id=order_id,
-        sequence=1,
-        event_type=EventType.CREATED,
-        amount=amount,
-        proof=Proof(
-            prev_status=OrderStatus.INIT,
-            prev_version=0,
-            prev_event_id=None,
-        ),
-    )
+from tests.shared.order_events import make_created_event
 
 
 def test_load_after_zero_returns_events_ordered_by_global_position(
