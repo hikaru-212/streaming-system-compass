@@ -9,7 +9,7 @@ contamination.
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from enum import Enum
 import fcntl
@@ -462,24 +462,75 @@ def block_bootstrap_median_ci(
     seed: int = BOOTSTRAP_SEED,
     repetitions: int = BOOTSTRAP_REPETITIONS,
 ) -> dict[str, Any]:
-    """Return a fixed-seed block-bootstrap 95% CI for the sample median."""
+    """Return a block-cluster bootstrap 95% CI for the pooled median.
+
+    Recorded blocks are sampled with replacement. Every observation belonging
+    to a selected block is retained, so each bootstrap replicate estimates the
+    median over the same declared unit population as the reported empirical
+    median. Histogram accumulation represents that complete resampled multiset
+    without independently resampling within-block observations.
+    """
 
     if repetitions <= 0:
         raise ValueError("bootstrap repetitions must be positive")
     blocks = [tuple(values) for _, values in sorted(values_by_block.items())]
     if not blocks or any(not block for block in blocks):
         raise ValueError("block bootstrap requires non-empty blocks")
-    block_medians = [nearest_rank(block, 50) for block in blocks]
+    units_per_block = len(blocks[0])
+    if any(len(block) != units_per_block for block in blocks):
+        raise ValueError("block bootstrap requires equal fixed-population blocks")
+
+    unique_values = sorted({value for block in blocks for value in block})
+    value_indexes = {
+        value: index for index, value in enumerate(unique_values)
+    }
+    block_histograms = [
+        tuple(
+            (value_indexes[value], count)
+            for value, count in Counter(block).items()
+        )
+        for block in blocks
+    ]
+    bootstrap_population_size = len(blocks) * units_per_block
+    median_rank = math.ceil(bootstrap_population_size * 0.5)
     rng = random.Random(seed)
     bootstrap_medians: list[float | int] = []
     for _ in range(repetitions):
-        resampled = [
-            block_medians[rng.randrange(len(block_medians))]
-            for _ in block_medians
-        ]
-        bootstrap_medians.append(nearest_rank(resampled, 50))
+        selected_multiplicities = [0] * len(blocks)
+        for _ in blocks:
+            selected_multiplicities[rng.randrange(len(blocks))] += 1
+
+        # This histogram is the exact multiset formed by concatenating every
+        # observation from each selected block, including repeated blocks.
+        resampled_counts = [0] * len(unique_values)
+        for multiplicity, histogram in zip(
+            selected_multiplicities,
+            block_histograms,
+            strict=True,
+        ):
+            if not multiplicity:
+                continue
+            for value_index, count in histogram:
+                resampled_counts[value_index] += multiplicity * count
+
+        cumulative = 0
+        for value, count in zip(unique_values, resampled_counts, strict=True):
+            cumulative += count
+            if cumulative >= median_rank:
+                bootstrap_medians.append(value)
+                break
+        else:  # pragma: no cover - guarded by the complete block histograms
+            raise AssertionError("cluster bootstrap population was incomplete")
     return {
-        "method": "fixed-seed bootstrap of recorded-block medians",
+        "method": (
+            "fixed-seed recorded-block cluster bootstrap of pooled median"
+        ),
+        "statistic": "empirical nearest-rank median of pooled units",
+        "resampling_unit": "recorded block",
+        "within_block_units": "retained in full",
+        "block_count": len(blocks),
+        "units_per_block": units_per_block,
+        "bootstrap_population_size": bootstrap_population_size,
         "confidence": 0.95,
         "seed": seed,
         "repetitions": repetitions,

@@ -388,8 +388,16 @@ The harness uses empirical nearest-rank percentiles:
   below the `10,000`-observation credibility threshold;
 - IQR and MAD;
 - every recorded block median and a distribution of block medians;
-- fixed-seed, 2,000-repetition bootstrap confidence interval over recorded-block
-  medians.
+- fixed-seed, 2,000-repetition recorded-block cluster-bootstrap confidence
+  interval for each reported distribution median.
+
+For each bootstrap repetition, the harness samples recorded blocks with
+replacement, retains every comparison or invocation unit in each selected
+block, concatenates that complete resampled population, and calculates its
+empirical nearest-rank median. It does not first reduce blocks to medians and
+does not independently resample permutation or invocation units. The bootstrap
+therefore targets the same pooled-unit median as the reported p50 while using
+the recorded block as the dependence-preserving resampling cluster.
 
 The comparison construction is mandatory:
 
@@ -522,6 +530,30 @@ Committing micro evidence changes the repository commit identity but must not
 change the recorded production `src` tree or harness blobs. The manifest records
 the overall commit, production `src` tree identity, and both harness blob
 identities so the two runs can demonstrate that boundary explicitly.
+
+### Proposed immutable derived-statistics correction artifact
+
+An accepted canonical timing namespace is never edited or regenerated to
+correct aggregation logic. The narrow correction namespace proposed for the
+canonical micro run is:
+
+```text
+experiments/stage4b5/evidence/
+  runtime-governance-overhead-micro-corrections/
+    stage4b5-runtime-overhead-micro-20260815-e3193f3/
+      bootstrap-estimand-v1/
+        manifest.json
+        bootstrap_ci_corrections.json
+```
+
+This proposal is not written automatically. `manifest.json` would bind the
+correction to the original run identity and SHA-256 hashes of its five immutable
+files, identify the correcting source commit and algorithm, and state that only
+bootstrap confidence intervals are superseded. The corrections document would
+contain the original and corrected interval for each aggregate key; it would
+not duplicate or alter samples, batch summaries, batch comparisons, empirical
+percentiles, or the original `aggregates.json`. Publication would use a new
+exclusive-create immutable namespace after separate human review.
 
 Run the semantic-path layer:
 

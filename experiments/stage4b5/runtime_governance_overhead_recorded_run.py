@@ -1026,7 +1026,10 @@ def _manifest(
                 "withheld because each scenario/comparison has 180 batch units"
             ),
             "bootstrap": {
-                "method": "fixed-seed bootstrap of recorded-block medians",
+                "method": (
+                    "fixed-seed recorded-block cluster bootstrap of pooled median; "
+                    "all within-block units retained"
+                ),
                 "repetitions": BOOTSTRAP_REPETITIONS,
             },
         },

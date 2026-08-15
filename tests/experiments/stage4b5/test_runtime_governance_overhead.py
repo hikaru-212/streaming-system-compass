@@ -20,6 +20,7 @@ from experiments.stage4b5.runtime_governance_overhead import (
     Surface,
     aggregate_evidence,
     assert_secret_free,
+    block_bootstrap_median_ci,
     compute_batch_comparisons,
     compute_batch_summaries,
     expected_sample_count,
@@ -98,6 +99,41 @@ def test_nearest_rank_is_empirical_and_non_interpolating() -> None:
     assert nearest_rank(values, 50) == 3
     assert nearest_rank(values, 95) == 100
     assert nearest_rank(values, 99) == 100
+
+
+def test_cluster_bootstrap_targets_pooled_unit_median_not_block_medians() -> None:
+    values_by_block = {
+        block: (
+            [0] * 10
+            if block < 14
+            else [0] * 4 + [100] * 6
+        )
+        for block in range(30)
+    }
+    pooled_values = [
+        value
+        for block in values_by_block.values()
+        for value in block
+    ]
+    block_medians = [
+        nearest_rank(block, 50) for block in values_by_block.values()
+    ]
+    assert nearest_rank(pooled_values, 50) == 0
+    assert nearest_rank(block_medians, 50) == 100
+
+    interval = block_bootstrap_median_ci(
+        values_by_block,
+        seed=7,
+        repetitions=500,
+    )
+
+    assert interval["lower"] == 0
+    assert interval["upper"] == 0
+    assert interval["block_count"] == 30
+    assert interval["units_per_block"] == 10
+    assert interval["bootstrap_population_size"] == 300
+    assert interval["statistic"] == "empirical nearest-rank median of pooled units"
+    assert interval["within_block_units"] == "retained in full"
 
 
 def test_comparisons_use_batch_units_and_direct_c_composition_lap() -> None:
