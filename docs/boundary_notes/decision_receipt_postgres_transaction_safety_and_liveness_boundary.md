@@ -31,8 +31,11 @@ automatic production materialization runtime
 production timeout value
 = not selected
 
-Stage 4B.1 DiagnosticTrace / ResolutionTrace
-= current formal development stage; implementation not started
+Stage 4B.5 Order Correctness Contract v0
+= complete / closed
+
+Stage 4B.3 Projection Trust Boundary and Continuation
+= separately owned / not started
 ```
 
 ## Summary

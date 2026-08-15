@@ -17,9 +17,14 @@ flowchart TD
     IR -->|"field: signature"| RS
     IR -->|"field: accepted_event"| OE0["prior accepted OrderEvent"]
 
-    CE["candidate OrderEvent"] -->|"argument"| VC["ValidationRuntime.decide(...)"]
-    CX["ValidationContext"] -->|"argument"| VC
-    VC -->|"returns"| VD["ValidationDecision"]
+    CE["candidate OrderEvent"] -->|"argument"| VI["write-side _invoke_validation(...)"]
+    CX["ValidationContext"] -->|"argument"| VI
+    VI -->|"when capability exists"| VCE["ValidationRuntime.decide_with_rule_evidence(...)"]
+    VI -.->|"legacy decide-only fallback"| VC["ValidationRuntime.decide(...)"]
+    VCE -->|"returns"| VDE["ValidationDecisionWithRuleEvidence"]
+    VDE -->|"property: decision"| VD["ValidationDecision"]
+    VDE -.->|"optional observed_violation"| ORV["OrderRuleViolationEvidence"]
+    VC -->|"returns"| VD
     VD -->|"field: validation_result"| VR["ValidationResult"]
 
     CE -->|"argument"| AC["ConcurrencyGate.append_if_admitted(...)"]
@@ -29,6 +34,8 @@ flowchart TD
     WR["PostgresWriteSideResult"] -->|"field: idempotency_decision"| ID
     WR -.->|"optional field: stream_admission_result"| SA["StreamAdmissionResult"]
     WR -.->|"optional field: validation_decision"| VD
+    WR -.->|"optional field: validation_decision_evidence"| VDE
+    WR -.->|"derived observed_rule_violation"| ORV
     WR -.->|"optional field: admission_result"| AR
     WR -.->|"optional field: accepted_event"| OE1["accepted OrderEvent"]
     CE -.->|"same identity on ACCEPTED"| OE1
@@ -47,6 +54,12 @@ flowchart TD
     DAE -->|"supporting contract"| GM
     DF -->|"supporting contract"| GM
     GM -->|"constructs and validates"| DR["DecisionReceipt"]
+
+    WR -->|"explicit PR7 mapper call"| PR7["map_postgres_write_side_result_to_semantic_rule_feedback(...)"]
+    PR7 -->|"calls Stage 4A mapper"| SO7["SemanticOutcome"]
+    PR7 -->|"constructs"| SR["PostgresWriteSideSemanticRuleFeedback"]
+    SO7 -->|"field: semantic_outcome"| SR
+    ORV -.->|"required when terminal is VALIDATION_BLOCKED"| SR
 ```
 
 `IdempotencyRecord` retains only an already accepted event. An `OrderEvent` candidate is not accepted-history authority before append and commit. `_SelectedIdentity` is PR4's private normalized selection, not a write-side producer object. Sources: `src/storage/idempotency_store.py::IdempotencyRecord`, `src/compass/runtime/write_side_decision_receipt_mapping.py::_SelectedIdentity`.
@@ -60,12 +73,16 @@ flowchart TD
 | `IdempotencyRecord` | `src/storage/idempotency_store.py::IdempotencyRecord` | durable idempotency-store row conversion | replay/conflict handling and identity selection | retained `signature`, prior `accepted_event` | prior accepted-history evidence; in a conflict, not proof that the current attempt was accepted |
 | `StreamAdmissionResult` | `src/pipeline/transactional/admission.py::StreamAdmissionResult` | `ConcurrencyGate.prepare_stream` | write side and mappers | Can the stream proceed through preparation? `verdict`, `reason`, `order_id` | stream preparation; not candidate-level `AdmissionResult` |
 | `OrderEvent` | `src/core/order/events.py::OrderEvent` | aggregate command builder or store-row rehydration | validation, gates, stores, results | `event_id`, `request_id`, `order_id`, `sequence`, `event_type`, `amount`, `occurred_at_ms`, `proof` | candidate or accepted event depends on the lifecycle source, not the class alone |
-| `ValidationContext` | `src/compass/transition/types.py::ValidationContext` | write-side `_build_validation_context` | `ValidationRuntime.decide` | `actual_prev_event`, `actual_prev_version`, `actual_prev_status` | validation read context; not a concurrency-admission verdict |
+| `ValidationContext` | `src/compass/transition/types.py::ValidationContext` | write-side `_build_validation_context` | evidence-aware runtime path or legacy `ValidationRuntime.decide` fallback | `actual_prev_event`, `actual_prev_version`, `actual_prev_status` | validation read context; not a concurrency-admission verdict |
 | `ValidationResult` | `src/compass/transition/types.py::ValidationResult` | selected validator | `ValidationPolicy`, `ValidationDecision`, mappers | `verdict`, `reason`, `candidate_event_id`, `validator_name`, `validation_mode`, timing fields, `metadata` | validator evidence; `metadata` is not receipt identity authority |
-| `ValidationDecision` | `src/compass/transition/types.py::ValidationDecision` | `ValidationRuntime.decide` | write side and mappers | `action` plus `validation_result` | ALLOW/BLOCK enforcement at the Compass boundary; not append admission |
+| `OrderRuleViolationEvidence` | `src/core/order/rule_violation_evidence.py::OrderRuleViolationEvidence` | supported executable predicate branch in `FullProofValidator` | FullProof/runtime/write-side carriers and PR7 mapper | contract identity/version, exact `rule_id`, candidate identity | one observed stable Order rule violation; not a complete violation set, diagnosis, or retry decision |
+| `FullProofValidationEvidence` | `src/compass/transition/rule_evaluation_evidence.py::FullProofValidationEvidence` | `FullProofValidator.validate_with_rule_evidence` | evidence-aware `ValidationRuntime` | exact `ValidationResult` plus optional exact violation | producer-specific bundle; FAILED requires one of exactly six supported `TRANSITION_TRUTH` rules |
+| `ValidationDecision` | `src/compass/transition/types.py::ValidationDecision` | `ValidationRuntime` legacy or evidence-aware path | write side and mappers | `action` plus `validation_result` | ALLOW/BLOCK enforcement at the Compass boundary; not append admission |
+| `ValidationDecisionWithRuleEvidence` | `src/compass/transition/runtime.py::ValidationDecisionWithRuleEvidence` | `ValidationRuntime.decide_with_rule_evidence` | PostgreSQL write side | exact `decision` plus optional `observed_violation` | same-invocation in-process carrier; not authenticity, persistence, or cross-process provenance |
 | `AdmissionResult` | `src/pipeline/transactional/admission.py::AdmissionResult` | `ConcurrencyGate.append_if_admitted` | write side and mappers | `verdict`, `reason`, `candidate_event_id`, optional `accepted_event_id` | candidate-level append-admission boundary; not stream preparation or commit result |
-| `PostgresWriteSideResult` | `src/pipeline/transactional/postgres_write_side.py::PostgresWriteSideResult` | normal write-side return branches | Stage 4A and PR4 adapters | `outcome`, `accepted_event`, `idempotency_decision`, optional stream/validation/append results | normal typed orchestration return object; an ACCEPTED object is built in the block and reaches the caller only after clean `__exit__` commit; an exception path may produce none |
+| `PostgresWriteSideResult` | `src/pipeline/transactional/postgres_write_side.py::PostgresWriteSideResult` | normal write-side return branches | Stage 4A, PR4, and explicit PR7 adapters | `outcome`, `accepted_event`, `idempotency_decision`, optional stream/validation/append results, optional `validation_decision_evidence`; derived `observed_rule_violation` | normal typed orchestration return object; it preserves validation observation after validation occurred without making that observation every terminal outcome's explanation |
 | `SemanticOutcome` | `src/compass/runtime/semantic_outcome.py::SemanticOutcome` | Stage 4A technical mapper | generic receipt mapper and tests | `outcome_id`, the semantic tuple, `reason`, `context`, `evidence` | semantic interpretation of technical evidence; not a receipt or runtime action |
+| `PostgresWriteSideSemanticRuleFeedback` | `src/compass/runtime/write_side_rule_feedback.py::PostgresWriteSideSemanticRuleFeedback` | explicit PR7 mapper | caller | exact Stage 4A `semantic_outcome` plus terminally applicable `rule_refinement` | refined terminal semantic view; exact rule evidence is required only for `VALIDATION_BLOCKED`, and every other terminal outcome exposes `None` |
 | `_SelectedIdentity` | `src/compass/runtime/write_side_decision_receipt_mapping.py::_SelectedIdentity` | PR4 `_select_identity` | subject/correlation/identity-source helpers | `order_id`, `request_id`, `candidate_event_id`, `accepted_event_id` | fail-closed typed selection; not a public contract or field-level provenance |
 | `DecisionReceiptSubject` | `src/compass/runtime/decision_receipt.py::DecisionReceiptSubject` | PR4 `_subject_for_result` | `DecisionReceipt` | primary `subject_type`, `subject_id` | what the receipt is primarily about; not complete correlation |
 | `DecisionReceiptCorrelation` | `src/compass/runtime/decision_receipt.py::DecisionReceiptCorrelation` | PR4 wrapper | `DecisionReceipt` | typed identities plus `identity_source` | additional typed identities and primary-block provenance |
@@ -73,7 +90,7 @@ flowchart TD
 | `DecisionReceiptActor` | `src/compass/runtime/decision_receipt.py::DecisionReceiptActor` | generic mapper default | `DecisionReceipt` | optional actor and runtime-role fields | PR4 leaves it empty; database role must not be guessed |
 | `DecisionReceiptCostSummary` | `src/compass/runtime/decision_receipt.py::DecisionReceiptCostSummary` | generic mapper default | `DecisionReceipt.cost_summary` | optional elapsed/validation/replay/transaction/lock-wait fields | PR4 does not derive it from validation timing or arbitrary metadata |
 | `DecisionReceiptFlags` | `src/compass/runtime/decision_receipt.py::DecisionReceiptFlags` | PR4 `DecisionReceiptFlags()` default | `DecisionReceipt` | fallback, rebuild, operator-review, retry-candidate states | all fields remain `NOT_EVALUATED`; later authorized evaluators may produce `TRUE` or `FALSE` |
-| `DecisionReceipt` | `src/compass/runtime/decision_receipt.py::DecisionReceipt` | generic mapper | caller | ID, semantic tuple, evidence source, supporting contracts, summary, metadata | a frozen in-memory contract intended to represent durable governance evidence; the exact semantic tuple is in the ownership table; a stable durable contract/vocabulary is not a serialized or persisted row |
+| `DecisionReceipt` | `src/compass/runtime/decision_receipt.py::DecisionReceipt` | generic mapper | caller, explicit serializer and persistence boundaries | ID, semantic tuple, evidence source, supporting contracts, summary, metadata | a frozen in-memory contract; serializer v1 and PostgreSQL persistence exist separately, but construction does not mean a row was automatically materialized |
 
 Gate/store/UOW ownership:
 
@@ -150,19 +167,24 @@ Recommended reading order:
 1. `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide._execute_command`: dispatches by `ValidationPlacement`.
 2. `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide._execute_in_transaction_command`: owns the IN path and its normal rollback branches.
 3. `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide._execute_pre_transaction_command`: owns preliminary read/validation and write-UOW re-check/append.
-4. `src/compass/runtime/write_side_decision_receipt_mapping.py::map_postgres_write_side_result_to_decision_receipt`: PR4 public entry point.
-5. `src/compass/runtime/write_side_decision_receipt_mapping.py::_validate_result_shape`: rejects incompatible outcome/nested-evidence lifecycles.
-6. `src/compass/runtime/write_side_outcome_mapping.py::map_postgres_write_side_result_to_semantic_outcome`: Stage 4A semantic interpretation.
-7. `src/compass/runtime/write_side_decision_receipt_mapping.py::_select_identity`: typed identity collection, UUID parsing, contradiction rejection.
-8. `src/compass/runtime/write_side_decision_receipt_mapping.py::_subject_for_result`: primary receipt entity.
-9. `src/compass/runtime/write_side_decision_receipt_mapping.py::_identity_source_for_result`: primary-block provenance.
-10. `src/compass/runtime/write_side_decision_receipt_mapping.py::_admission_disposition_for_result`: admission fate from lifecycle phase and verdict.
-11. `src/compass/runtime/write_side_decision_receipt_mapping.py::_technical_status_for_result`: receipt-summary status parity with Stage 4A.
-12. `src/compass/runtime/write_side_decision_receipt_mapping.py::_lifecycle_phase_for_result`: typed terminal/resolving phase selection.
-13. `src/compass/runtime/write_side_decision_receipt_mapping.py::_evidence_summary_for_result`: compact allow-list summary.
-14. `src/compass/runtime/decision_receipt_mapping.py::map_semantic_outcome_to_decision_receipt`: semantic tuple plus supporting contracts.
-15. `src/compass/runtime/decision_receipt.py::DecisionReceipt.__post_init__`: receipt type and JSON mapping validation.
-16. `src/compass/runtime/decision_receipt.py::_validate_admission_evidence`: disposition/candidate/accepted-ID cross-field invariants.
+4. `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide._invoke_validation`: feature-detects the evidence-aware runtime method and retains the legacy decide-only fallback.
+5. `src/compass/runtime/write_side_decision_receipt_mapping.py::map_postgres_write_side_result_to_decision_receipt`: PR4 public entry point.
+6. `src/compass/runtime/write_side_decision_receipt_mapping.py::_validate_result_shape`: rejects incompatible outcome/nested-evidence lifecycles.
+7. `src/compass/runtime/write_side_outcome_mapping.py::map_postgres_write_side_result_to_semantic_outcome`: Stage 4A semantic interpretation.
+8. `src/compass/runtime/write_side_decision_receipt_mapping.py::_select_identity`: typed identity collection, UUID parsing, contradiction rejection.
+9. `src/compass/runtime/write_side_decision_receipt_mapping.py::_subject_for_result`: primary receipt entity.
+10. `src/compass/runtime/write_side_decision_receipt_mapping.py::_identity_source_for_result`: primary-block provenance.
+11. `src/compass/runtime/write_side_decision_receipt_mapping.py::_admission_disposition_for_result`: admission fate from lifecycle phase and verdict.
+12. `src/compass/runtime/write_side_decision_receipt_mapping.py::_technical_status_for_result`: receipt-summary status parity with Stage 4A.
+13. `src/compass/runtime/write_side_decision_receipt_mapping.py::_lifecycle_phase_for_result`: typed terminal/resolving phase selection.
+14. `src/compass/runtime/write_side_decision_receipt_mapping.py::_evidence_summary_for_result`: compact allow-list summary.
+15. `src/compass/runtime/decision_receipt_mapping.py::map_semantic_outcome_to_decision_receipt`: semantic tuple plus supporting contracts.
+16. `src/compass/runtime/decision_receipt.py::DecisionReceipt.__post_init__`: receipt type and JSON mapping validation.
+17. `src/compass/runtime/decision_receipt.py::_validate_admission_evidence`: disposition/candidate/accepted-ID cross-field invariants.
+18. `src/compass/runtime/write_side_rule_feedback.py::map_postgres_write_side_result_to_semantic_rule_feedback`: explicit PR7 terminal semantic-refinement entry point.
+19. `src/compass/runtime/decision_receipt_serialization.py::serialize_decision_receipt`: explicit portable serializer-v1 boundary.
+20. `src/storage/postgres_decision_receipt_store.py::PostgresDecisionReceiptStore`: caller-transaction-owned statement boundary.
+21. `src/storage/postgres_decision_receipt_transaction_owner.py::PostgresDecisionReceiptTransactionOwner`: explicitly invoked dedicated governance-transaction owner.
 
 ## 5. “Which object should I inspect?” guide
 
@@ -171,12 +193,15 @@ Recommended reading order:
 | Is this a duplicate replay? | `PostgresWriteSideResult.outcome == REPLAY` and `IdempotencyDecision.verdict/record` |
 | Is this an idempotency-intent conflict? | `outcome == CONFLICT`; the prior record proves conflict history only |
 | Did Compass reject the candidate? | `ValidationDecision.action == BLOCK` and `ValidationResult` |
+| Which exact correctness rule failed? | `PostgresWriteSideResult.observed_rule_violation`; current FullProof production covers exactly six `TRANSITION_TRUTH` rules |
+| Did validation happen before a later terminal result? | `validation_decision is not None`; inspect `validation_decision_evidence` for the same-invocation carrier |
+| Does the terminal result expose exact rule refinement? | Explicitly map to `PostgresWriteSideSemanticRuleFeedback`; only `VALIDATION_BLOCKED` has a non-`None` refinement |
 | Was append admission invoked? | `PostgresWriteSideResult.admission_result is not None`; candidate presence is insufficient |
 | Is this stale concurrency or technical failure? | the owning result's `AdmissionVerdict` plus whether it is the stream or append phase |
 | Does the accepted event have authority? | returned `accepted_event` or `IdempotencyRecord.accepted_event`; receipt `accepted_event_id` |
 | Does a candidate exist? | `ValidationResult.candidate_event_id` or `AdmissionResult.candidate_event_id` |
 | Which phase ended the attempt? | `DecisionReceipt.evidence_summary["lifecycle_phase"]` |
-| Has retry candidacy been evaluated or authorized? | `flags.retry_candidate` records evaluation state; PR4 leaves it `NOT_EVALUATED` and has no authorization object |
+| Has retry candidacy been evaluated or authorized? | `DecisionReceipt.flags.retry_candidate`; PR4 leaves it `NOT_EVALUATED`, while rule evidence and PR7 refinement provide no retry authorization |
 | Which technical status did Stage 4A select? | `SemanticOutcome.evidence["technical_status"]`; PR4 independently selects `DecisionReceipt.evidence_summary["technical_status"]` and a parity test compares them |
 | Did stream preparation succeed? | `StreamAdmissionResult.verdict/admitted` |
 | Was event insert attempted? | presence of `AdmissionResult`, then follow `ConcurrencyGate.append_if_admitted` to the event store |
@@ -243,7 +268,9 @@ no policy, strategy, or execution. Sources:
 | implemented but not produced | stream `STALE_WRITE` | representable by the typed `AdmissionVerdict` domain and covered synthetically by PR4 tests; current PostgreSQL `prepare_stream` gates do not produce it |
 | implemented but not produced | `COMMIT_OUTCOME_UNRESOLVED` | contract and invariant exist; the current write-side result has no ambiguous-commit/reconciliation producer |
 | implemented but not produced by PR4 | completed `DecisionReceiptFlagState.TRUE` / `FALSE` | the enum represents both states, but PR4 supplies only `NOT_EVALUATED`; later authorized evaluators may produce completed states |
-| planned | receipt persistence / serialization | the current mapper returns only a frozen in-memory `DecisionReceipt` contract intended to represent durable governance evidence; a stable durable contract/vocabulary is not a serialized or persisted row; README keeps persistence as later work |
+| implemented, separately invoked | receipt serialization and PostgreSQL persistence | strict serializer v1, persistence envelopes, migration 007, and the PostgreSQL store exist; mapper construction alone does not invoke them |
+| implemented, explicitly invoked | dedicated DecisionReceipt transaction owner | `PostgresDecisionReceiptTransactionOwner` owns its dedicated governance connection and commit/rollback when called; the lower-level store remains statement-only and caller-transaction-owned |
+| deferred | automatic DecisionReceipt materialization | no normal write command automatically calls the receipt mapper, serializer, store, or dedicated transaction owner |
 | unresolved | ambiguous commit reconciliation | commit exceptions do not become a typed `PostgresWriteSideResult`, and no reconciliation-evidence contract exists |
 | unresolved | field-level identity provenance | current `identity_source` describes only the primary correlation block |
 
