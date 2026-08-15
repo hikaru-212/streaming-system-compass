@@ -100,15 +100,6 @@ class RecordedRunError(RuntimeError):
     """Raised when a recorded run cannot preserve its evidence contract."""
 
 
-def running_in_virtual_environment() -> bool:
-    """Return whether this interpreter is isolated by venv or virtualenv."""
-
-    return (
-        sys.prefix != getattr(sys, "base_prefix", sys.prefix)
-        or hasattr(sys, "real_prefix")
-    )
-
-
 def require_test_database_name(database_name: object) -> str:
     """Return a verified test database name or refuse destructive execution."""
 
@@ -1121,10 +1112,6 @@ def _require_canonical_preconditions(confirmation: str) -> dict[str, Any]:
     source = current_source_identity()
     if not source["working_tree_clean"]:
         raise RecordedRunError("canonical evidence requires a clean working tree")
-    if not running_in_virtual_environment():
-        raise RecordedRunError(
-            "canonical run requires execution inside a Python virtual environment"
-        )
     return source
 
 

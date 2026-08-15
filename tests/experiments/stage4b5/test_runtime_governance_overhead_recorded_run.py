@@ -9,6 +9,7 @@ import sys
 
 import pytest
 
+import experiments.stage4b5.runtime_governance_overhead_recorded_run as recorded_run
 from experiments.stage4b5.runtime_governance_overhead import (
     MICRO_SCENARIOS,
     REPOSITORY_ROOT,
@@ -19,10 +20,10 @@ from experiments.stage4b5.runtime_governance_overhead import (
 from experiments.stage4b5.runtime_governance_overhead_recorded_run import (
     CANONICAL_CONFIRMATION,
     RecordedRunError,
+    _require_canonical_preconditions,
     _read_postgres_preflight_facts,
     _WorkerRuntime,
     require_test_database_name,
-    running_in_virtual_environment,
 )
 
 
@@ -137,13 +138,19 @@ def test_postgres_preflight_fails_if_cleanup_does_not_return_to_idle() -> None:
     assert connection.info.transaction_status.name == "INTRANS"
 
 
-def test_canonical_interpreter_precondition_accepts_any_virtual_environment(
+def test_canonical_interpreter_precondition_accepts_hosted_python_toolchain(
     monkeypatch,
 ) -> None:
-    assert running_in_virtual_environment() is True
+    source_identity = {"working_tree_clean": True}
+    monkeypatch.setattr(
+        recorded_run,
+        "current_source_identity",
+        lambda: source_identity,
+    )
     monkeypatch.setattr(sys, "prefix", getattr(sys, "base_prefix", sys.prefix))
     monkeypatch.delattr(sys, "real_prefix", raising=False)
-    assert running_in_virtual_environment() is False
+
+    assert _require_canonical_preconditions(CANONICAL_CONFIRMATION) is source_identity
 
 
 def test_c_surface_records_same_invocation_composition_lap() -> None:
