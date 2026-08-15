@@ -43,8 +43,8 @@ coarse semantic rejection
 Stage 4B.5 does not itself authorize retry, prescribe repair, or decide why an
 Agent reasoned incorrectly.
 
-Two closeout supplements are now explicitly planned after the final semantic
-wiring is frozen:
+Two closeout supplements were completed after the final semantic wiring was
+frozen:
 
 ```text
 1. Runtime Governance Overhead Characterization
@@ -75,8 +75,8 @@ Combined PR5 + PR6
 
 PR7 — COMPLETE / MERGED
 Supplement A — COMPLETE / CANONICAL MICRO + POSTGRESQL EVIDENCE RECORDED
-Supplement B — PLANNED
-PR8 — CLOSEOUT
+Supplement B — COMPLETE / MERGED
+PR8 — COMPLETE / CLOSED
 ```
 
 Current delivered chain:
@@ -91,6 +91,7 @@ Order Correctness Contract V0
 → existing normal / trace / measurement delivery surfaces
 → Stage 4A SemanticOutcome mapping
 → terminal Order-rule refinement composition
+→ deterministic YAML readability projection
 ```
 
 The completed Supplement A chain is:
@@ -151,15 +152,15 @@ Order core must not depend on Compass.
 
 ---
 
-## Branch Workflow
+## Historical Branch Workflow
 
-Stage 4B.5 uses the integration branch:
+Stage 4B.5 used the integration branch:
 
 ```text
 feat/stage4b5-order-correctness-contract
 ```
 
-Current sequence:
+Delivered sequence:
 
 ```text
 feat/stage4b5-order-correctness-contract
@@ -843,24 +844,27 @@ both
 → bounded feedback / enriched semantic view
 ```
 
-A minimal shape may be:
+A minimal shape was implemented as:
 
 ```text
-semantic_outcome: SemanticOutcome
-observed_violation: OrderRuleViolationEvidence | None
+PostgresWriteSideSemanticRuleFeedback
+    semantic_outcome: SemanticOutcome
+    rule_refinement: OrderRuleViolationEvidence | None
 ```
 
-but the exact type remains source-grounded until PR7 implementation review.
+The explicit mapper is
+`map_postgres_write_side_result_to_semantic_rule_feedback(...)`. It is not
+automatically invoked by the write side.
 
 Compatibility rule:
 
 ```text
 COMPASS_VALIDATION_BLOCKED
-→ may carry B4.5 refinement
+→ exact B4.5 refinement is required by the PR7 refined mapper
 
 LOCK_TIMEOUT / OCC / idempotency / success
 → existing Stage 4A semantics remain unchanged
-→ no false B4.5 refinement
+→ `rule_refinement = None`
 ```
 
 Same-invocation provenance is mandatory.
@@ -869,7 +873,8 @@ Same-invocation provenance is mandatory.
 
 # Post-PR7 Decision Gate — Domain / Command Rejection Coverage
 
-After PR7, decide whether Stage 4B.5 completion requires typed live rule evidence
+The closeout decision is **A**: close with current FullProof / Compass producer
+scope documented. Stage 4B.5 completion does not require typed live rule evidence
 for failures before `FullProofValidator`, including:
 
 - illegal CREATE/PAY aggregate state;
@@ -1052,6 +1057,17 @@ correctness / governance has a cost
 
 # Supplement B — Deterministic Python → YAML Contract Projection
 
+## Status
+
+```text
+COMPLETE / MERGED
+```
+
+Current source is
+`src/core/order/correctness_contract_yaml_projection.py`; the committed
+readability projection is `order_correctness_contract_v0.yaml`. Production does
+not load that YAML to execute correctness.
+
 ## Purpose
 
 Produce a readable YAML representation of the accepted Order Correctness
@@ -1174,6 +1190,12 @@ YAML → production runtime
 
 # PR8 — Stage 4B.5 Closeout
 
+## Status
+
+```text
+COMPLETE / CLOSED
+```
+
 ## Branch
 
 ```text
@@ -1265,6 +1287,9 @@ concrete durability consumer appears.
 ---
 
 ## Stage Completion Boundary
+
+The following criteria are satisfied for the bounded Stage 4B.5 scope. The
+stage is complete and closed; future Retry Governance remains separately owned.
 
 Stage 4B.5 is complete when:
 

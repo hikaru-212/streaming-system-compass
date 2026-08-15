@@ -4,24 +4,31 @@
 
 ```text
 stage
-= Stage 4B.5
+= Stage 4B.5 — COMPLETE / CLOSED
 
 PR
-= PR1
+= PR1 — COMPLETE / MERGED
 
 responsibility
 = source-grounded correctness boundary and design documentation
 
 PR1 documentation
-= active
+= accepted source-grounded baseline
 
 production contract and runtime evidence
-= not implemented
+= implemented in later Stage 4B.5 deliveries
 ```
 
-This note records the current source-grounded Stage 4B.5 boundary after a fresh
+This note records the PR1 source-grounded Stage 4B.5 boundary after a fresh
 read-only audit of the Order domain, Compass Layer 1, write-side orchestration,
 admission, and idempotency boundaries.
+
+Later Stage 4B.5 deliveries implemented the 18-rule identity-driven contract,
+six-rule FullProof evidence producer, same-invocation runtime and PostgreSQL
+propagation, explicit terminal semantic refinement, deterministic YAML
+projection, and bounded overhead characterization. The PR1 analysis below is
+preserved as the source-grounded baseline rather than rewritten as closeout
+chronology.
 
 It supersedes the earlier planning assumption that Stage 4B.5 needs only a
 data-only contract plus parity tests.

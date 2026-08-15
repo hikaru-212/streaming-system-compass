@@ -5,23 +5,27 @@
 > with the fixed design and limitations in the
 > [Runtime Governance Overhead Characterization Method](runtime_governance_overhead_method.md).
 
+> Closeout rationale: [Why Stage 4B.5 Exists](why_stage_4b_5_exists.md).
+> Exploratory retry transition: [Retry Amplification, Local Correctness, and
+> Semantic Diagnosis](../../reasoning_notes/retry_amplification_local_correctness_and_semantic_diagnosis.md).
+
 ## Status
 
 ```text
 Stage 4B.5
-= ACTIVE PLANNING
+= COMPLETE / CLOSED
 
 current PR
-= PR1 — source-grounded correctness boundary
+= PR8 — documentation closeout
 
-PR1 responsibility
-= documentation only
+canonical correctness contract
+= implemented with 18 stable rules
 
-production contract
-= not implemented
+current typed runtime producer coverage
+= exactly six FullProof TRANSITION_TRUTH rules
 
-runtime rule-evaluation evidence
-= not implemented
+runtime / PostgreSQL evidence propagation and terminal refinement
+= implemented
 ```
 
 Stage 4B.5 defines a machine-readable representation of intended Order correctness without replacing the current Python executable authority.
@@ -102,12 +106,15 @@ That distinction is part of the Stage 4B.5 responsibility boundary.
 
 ---
 
-## PR1 Documents
+## Stage Documents
 
 - [PR Breakdown](pr_breakdown.md)
 - [Source-Grounded Order Correctness Boundary](order_correctness_contract_source_grounded_boundary.md)
+- [Why Stage 4B.5 Exists](why_stage_4b_5_exists.md)
 - [Runtime Governance Overhead Characterization Method](runtime_governance_overhead_method.md)
 - [Runtime Governance Overhead Characterization Report](runtime_governance_overhead_report.md)
+- [Exploratory Retry-Amplification Reasoning Note](../../reasoning_notes/retry_amplification_local_correctness_and_semantic_diagnosis.md)
+- [Deterministic YAML Readability Projection](order_correctness_contract_v0.yaml)
 - `order_correctness_contract_boundary.md`
   - historical pre-audit planning input;
   - retained for provenance;
@@ -115,7 +122,7 @@ That distinction is part of the Stage 4B.5 responsibility boundary.
 
 ---
 
-## Planned Stage 4B.5 Sequence
+## Delivered Stage 4B.5 Sequence
 
 ```text
 PR1
@@ -129,21 +136,26 @@ PR3
 → executable-authority parity
 
 PR4
-→ typed RuleEvaluationEvidence
-→ producer-owned rule evidence, Compass-first
+→ typed FullProof rule-evaluation evidence
 
-PR5
-→ live SemanticOutcome + sibling rule evidence composition
+combined PR5 + PR6
+→ ValidationRuntime preservation
+→ PostgreSQL write-side propagation
 
-post-PR5 decision gate
-→ decide whether aggregate/domain command rejection needs a separately scoped
-  typed rule-evidence producer before closeout
+PR7
+→ explicit terminal SemanticOutcome + exact rule-refinement composition
 
-final PR
-→ Stage 4B.5 closeout
+supplements
+→ deterministic Python-to-YAML readability projection
+→ bounded runtime-governance overhead characterization
+
+PR8
+→ Stage 4B.5 documentation closeout
 ```
 
-PR4 and PR5 remain gated by the source-grounded evidence established in PR1–PR3.
+The accepted closeout scope keeps aggregate/domain command-rejection producers
+deferred. Current typed production coverage remains the six FullProof
+`TRANSITION_TRUTH` rules.
 
 ---
 
@@ -172,9 +184,8 @@ Stable rule identity is now justified by a concrete consumer:
 live Agent constraint feedback
 ```
 
-PR1 freezes naming principles only.
-
-Actual rule IDs are frozen only with the immutable contract in PR2.
+PR2 froze the actual rule IDs with the immutable contract after PR1 established
+the naming principles.
 
 Rule identity must remain distinct from:
 
@@ -202,7 +213,10 @@ RuleEvaluationEvidence
 → live Agent feedback
 ```
 
-No convenience envelope is required in PR1.
+The current same-invocation carrier is
+`ValidationDecisionWithRuleEvidence`. The explicit terminal composition is
+`PostgresWriteSideSemanticRuleFeedback`; neither changes `DecisionReceipt`
+ownership or automatically persists feedback.
 
 `DecisionReceipt` remains the durable compact governance artifact. Durable
 rule-level correlation may later support cross-process recovery, historical
@@ -214,10 +228,8 @@ metadata.
 
 ## Explicit Non-Goals
 
-Stage 4B.5 PR1 does not:
+Stage 4B.5 does not:
 
-- add production code;
-- add production tests;
 - change `OrderAggregate`;
 - change Money semantics;
 - change Compass Layer 1 allow/block semantics;
@@ -226,6 +238,8 @@ Stage 4B.5 PR1 does not:
 - change `DiagnosticTrace`;
 - modify admission or idempotency behavior;
 - add migrations or dependencies;
+- automatically materialize `DecisionReceipt`;
+- automatically invoke PR7 from every write command;
 - authorize retry;
 - define retry count, backoff, reload, fallback, rebuild, or human-review policy;
 - automatically modify Agent candidates;
@@ -233,9 +247,9 @@ Stage 4B.5 PR1 does not:
 
 ---
 
-## Development Workflow
+## Historical Development Workflow
 
-Stage 4B.5 uses:
+Stage 4B.5 used:
 
 ```text
 feat/stage4b5-order-correctness-contract
