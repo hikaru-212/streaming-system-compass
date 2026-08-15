@@ -5,9 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from decimal import Decimal
 from enum import Enum
+from uuid import UUID
 
 import pytest
 
+from src.compass.runtime.write_side_rule_feedback import (
+    map_postgres_write_side_result_to_semantic_rule_feedback,
+)
 from src.compass.transition.rule_evaluation_evidence import (
     FullProofValidationEvidence,
 )
@@ -51,6 +55,9 @@ from src.pipeline.transactional.postgres_write_side_measurement import (
     PostgresWriteSideMeasurementDelivery,
 )
 from src.storage.idempotency_store import IdempotencyDecision, IdempotencyVerdict
+
+
+PR7_OUTCOME_ID = UUID("00000000-0000-0000-0000-000000000702")
 
 
 class _Delivery(Enum):
@@ -439,6 +446,10 @@ def test_full_proof_failure_preserves_exact_evidence_across_all_topologies(
     )
     carrier = runtime.produced[0]
     producer_evidence = validator.produced[0]
+    feedback = map_postgres_write_side_result_to_semantic_rule_feedback(
+        outcome_id=PR7_OUTCOME_ID,
+        result=invocation.result,
+    )
 
     assert invocation.result.outcome is PostgresWriteSideOutcome.VALIDATION_BLOCKED
     assert runtime.evidence_decide_calls == 1
@@ -453,6 +464,10 @@ def test_full_proof_failure_preserves_exact_evidence_across_all_topologies(
     assert carrier.observed_violation is producer_evidence.observed_violation
     assert invocation.result.observed_rule_violation is carrier.observed_violation
     assert invocation.result.observed_rule_violation is not None
+    assert feedback.semantic_outcome.evidence["technical_status"] == (
+        "COMPASS_VALIDATION_BLOCKED"
+    )
+    assert feedback.rule_refinement is invocation.result.observed_rule_violation
 
 
 @pytest.mark.usefixtures("clean_database")

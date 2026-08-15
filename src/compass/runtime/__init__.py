@@ -46,6 +46,10 @@ from src.compass.runtime.write_side_outcome_mapping import (
     map_postgres_write_side_result_to_semantic_outcome,
     map_write_side_admission_status_to_semantic_outcome,
 )
+from src.compass.runtime.write_side_rule_feedback import (
+    PostgresWriteSideSemanticRuleFeedback,
+    map_postgres_write_side_result_to_semantic_rule_feedback,
+)
 
 __all__ = [
     "DecisionReceipt", "DecisionReceiptActor", "DecisionReceiptAdmissionEvidence",
@@ -55,10 +59,12 @@ __all__ = [
     "DecisionReceiptIdentitySource", "DecisionReceiptSubject",
     "DecisionReceiptSubjectType", "EventAdmissionDisposition",
     "JsonObject", "JsonScalar", "JsonValue", "MAX_JSON_DEPTH",
-    "RuntimeTechnicalStatusMapping", "SemanticBoundary", "SemanticOutcome",
+    "PostgresWriteSideSemanticRuleFeedback", "RuntimeTechnicalStatusMapping",
+    "SemanticBoundary", "SemanticOutcome",
     "SemanticOutcomeCategory", "SemanticOutcomeCode", "SemanticReversibility",
     "SemanticRiskLevel", "SemanticSeverity", "ensure_json_object",
     "ensure_json_value", "map_postgres_write_side_result_to_semantic_outcome",
+    "map_postgres_write_side_result_to_semantic_rule_feedback",
     "map_projection_snapshot_assisted_resolution_result_to_semantic_outcome",
     "map_projection_snapshot_replay_validation_result_to_semantic_outcome",
     "map_replay_validation_result_to_semantic_outcome", "map_runtime_technical_status",
