@@ -120,6 +120,56 @@ def require_test_database_name(database_name: object) -> str:
     return database_name
 
 
+def _require_postgres_idle(connection: Any, location: str) -> None:
+    """Fail closed unless a benchmark PostgreSQL connection is IDLE."""
+
+    status = connection.info.transaction_status.name
+    if status != "IDLE":
+        raise RecordedRunError(f"connection not IDLE {location}")
+
+
+def _read_postgres_preflight_facts(connection: Any) -> dict[str, Any]:
+    """Collect PostgreSQL facts and close only the read-only preflight transaction.
+
+    With autocommit disabled, the first preflight query starts a transaction.
+    This helper owns cleanup of that read-only transaction, but it owns no
+    benchmark setup or business-work rollback. Workload execution remains
+    forbidden until the connection has returned to IDLE.
+    """
+
+    _require_postgres_idle(connection, "immediately after connect")
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT current_database(), oid FROM pg_database "
+                "WHERE datname = current_database()"
+            )
+            database_name, database_oid = cursor.fetchone()
+            cursor.execute("SHOW server_version_num")
+            postgres_version_num = cursor.fetchone()[0]
+            cursor.execute("SHOW transaction_isolation")
+            transaction_isolation = cursor.fetchone()[0]
+            cursor.execute(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+            )
+            tables = {row[0] for row in cursor.fetchall()}
+    finally:
+        # These SELECT/SHOW statements start a transaction when autocommit is
+        # disabled. Roll back only that read-only preflight transaction.
+        connection.rollback()
+        _require_postgres_idle(
+            connection,
+            "after read-only PostgreSQL preflight rollback",
+        )
+    return {
+        "database_name": database_name,
+        "database_oid": database_oid,
+        "postgres_version_num": postgres_version_num,
+        "transaction_isolation": transaction_isolation,
+        "tables": tables,
+    }
+
+
 class _WorkerRuntime:
     """Own one isolated A, B, or C production import graph and DB connection."""
 
@@ -392,21 +442,12 @@ class _WorkerRuntime:
         psycopg = importlib.import_module("psycopg")
         connection = psycopg.connect(database_url, connect_timeout=10)
         try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT current_database(), oid FROM pg_database "
-                    "WHERE datname = current_database()"
-                )
-                database_name, database_oid = cursor.fetchone()
-                cursor.execute("SHOW server_version_num")
-                postgres_version_num = cursor.fetchone()[0]
-                cursor.execute("SHOW transaction_isolation")
-                transaction_isolation = cursor.fetchone()[0]
-                cursor.execute(
-                    "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
-                )
-                tables = {row[0] for row in cursor.fetchall()}
-            connection.rollback()
+            preflight = _read_postgres_preflight_facts(connection)
+            database_name = preflight["database_name"]
+            database_oid = preflight["database_oid"]
+            postgres_version_num = preflight["postgres_version_num"]
+            transaction_isolation = preflight["transaction_isolation"]
+            tables = preflight["tables"]
             require_test_database_name(database_name)
             missing = sorted(_REQUIRED_TABLES - tables)
             if missing:
@@ -504,9 +545,7 @@ class _WorkerRuntime:
 
     @staticmethod
     def _require_idle(connection: Any, location: str) -> None:
-        status = connection.info.transaction_status.name
-        if status != "IDLE":
-            raise RecordedRunError(f"connection not IDLE {location}")
+        _require_postgres_idle(connection, location)
 
     def _seed_pay(self, *, placement: Placement, token: str) -> str:
         writer = self._writers[(placement, Terminal.ACCEPTED)]

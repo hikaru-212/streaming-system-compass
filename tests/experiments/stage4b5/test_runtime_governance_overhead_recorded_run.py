@@ -19,6 +19,7 @@ from experiments.stage4b5.runtime_governance_overhead import (
 from experiments.stage4b5.runtime_governance_overhead_recorded_run import (
     CANONICAL_CONFIRMATION,
     RecordedRunError,
+    _read_postgres_preflight_facts,
     _WorkerRuntime,
     require_test_database_name,
     running_in_virtual_environment,
@@ -33,11 +34,107 @@ RUNNER = (
 )
 
 
+class _FakeTransactionStatus:
+    def __init__(self) -> None:
+        self.name = "IDLE"
+
+
+class _FakeConnectionInfo:
+    def __init__(self) -> None:
+        self.transaction_status = _FakeTransactionStatus()
+
+
+class _FakePreflightCursor:
+    def __init__(self, connection: "_FakePreflightConnection") -> None:
+        self.connection = connection
+        self.query = ""
+
+    def __enter__(self) -> "_FakePreflightCursor":
+        return self
+
+    def __exit__(self, *unused: object) -> None:
+        return None
+
+    def execute(self, query: str) -> None:
+        self.connection.statuses_before_query.append(
+            self.connection.info.transaction_status.name
+        )
+        self.connection.info.transaction_status.name = "INTRANS"
+        self.query = query
+
+    def fetchone(self) -> tuple[object, ...]:
+        if self.query.startswith("SELECT current_database"):
+            return ("compass_test", 181689)
+        if self.query == "SHOW server_version_num":
+            return ("160014",)
+        if self.query == "SHOW transaction_isolation":
+            return ("read committed",)
+        raise AssertionError(f"unexpected fetchone query: {self.query}")
+
+    def fetchall(self) -> list[tuple[str]]:
+        if not self.query.startswith("SELECT tablename FROM pg_tables"):
+            raise AssertionError(f"unexpected fetchall query: {self.query}")
+        return [("order_events",)]
+
+
+class _FakePreflightConnection:
+    def __init__(self, *, rollback_returns_idle: bool) -> None:
+        self.autocommit = False
+        self.info = _FakeConnectionInfo()
+        self.rollback_returns_idle = rollback_returns_idle
+        self.rollback_calls = 0
+        self.statuses_before_query: list[str] = []
+
+    def cursor(self) -> _FakePreflightCursor:
+        return _FakePreflightCursor(self)
+
+    def rollback(self) -> None:
+        self.rollback_calls += 1
+        if self.rollback_returns_idle:
+            self.info.transaction_status.name = "IDLE"
+
+
 def test_database_name_guard_is_suffix_exact() -> None:
     assert require_test_database_name("stage4b5_test") == "stage4b5_test"
     for unsafe in ("stage4b5", "stage4b5_testing", "", None):
         with pytest.raises(RecordedRunError, match="does not end in _test"):
             require_test_database_name(unsafe)
+
+
+def test_postgres_preflight_rolls_back_read_transaction_to_idle() -> None:
+    connection = _FakePreflightConnection(rollback_returns_idle=True)
+
+    facts = _read_postgres_preflight_facts(connection)
+
+    assert connection.autocommit is False
+    assert connection.statuses_before_query == [
+        "IDLE",
+        "INTRANS",
+        "INTRANS",
+        "INTRANS",
+    ]
+    assert connection.rollback_calls == 1
+    assert connection.info.transaction_status.name == "IDLE"
+    assert facts == {
+        "database_name": "compass_test",
+        "database_oid": 181689,
+        "postgres_version_num": "160014",
+        "transaction_isolation": "read committed",
+        "tables": {"order_events"},
+    }
+
+
+def test_postgres_preflight_fails_if_cleanup_does_not_return_to_idle() -> None:
+    connection = _FakePreflightConnection(rollback_returns_idle=False)
+
+    with pytest.raises(
+        RecordedRunError,
+        match="not IDLE after read-only PostgreSQL preflight rollback",
+    ):
+        _read_postgres_preflight_facts(connection)
+
+    assert connection.rollback_calls == 1
+    assert connection.info.transaction_status.name == "INTRANS"
 
 
 def test_canonical_interpreter_precondition_accepts_any_virtual_environment(
