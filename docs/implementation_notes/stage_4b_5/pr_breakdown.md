@@ -69,15 +69,12 @@ PR3 — COMPLETE / MERGED
 PR4 — COMPLETE / MERGED
 
 Combined PR5 + PR6
-— IMPLEMENTED
-— source-reviewed
-— runtime preservation validated
-— PostgreSQL propagation validated before final hardening
-— final adversarial hardening added
-— final rerun pending before commit / PR
+— COMPLETE / MERGED
+— exact rule evidence preserved through ValidationRuntime
+— exact rule evidence propagated through PostgreSQL write-side execution
 
-PR7 — PLANNED
-Supplement A — PLANNED
+PR7 — COMPLETE / MERGED
+Supplement A — HARNESS IMPLEMENTED / CANONICAL RUN NOT STARTED
 Supplement B — PLANNED
 PR8 — CLOSEOUT
 ```
@@ -92,21 +89,22 @@ Order Correctness Contract V0
 → ValidationPolicy on the identical ValidationResult
 → PostgreSQL write-side same-invocation propagation
 → existing normal / trace / measurement delivery surfaces
+→ Stage 4A SemanticOutcome mapping
+→ terminal Order-rule refinement composition
 ```
 
-The remaining semantic gap is:
+The active supplement gap is:
 
 ```text
-PostgresWriteSideResult
-→ existing Stage 4A SemanticOutcome mapping
-+
-same-invocation OrderRuleViolationEvidence
-→ bounded hierarchical semantic refinement
+matched A/B/C characterization
+→ semantic-path micro cost
++ PostgreSQL end-to-end cost
+→ environment-qualified governance-overhead evidence
 ```
 
-After that semantic path is frozen, the stage will characterize its incremental
-runtime cost and emit a deterministic YAML readability projection before
-documentation closeout.
+The semantic path is frozen. Supplement A now characterizes its incremental
+runtime cost without reopening Stage 4B.2 or treating YAML projection as a
+runtime dependency.
 
 ---
 
@@ -893,6 +891,24 @@ Do not imply universal rule-evidence coverage unless it actually exists.
 ---
 
 # Supplement A — Runtime Governance Overhead Characterization
+
+## Current supplement status
+
+```text
+source-grounded A/B/C method
+= COMPLETE
+
+guarded harness and evidence schema
+= IMPLEMENTED / AWAITING REVIEW
+
+canonical micro and PostgreSQL recorded runs
+= NOT RUN
+```
+
+See [Runtime Governance Overhead Characterization Method](runtime_governance_overhead_method.md)
+for the A-control isolation decision, exact timing boundaries, fixed schedules,
+statistics, safety gates, evidence layout, and human-run commands. No benchmark
+result is claimed before those fixed runs execute.
 
 ## Position
 

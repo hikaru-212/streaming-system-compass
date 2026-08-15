@@ -1,5 +1,10 @@
 # Stage 4B.5 — Order Correctness Contract v0
 
+> Runtime-overhead supplement: the source-grounded A/B/C method and guarded
+> harness are documented in
+> [Runtime Governance Overhead Characterization Method](runtime_governance_overhead_method.md).
+> The canonical recorded benchmark has not run; no overhead result is claimed.
+
 ## Status
 
 ```text
@@ -101,6 +106,7 @@ That distinction is part of the Stage 4B.5 responsibility boundary.
 
 - [PR Breakdown](pr_breakdown.md)
 - [Source-Grounded Order Correctness Boundary](order_correctness_contract_source_grounded_boundary.md)
+- [Runtime Governance Overhead Characterization Method](runtime_governance_overhead_method.md)
 - `order_correctness_contract_boundary.md`
   - historical pre-audit planning input;
   - retained for provenance;
