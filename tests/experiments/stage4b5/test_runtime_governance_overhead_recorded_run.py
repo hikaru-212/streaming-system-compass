@@ -211,6 +211,43 @@ else:
     )
 
 
+def test_a_loader_fails_if_import_closure_introduces_unaudited_current_module(
+) -> None:
+    script = """
+import sys
+from types import ModuleType
+import experiments.stage4b5.runtime_governance_overhead as module
+
+real_import = module.importlib.import_module
+
+def injecting_import(name):
+    parent = real_import(name)
+    if name == "src.compass.transition":
+        child_name = "src.compass.transition.unexpected_dependency"
+        child = ModuleType(child_name)
+        sys.modules[child_name] = child
+        setattr(parent, "unexpected_dependency", child)
+    return parent
+
+module.importlib.import_module = injecting_import
+try:
+    module.install_verified_historical_modules()
+except RuntimeError as exc:
+    if "A import closure introduced unaudited current modules" not in str(exc):
+        raise
+else:
+    raise AssertionError("unaudited current dependency was not rejected")
+"""
+    subprocess.run(
+        (sys.executable, "-c", script),
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
 def test_micro_smoke_uses_isolated_a_b_c_and_discards_timings() -> None:
     completed = subprocess.run(
         (sys.executable, str(RUNNER), "smoke-micro"),

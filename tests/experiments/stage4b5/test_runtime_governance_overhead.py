@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import hashlib
+import json
 from pathlib import Path
 
 import pytest
 
+import experiments.stage4b5.runtime_governance_overhead as overhead
 from experiments.stage4b5.runtime_governance_overhead import (
     HISTORICAL_SOURCE_COMMIT,
     MICRO_CONFIG,
@@ -92,6 +95,65 @@ def test_a_provenance_resolves_exact_commit_blobs_and_digests() -> None:
         "src.compass.transition.runtime",
         "src.pipeline.transactional.postgres_write_side",
     ]
+
+
+def test_a_provenance_pins_historical_audit_time_source_differences() -> None:
+    document = json.loads(
+        overhead.A_SOURCE_PROVENANCE_PATH.read_text(encoding="utf-8")
+    )
+    historical_differences = json.dumps(
+        document["allowed_current_source_differences"],
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+    # This digest freezes historical audit metadata only. Current drift remains
+    # scoped independently to A's explicit transitive dependency surface.
+    assert hashlib.sha256(historical_differences).hexdigest() == (
+        "16a3050e5738a0d18911c61786dfd03f0dc25ec3fd2080a7e0061e7885347ee7"
+    )
+
+
+def test_a_provenance_ignores_unrelated_current_source_difference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_git = overhead._git
+
+    def git_with_unrelated_difference(
+        *args: str,
+        binary: bool = False,
+    ) -> str | bytes:
+        if args[:2] == ("diff", "--name-only"):
+            return "src/pipeline/projection/README.md"
+        return real_git(*args, binary=binary)
+
+    monkeypatch.setattr(overhead, "_git", git_with_unrelated_difference)
+
+    provenance = overhead.load_and_verify_a_source_provenance()
+
+    assert provenance["source_commit"] == HISTORICAL_SOURCE_COMMIT
+
+
+def test_a_provenance_rejects_audited_current_dependency_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_git = overhead._git
+
+    def git_with_relevant_difference(
+        *args: str,
+        binary: bool = False,
+    ) -> str | bytes:
+        if args[:2] == ("diff", "--name-only"):
+            return "src/core/order/events.py"
+        return real_git(*args, binary=binary)
+
+    monkeypatch.setattr(overhead, "_git", git_with_relevant_difference)
+
+    with pytest.raises(
+        ValueError,
+        match="current A transitive dependencies drifted: .*events.py",
+    ):
+        overhead.load_and_verify_a_source_provenance()
 
 
 def test_nearest_rank_is_empirical_and_non_interpolating() -> None:

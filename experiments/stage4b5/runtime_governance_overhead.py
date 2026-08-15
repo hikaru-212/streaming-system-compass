@@ -52,6 +52,68 @@ HISTORICAL_MODULE_ORDER = (
     "src.pipeline.transactional.postgres_write_side",
 )
 
+# Historical A executes the three pinned modules above while deliberately
+# sharing these audited-unchanged transitive dependencies with the current
+# checkout. This is a closed import surface, not a freeze on unrelated future
+# files elsewhere under src/.
+_A_CURRENT_TRANSITIVE_DEPENDENCIES = (
+    ("src", "src/__init__.py"),
+    ("src.compass", "src/compass/__init__.py"),
+    ("src.compass.transition", "src/compass/transition/__init__.py"),
+    ("src.compass.transition.types", "src/compass/transition/types.py"),
+    ("src.core", "src/core/__init__.py"),
+    ("src.core.common", "src/core/common/__init__.py"),
+    ("src.core.common.ids", "src/core/common/ids.py"),
+    ("src.core.common.money", "src/core/common/money.py"),
+    ("src.core.order", "src/core/order/__init__.py"),
+    ("src.core.order.aggregate", "src/core/order/aggregate.py"),
+    ("src.core.order.enums", "src/core/order/enums.py"),
+    ("src.core.order.events", "src/core/order/events.py"),
+    ("src.core.order.proofs", "src/core/order/proofs.py"),
+    ("src.pipeline", "src/pipeline/__init__.py"),
+    ("src.pipeline.transactional", "src/pipeline/transactional/__init__.py"),
+    (
+        "src.pipeline.transactional.admission",
+        "src/pipeline/transactional/admission.py",
+    ),
+    (
+        "src.pipeline.transactional.postgres_admission",
+        "src/pipeline/transactional/postgres_admission.py",
+    ),
+    (
+        "src.pipeline.transactional.postgres_unit_of_work",
+        "src/pipeline/transactional/postgres_unit_of_work.py",
+    ),
+    (
+        "src.pipeline.transactional.postgres_write_side_config",
+        "src/pipeline/transactional/postgres_write_side_config.py",
+    ),
+    (
+        "src.pipeline.transactional.postgres_write_side_execution_trace",
+        "src/pipeline/transactional/postgres_write_side_execution_trace.py",
+    ),
+    (
+        "src.pipeline.transactional.postgres_write_side_measurement_instrumentation",
+        "src/pipeline/transactional/postgres_write_side_measurement_instrumentation.py",
+    ),
+    ("src.storage", "src/storage/__init__.py"),
+    ("src.storage.errors", "src/storage/errors.py"),
+    ("src.storage.event_store", "src/storage/event_store.py"),
+    ("src.storage.idempotency_store", "src/storage/idempotency_store.py"),
+    ("src.storage.order_event_hydration", "src/storage/order_event_hydration.py"),
+    ("src.storage.postgres_event_store", "src/storage/postgres_event_store.py"),
+    (
+        "src.storage.postgres_idempotency_store",
+        "src/storage/postgres_idempotency_store.py",
+    ),
+)
+_A_CURRENT_TRANSITIVE_DEPENDENCY_MODULES = frozenset(
+    module_name for module_name, _ in _A_CURRENT_TRANSITIVE_DEPENDENCIES
+)
+_A_CURRENT_TRANSITIVE_DEPENDENCY_PATHS = frozenset(
+    source_path for _, source_path in _A_CURRENT_TRANSITIVE_DEPENDENCIES
+)
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 A_SOURCE_PROVENANCE_PATH = (
     REPOSITORY_ROOT
@@ -266,7 +328,7 @@ def _git(*args: str, binary: bool = False) -> str | bytes:
 
 
 def load_and_verify_a_source_provenance() -> dict[str, Any]:
-    """Verify the pinned commit, Git blob identities, and byte digests for A."""
+    """Verify A's pinned blobs and unchanged current dependency surface."""
 
     document = json.loads(A_SOURCE_PROVENANCE_PATH.read_text(encoding="utf-8"))
     if document.get("schema") != "stage4b5-runtime-governance-a-source-provenance":
@@ -289,6 +351,10 @@ def load_and_verify_a_source_provenance() -> dict[str, Any]:
     allowed_differences = document.get("allowed_current_source_differences")
     if not isinstance(allowed_differences, list) or not allowed_differences:
         raise ValueError("A source provenance must freeze current source differences")
+
+    # The fixture retains the audit-time repository diff as historical
+    # provenance. Future unrelated src/ evolution is not an A dependency;
+    # only drift inside the explicit current transitive surface is relevant.
     source_diff = _git(
         "diff",
         "--name-only",
@@ -298,9 +364,15 @@ def load_and_verify_a_source_provenance() -> dict[str, Any]:
     )
     assert isinstance(source_diff, str)
     actual_differences = set(source_diff.splitlines())
-    if actual_differences != set(allowed_differences):
+    relevant_differences = sorted(
+        actual_differences.intersection(
+            _A_CURRENT_TRANSITIVE_DEPENDENCY_PATHS
+        )
+    )
+    if relevant_differences:
         raise ValueError(
-            "current src/ differences no longer match the transitive-import audit"
+            "current A transitive dependencies drifted: "
+            + ", ".join(relevant_differences)
         )
     for entry in modules:
         expected_blob = entry["git_blob"]
@@ -379,6 +451,21 @@ def install_verified_historical_modules() -> dict[str, Any]:
             raise
         installed.add(name)
         assert_children_absent(installed=installed)
+
+    allowed_source_modules = (
+        _A_CURRENT_TRANSITIVE_DEPENDENCY_MODULES.union(module_names)
+    )
+    unexpected_source_modules = sorted(
+        name
+        for name in sys.modules
+        if (name == "src" or name.startswith("src."))
+        and name not in allowed_source_modules
+    )
+    if unexpected_source_modules:
+        raise RuntimeError(
+            "A import closure introduced unaudited current modules: "
+            + ", ".join(unexpected_source_modules)
+        )
     return document
 
 
