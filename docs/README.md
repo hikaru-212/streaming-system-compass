@@ -64,14 +64,16 @@ Stage 3.5E is now complete at the minimal actor / permission boundary level.
 Stage 4B.2 is complete and closed. Its final completion authority is the
 [Stage 4B.2 closeout](implementation_notes/stage_4b_2/stage_4b_2_closeout.md).
 
-The next Stage 4 foundation work is:
+Stage 4B.5 is complete and closed. Its implementation index and closeout status
+are in [Stage 4B.5 — Order Correctness Contract v0](implementation_notes/stage_4b_5/).
+
+The remaining Stage 4 foundation work is:
 
 - Stage 4B.3 — Projection Trust Boundary and Continuation
-- [Stage 4B.5 — Order Correctness Contract v0](implementation_notes/stage_4b_5/)
 - later runtime policy, strategy selection, and retry governance in roadmap order
 
-Stage 4B.3 and Stage 4B.5 are separately owned parallel foundation work. Stage
-4B.5 PR1 documentation is active.
+Stage 4B.3 remains separately owned and not started. Completed Stage 4B.5 does
+not implement the later retry-governance layer.
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
 Stage 4B preserves selected evidence through explicit mapping, serialization,
@@ -90,10 +92,9 @@ stage, and completes producer-specific PostgreSQL write-side Result + Trace
 integration. The
 [Stage 4B.1 closeout](implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
 is the current completion authority for Stage 4B.1. Stage 4B.2 Measurement
-Evidence is complete and closed. Stage 4B.3 Projection Trust Boundary and
-Continuation and Stage 4B.5 Order Correctness Contract v0 remain separately
-owned parallel Stage 4 foundation responsibilities. Stage 4B.5 PR1
-documentation is active. Separately, the repository has
+Evidence and Stage 4B.5 Order Correctness Contract v0 are complete and closed.
+Stage 4B.3 Projection Trust Boundary and Continuation remains separately owned
+and not started. Separately, the repository has
 completed an independent
 PostgreSQL Level 1 characterization experiment for a live-but-idle
 DecisionReceipt transaction owner and a blocked uniqueness contender.
