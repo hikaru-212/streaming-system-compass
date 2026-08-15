@@ -64,17 +64,21 @@ Stage 3.5E is now complete at the minimal actor / permission boundary level.
 Stage 4B.2 is complete and closed. Its final completion authority is the
 [Stage 4B.2 closeout](implementation_notes/stage_4b_2/stage_4b_2_closeout.md).
 
+Stage 4B.5 is complete and closed. Its implementation index and closeout status
+are in [Stage 4B.5 — Order Correctness Contract v0](implementation_notes/stage_4b_5/).
+
 The current Stage 4 foundation position is:
 
-- Stage 4B.3 — Projection Trust Boundary and Continuation — closed as not currently justified
-- Stage 4B.5 — Order Correctness Contract v0 — in progress / separately owned parallel work
+- Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
+- Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 - later runtime policy, strategy selection, and retry governance in roadmap order
 
 Stage 4B.3 PR1 and PR2 remain historical/reference investigation. The canonical
 [ADR 0026 closeout](adr/0026_projection_trust_continuation_is_not_currently_justified.md)
-records why PR3+ do not proceed. Stage 4B.5 is in progress in a separately owned
-parallel development stream; it is technically independent from and not moved
-under the closed Stage 4B.3 stage.
+records why PR3+ do not proceed. Stage 4B.5 completed in a separately owned
+parallel development stream; it is technically independent from and was not
+moved under the closed Stage 4B.3 stage. It does not implement the later
+retry-governance layer.
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
 Stage 4B preserves selected evidence through explicit mapping, serialization,
@@ -93,11 +97,12 @@ stage, and completes producer-specific PostgreSQL write-side Result + Trace
 integration. The
 [Stage 4B.1 closeout](implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
 is the current completion authority for Stage 4B.1. Stage 4B.2 Measurement
-Evidence is complete and closed. Stage 4B.3 is closed as not currently
+Evidence and Stage 4B.5 Order Correctness Contract v0 are complete and closed.
+Stage 4B.3 is complete and closed as not currently
 justified after PR1 boundary work, PR2 mechanics characterization, and the
-accepted architecture-necessity audit. Stage 4B.5 is in progress as separately
-owned parallel work, independent from the Stage 4B.3 closeout. Separately, the
-repository has completed an independent
+accepted architecture-necessity audit. The two completed stages remain
+separately owned and independent. Separately, the repository has completed an
+independent
 PostgreSQL Level 1 characterization experiment for a live-but-idle
 DecisionReceipt transaction owner and a blocked uniqueness contender.
 

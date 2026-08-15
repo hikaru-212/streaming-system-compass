@@ -12,13 +12,16 @@ Level 1 PostgreSQL owner-liveness mechanism
 = experimentally verified
 
 production transaction-owner contract
-= approved by documentation, not implemented
+= implemented, tested, and merged
 
 repository-supported runtime owner-liveness implementation
-= not implemented
+= `PostgresDecisionReceiptTransactionOwner`
 
 production timeout value
 = not selected
+
+automatic production materialization caller
+= not implemented
 ```
 
 This document is a **post-Stage 4B implementation note**.
@@ -26,9 +29,16 @@ This document is a **post-Stage 4B implementation note**.
 It does not reopen the completed Stage 4B `DecisionReceipt` contract, and it is
 not part of Stage 4B.1 DiagnosticTrace / ResolutionTrace.
 
-Its purpose is to preserve the verified PostgreSQL mechanism and define the
-approved first-version production transaction-owner boundary before
-implementation.
+Its purpose is to preserve the verified PostgreSQL mechanism, the approved
+first-version transaction-owner boundary, and the implementation that now owns
+one explicitly invoked receipt-governance transaction.
+
+Current source is
+`src/storage/postgres_decision_receipt_transaction_owner.py`. The owner accepts
+an already-complete receipt, acquires a dedicated connection, applies the
+required transaction-local timeout, owns commit or rollback, and closes or
+discards the connection. It does not construct receipts, select a production
+timeout, or provide an automatic materialization caller.
 
 ---
 
@@ -207,7 +217,7 @@ owner-liveness hardening
 = bounds live-but-idle abnormal-path cleanup inside separate governance
   transactions
 
-future transaction owner
+implemented transaction owner
 = implements connection, transaction, timeout, commit, rollback, and discard
 
 later governance
@@ -309,9 +319,9 @@ The experiment therefore changes repository evidence, not production behavior.
 
 ---
 
-## Current Production Gap
+## Pre-Implementation Production Gap
 
-The current call shape is effectively:
+Before the dedicated owner was implemented, the supported store call shape was:
 
 ```text
 caller creates connection
@@ -320,17 +330,16 @@ caller creates connection
 → caller is expected to commit, roll back, or close
 ```
 
-There is no dedicated production abstraction that owns the complete
+There was no dedicated production abstraction that owned the complete
 DecisionReceipt transaction lifecycle.
 
-The approved contract below resolves the first-version identity, connection
+The approved contract below resolved the first-version identity, connection
 ownership, timeout input, ordering, and outer technical-result meanings. This
-table continues to describe the current executable repository until production
-implementation lands.
+table preserves the gap against which the implemented owner was reviewed.
 
-The missing responsibilities are:
+The pre-implementation missing responsibilities were:
 
-| Responsibility | Current owner | Gap |
+| Responsibility | Pre-implementation owner | Gap |
 |---|---|---|
 | Connection creation | Caller | No implemented purpose-specific receipt factory |
 | Transaction begin | Caller / implicit psycopg behavior | No implemented receipt owner boundary |
@@ -384,7 +393,7 @@ The store should not become responsible for:
 
 ### Explicit transaction owner
 
-The approved future class responsibility and placement are:
+The implemented class responsibility and placement are:
 
 ```text
 PostgresDecisionReceiptTransactionOwner
@@ -593,7 +602,7 @@ entered `INERROR`.
 
 ### Commit-aware outer result
 
-The future outer technical result must carry at least:
+The implemented outer technical result carries at least:
 
 ```text
 durability
@@ -838,18 +847,20 @@ The two concerns should remain separate in roadmap and implementation work.
 
 ---
 
-## Expected Production File Impact
+## Pre-Implementation File-Impact Audit
 
-The completed impact audit approves this first-version production direction:
+The completed impact audit recorded this first-version production direction.
+The status column is updated to current source while the original responsibility
+split is preserved:
 
 | Expected file | Likely responsibility | Status |
 |---|---|---|
-| `src/storage/postgres_decision_receipt_transaction_owner.py` | Approved dedicated receipt governance-transaction owner | Approved future addition |
+| `src/storage/postgres_decision_receipt_transaction_owner.py` | Approved dedicated receipt governance-transaction owner | Implemented |
 | `src/storage/postgres_connection.py` | Existing generic low-level connection helper | No first-version change required |
 | Existing runtime/bootstrap call site | Use supported transaction owner | Deferred; no caller selected |
-| `tests/unit/storage/test_postgres_decision_receipt_transaction_owner.py` | Lifecycle and failure-contract unit tests | Expected with implementation |
+| `tests/unit/storage/test_postgres_decision_receipt_transaction_owner.py` | Lifecycle and failure-contract unit tests | Implemented |
 | `tests/integration/storage/test_postgres_decision_receipt_store.py` | Physical PostgreSQL evidence | Already extended |
-| `tests/integration/storage/test_postgres_decision_receipt_transaction_owner.py` | Commit, rollback, timeout, discard, and commit ambiguity | Expected with implementation |
+| `tests/integration/storage/test_postgres_decision_receipt_transaction_owner_integration.py` | Commit, rollback, timeout, discard, and commit ambiguity | Implemented |
 | External configuration source | Production duration input | Deferred; no file selected |
 | Development PostgreSQL docs | Local configuration and validation | Later, after production duration ownership |
 | Current boundary and implementation notes | Contract now; runtime guarantee after implementation | Current and later |
@@ -860,7 +871,7 @@ apply the timeout or report commit-aware completion.
 
 ---
 
-## Proposed Delivery Sequence
+## Historical Delivery Sequence
 
 ### Commit 1 — Design baseline
 
@@ -962,7 +973,7 @@ Required:
 
 ### Production transaction owner
 
-Required if implemented:
+Implemented boundary:
 
 - mandatory positive integer-millisecond timeout validation before connection
   acquisition, including boolean rejection;
@@ -1035,15 +1046,23 @@ The first transaction-owner infrastructure does not include:
 - rate limiting, queues, or backpressure;
 - monitoring, alerting, deployment, or operational runbooks.
 
-The future owner may be used by accepted live-result materialization, typed
-non-`ACCEPTED` persistence, and accepted-history reconciliation. It owns only
-their final separately owned governance-persistence transaction.
+The implemented owner may be used by future accepted live-result
+materialization, typed non-`ACCEPTED` persistence, and accepted-history
+reconciliation. It owns only their final separately owned
+governance-persistence transaction.
 
 ---
 
-## Human Decisions Required
+## Historical Human Decisions Before Implementation
 
-Before production code is authorized, decide:
+The following list is preserved as the pre-implementation review record. The
+public symbol/result names, test seam, delivery ordering, and relationship to
+Stage 4B.1 were resolved by the implementation and repository chronology.
+Configuration ownership, production duration, automatic callers, identity
+allocation, semantic interpretation, unsuccessful-attempt evidence,
+reconciliation, and pooling remain future decisions.
+
+Before production code was authorized, the review questions were:
 
 1. Where the mandatory timeout configuration is loaded before the owner
    receives and validates it.
@@ -1082,13 +1101,13 @@ production owner contract
 = defined by this documentation change
 
 production owner implementation
-= not implemented
+= implemented, tested, and merged
 
 automatic callers and reconciliation
 = not implemented
 ```
 
-This follow-up is complete only when the repository can truthfully claim:
+The repository can now truthfully claim:
 
 ```text
 a supported DecisionReceipt governance-transaction owner
@@ -1121,15 +1140,13 @@ accepted business transaction
 receipt governance transaction
 ```
 
-Until production orchestration exists, the correct repository statement
-remains:
+Until production orchestration exists, the correct repository statement is:
 
 ```text
 transaction-local owner cleanup mechanism characterized
-≠
-production owner-liveness policy implemented
+→ implemented dedicated transaction owner
 
-production transaction-owner contract defined
+implemented dedicated transaction owner
 ≠
-production transaction owner implemented
+automatic receipt materialization or calibrated production policy
 ```

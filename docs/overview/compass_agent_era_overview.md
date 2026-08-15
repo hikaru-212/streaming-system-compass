@@ -20,9 +20,11 @@
   return Result + Trace; snapshot traced-resolver runtime integration remains
   intentionally deferred.
 - Stage 4B.2 measurement / cost evidence is complete and closed.
-- Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
-  Correctness Contract v0 are separately owned parallel Stage 4 foundation
-  work.
+- Stage 4B.5 Order Correctness Contract v0 is complete and closed: the contract
+  has 18 stable rules, while current typed FullProof production covers exactly
+  six transition-truth rules and does not authorize retry.
+- Stage 4B.3 Projection Trust Boundary and Continuation remains separately
+  owned and not started.
 - Policy, strategy selection, retry governance, action authorization, and
   external action execution remain later work.
 

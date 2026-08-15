@@ -119,8 +119,9 @@ class PostgresWriteSideMeasurement:
             excludes final measurement construction and delivery overhead.
         business_uow: Application UOW entry through normal context exit. This
             is not exact physical PostgreSQL transaction lifetime.
-        validation_runtime_call: Full ``ValidationRuntime.decide(...)`` call.
-            It is distinct from validator-local
+        validation_runtime_call: One complete write-side validation-runtime call,
+            using the evidence-aware capability when available and the legacy
+            ``decide(...)`` path otherwise. It is distinct from validator-local
             ``ValidationResult.total_time_ms``.
         preliminary_idempotency_check: PRE preliminary idempotency lookup.
         preliminary_read_cleanup: PRE read-transaction rollback/cleanup call.

@@ -20,12 +20,13 @@ the documentation-only Stage 4B.3 closeout:
 - Stage 4B DecisionReceipt PR1–PR7 is complete.
 - Stage 4B.1 DiagnosticTrace / ResolutionTrace PR1–PR7 is complete.
 - Stage 4B.2 Measurement Evidence PR1–PR8 is complete and closed.
-- Stage 4B.3 Projection Trust Boundary and Continuation is closed as not
+- Stage 4B.3 Projection Trust Boundary and Continuation is complete and closed as not
   currently justified. PR1 and PR2 remain historical/reference work; PR3 and
   later implementation PRs do not proceed.
-- Stage 4B.5 Order Correctness Contract v0 is in progress as separately owned
-  parallel Stage 4 foundation work. It is technically independent from the
-  Stage 4B.3 closeout, which does not move, redefine, block, or sequence it.
+- Stage 4B.5 Order Correctness Contract v0 is complete and closed through PR8.
+  It was delivered as separately owned parallel Stage 4 foundation work and is
+  technically independent from the Stage 4B.3 closeout, which did not move,
+  redefine, block, or sequence it.
 - Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
@@ -71,17 +72,18 @@ Detailed completed-stage and current-stage records now live under:
 - [Stage 4B.1 Implementation Notes](../implementation_notes/stage_4b_1/)
 - [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
 - [Stage 4B.3 Implementation Notes](../implementation_notes/stage_4b_3/)
+- [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
 
-The completed and current Stage 4 foundation position is:
+The completed Stage 4 foundation position is:
 
 - **Stage 4B.2 — COMPLETE / CLOSED**
-- **Stage 4B.3 — CLOSED AS NOT CURRENTLY JUSTIFIED**
-- **Stage 4B.5 — IN PROGRESS / SEPARATELY OWNED PARALLEL FOUNDATION WORK**
+- **Stage 4B.3 — COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED**
+- **Stage 4B.5 — COMPLETE / CLOSED**
 
 With Stage 4B.2 complete, the current and later responsibilities are:
 
-- Stage 4B.5 Order Correctness Contract as separately owned foundation work;
-  Stage 4B.3 remains closed unless ADR 0026 re-entry conditions are met
+- Stage 4B.3 remains closed unless ADR 0026 re-entry conditions are met; Stage
+  4B.5 Order Correctness Contract is complete
 - Stage 4C+ runtime decision governance
 - Stage 5 dual-dimension governance demo / action safety
 - Stage 5+ production and agent-facing hardening
@@ -640,8 +642,8 @@ Stage 4A — SemanticOutcome Core
 Stage 4B — DecisionReceipt / Runtime Evidence Record
 Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 Stage 4B.2 — Measurement Evidence
-Stage 4B.3 — Projection Trust Boundary and Continuation — closed as not currently justified
-Stage 4B.5 — Order Correctness Contract v0 — in progress / separately owned parallel foundation work
+Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
+Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 Stage 4C — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 Stage 4D — StrategySelector / Fast-Path Health Policy
@@ -654,8 +656,8 @@ Compass should first define semantic meaning, then preserve decision evidence,
 then preserve producer-specific execution-topology evidence, then measure bounded
 execution cost and obtain empirical evidence. Stage 4B.3 used an evidence-first
 investigation to determine that incremental projection-trust continuation is not
-currently justified. Stage 4B.5 is in progress as separately owned parallel
-foundation work and is technically independent from Stage 4B.3. Stage 4C+
+currently justified. Stage 4B.5 completed as separately owned parallel
+foundation work and remains technically independent from Stage 4B.3. Stage 4C+
 runtime decisions, outcome-family alignment, strategy selection, and retry
 governance remain downstream.
 
@@ -873,16 +875,18 @@ separately owned Stage 4B.5 work.
 
 ### Status
 
-IN PROGRESS in a separately owned parallel development stream. This status is
-independent from the Stage 4B.3 closeout; this roadmap correction does not make
-or alter any Stage 4B.5 architectural decision.
+Complete and closed through PR8.
 
 ### Goal
 
 Stage 4B.5 introduces a narrow correctness-contract boundary for the current
 order/payment domain.
 
-The purpose is to connect semantic outcomes to stable rule references and recovery hints without turning Stage 4 into a general policy platform.
+The delivered purpose is to establish stable rule references for
+source-legitimate live constraint feedback without turning Stage 4B.5 into a
+recovery or general policy platform. The canonical vocabulary contains 18
+rules; current typed FullProof production covers exactly six
+`TRANSITION_TRUTH` rules.
 
 Core boundary:
 
@@ -896,6 +900,11 @@ Correctness contract does not replace Compass.
 
 Compass does not replace correctness contract.
 
+The completed runtime path preserves same-invocation evidence through
+`ValidationRuntime` and the PostgreSQL write side, then exposes terminal exact
+rule refinement through an explicit mapper. It does not add per-rule
+`SemanticOutcome` codes or authorize retry.
+
 ### Non-goals
 
 Stage 4B.5 does not implement:
@@ -905,6 +914,7 @@ Stage 4B.5 does not implement:
 - cross-domain governance
 - automatic policy evolution
 - agent workflow orchestration
+- recovery, runtime-action selection, or retry governance
 
 ---
 
@@ -1245,9 +1255,9 @@ Runtime Semantic Governance
   4B.1 DiagnosticTrace / ResolutionTrace Boundary
   4B.2 Measurement Evidence
   4B.3 Projection Trust Boundary and Continuation
-    closed as not currently justified after PR1/PR2 investigation
+    complete / closed as not currently justified after PR1/PR2 investigation
   4B.5 Order Correctness Contract v0
-    in progress in a separately owned parallel development stream
+    complete / closed after separately owned parallel delivery
   4C RuntimeDecisionPolicy
   4C.5 Layer 1 / Layer 2 Outcome Alignment
   4D StrategySelector / Fast-Path Health Policy

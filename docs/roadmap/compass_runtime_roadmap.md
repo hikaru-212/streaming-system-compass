@@ -157,13 +157,15 @@ serialization, and explicit PostgreSQL persistence foundation. Stage 4B.1 then
 completed producer-specific diagnostic and resolution trace boundaries while
 keeping traces separate from receipts. Stage 4B.2 then completed
 producer-specific measurement, controlled comparison, explanatory
-characterization, and bounded concurrency evidence. Stage 4B.3 is closed as not
-currently justified after PR1 responsibility-boundary work, PR2 executable
+characterization, and bounded concurrency evidence. Stage 4B.3 is complete and
+closed as not currently justified after PR1 responsibility-boundary work, PR2 executable
 mechanics characterization, and an accepted architecture-necessity audit. PR3
-and later Stage 4B.3 implementation work do not proceed. Stage 4B.5 is in
-progress as separately owned parallel foundation work and is technically
-independent from the closeout, which does not move, redefine, block, or sequence
-it.
+and later Stage 4B.3 implementation work do not proceed. Stage 4B.5 is complete
+after separately owned parallel work delivered the Order correctness
+contract, exact FullProof evidence path, runtime/write-side propagation,
+terminal semantic refinement, deterministic YAML projection, and bounded
+overhead characterization. The Stage 4B.3 closeout did not move, redefine,
+block, or sequence it.
 
 ---
 
@@ -550,13 +552,14 @@ The capability path is:
 
 Stage 4B.2 is complete and closed after producer-specific write-side
 measurement semantics, controlled PostgreSQL strategy comparison, explanatory
-characterization, and bounded concurrency evidence. Stage 4B.3 is closed as not
-currently justified under
+characterization, and bounded concurrency evidence. Stage 4B.5 is also complete
+and closed; its rule evidence does not authorize retry. Stage 4B.3 is complete
+and closed as not currently justified under
 [ADR 0026](../adr/0026_projection_trust_continuation_is_not_currently_justified.md):
-PR1/PR2 remain reference evidence and PR3+ do not proceed. Stage 4B.5 is in
-progress as separately owned parallel foundation work, independent from Stage
-4B.3. Stage 4B.2 did not implement policy, strategy selection, retry governance,
-or rate admission.
+PR1/PR2 remain reference evidence and PR3+ do not proceed. Stage 4B.5 completed
+as separately owned parallel foundation work, independent from Stage 4B.3.
+Stage 4B.2 and Stage 4B.5 did not implement policy, strategy selection, retry
+governance, or rate admission.
 
 ---
 

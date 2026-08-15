@@ -19,11 +19,12 @@ For project-wide sequencing, see:
 - [Stage 4B.1 — DiagnosticTrace / ResolutionTrace](./stage_4b_1/)
 - [Stage 4B.2 — Measurement Evidence](./stage_4b_2/)
 - [Stage 4B.3 — Projection Trust Boundary and Continuation Closeout](./stage_4b_3/)
+- [Stage 4B.5 — Order Correctness Contract v0](./stage_4b_5/)
 
 ## Current Position
 
-Stage 4A, Stage 4B PR1–PR7, Stage 4B.1 PR1–PR7, and Stage 4B.2 PR1–PR8 are
-complete.
+Stage 4A, Stage 4B PR1–PR7, Stage 4B.1 PR1–PR7, Stage 4B.2 PR1–PR8, and
+Stage 4B.5 through PR8 are complete. Stage 4B.2 and Stage 4B.5 are closed.
 
 Stage 4 Interlude PR0 — test helper consolidation before Stage 4B — is complete.
 
@@ -35,19 +36,18 @@ The current Stage 4 foundation position is:
 ```text
 Stage 4B.3
 = Projection Trust Boundary and Continuation
-= CLOSED AS NOT CURRENTLY JUSTIFIED
+= COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED
 
 Stage 4B.5
-= Order Correctness Contract v0
-= IN PROGRESS / SEPARATELY OWNED PARALLEL WORK
+= Order Correctness Contract v0 — COMPLETE / CLOSED
 ```
 
 Stage 4B.3 PR1 responsibility-boundary work and PR2 executable mechanics
 characterization remain complete historical/reference investigation. The
 canonical [ADR 0026 closeout](../adr/0026_projection_trust_continuation_is_not_currently_justified.md)
-records why PR3+ do not proceed. Stage 4B.5 is in progress in a separately owned
+records why PR3+ do not proceed. Stage 4B.5 completed in a separately owned
 parallel development stream and remains technically independent from the closed
-stage.
+Stage 4B.3 stage.
 
 Stage 4A introduced the stable `SemanticOutcome` core, runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
 
@@ -62,6 +62,12 @@ controlled PostgreSQL strategy comparison, explanatory characterization,
 bounded concurrency evidence, and documentation closeout. Its entry point is
 the [Stage 4B.2 implementation index](stage_4b_2/README.md).
 
+Stage 4B.5 completed the identity-driven 18-rule Order correctness contract,
+six-rule FullProof evidence producer, same-invocation runtime/write-side
+propagation, explicit terminal refinement, deterministic YAML projection, and
+bounded overhead characterization. Its entry point is the
+[Stage 4B.5 implementation index](stage_4b_5/README.md).
+
 Stage 4B should not reopen Stage 4A mapping scope unless receipt requirements expose a missing evidence contract.
 
 Stage 4B should also not collapse later Stage 4 layers into the receipt boundary.
@@ -69,8 +75,8 @@ Stage 4B should also not collapse later Stage 4 layers into the receipt boundary
 ```text
 Completed and later Stage 4 work remains separate:
 Stage 4B.2 — Measurement Evidence — COMPLETE / CLOSED
-Stage 4B.3 — Projection Trust Boundary and Continuation — CLOSED AS NOT CURRENTLY JUSTIFIED
-Stage 4B.5 — Order Correctness Contract v0 — IN PROGRESS / SEPARATELY OWNED PARALLEL WORK
+Stage 4B.3 — Projection Trust Boundary and Continuation — COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED
+Stage 4B.5 — Order Correctness Contract v0 — COMPLETE / CLOSED
 Stage 4C   — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 Stage 4D   — StrategySelector / Fast-Path Health Policy

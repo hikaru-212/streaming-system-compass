@@ -3,7 +3,7 @@
 This guide follows the current production code and directly related tests, connecting Stage 3.5B, Stage 4A, and Stage 4B PR4. It is a reading guide and does not replace the invariants defined by the types themselves.
 
 
-Primary sources: `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide`, `src/compass/runtime/write_side_outcome_mapping.py::map_postgres_write_side_result_to_semantic_outcome`, `src/compass/runtime/write_side_decision_receipt_mapping.py::map_postgres_write_side_result_to_decision_receipt`.
+Primary sources: `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide`, `src/compass/transition/runtime.py::ValidationRuntime`, `src/compass/runtime/write_side_outcome_mapping.py::map_postgres_write_side_result_to_semantic_outcome`, `src/compass/runtime/write_side_decision_receipt_mapping.py::map_postgres_write_side_result_to_decision_receipt`, and `src/compass/runtime/write_side_rule_feedback.py::map_postgres_write_side_result_to_semantic_rule_feedback`.
 
 ## How to read this guide
 
@@ -41,9 +41,19 @@ PR4 producer-specific write-side adapter
                                 │
                                 ▼
                         DecisionReceipt
+
+PostgresWriteSideResult
+        │
+        ▼
+explicit PR7 semantic-rule-feedback mapper
+        ├── call Stage 4A mapper → SemanticOutcome
+        └── expose exact rule refinement only for terminal VALIDATION_BLOCKED
+                                │
+                                ▼
+             PostgresWriteSideSemanticRuleFeedback
 ```
 
-`PostgresTransactionalWriteSide` executes a command, may read and write PostgreSQL, and uses `PostgresWriteSideResult` to represent a normally completed lifecycle outcome. Stage 4A interprets that result as a semantic tuple. Stage 4B PR4 selects only completed typed evidence and assembles an in-memory `DecisionReceipt`; it does not execute another write, commit, rollback, or retry. Sources: `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide._execute_command`, `src/compass/runtime/write_side_decision_receipt_mapping.py::map_postgres_write_side_result_to_decision_receipt`.
+`PostgresTransactionalWriteSide` executes a command, may read and write PostgreSQL, and uses `PostgresWriteSideResult` to represent a normally completed lifecycle outcome. Stage 4A interprets that result as a semantic tuple. Stage 4B PR4 selects only completed typed evidence and assembles an in-memory `DecisionReceipt`; it does not execute another write, commit, rollback, or retry. Serializer v1, PostgreSQL receipt persistence, and a dedicated receipt transaction owner now exist as separately invoked capabilities; no normal write command automatically materializes a receipt. Sources: `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide._execute_command`, `src/compass/runtime/write_side_decision_receipt_mapping.py::map_postgres_write_side_result_to_decision_receipt`, `src/compass/runtime/decision_receipt_serialization.py::serialize_decision_receipt`, `src/storage/postgres_decision_receipt_transaction_owner.py::PostgresDecisionReceiptTransactionOwner`.
 
 `StreamAdmissionResult` is the stream-preparation evidence produced by `ConcurrencyGate.prepare_stream(...)`. Its position relative to history loading, candidate construction, and validation depends on orchestration placement. `AdmissionResult` is the candidate-level append boundary. Neither is synonymous with transaction commit or accepted-history membership. The actual insert occurs when a gate calls `PostgresEventStore.append(...)`; transaction completion is controlled by `PostgresWriteSideUnitOfWork.__exit__`. Sources: `src/pipeline/transactional/admission.py::StreamAdmissionResult`, `src/pipeline/transactional/admission.py::AdmissionResult`, `src/pipeline/transactional/postgres_admission.py::_append_with_translation`, `src/pipeline/transactional/postgres_unit_of_work.py::PostgresWriteSideUnitOfWork.__exit__`.
 
@@ -113,7 +123,7 @@ Exceptions raised from inside the `with` body cause `__exit__` to roll back and 
 | 5 | `_rehydrate_aggregate(uow, order_id)` → `OrderAggregate, history` | loads accepted history and applies it to the aggregate; reading does not create membership |
 | 6 | `_build_validation_context(...)` → `ValidationContext` | preserves the actual previous event/version/status for Compass |
 | 7 | `build_candidate_event(aggregate)` → `OrderEvent` | creates the candidate; it is not accepted history |
-| 8 | `ValidationRuntime.decide(candidate, context)` → `ValidationDecision` | `BLOCK` explicitly rolls back and returns `VALIDATION_BLOCKED`; the candidate exists and append has not been invoked |
+| 8 | `_invoke_validation(candidate, context)` → `ValidationDecision` plus optional `ValidationDecisionWithRuleEvidence` | uses `decide_with_rule_evidence(...)` when exposed, otherwise calls legacy `decide(...)`; `BLOCK` explicitly rolls back and returns `VALIDATION_BLOCKED`; the candidate exists and append has not been invoked |
 | 9 | `gate.append_if_admitted(candidate, expected_current_version)` → `AdmissionResult` | candidate-level append admission; an `ADMITTED` result means the gate called the event-store append; rejection explicitly rolls back and returns `ADMISSION_REJECTED` |
 | 10 | `uow.idempotency_store.record(signature, candidate)` | writes accepted-event idempotency memory in the same transaction; a failure raised from the body makes `__exit__` roll back the inserted event |
 | 11 | evaluate `return PostgresWriteSideResult(ACCEPTED, ...)` | Python builds the result object and evaluates the return expression inside the `with` block, then runs clean `__exit__` commit; the caller receives the result only after commit succeeds |
@@ -134,7 +144,7 @@ Every normal non-accepted early return explicitly calls `uow.rollback()`. An une
 | 4 | `_rehydrate_aggregate_from_history(...)` → `OrderAggregate` | rebuilds state from the history just loaded |
 | 5 | `_build_validation_context(...)` → `ValidationContext` | records the previous event/version/status as observed by the read |
 | 6 | `build_candidate_event(aggregate)` → `OrderEvent` | the candidate exists before stream preparation |
-| 7 | `ValidationRuntime.decide(...)` → `ValidationDecision` | `BLOCK` returns `VALIDATION_BLOCKED`; no write UOW, append, or new accepted event |
+| 7 | `_invoke_validation(...)` → `ValidationDecision` plus optional `ValidationDecisionWithRuleEvidence` | uses the evidence-aware capability when present and the legacy decide-only fallback otherwise; `BLOCK` returns `VALIDATION_BLOCKED`; no write UOW, append, or new accepted event |
 | 8 | enter `PostgresWriteSideUnitOfWork` | starts the write transaction |
 | 9 | `uow.idempotency_store.check(signature)` → authoritative `IdempotencyDecision` | race-window re-check; `REPLAY`/`CONFLICT` can now return with current candidate validation evidence; explicit rollback |
 | 10 | `gate.prepare_stream(order_id)` → `StreamAdmissionResult` | the current default `PRE_TRANSACTION + PostgresOptimisticAdmissionGate` always returns `ADMITTED`; generic orchestration retains a defensive rejection branch for an explicitly injected non-default/custom gate, where candidate and allowing validation exist but `AdmissionResult` is absent |
@@ -160,6 +170,8 @@ Stream `STALE_WRITE` in the PR4 tests is also synthetic typed-domain verdict cov
 ## 5. Write-side result construction
 
 `PostgresWriteSideOutcome` describes only the normal orchestration outcome category. `PostgresWriteSideResult` preserves the outcome and supporting objects already produced by that lifecycle. It is not itself semantic classification or a receipt. Sources: `src/pipeline/transactional/postgres_write_side.py::PostgresWriteSideOutcome`, `src/pipeline/transactional/postgres_write_side.py::PostgresWriteSideResult`.
+
+When the evidence-aware runtime capability is used, `validation_decision_evidence` preserves the carrier from that exact invocation and must own the identical `validation_decision` object. Its `observed_rule_violation` view may remain available on a later post-validation terminal result. That preserved observation is sibling evidence, not automatically the terminal semantic explanation. Legacy decide-only runtimes remain supported and produce no carrier.
 
 | Result shape | Terminal / resolving lifecycle phase | Must exist | Must be absent / identity meaning | Transaction behavior |
 |---|---|---|---|---|
@@ -201,6 +213,35 @@ Stage 4A owns semantic interpretation. It first selects a technical status from 
 
 `SemanticOutcome.context` and `.evidence` are richer Stage 4A runtime payloads. The generic Stage 4B mapper intentionally does not inspect or copy them. PR4 preserves the Stage 4A semantic tuple and independently selects receipt evidence from the original typed result. Source: `tests/unit/compass/runtime/test_decision_receipt_mapping.py::test_mapper_does_not_copy_or_inspect_outcome_evidence`.
 
+### Stage 4B.5 exact rule-evidence refinement
+
+For the evidence-aware FullProof path, the current source chain is:
+
+```text
+candidate + ValidationContext
+→ FullProofValidator.validate_with_rule_evidence(...)
+→ FullProofValidationEvidence
+   { ValidationResult, optional exact OrderRuleViolationEvidence }
+→ ValidationRuntime.decide_with_rule_evidence(...)
+→ ValidationDecisionWithRuleEvidence
+→ PostgresWriteSideResult.validation_decision_evidence
+```
+
+Validation and policy evaluation each occur once. The producer emits exact rule identity at the executable predicate branch; no reason parsing, second pass, fallback re-validation, or evidence fabrication is used. Current FullProof production covers exactly six `TRANSITION_TRUTH` rules, not all 18 rules in the canonical Order correctness contract.
+
+The separate, explicit PR7 path is:
+
+```text
+PostgresWriteSideResult
+→ map_postgres_write_side_result_to_semantic_rule_feedback(...)
+   ├── Stage 4A SemanticOutcome
+   └── terminal exact rule refinement
+→ PostgresWriteSideSemanticRuleFeedback
+   { semantic_outcome, rule_refinement }
+```
+
+`VALIDATION_BLOCKED` requires exact `OrderRuleViolationEvidence` at this refined boundary. Every other terminal outcome returns `rule_refinement=None`, even when an earlier validation observation was preserved. This keeps validation observation separate from terminal explanation. PR7 does not change the write-side transaction and is not automatically invoked by write commands.
+
 ## 7. Stage 4B PR4 adapter
 
 The public wrapper is:
@@ -217,8 +258,10 @@ map_postgres_write_side_result_to_decision_receipt(
 All three parameters are keyword-only. The adapter does not accept an arbitrary prebuilt `SemanticOutcome` and exposes no metadata/context/evidence/policy/retry/persistence parameters. Source: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_public_wrapper_signature_is_exact_and_keyword_only`.
 
 The adapter is implemented, but no production command path currently invokes
-it. Its composition is covered by mapper unit tests; runtime invocation and
-durable receipt persistence are outside PR4.
+it. Its composition is covered by mapper unit tests. Durable receipt
+serialization and PostgreSQL persistence are implemented through separate
+explicit boundaries; automatic mapper-to-store materialization remains outside
+this command path.
 
 Actual call order and the question answered by each step:
 
@@ -273,11 +316,11 @@ Across the `APPEND_ADMISSION_NOT_REACHED` contract, current candidate identity i
 3. `prepare_stream(...)` returns an admitted `StreamAdmissionResult`.
 4. History produces `OrderAggregate` and `ValidationContext`.
 5. The builder produces an `OrderEvent` candidate.
-6. Compass produces an ALLOW `ValidationDecision` containing `ValidationResult`.
+6. The write side uses evidence-aware validation when available, producing an ALLOW `ValidationDecision` and its optional same-invocation carrier; a legacy decide-only runtime still produces the decision without that carrier.
 7. `append_if_admitted(...)` calls event-store append and returns admitted `AdmissionResult`; candidate and accepted IDs match.
 8. After the idempotency record is written, the `return PostgresWriteSideResult(ACCEPTED)` expression builds the result object inside the `with` block.
 9. Clean `PostgresWriteSideUnitOfWork.__exit__` commits; the caller receives the result only after success.
-10. Stage 4A produces the semantic tuple corresponding to `WRITE_SIDE_ACCEPTED`.
+10. Stage 4A produces the semantic tuple corresponding to `WRITE_SIDE_ACCEPTED`; an explicit PR7 mapping would expose `rule_refinement=None` because acceptance is the terminal explanation.
 11. PR4 builds typed identity, an `ACCEPTED_EVENT` subject, accepted-history correlation, `ADMITTED_TO_ACCEPTED_HISTORY`, all-NE flags, and a compact summary.
 12. The generic mapper and `DecisionReceipt` validation complete the in-memory receipt.
 
@@ -285,7 +328,7 @@ Source: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py:
 
 ### Example B: `VALIDATION_BLOCKED`
 
-The shared sequence is `RequestSignature` → `IdempotencyDecision(MISS)` → history/aggregate → candidate → BLOCK `ValidationDecision` → `PostgresWriteSideResult(VALIDATION_BLOCKED)`. `AdmissionResult`, accepted event, and `IdempotencyRecord` are absent.
+The shared sequence is `RequestSignature` → `IdempotencyDecision(MISS)` → history/aggregate → candidate → evidence-aware FullProof validation → BLOCK `ValidationDecision` plus exact same-invocation rule evidence → `PostgresWriteSideResult(VALIDATION_BLOCKED)`. `AdmissionResult`, accepted event, and `IdempotencyRecord` are absent. A legacy decide-only runtime remains valid for the coarse write-side/Stage 4A path, but it cannot complete the stricter PR7 refined mapping without exact rule evidence.
 
 Placement differs: the IN path already has an admitted `StreamAdmissionResult` and explicitly rolls back before returning; the PRE path has not created a write UOW, so `StreamAdmissionResult` is absent. Stage 4A produces the `COMPASS_VALIDATION_BLOCKED` semantic tuple. PR4 gets the candidate UUID from `ValidationResult.candidate_event_id` and builds a `CANDIDATE_EVENT` subject, `CANDIDATE_EVENT_IDENTITY` correlation, `SEMANTIC_ADMISSION_REJECTED`, and four NE flags. Source: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_validation_blocked_uses_candidate_without_inventing_correlation`.
 
@@ -297,9 +340,10 @@ Stage 4A uses `CONCURRENT_STATE_STALENESS` to build a concurrency-uncertain sema
 
 ## 10. Boundaries and non-goals
 
-The current flow:
+The current write-command and mapping flow:
 
-- Does not persist or serialize `DecisionReceipt`. The mapper returns only a frozen in-memory contract intended to represent durable governance evidence. A stable durable contract/vocabulary does not mean a serialized or persisted `DecisionReceipt` row already exists. Source: `tests/unit/compass/runtime/test_decision_receipt_mapping.py::test_mapper_adds_no_policy_strategy_retry_trace_or_persistence_contract`.
+- Does not automatically serialize or persist `DecisionReceipt`. The mapper returns a frozen in-memory contract. Strict serializer v1, the PostgreSQL store, and `PostgresDecisionReceiptTransactionOwner` exist, but a caller must explicitly construct and invoke those separate boundaries; normal write commands do not materialize receipts. Sources: `src/compass/runtime/decision_receipt_serialization.py::serialize_decision_receipt`, `src/storage/postgres_decision_receipt_store.py::PostgresDecisionReceiptStore`, `src/storage/postgres_decision_receipt_transaction_owner.py::PostgresDecisionReceiptTransactionOwner`.
+- Does not automatically invoke PR7 semantic rule feedback. Callers explicitly compose it from one `PostgresWriteSideResult`. Preserved validation observation is exposed as terminal refinement only for `VALIDATION_BLOCKED`; other terminal outcomes use `rule_refinement=None`.
 - Does not evaluate, execute, or authorize retry. `retry_candidate` remains `NOT_EVALUATED`; typed retry-relevant verdicts remain in the evidence summary for later authorized evaluators. Sources: `docs/adr/0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md`, `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_every_supported_result_shape_leaves_flags_not_evaluated`.
 - Does not provide ambiguous-commit reconciliation. `COMMIT_OUTCOME_UNRESOLVED` exists in the contract, but the current write-side adapter does not produce it. The current implementation also does not guarantee a subsequent rollback after commit failure. Source: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_supported_write_side_results_do_not_map_to_commit_outcome_unresolved`.
 - Does not include distributed routing, rate limiting, or hot-partition governance; the public wrapper has no corresponding input or side effect.

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING, Optional, cast
 
 from psycopg import Connection
 
-from src.compass.transition.runtime import ValidationRuntime
+from src.compass.transition.runtime import (
+    ValidationDecisionWithRuleEvidence,
+    ValidationRuntime,
+)
 from src.compass.transition.types import (
     EnforcementAction,
     ValidationContext,
@@ -17,6 +20,7 @@ from src.compass.transition.types import (
 from src.core.order.aggregate import OrderAggregate
 from src.core.order.enums import CommandType
 from src.core.order.events import OrderEvent
+from src.core.order.rule_violation_evidence import OrderRuleViolationEvidence
 from src.pipeline.transactional.admission import (
     AdmissionResult,
     ConcurrencyGate,
@@ -95,8 +99,25 @@ class PostgresWriteSideOutcome(Enum):
 
 @dataclass(frozen=True)
 class PostgresWriteSideResult:
-    """
-    Result returned by the PostgreSQL-backed transactional write-side flow.
+    """Return the primary PostgreSQL write-side outcome and sibling evidence.
+
+    Args:
+        outcome: Existing write-side terminal classification.
+        accepted_event: Event admitted to accepted history, when applicable.
+        idempotency_decision: Existing request-identity decision.
+        stream_admission_result: Optional stream-preparation result.
+        validation_decision: Existing policy-owned validation decision.
+        admission_result: Optional append-admission result.
+        validation_decision_evidence: Optional runtime-owned carrier produced by
+            the same validation invocation as ``validation_decision``.
+
+    When the optional carrier exists, its decision must be the identical object
+    stored in ``validation_decision``. The carrier is excluded from primary
+    result equality and representation because it is additive sibling evidence.
+    Construction rejects a wrong carrier type or a non-identical decision pair.
+
+    This result does not establish authenticity, durability, serialization,
+    cross-process provenance, retry authority, or a complete violation set.
     """
 
     outcome: PostgresWriteSideOutcome
@@ -105,6 +126,35 @@ class PostgresWriteSideResult:
     stream_admission_result: StreamAdmissionResult | None = None
     validation_decision: ValidationDecision | None = None
     admission_result: AdmissionResult | None = None
+    validation_decision_evidence: ValidationDecisionWithRuleEvidence | None = field(
+        default=None,
+        compare=False,
+        repr=False,
+    )
+
+    def __post_init__(self) -> None:
+        """Validate only the optional same-invocation carrier relationship."""
+
+        carrier = self.validation_decision_evidence
+        if carrier is None:
+            return
+        if not isinstance(carrier, ValidationDecisionWithRuleEvidence):
+            raise TypeError(
+                "validation_decision_evidence must be "
+                "ValidationDecisionWithRuleEvidence or None"
+            )
+        if self.validation_decision is not carrier.decision:
+            raise ValueError(
+                "validation_decision must be the identical decision owned by "
+                "validation_decision_evidence"
+            )
+
+    @property
+    def observed_rule_violation(self) -> OrderRuleViolationEvidence | None:
+        """Return exact sibling rule evidence from the runtime carrier, if any."""
+
+        carrier = self.validation_decision_evidence
+        return None if carrier is None else carrier.observed_violation
 
 
 _ALLOWED_EXECUTION_TERMINALS = frozenset(
@@ -375,6 +425,42 @@ class PostgresTransactionalWriteSide:
             actual_prev_status=aggregate.status,
         )
 
+    def _invoke_validation(
+        self,
+        candidate_event: OrderEvent,
+        context: ValidationContext,
+    ) -> tuple[
+        ValidationDecision,
+        ValidationDecisionWithRuleEvidence | None,
+    ]:
+        """Invoke one supported runtime path without reconstructing evidence.
+
+        An explicitly available evidence-aware method returns the runtime-owned
+        carrier whose decision and optional violation came from one invocation.
+        Legacy decide-only substitutes retain their existing single-call path and
+        produce no rule evidence. Exceptions from either path propagate unchanged.
+        """
+
+        decide_with_rule_evidence = getattr(
+            self._validation_runtime,
+            "decide_with_rule_evidence",
+            None,
+        )
+        if decide_with_rule_evidence is None:
+            return self._validation_runtime.decide(candidate_event, context), None
+        if not callable(decide_with_rule_evidence):
+            raise TypeError(
+                "decide_with_rule_evidence must be callable when provided"
+            )
+
+        carrier = decide_with_rule_evidence(candidate_event, context)
+        if not isinstance(carrier, ValidationDecisionWithRuleEvidence):
+            raise TypeError(
+                "decide_with_rule_evidence must return "
+                "ValidationDecisionWithRuleEvidence"
+            )
+        return carrier.decision, carrier
+
     def _execute_command(
         self,
         *,
@@ -578,14 +664,20 @@ class PostgresTransactionalWriteSide:
             candidate_event = build_candidate_event(aggregate)
 
             if measurement_recorder is None:
-                validation_decision = self._validation_runtime.decide(
+                (
+                    validation_decision,
+                    validation_decision_evidence,
+                ) = self._invoke_validation(
                     candidate_event,
                     validation_context,
                 )
             else:
-                validation_decision = measurement_recorder.measure_call(
+                (
+                    validation_decision,
+                    validation_decision_evidence,
+                ) = measurement_recorder.measure_call(
                     _PostgresWriteSideMeasurementPhase.VALIDATION_RUNTIME_CALL,
-                    lambda: self._validation_runtime.decide(
+                    lambda: self._invoke_validation(
                         candidate_event,
                         validation_context,
                     ),
@@ -603,6 +695,9 @@ class PostgresTransactionalWriteSide:
                         idempotency_decision=idempotency_decision,
                         stream_admission_result=stream_admission_result,
                         validation_decision=validation_decision,
+                        validation_decision_evidence=(
+                            validation_decision_evidence
+                        ),
                     ),
                     trace_collector,
                 )
@@ -639,6 +734,9 @@ class PostgresTransactionalWriteSide:
                         stream_admission_result=stream_admission_result,
                         validation_decision=validation_decision,
                         admission_result=admission_result,
+                        validation_decision_evidence=(
+                            validation_decision_evidence
+                        ),
                     ),
                     trace_collector,
                 )
@@ -666,6 +764,7 @@ class PostgresTransactionalWriteSide:
                     stream_admission_result=stream_admission_result,
                     validation_decision=validation_decision,
                     admission_result=admission_result,
+                    validation_decision_evidence=validation_decision_evidence,
                 ),
                 trace_collector,
             )
@@ -786,14 +885,20 @@ class PostgresTransactionalWriteSide:
         candidate_event = build_candidate_event(aggregate)
 
         if measurement_recorder is None:
-            validation_decision = self._validation_runtime.decide(
+            (
+                validation_decision,
+                validation_decision_evidence,
+            ) = self._invoke_validation(
                 candidate_event,
                 validation_context,
             )
         else:
-            validation_decision = measurement_recorder.measure_call(
+            (
+                validation_decision,
+                validation_decision_evidence,
+            ) = measurement_recorder.measure_call(
                 _PostgresWriteSideMeasurementPhase.VALIDATION_RUNTIME_CALL,
-                lambda: self._validation_runtime.decide(
+                lambda: self._invoke_validation(
                     candidate_event,
                     validation_context,
                 ),
@@ -809,6 +914,7 @@ class PostgresTransactionalWriteSide:
                     accepted_event=None,
                     idempotency_decision=preliminary_idempotency_decision,
                     validation_decision=validation_decision,
+                    validation_decision_evidence=validation_decision_evidence,
                 ),
                 trace_collector,
             )
@@ -853,6 +959,9 @@ class PostgresTransactionalWriteSide:
                         ),
                         idempotency_decision=authoritative_idempotency_decision,
                         validation_decision=validation_decision,
+                        validation_decision_evidence=(
+                            validation_decision_evidence
+                        ),
                     ),
                     trace_collector,
                 )
@@ -865,6 +974,9 @@ class PostgresTransactionalWriteSide:
                         accepted_event=None,
                         idempotency_decision=authoritative_idempotency_decision,
                         validation_decision=validation_decision,
+                        validation_decision_evidence=(
+                            validation_decision_evidence
+                        ),
                     ),
                     trace_collector,
                 )
@@ -897,6 +1009,9 @@ class PostgresTransactionalWriteSide:
                         idempotency_decision=authoritative_idempotency_decision,
                         stream_admission_result=stream_admission_result,
                         validation_decision=validation_decision,
+                        validation_decision_evidence=(
+                            validation_decision_evidence
+                        ),
                     ),
                     trace_collector,
                 )
@@ -931,6 +1046,9 @@ class PostgresTransactionalWriteSide:
                         stream_admission_result=stream_admission_result,
                         validation_decision=validation_decision,
                         admission_result=admission_result,
+                        validation_decision_evidence=(
+                            validation_decision_evidence
+                        ),
                     ),
                     trace_collector,
                 )
@@ -958,6 +1076,7 @@ class PostgresTransactionalWriteSide:
                     stream_admission_result=stream_admission_result,
                     validation_decision=validation_decision,
                     admission_result=admission_result,
+                    validation_decision_evidence=validation_decision_evidence,
                 ),
                 trace_collector,
             )

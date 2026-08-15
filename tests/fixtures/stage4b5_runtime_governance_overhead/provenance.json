@@ -1,0 +1,37 @@
+{
+  "schema": "stage4b5-runtime-governance-a-source-provenance",
+  "schema_version": 1,
+  "source_commit": "0bd2f515bcc49e8e1f0e9d2f9dba4a294adadd0d",
+  "allowed_current_source_differences": [
+    "src/compass/runtime/__init__.py",
+    "src/compass/runtime/write_side_rule_feedback.py",
+    "src/compass/transition/rule_evaluation_evidence.py",
+    "src/compass/transition/runtime.py",
+    "src/compass/transition/validators.py",
+    "src/core/order/correctness_contract.py",
+    "src/core/order/correctness_contract_yaml_projection.py",
+    "src/core/order/rule_violation_evidence.py",
+    "src/pipeline/transactional/postgres_write_side.py",
+    "src/pipeline/transactional/postgres_write_side_measurement.py"
+  ],
+  "modules": [
+    {
+      "module": "src.compass.transition.validators",
+      "path": "src/compass/transition/validators.py",
+      "git_blob": "1af582ce26ab622d452880ed280885f172001f73",
+      "sha256": "aced29031b0b07f39a47c6c27714da6569ae1ea8bdf8ad9641dfb8fe026b545d"
+    },
+    {
+      "module": "src.compass.transition.runtime",
+      "path": "src/compass/transition/runtime.py",
+      "git_blob": "c9253299d3bcb91bd7f99da4bbab658d90458724",
+      "sha256": "e6b72c5b4702dd68f835123392e68d507b6e1b1da333563c6fb876c457e1d889"
+    },
+    {
+      "module": "src.pipeline.transactional.postgres_write_side",
+      "path": "src/pipeline/transactional/postgres_write_side.py",
+      "git_blob": "e20cfb881ead9293c266bdabf5e3d9b79441b777",
+      "sha256": "374839bb5ff14ee257453d5d4b79d86dff948c16ddb36fbc00f7df85370a53cf"
+    }
+  ]
+}

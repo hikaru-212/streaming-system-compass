@@ -370,7 +370,7 @@ Stage 4B.2
 = defines timing / cost evidence vocabulary
 
 Stage 4B.5
-= links outcomes to narrow order-domain policy rules and recovery hints
+= adds exact Order correctness-rule refinement beside coarse outcomes without adding recovery or retry policy
 
 Stage 4C
 = converts SemanticOutcome plus evidence into RuntimeDecision

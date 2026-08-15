@@ -87,8 +87,12 @@ It answers:
 
 ---
 
-## Rule ID3 — `event_id` is accepted-event identity
-`event_id` identifies one accepted event.
+## Rule ID3 — `event_id` is event identity, not acceptance evidence
+`event_id` may identify an event-shaped candidate before acceptance and remains
+that event's identity if it is admitted.
+
+Possession of an `event_id` does not prove acceptance. Accepted-event status is
+established by membership in accepted history.
 
 A successfully processed request usually produces one accepted event.
 
@@ -216,7 +220,9 @@ This keeps the `PAID` state dependent on a valid predecessor.
 # 5. Create Rules
 
 ## Rule C1 — `order_id` must not be empty
-A create command must carry a non-empty `order_id`.
+The aggregate identity used by `create()` must already be non-empty when the
+aggregate is constructed. The current `create()` API uses that established
+aggregate identity rather than receiving or establishing `order_id` itself.
 
 ---
 
@@ -237,11 +243,15 @@ This rule belongs to the orchestration / idempotency layer, not to the aggregate
 ## Rule C3 — Create amount must be positive
 `create(amount)` must satisfy:
 
-- `amount > 0`
+- `normalized amount > 0`
+
+Shared Money semantics normalize the monetary input to the current monetary
+quantum before checking positivity.
 
 Not allowed:
 - negative amount
 - zero amount
+- a raw positive value that normalizes to zero
 
 In v1, zero-amount orders are intentionally not modeled.
 
@@ -322,18 +332,22 @@ The aggregate state would still remain correct, but the request/result contract 
 ## Rule P2 — Pay amount must be positive
 `pay(amount)` must satisfy:
 
-- `amount > 0`
+- `normalized amount > 0`
+
+Shared Money semantics normalize the monetary input to the current monetary
+quantum before checking positivity.
 
 Not allowed:
 - negative amount
 - zero amount
+- a raw positive value that normalizes to zero
 
 ---
 
 ## Rule P3 — In v1, pay amount must equal `total_amount`
 In the current v1 model:
 
-- `pay(amount) == total_amount`
+- `normalized pay(amount) == total_amount`
 
 Not allowed:
 - underpayment
@@ -342,6 +356,9 @@ Not allowed:
 - accumulated payment
 
 This rule defines `PAID` as **full payment completion**, not as a generic payment ledger entry.
+
+Current PAY command handling checks this equality before producing a candidate
+event.
 
 ---
 
@@ -403,6 +420,12 @@ Once the order reaches `PAID`, the following must hold:
 
 This is the semantic meaning of `PAID` in v1.
 
+The normal command/candidate/admission trust chain establishes this guarantee:
+PAY command handling checks equality before producing the candidate. Trusted
+`apply(PAID)` performs state mutation for accepted/replayed events and does not
+independently rerun the full-payment command rule. Arbitrary direct
+`apply(PAID)` therefore does not independently prove full-payment correctness.
+
 ---
 
 ## Rule E6 — All state mutation must happen through `apply(event)`
@@ -421,6 +444,48 @@ Business legality checks happen when handling commands and producing candidate e
 It should not re-run command-level legality logic during replay.
 
 This separation keeps rehydration deterministic and simple.
+
+---
+
+## Semantic Clarification — Event Sequence vs Business-State Version
+
+Event sequence is the aggregate-local ordinal of accepted events. Every newly
+accepted event advances that sequence.
+
+Business-state version is a conceptually distinct generation of meaningful
+business state. It may remain unchanged when an accepted event does not change
+business state, and it is not currently implemented as a separate v1 field.
+
+Current Order v1 has no legal accepted state-preserving event. Therefore the
+current numerical equality:
+
+```text
+aggregate.current_version
+==
+last applied event.sequence
+```
+
+is a v1 implementation/model property. The current `aggregate.current_version`
+field is the implementation's aggregate-local accepted-event stream
+progress/version coordinate. This property must not be generalized as the
+semantic identity:
+
+```text
+event sequence
+==
+business-state version
+```
+
+A pure query is read-only and is not an accepted event:
+
+```text
+read-only query
+!=
+accepted event
+```
+
+A pure query appends no accepted history and therefore advances no event
+sequence.
 
 ---
 
@@ -593,10 +658,12 @@ If reduced to the most essential v1 rules, the current model depends on these:
 2. `order_id` is aggregate identity and exists independently of status
 3. only `INIT` may create
 4. only `CREATED` may pay
-5. `create(amount)` requires `amount > 0`
-6. `pay(amount)` requires `amount > 0`
-7. in v1, `pay(amount)` requires `amount == total_amount`
-8. `PAID` implies `paid_amount == total_amount`
+5. `create(amount)` requires normalized monetary value `> 0`
+6. `pay(amount)` requires normalized monetary value `> 0`
+7. in v1, PAY command handling requires normalized `pay(amount) == total_amount`
+8. through the normal command/candidate/admission trust chain, `PAID` implies
+   `paid_amount == total_amount`; trusted `apply(PAID)` does not independently
+   rerun that command rule
 9. all state mutation must happen through `apply(event)`
 10. same `request_id` means retry
 11. different `request_id` means new business action
@@ -609,7 +676,7 @@ If reduced to the most essential v1 rules, the current model depends on these:
 # 13. Suggested Tests
 
 ## Aggregate business legality tests
-- create with empty `order_id` -> fail
+- construct aggregate with empty `order_id` -> fail
 - create with empty `request_id` -> fail
 - create with negative amount -> fail
 - create with zero amount -> fail
