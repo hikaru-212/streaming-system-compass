@@ -9,15 +9,23 @@ source-grounded design
 = COMPLETE
 
 benchmark harness, evidence schema, and safety checks
-= IMPLEMENTED / AWAITING REVIEW
+= COMPLETE / HUMAN-REVIEWED
 
-canonical recorded benchmark
-= NOT RUN
+canonical micro characterization
+= COMPLETE / RECORDED
+
+micro bootstrap-estimand correction
+= COMPLETE / PUBLISHED AS SEPARATE IMMUTABLE DERIVED EVIDENCE
+
+canonical PostgreSQL characterization
+= COMPLETE / RECORDED
+
+characterization report
+= COMPLETE
 ```
 
-No result is claimed by this method note. The canonical fixed runs require a
-separate human decision after review of the harness, tests, evidence schema,
-and test-database safety boundary.
+The completed findings and limitations are recorded in the
+[Runtime Governance Overhead Characterization Report](runtime_governance_overhead_report.md).
 
 ---
 
@@ -531,10 +539,10 @@ change the recorded production `src` tree or harness blobs. The manifest records
 the overall commit, production `src` tree identity, and both harness blob
 identities so the two runs can demonstrate that boundary explicitly.
 
-### Proposed immutable derived-statistics correction artifact
+### Published immutable derived-statistics correction artifact
 
 An accepted canonical timing namespace is never edited or regenerated to
-correct aggregation logic. The narrow correction namespace proposed for the
+correct aggregation logic. The published correction namespace for the
 canonical micro run is:
 
 ```text
@@ -546,14 +554,14 @@ experiments/stage4b5/evidence/
         bootstrap_ci_corrections.json
 ```
 
-This proposal is not written automatically. `manifest.json` would bind the
-correction to the original run identity and SHA-256 hashes of its five immutable
-files, identify the correcting source commit and algorithm, and state that only
-bootstrap confidence intervals are superseded. The corrections document would
-contain the original and corrected interval for each aggregate key; it would
-not duplicate or alter samples, batch summaries, batch comparisons, empirical
-percentiles, or the original `aggregates.json`. Publication would use a new
-exclusive-create immutable namespace after separate human review.
+The correction manifest binds the artifact to the original run identity and
+SHA-256 hashes of its five immutable files, identifies the correcting source
+commit and algorithm, and states that only bootstrap confidence intervals are
+superseded. The corrections document contains the original and corrected
+interval for each reviewed aggregate key; it does not duplicate or alter
+samples, batch summaries, batch comparisons, empirical percentiles, or the
+original `aggregates.json`. The artifact was published in a separate immutable
+namespace after human review; no timing execution was rerun.
 
 Run the semantic-path layer:
 

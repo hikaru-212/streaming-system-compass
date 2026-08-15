@@ -74,7 +74,7 @@ Combined PR5 + PR6
 — exact rule evidence propagated through PostgreSQL write-side execution
 
 PR7 — COMPLETE / MERGED
-Supplement A — HARNESS IMPLEMENTED / CANONICAL RUN NOT STARTED
+Supplement A — COMPLETE / CANONICAL MICRO + POSTGRESQL EVIDENCE RECORDED
 Supplement B — PLANNED
 PR8 — CLOSEOUT
 ```
@@ -93,7 +93,7 @@ Order Correctness Contract V0
 → terminal Order-rule refinement composition
 ```
 
-The active supplement gap is:
+The completed Supplement A chain is:
 
 ```text
 matched A/B/C characterization
@@ -102,9 +102,10 @@ matched A/B/C characterization
 → environment-qualified governance-overhead evidence
 ```
 
-The semantic path is frozen. Supplement A now characterizes its incremental
+The semantic path remained frozen. Supplement A characterized its incremental
 runtime cost without reopening Stage 4B.2 or treating YAML projection as a
-runtime dependency.
+runtime dependency. See the
+[Runtime Governance Overhead Characterization Report](runtime_governance_overhead_report.md).
 
 ---
 
@@ -899,23 +900,30 @@ source-grounded A/B/C method
 = COMPLETE
 
 guarded harness and evidence schema
-= IMPLEMENTED / AWAITING REVIEW
+= COMPLETE / HUMAN-REVIEWED
 
 canonical micro and PostgreSQL recorded runs
-= NOT RUN
+= COMPLETE / COMMITTED EVIDENCE
+
+bootstrap-estimand correction artifact
+= COMPLETE / COMMITTED IMMUTABLE DERIVED EVIDENCE
+
+characterization report
+= COMPLETE
 ```
 
 See [Runtime Governance Overhead Characterization Method](runtime_governance_overhead_method.md)
 for the A-control isolation decision, exact timing boundaries, fixed schedules,
-statistics, safety gates, evidence layout, and human-run commands. No benchmark
-result is claimed before those fixed runs execute.
+statistics, safety gates, evidence layout, and human-run commands. See the
+[Runtime Governance Overhead Characterization Report](runtime_governance_overhead_report.md)
+for the completed findings and retained limitations.
 
 ## Position
 
 ```text
 PR7 complete
 → semantic/runtime path frozen
-→ run comparable performance characterization
+→ comparable performance characterization complete
 → do not reopen Stage 4B.2
 ```
 
