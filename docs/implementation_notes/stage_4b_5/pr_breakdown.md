@@ -69,15 +69,12 @@ PR3 — COMPLETE / MERGED
 PR4 — COMPLETE / MERGED
 
 Combined PR5 + PR6
-— IMPLEMENTED
-— source-reviewed
-— runtime preservation validated
-— PostgreSQL propagation validated before final hardening
-— final adversarial hardening added
-— final rerun pending before commit / PR
+— COMPLETE / MERGED
+— exact rule evidence preserved through ValidationRuntime
+— exact rule evidence propagated through PostgreSQL write-side execution
 
-PR7 — PLANNED
-Supplement A — PLANNED
+PR7 — COMPLETE / MERGED
+Supplement A — COMPLETE / CANONICAL MICRO + POSTGRESQL EVIDENCE RECORDED
 Supplement B — PLANNED
 PR8 — CLOSEOUT
 ```
@@ -92,21 +89,23 @@ Order Correctness Contract V0
 → ValidationPolicy on the identical ValidationResult
 → PostgreSQL write-side same-invocation propagation
 → existing normal / trace / measurement delivery surfaces
+→ Stage 4A SemanticOutcome mapping
+→ terminal Order-rule refinement composition
 ```
 
-The remaining semantic gap is:
+The completed Supplement A chain is:
 
 ```text
-PostgresWriteSideResult
-→ existing Stage 4A SemanticOutcome mapping
-+
-same-invocation OrderRuleViolationEvidence
-→ bounded hierarchical semantic refinement
+matched A/B/C characterization
+→ semantic-path micro cost
++ PostgreSQL end-to-end cost
+→ environment-qualified governance-overhead evidence
 ```
 
-After that semantic path is frozen, the stage will characterize its incremental
-runtime cost and emit a deterministic YAML readability projection before
-documentation closeout.
+The semantic path remained frozen. Supplement A characterized its incremental
+runtime cost without reopening Stage 4B.2 or treating YAML projection as a
+runtime dependency. See the
+[Runtime Governance Overhead Characterization Report](runtime_governance_overhead_report.md).
 
 ---
 
@@ -894,12 +893,37 @@ Do not imply universal rule-evidence coverage unless it actually exists.
 
 # Supplement A — Runtime Governance Overhead Characterization
 
+## Current supplement status
+
+```text
+source-grounded A/B/C method
+= COMPLETE
+
+guarded harness and evidence schema
+= COMPLETE / HUMAN-REVIEWED
+
+canonical micro and PostgreSQL recorded runs
+= COMPLETE / COMMITTED EVIDENCE
+
+bootstrap-estimand correction artifact
+= COMPLETE / COMMITTED IMMUTABLE DERIVED EVIDENCE
+
+characterization report
+= COMPLETE
+```
+
+See [Runtime Governance Overhead Characterization Method](runtime_governance_overhead_method.md)
+for the A-control isolation decision, exact timing boundaries, fixed schedules,
+statistics, safety gates, evidence layout, and human-run commands. See the
+[Runtime Governance Overhead Characterization Report](runtime_governance_overhead_report.md)
+for the completed findings and retained limitations.
+
 ## Position
 
 ```text
 PR7 complete
 → semantic/runtime path frozen
-→ run comparable performance characterization
+→ comparable performance characterization complete
 → do not reopen Stage 4B.2
 ```
 

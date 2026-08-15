@@ -1,0 +1,57 @@
+{
+  "bootstrap": {
+    "confidence": 0.95,
+    "percentile_method": "empirical nearest-rank",
+    "repetitions": 2000,
+    "resampling_unit": "recorded block",
+    "seed": 4500951,
+    "within_block_units": "retained in full"
+  },
+  "corrected_estimand": "sample recorded blocks with replacement, retain all units from each selected block, and compute the pooled empirical nearest-rank median",
+  "correcting_git_commit": "7b656016261c754320c033666d5f235bffa6b6c6",
+  "correcting_implementation": {
+    "git_blob": "c05ae58b01b53230ad4e36e8e66e6d992b63bf2e",
+    "path": "experiments/stage4b5/runtime_governance_overhead.py"
+  },
+  "correction_counts": {
+    "absolute_total_elapsed_ns": 12,
+    "batch_comparison_estimate_ns": 16,
+    "total": 28
+  },
+  "correction_id": "bootstrap-estimand-v1",
+  "corrections_document": "bootstrap_ci_corrections.json",
+  "original_estimand": "median within each recorded block followed by bootstrap median over 30 block medians",
+  "original_evidence_namespace": "experiments/stage4b5/evidence/runtime-governance-overhead-micro/stage4b5-runtime-overhead-micro-20260815-e3193f3",
+  "original_evidence_remains_immutable": true,
+  "original_evidence_sha256": {
+    "aggregates.json": "2bd35a4273d7e9b830ee637b295edfad3a31c411dd1f6b33e7c56df3b7c7ccbc",
+    "batch_comparisons.jsonl": "7c8c38aa012f17472177c75e156f7e1d55327bf6baa6b3b457038e97dac26f09",
+    "batch_summaries.jsonl": "197bbb2b67ef9f137b9266c0cfe14bdd3f5e1bbeb39f68e9e5f74049c6516f13",
+    "manifest.json": "23af57b7faef0a5b08fccb0e3255e7a791582ae65fa7bb12be14dd3dccde8065",
+    "samples.jsonl": "bc04bfe515a6e9bd0b8b9a091ed973755be49b672ee863b2631471d1ee274907"
+  },
+  "original_harness_commit": "e3193f374bea0ac4190f87499945b58cd99638c2",
+  "original_run_id": "stage4b5-runtime-overhead-micro-20260815-e3193f3",
+  "schema": "stage4b5-runtime-governance-bootstrap-ci-correction-manifest",
+  "schema_version": 1,
+  "supersession_scope": {
+    "does_not_supersede": [
+      "raw timing samples",
+      "total_elapsed_ns values",
+      "producer_elapsed_ns values",
+      "composition_elapsed_ns values",
+      "batch summaries",
+      "batch comparisons",
+      "empirical p50/p95/p99",
+      "IQR",
+      "MAD",
+      "scenario semantics",
+      "source provenance",
+      "timing boundaries"
+    ],
+    "supersedes": [
+      "bootstrap confidence intervals only"
+    ]
+  },
+  "timing_execution_rerun": false
+}
