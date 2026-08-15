@@ -156,9 +156,11 @@ serialization, and explicit PostgreSQL persistence foundation. Stage 4B.1 then
 completed producer-specific diagnostic and resolution trace boundaries while
 keeping traces separate from receipts. Stage 4B.2 then completed
 producer-specific measurement, controlled comparison, explanatory
-characterization, and bounded concurrency evidence. Stage 4B.3 and Stage 4B.5
-are separately owned Stage 4 foundation responsibilities and may proceed in
-parallel; Stage 4B.5 PR1 documentation is active.
+characterization, and bounded concurrency evidence. Stage 4B.5 then completed
+the Order correctness contract, exact FullProof evidence path,
+runtime/write-side propagation, terminal semantic refinement, deterministic
+YAML projection, and bounded overhead characterization. Stage 4B.3 remains a
+separately owned Stage 4 foundation responsibility and has not started.
 
 ---
 
@@ -544,10 +546,10 @@ The capability path is:
 
 Stage 4B.2 is complete and closed after producer-specific write-side
 measurement semantics, controlled PostgreSQL strategy comparison, explanatory
-characterization, and bounded concurrency evidence. Stage 4B.3 and Stage 4B.5
-are separately owned parallel foundation work. Stage 4B.5 PR1 documentation is
-active. Stage 4B.2 did not implement policy, strategy selection, retry
-governance, or rate admission.
+characterization, and bounded concurrency evidence. Stage 4B.5 is also complete
+and closed; its rule evidence does not authorize retry. Stage 4B.3 remains
+separately owned and not started. Stage 4B.2 and Stage 4B.5 did not implement
+policy, strategy selection, retry governance, or rate admission.
 
 ---
 

@@ -22,29 +22,29 @@ For project-wide sequencing, see:
 
 ## Current Position
 
-Stage 4A, Stage 4B PR1–PR7, Stage 4B.1 PR1–PR7, and Stage 4B.2 PR1–PR8 are
-complete.
+Stage 4A, Stage 4B PR1–PR7, Stage 4B.1 PR1–PR7, Stage 4B.2 PR1–PR8, and
+Stage 4B.5 through PR8 are complete. Stage 4B.2 and Stage 4B.5 are closed.
 
 Stage 4 Interlude PR0 — test helper consolidation before Stage 4B — is complete.
 
 Stage 4B.2 is complete and closed. Its final delivery record is the
 [Stage 4B.2 closeout](stage_4b_2/stage_4b_2_closeout.md).
 
-The next Stage 4 foundation work is:
+The remaining Stage 4 foundation work is:
 
 ```text
 Stage 4B.3
 = Projection Trust Boundary and Continuation
 
 Stage 4B.5
-= Order Correctness Contract v0
+= Order Correctness Contract v0 — COMPLETE / CLOSED
 
-Stage 4B.3 and Stage 4B.5
-= SEPARATELY OWNED PARALLEL FOUNDATION WORK
+Stage 4B.3
+= SEPARATELY OWNED / NOT STARTED
 ```
 
-The stages remain separately owned. Stage 4B.5 PR1 source-grounded
-documentation is active.
+Stage 4B.5 completed without imposing an ordering on the separately owned
+Stage 4B.3 work.
 
 Stage 4A introduced the stable `SemanticOutcome` core, runtime technical-status mapping, read-side / snapshot outcome mapping, and write-side admission outcome mapping.
 
@@ -59,6 +59,12 @@ controlled PostgreSQL strategy comparison, explanatory characterization,
 bounded concurrency evidence, and documentation closeout. Its entry point is
 the [Stage 4B.2 implementation index](stage_4b_2/README.md).
 
+Stage 4B.5 completed the identity-driven 18-rule Order correctness contract,
+six-rule FullProof evidence producer, same-invocation runtime/write-side
+propagation, explicit terminal refinement, deterministic YAML projection, and
+bounded overhead characterization. Its entry point is the
+[Stage 4B.5 implementation index](stage_4b_5/README.md).
+
 Stage 4B should not reopen Stage 4A mapping scope unless receipt requirements expose a missing evidence contract.
 
 Stage 4B should also not collapse later Stage 4 layers into the receipt boundary.
@@ -67,7 +73,7 @@ Stage 4B should also not collapse later Stage 4 layers into the receipt boundary
 Completed and later Stage 4 work remains separate:
 Stage 4B.2 — Measurement Evidence — COMPLETE / CLOSED
 Stage 4B.3 — Projection Trust Boundary and Continuation — PARALLEL / NOT STARTED
-Stage 4B.5 — Order Correctness Contract v0 — PARALLEL / PR1 DOCUMENTATION ACTIVE
+Stage 4B.5 — Order Correctness Contract v0 — COMPLETE / CLOSED
 Stage 4C   — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 Stage 4D   — StrategySelector / Fast-Path Health Policy

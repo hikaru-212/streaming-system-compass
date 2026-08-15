@@ -12,7 +12,7 @@ Use roadmap documents to understand:
 * what depends on what
 * which features are intentionally deferred
 * how the project moves from durable truth toward runtime governance
-* how the project has completed Stage 4B.2 measurement and bounded empirical cost-evidence work and reached parallel Stage 4B.3 and Stage 4B.5 foundation work
+* how the project completed Stage 4B.2 measurement and bounded empirical cost-evidence work, completed Stage 4B.5 correctness-contract work, and retains Stage 4B.3 as separately owned foundation work
 
 ---
 
@@ -56,11 +56,13 @@ ResolutionTrace boundary, PostgreSQL write-side execution characterization,
 immutable write-side trace contract, traced Result + Trace integration, and
 closeout. Stage 4B.2 PR1–PR8 then completed producer-specific measurement,
 controlled comparison, explanatory characterization, bounded concurrency
-evidence, and closeout. Stage 4B.3 and Stage 4B.5 are separately owned Stage 4
-foundation responsibilities and may proceed in parallel. Stage 4B.5 PR1
-documentation is active.
+evidence, and closeout. Stage 4B.5 then completed the Order correctness
+contract, exact FullProof evidence path, runtime/write-side propagation,
+terminal refinement, YAML projection, overhead characterization, and closeout.
+Stage 4B.3 remains a separately owned foundation responsibility and has not
+started.
 
-Current Stage 4B.5 work is recorded in the
+Completed Stage 4B.5 work is recorded in the
 [Stage 4B.5 implementation notes](../implementation_notes/stage_4b_5/).
 
 ---
@@ -91,7 +93,7 @@ The deferred architecture backlog should be read after the main roadmaps. It doe
 
 ## Current Roadmap Position
 
-Completed stage and next Stage 4 foundation work:
+Completed stages and remaining Stage 4 foundation work:
 
 ```text
 Stage 4B.2
@@ -101,13 +103,13 @@ Stage 4B.3
 = PROJECTION TRUST BOUNDARY AND CONTINUATION / NOT STARTED
 
 Stage 4B.5
-= ORDER CORRECTNESS CONTRACT V0 / PR1 DOCUMENTATION ACTIVE
+= ORDER CORRECTNESS CONTRACT V0 / COMPLETE / CLOSED
 
-Stage 4B.3 and Stage 4B.5
-= SEPARATELY OWNED PARALLEL FOUNDATION WORK
+Stage 4B.3
+= SEPARATELY OWNED / NOT STARTED
 ```
 
-Stage 4B, Stage 4B.1, and Stage 4B.2 are complete. Stage 4B.2 consumed a stable
+Stage 4B, Stage 4B.1, Stage 4B.2, and Stage 4B.5 are complete. Stage 4B.2 consumed a stable
 semantic and execution-topology evidence foundation:
 
 - raw technical status has a stable SemanticOutcome interpretation layer
@@ -195,7 +197,7 @@ Stage 4 proceeds through:
 * Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary — complete
 * Stage 4B.2 — Measurement Evidence — complete / closed
 * Stage 4B.3 — Projection Trust Boundary and Continuation — parallel / not started
-* Stage 4B.5 — Order Correctness Contract v0 — parallel / PR1 documentation active
+* Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 * Stage 4C — RuntimeDecisionPolicy
 * Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 * Stage 4D — StrategySelector / Fast-Path Health Policy

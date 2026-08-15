@@ -55,8 +55,26 @@ PostgresWriteSideResult
 ```
 
 PR4 implements the producer-specific mapping adapter. No production command
-path currently invokes it; runtime invocation and durable persistence are
-outside PR4.
+path currently invokes it. Strict DecisionReceipt serialization and PostgreSQL
+persistence exist through separate explicit boundaries, but automatic
+materialization from a normal write command remains outside PR4.
+
+Stage 4B.5 adds a separate refinement composition without changing ownership
+of the Stage 4A tuple or the DecisionReceipt path:
+
+```text
+PostgresWriteSideResult
+→ explicit map_postgres_write_side_result_to_semantic_rule_feedback(...)
+   ├── existing Stage 4A SemanticOutcome mapping
+   └── exact Order rule refinement only for terminal VALIDATION_BLOCKED
+→ PostgresWriteSideSemanticRuleFeedback
+```
+
+This object is not a `DecisionReceipt`, does not change the write-side
+transaction, and is not automatically produced by every write command.
+Preserved validation observation on a later terminal outcome remains available
+on the source result but does not become that outcome's terminal rule
+refinement.
 
 ## 2. Why the generic mapper is intentionally insufficient
 
@@ -298,7 +316,7 @@ All enum-backed values use `.value`. The phase is `ACCEPTED_HISTORY`, `IDEMPOTEN
 
 `validation_verdict` preserves validation truth/evidence; `validation_action` preserves the enforcement response. They are separate axes. The repository must not require a universal `ALLOW == PASSED` or `BLOCK == FAILED` identity. For example, `ValidationMode.OFF` can truthfully produce `ValidationVerdict.SKIPPED` with `EnforcementAction.ALLOW`. Sources: `src/compass/transition/types.py::ValidationVerdict`, `src/compass/transition/runtime.py::ValidationPolicy.decide`.
 
-PR4 does not copy rich validation metadata, duplicate reasons, event bodies, `OrderEvent` objects, Python class names, exceptions, SQL, or `SemanticOutcome.context/evidence`. `metadata` stays `{}`; `actor` and `cost_summary` stay at the generic defaults. There is no policy, strategy, retry authorization, serializer, or persistence data. Sources: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_evidence_summary_is_compact_typed_vocabulary_and_cost_is_not_derived`, `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_evidence_summary_has_exact_keys_for_lifecycle_shape`.
+PR4 does not copy rich validation metadata, duplicate reasons, event bodies, `OrderEvent` objects, Python class names, exceptions, SQL, or `SemanticOutcome.context/evidence`. `metadata` stays `{}`; `actor` and `cost_summary` stay at the generic defaults. The PR4 receipt payload contains no policy, strategy, retry authorization, serializer result, or persistence result. Sources: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_evidence_summary_is_compact_typed_vocabulary_and_cost_is_not_derived`, `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_evidence_summary_has_exact_keys_for_lifecycle_shape`.
 
 ## 10. Stage 4A / Stage 4B invariant summary
 
@@ -308,4 +326,5 @@ PR4 does not copy rich validation metadata, duplicate reasons, event bodies, `Or
 4. Blank, malformed, or contradictory identity fails closed. Source: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_malformed_authority_bearing_event_ids_fail_closed`.
 5. Candidate identity is not accepted-history authority; a conflict's prior accepted event is not current acceptance.
 6. Candidate existence does not mean append admission was reached; `AdmissionResult` is the candidate-level append-boundary evidence.
-7. `DecisionReceipt` is a frozen in-memory contract intended to represent durable governance evidence. Its stable durable contract and vocabulary do not mean that a receipt has already been serialized or persisted as a row. It records completed facts but executes no action, policy, retry, serialization, or persistence. Sources: `src/compass/runtime/decision_receipt.py::DecisionReceipt`, `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_wrapper_has_no_side_effect_or_expanded_public_surface`.
+7. `DecisionReceipt` is a frozen in-memory contract intended to represent durable governance evidence. Serializer v1 and PostgreSQL persistence are implemented separately, but receipt construction does not mean that a row was automatically materialized. The PR4 mapper records completed facts and executes no action, policy, retry, serialization, or persistence. Sources: `src/compass/runtime/decision_receipt.py::DecisionReceipt`, `src/compass/runtime/decision_receipt_serialization.py::serialize_decision_receipt`, `src/storage/postgres_decision_receipt_store.py::PostgresDecisionReceiptStore`, `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_wrapper_has_no_side_effect_or_expanded_public_surface`.
+8. Stage 4B.5 exact rule evidence is a separate domain-specific refinement path. It does not add per-rule `SemanticOutcome` codes or alter ownership of the Stage 4A semantic tuple.

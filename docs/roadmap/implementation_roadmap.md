@@ -19,9 +19,9 @@ This version reflects the project position after the completion of Stage 4B.2:
 - Stage 4B DecisionReceipt PR1–PR7 is complete.
 - Stage 4B.1 DiagnosticTrace / ResolutionTrace PR1–PR7 is complete.
 - Stage 4B.2 Measurement Evidence PR1–PR8 is complete and closed.
-- Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
-  Correctness Contract v0 are separately owned parallel Stage 4 foundation
-  work and may proceed independently; Stage 4B.5 PR1 documentation is active.
+- Stage 4B.5 Order Correctness Contract v0 is complete and closed through PR8.
+- Stage 4B.3 Projection Trust Boundary and Continuation remains separately
+  owned and not started.
 - Stage 5 and later stages remain forward-looking governance / production-hardening work.
 
 ---
@@ -68,16 +68,16 @@ Detailed completed-stage and current-stage records now live under:
 - [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
 - [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
 
-The completed stage and next Stage 4 foundation work are:
+The completed stages and remaining Stage 4 foundation work are:
 
 - **Stage 4B.2 — COMPLETE / CLOSED**
-- **Stage 4B.3 — PARALLEL FOUNDATION WORK / NOT STARTED**
-- **Stage 4B.5 — PARALLEL FOUNDATION WORK / PR1 DOCUMENTATION ACTIVE**
+- **Stage 4B.3 — SEPARATELY OWNED / NOT STARTED**
+- **Stage 4B.5 — COMPLETE / CLOSED**
 
 With Stage 4B.2 complete, the later responsibilities are:
 
-- Stage 4B.3 Projection Trust Boundary and Continuation and Stage 4B.5 Order
-  Correctness Contract as separately owned parallel foundation work
+- Stage 4B.3 Projection Trust Boundary and Continuation as remaining separately
+  owned foundation work; Stage 4B.5 is complete
 - Stage 4C+ runtime decision governance
 - Stage 5 dual-dimension governance demo / action safety
 - Stage 5+ production and agent-facing hardening
@@ -636,9 +636,9 @@ Stage 4A — SemanticOutcome Core
 Stage 4B — DecisionReceipt / Runtime Evidence Record
 Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 Stage 4B.2 — Measurement Evidence
-Parallel Stage 4 foundation work:
-  Stage 4B.3 — Projection Trust Boundary and Continuation
-  Stage 4B.5 — Order Correctness Contract v0
+Separately owned Stage 4 foundation work:
+  Stage 4B.3 — Projection Trust Boundary and Continuation — not started
+  Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 Stage 4C — RuntimeDecisionPolicy
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 Stage 4D — StrategySelector / Fast-Path Health Policy
@@ -649,10 +649,11 @@ This sequence is intentionally staged.
 
 Compass should first define semantic meaning, then preserve decision evidence,
 then preserve producer-specific execution-topology evidence, then measure bounded
-execution cost and obtain empirical evidence. Stage 4B.3 projection-trust work
-and Stage 4B.5 order-correctness work may then proceed in parallel as separately
-owned foundation responsibilities. Stage 4C+ runtime decisions, outcome-family
-alignment, strategy selection, and retry governance remain downstream.
+execution cost and obtain empirical evidence. Stage 4B.5 order-correctness work
+then completed independently; Stage 4B.3 projection-trust work remains a
+separately owned foundation responsibility. Stage 4C+ runtime decisions,
+outcome-family alignment, strategy selection, and retry governance remain
+downstream.
 
 ---
 
@@ -854,17 +855,18 @@ Stage 4B.3 does not impose an ordering on the separately owned Stage 4B.5 work.
 
 ### Status
 
-Separately owned parallel Stage 4 foundation work. PR1 source-grounded
-documentation is active.
+Complete and closed through PR8.
 
 ### Goal
 
 Stage 4B.5 introduces a narrow correctness-contract boundary for the current
 order/payment domain.
 
-The purpose is to establish stable rule references for source-legitimate live
-constraint feedback without turning Stage 4B.5 into a recovery or general
-policy platform.
+The delivered purpose is to establish stable rule references for
+source-legitimate live constraint feedback without turning Stage 4B.5 into a
+recovery or general policy platform. The canonical vocabulary contains 18
+rules; current typed FullProof production covers exactly six
+`TRANSITION_TRUTH` rules.
 
 Core boundary:
 
@@ -877,6 +879,11 @@ runtime policy decides allowed action
 Correctness contract does not replace Compass.
 
 Compass does not replace correctness contract.
+
+The completed runtime path preserves same-invocation evidence through
+`ValidationRuntime` and the PostgreSQL write side, then exposes terminal exact
+rule refinement through an explicit mapper. It does not add per-rule
+`SemanticOutcome` codes or authorize retry.
 
 ### Non-goals
 
@@ -1227,9 +1234,9 @@ Runtime Semantic Governance
   4B DecisionReceipt / Runtime Evidence Record
   4B.1 DiagnosticTrace / ResolutionTrace Boundary
   4B.2 Measurement Evidence
-  parallel Stage 4 foundation work
-    4B.3 Projection Trust Boundary and Continuation
-    4B.5 Order Correctness Contract v0
+  separately owned Stage 4 foundation work
+    4B.3 Projection Trust Boundary and Continuation — not started
+    4B.5 Order Correctness Contract v0 — complete / closed
   4C RuntimeDecisionPolicy
   4C.5 Layer 1 / Layer 2 Outcome Alignment
   4D StrategySelector / Fast-Path Health Policy

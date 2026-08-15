@@ -415,7 +415,9 @@ The completed closeout transition is:
 ```text
 PR7 — Stage 4B Closeout — Complete
 Stage 4B.1 PR1–PR7 — Complete
-Current formal development stage — Stage 4B.2 Measurement / Cost Evidence
+Stage 4B.2 PR1–PR8 — Complete / Closed
+Stage 4B.5 — Order Correctness Contract v0 — Complete / Closed
+Stage 4B.3 — Projection Trust Boundary and Continuation — Separately Owned / Not Started
 ```
 
 ---
@@ -469,7 +471,7 @@ Stage 4B.2
 = Measurement Matrix / Cost Evidence Inventory
 
 Stage 4B.5
-= Order Domain Policy Contract v0
+= Order Correctness Contract v0 — complete / closed
 
 Stage 4C
 = RuntimeDecisionPolicy
@@ -484,7 +486,8 @@ Stage 4E
 = Retry Governance / Attempt Classification
 ```
 
-Stage 4B should not implement those layers early.
+Stage 4B.5 now provides exact machine-readable correctness evidence without
+implementing Retry Governance. The other later layers remain separately owned.
 
 It should preserve clear extension points so those layers can consume receipt evidence later.
 

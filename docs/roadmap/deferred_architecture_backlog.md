@@ -22,10 +22,11 @@ Pure naming preference, style cleanup, or already-completed implementation work 
 
 Completed Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
 
-Current focus after Stage 4B closeout:
+Current foundation status after Stage 4B.5 closeout:
 
 ```text
-Stage 4B.1 — DiagnosticTrace / ResolutionTrace
+Stage 4B.3 — Projection Trust Boundary and Continuation — NOT STARTED
+Stage 4C+ — runtime decision and later governance — FUTURE
 ```
 
 Completed implementation details now live under:
@@ -36,6 +37,9 @@ Completed implementation details now live under:
 - [Stage 3.5E Implementation Notes](../implementation_notes/stage_3_5e/)
 - [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 - [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
+- [Stage 4B.1 Implementation Notes](../implementation_notes/stage_4b_1/)
+- [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
+- [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
 
 This backlog should now be used only for concerns intentionally deferred beyond the completed durable write-side, durable read-side, read-side snapshot trust, durable permission, Stage 4A SemanticOutcome, and Stage 4B DecisionReceipt baselines.
 
@@ -44,14 +48,14 @@ This backlog should now be used only for concerns intentionally deferred beyond 
 ## Status Legend
 
 ```text
-Stage 4B.1 / trace design
-→ should wait for DiagnosticTrace or ResolutionTrace work
+Completed Stage 4B.1 / trace design
+→ implemented work belongs in Stage 4B.1 notes, not this backlog
 
 Stage 4E / retry classification
 → should wait for DecisionReceipt / request-attempt evidence design
 
-Stage 4B.5 / domain policy contract
-→ should wait until SemanticOutcome v1 exists, then may be introduced as a minimal order-domain rule / recovery contract before RuntimeDecisionPolicy v1 hardens
+Completed Stage 4B.5 / Order correctness contract
+→ machine-readable correctness evidence is implemented; recovery policy and retry authorization remain separate future Stage 4C/4E responsibilities
 
 Stage 4 / connection-pool hardening
 → should wait until structured error modeling, connection lifecycle policy, or pooled database connections exist
@@ -152,9 +156,16 @@ After durable replay / rebuild validation exists and before any multi-worker or 
 
 ## 2. Order Domain Policy Contract v0 and Policy-Guided Recovery
 
+> **Current qualification:** Stage 4B.5 completed the narrower identity-driven
+> Order correctness contract and exact FullProof rule-evidence path. It did not
+> implement recovery hints, retry policy, or the speculative policy schema
+> below. Those concerns remain future Stage 4C/4E work and must not be
+> retroactively attributed to Stage 4B.5.
+
 ### Current Decision
 
-Do not build a full general-purpose policy framework during Stage 3.5E or the first Layer 2 validator pass.
+Do not treat the completed Stage 4B.5 correctness contract as a general-purpose
+policy framework or recovery contract.
 
 The current project should remain focused on:
 
@@ -164,7 +175,8 @@ The current project should remain focused on:
 - runtime decisions
 - action safety
 
-However, Stage 4 may introduce a small domain-specific policy contract after `SemanticOutcome` v1 exists.
+Later Stage 4 work may introduce a small domain-specific policy contract after
+the completed `SemanticOutcome` and correctness-evidence foundations.
 
 This contract should be limited to the current minimal order/payment domain.
 
@@ -187,7 +199,8 @@ The project does not need that much machinery to prove the Stage 4 governance lo
 
 ### Future Work
 
-Introduce a minimal artifact such as:
+If a concrete consumer justifies it, introduce a separately owned minimal
+policy artifact such as:
 
 ```text
 contracts/order_domain_policy_contract_v1.yaml
@@ -276,18 +289,23 @@ After:
 
 ```text
 Stage 4A — SemanticOutcome Core (complete)
+Stage 4B.5 — Order Correctness Contract v0 (complete)
 ```
 
-and before hardening:
+and within separately reviewed later governance work:
 
 ```text
 Stage 4C — Runtime Decision Policy v1
+Stage 4E — Retry Governance / Attempt Classification
 ```
 
-This can be treated as:
+This remaining recovery-policy work must not be treated as completed
+Stage 4B.5 scope:
 
 ```text
-Stage 4B.5 — Order Domain Policy Contract v0
+Order correctness evidence
+≠ recovery policy
+≠ retry authorization
 ```
 
 ### Non-goals
