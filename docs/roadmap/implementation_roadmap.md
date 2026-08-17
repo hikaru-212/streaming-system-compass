@@ -644,10 +644,10 @@ Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 Stage 4B.2 — Measurement Evidence
 Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
 Stage 4B.5 — Order Correctness Contract v0 — complete / closed
-Stage 4C — RuntimeDecisionPolicy
+Stage 4C — Runtime Decision Authority
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
-Stage 4D — StrategySelector / Fast-Path Health Policy
-Stage 4E — Retry Governance / Attempt Classification
+Stage 4D — Strategy Selection Authority
+Stage 4E — Retry / Attempt Authorization
 ```
 
 This sequence is intentionally staged.
@@ -918,16 +918,18 @@ Stage 4B.5 does not implement:
 
 ---
 
-## Stage 4C — RuntimeDecisionPolicy
+## Stage 4C — Runtime Decision Authority
 
 ### Goal
 
-Stage 4C converts semantic outcomes and supporting evidence into runtime decisions.
+Stage 4C converts a current semantic observation and eligible supporting
+evidence into a generic current-response decision.
 
 It answers:
 
 ```text
-Given this semantic outcome and evidence, what should the system be allowed to do?
+Given this current semantic observation and eligible evidence,
+what generic response is permitted, required, or denied now?
 ```
 
 Examples of runtime decisions may include:
@@ -938,12 +940,33 @@ Examples of runtime decisions may include:
 - fallback to authority
 - rebuild
 - quarantine
-- retry after reload
 - escalate
 
-Stage 4C decides what action is semantically allowed.
+Stage 4C decides what generic current response is semantically allowed. It does
+not execute that response.
 
-It does not choose the cheapest execution path. That belongs to Stage 4D.
+Its first design center is live, in-memory `SemanticOutcome` plus terminally
+applicable exact `OrderRuleViolationEvidence` when source-applicable. For the
+current PostgreSQL write-side path, `PostgresWriteSideSemanticRuleFeedback` may
+carry that pair without becoming a universal Stage 4C abstraction.
+
+`DecisionReceipt` remains durable governance evidence but is not required for
+the first live Stage 4C hot path. Restart-recovery governance is a distinct
+deferred consumer; old durable evidence is not permanent action authority.
+
+Stage 4C does not choose an execution path or authorize another attempt. It does
+not own retry count, attempt budget, backoff, reload-before-retry,
+revalidation-before-retry, candidate-regeneration constraints, intent
+consistency, or cross-attempt lineage.
+
+The following are not Stage 4C concepts:
+
+```text
+RETRY_AFTER_RELOAD
+RETRY_WITH_BACKOFF
+retry_allowed
+max_attempts
+```
 
 ---
 
@@ -971,36 +994,43 @@ The purpose of Stage 4C.5 is alignment, not rewriting the already-working write-
 
 ---
 
-## Stage 4D — StrategySelector / Fast-Path Health Policy
+## Stage 4D — Strategy Selection Authority
 
 ### Goal
 
-Stage 4D selects execution strategy under changing runtime conditions.
+Given an already-permitted action, Stage 4D selects an eligible execution path
+or strategy under changing runtime conditions.
 
-It should choose among paths that are already allowed by semantic outcome, policy contract, and runtime decision.
+Stage 4D should choose among execution paths that are semantically consistent
+with the current `SemanticOutcome` and explicitly permitted by the
+`RuntimeDecision` and any applicable policy authority.
 
 Examples of strategy questions:
 
 - should the runtime use authority replay or snapshot fast path?
-- is a receipt-backed trusted snapshot sufficient?
+- is a currently qualified snapshot-assisted path eligible?
 - should a repeated fast-path failure temporarily disable the fast path?
-- should projection be rebuilt or quarantined?
 - should write-side contention prefer optimistic or pessimistic admission strategy?
 
 Important principle:
 
 ```text
-StrategySelector should not choose the fastest path.
+Strategy selection should not choose the fastest path.
 It should choose the lowest-cost path among semantically acceptable paths.
 ```
 
+Stage 4D must not independently authorize `REBUILD`, `QUARANTINE`, `ESCALATE`,
+or another generic current response. It may choose how an already-authorized
+response is performed. Strategy selection does not execute the response.
+
 ---
 
-## Stage 4E — Retry Governance / Attempt Classification
+## Stage 4E — Retry / Attempt Authorization
 
 ### Goal
 
-Stage 4E classifies and governs retry attempts.
+Stage 4E decides whether another attempt is authorized and, if so, under which
+explicit constraints.
 
 Core rule:
 
@@ -1012,7 +1042,13 @@ same intent
 
 A retry loop may preserve request identity while changing action path, target state, semantic meaning, or safety boundary.
 
-Stage 4E should distinguish retry-like situations such as:
+Stage 4E owns retry/attempt classification, retry safety,
+reload-before-retry and revalidation-before-retry requirements, backoff and
+timing constraints, total and per-class attempt limits, attempt budget,
+same-candidate versus regenerated-candidate constraints, intent consistency,
+prior-attempt lineage, and cross-attempt governance.
+
+It should distinguish retry-like situations such as:
 
 - idempotent replay
 - concurrency retry
@@ -1022,7 +1058,28 @@ Stage 4E should distinguish retry-like situations such as:
 - rebuild-required retry
 - future agent intent drift
 
-Retry governance should come after SemanticOutcome, DecisionReceipt, policy boundary, runtime decision policy, and strategy selection because a retry cannot be classified safely without knowing what semantic outcome happened before it.
+Current-attempt failure does not authorize another attempt. Retry authorization
+does not execute retry, permit reuse of the same candidate, or grant unlimited
+attempts.
+
+For a later attempt, the conceptual handoff may be:
+
+```text
+current execution evidence
+→ Stage 4C current-response decision
+→ Stage 4E attempt authorization and constraints
+→ Stage 4D strategy selection for the authorized attempt
+→ execution
+```
+
+This is not a mandatory path for normal execution. An execution that does not
+consider another attempt does not need to pass through Stage 4E, and
+`C → D → E` is not a mandatory irreversible runtime pipeline.
+
+The first Stage 4E delivery shares Stage 4C's live/in-memory design center.
+Durable `DecisionReceipt` evidence may support a later restart-recovery
+consumer, but receipt persistence is not required before a live in-process
+attempt decision. Stage 4E authorizes attempts; it does not perform them.
 
 ---
 
@@ -1158,12 +1215,15 @@ Stage 5 is complete when the project can demonstrate:
 requested action
 → semantic state check
 → SemanticOutcome
-→ DecisionReceipt
-→ RuntimeDecisionPolicy
-→ StrategySelector
+→ eligible live rule refinement when source-applicable
+→ current-response RuntimeDecision
+→ Strategy Selection inside prior authorization
 → ActionSafetyGate
 → execute or block
 ```
+
+Durable `DecisionReceipt` evidence may support review or later recovery without
+becoming a mandatory first-slice live-policy input.
 
 ---
 
@@ -1258,10 +1318,10 @@ Runtime Semantic Governance
     complete / closed as not currently justified after PR1/PR2 investigation
   4B.5 Order Correctness Contract v0
     complete / closed after separately owned parallel delivery
-  4C RuntimeDecisionPolicy
+  4C Runtime Decision Authority
   4C.5 Layer 1 / Layer 2 Outcome Alignment
-  4D StrategySelector / Fast-Path Health Policy
-  4E Retry Governance / Attempt Classification
+  4D Strategy Selection Authority
+  4E Retry / Attempt Authorization
 
 Stage 5:
 Dual-Dimension Governance Demo / Action Safety
@@ -1319,9 +1379,9 @@ technical correctness evidence
 → Projection Trust Boundary and Continuation
   closed as not currently justified
 → separately owned Order Correctness Contract
-→ RuntimeDecisionPolicy
-→ StrategySelector
-→ RetryGovernance
+→ current-response RuntimeDecision Authority
+→ Strategy Selection inside prior authorization
+→ Retry / Attempt Authorization when another attempt is considered
 ```
 
 Projection worker mapping is not required for Stage 4A because Stage 4A PR4 maps read-side correctness validation results, not ordinary worker execution outcomes.
@@ -1451,9 +1511,10 @@ A future `ActionSafetyGate` may consume:
 
 ```text
 SemanticOutcome
-DecisionReceipt
+eligible exact rule refinement
+DecisionReceipt when a concrete durable-evidence consumer requires it
 RuntimeDecision
-StrategySelector output
+strategy-selection output
 projection worker freshness evidence
 ```
 
