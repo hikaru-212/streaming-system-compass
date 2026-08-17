@@ -20,6 +20,7 @@ For project-wide sequencing, see:
 - [Stage 4B.2 — Measurement Evidence](./stage_4b_2/)
 - [Stage 4B.3 — Projection Trust Boundary and Continuation Closeout](./stage_4b_3/)
 - [Stage 4B.5 — Order Correctness Contract v0](./stage_4b_5/)
+- [Stage 4C — Runtime Decision Authority — docs-first entry](./stage_4c/)
 
 ## Current Position
 
@@ -77,11 +78,18 @@ Completed and later Stage 4 work remains separate:
 Stage 4B.2 — Measurement Evidence — COMPLETE / CLOSED
 Stage 4B.3 — Projection Trust Boundary and Continuation — COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED
 Stage 4B.5 — Order Correctness Contract v0 — COMPLETE / CLOSED
-Stage 4C   — RuntimeDecisionPolicy
+Stage 4C   — Runtime Decision Authority
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
-Stage 4D   — StrategySelector / Fast-Path Health Policy
-Stage 4E   — Retry Governance / Attempt Classification
+Stage 4D   — Strategy Selection Authority
+Stage 4E   — Retry / Attempt Authorization
 ```
+
+Stage 4C is now in docs-first boundary definition under
+[ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md).
+No Stage 4C production implementation is claimed. Its first design center is
+live, in-memory `SemanticOutcome` plus terminally applicable exact rule
+refinement when source-applicable; `DecisionReceipt` remains durable governance
+evidence but is not required for the first live hot path.
 
 ## Boundary
 

@@ -18,7 +18,8 @@ Use roadmap documents to understand:
 
 ## Completed Baseline
 
-The project has completed the baseline sequence through Stage 4B.2:
+The project has completed the Stage 4 foundation / evidence baseline through
+Stage 4B.5:
 
 * Stage 1 — Transactional Semantic Core
 * Stage 2 — Compass Layer 1 Write-side Validation
@@ -32,6 +33,8 @@ The project has completed the baseline sequence through Stage 4B.2:
 * Stage 4B — DecisionReceipt / Runtime Evidence Record
 * Stage 4B.1 — DiagnosticTrace / ResolutionTrace
 * Stage 4B.2 — Measurement Evidence
+* Stage 4B.3 — Projection Trust Boundary and Continuation — closed as not currently justified
+* Stage 4B.5 — Order Correctness Contract V0
 
 Detailed sequencing remains in [Implementation Roadmap](implementation_roadmap.md).
 
@@ -45,6 +48,9 @@ Completed implementation details from Stage 3.5B onward are preserved in [Implem
 * [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
 * [Stage 4B.1 Implementation Notes](../implementation_notes/stage_4b_1/)
 * [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
+* [Stage 4B.3 Closeout Notes](../implementation_notes/stage_4b_3/)
+* [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
+* [Stage 4C Docs-First Entry](../implementation_notes/stage_4c/)
 
 Stage 4B PR1–PR7 completed the DecisionReceipt boundary, contract, generic and
 producer mapping, strict serializer, storage-neutral persistence contracts,
@@ -94,7 +100,7 @@ The deferred architecture backlog should be read after the main roadmaps. It doe
 
 ## Current Roadmap Position
 
-Completed stages and remaining Stage 4 foundation work:
+Completed Stage 4 foundation / evidence work:
 
 ```text
 Stage 4B.2
@@ -106,6 +112,11 @@ Stage 4B.3
 Stage 4B.5
 = ORDER CORRECTNESS CONTRACT V0 / COMPLETE / CLOSED
 ```
+
+Stage 4B.3 produced a closeout decision, not a Projection Trust Continuation
+mechanism. Stage 4B.5 contains 18 stable correctness rules, while exactly six
+FullProof `TRANSITION_TRUTH` rules currently have typed runtime producer
+coverage.
 
 Stage 4B, Stage 4B.1, Stage 4B.2, and Stage 4B.5 are complete. Stage 4B.2 consumed a stable
 semantic and execution-topology evidence foundation:
@@ -142,6 +153,10 @@ semantic truth
 → DecisionReceipt
 → DiagnosticTrace / ResolutionTrace
 → Measurement Evidence
+→ Order Correctness Contract V0
+→ Runtime Decision Authority
+→ Strategy Selection Authority
+→ Retry / Attempt Authorization
 → action safety demo
 → later production and agent-facing hardening
 ```
@@ -159,12 +174,15 @@ The public sequence is:
 ```text
 technical evidence
 → SemanticOutcome
-→ DecisionReceipt
-→ DiagnosticTrace when needed
-→ Measurement Matrix / cost evidence
-→ policy-linked RuntimeDecision
-→ StrategySelector
-→ Retry Governance
+  ├→ DecisionReceipt as separately persisted durable governance evidence
+  └→ current-response RuntimeDecision
+     + terminally applicable exact rule refinement when source-applicable
+     ├→ Strategy Selection for the current response → execution
+     └→ when another attempt is considered:
+        Retry / Attempt Authorization → Strategy Selection → execution
+
+DiagnosticTrace and measurement
+= optional supporting evidence for concrete later consumers
 ```
 
 Stage 4 should not be reduced to an error taxonomy.
@@ -175,10 +193,18 @@ Important boundaries:
 
 ```text
 technical status ≠ semantic outcome
+semantic outcome ≠ exact rule refinement
 semantic outcome ≠ runtime decision
 runtime decision ≠ execution strategy
-retry attempt ≠ same intent
+runtime decision ≠ retry authorization
+retry authorization ≠ retry execution
 ```
+
+ADR 0027 defines the Stage 4C–4E authority boundary. The first delivery is
+live/in-memory first: `SemanticOutcome` plus terminally applicable exact rule
+refinement is the primary policy evidence. `DecisionReceipt` remains durable
+governance evidence but is not required for the first live hot path. Restart
+recovery remains a distinct deferred consumer.
 
 Stage 4 does not yet claim to implement production benchmarking, full observability, full authorization, general policy authoring, agent workflow orchestration, or final action safety.
 
@@ -196,10 +222,10 @@ Stage 4 proceeds through:
 * Stage 4B.2 — Measurement Evidence — complete / closed
 * Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified; PR1/PR2 retained as reference, PR3+ not proceeding
 * Stage 4B.5 — Order Correctness Contract v0 — complete / closed / independently delivered
-* Stage 4C — RuntimeDecisionPolicy
+* Stage 4C — Runtime Decision Authority — docs-first boundary
 * Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
-* Stage 4D — StrategySelector / Fast-Path Health Policy
-* Stage 4E — Retry Governance / Attempt Classification
+* Stage 4D — Strategy Selection Authority inside prior authorization
+* Stage 4E — Retry / Attempt Authorization
 
 The detailed implementation of each step belongs in stage-specific implementation notes and PRs, not in this roadmap index.
 
