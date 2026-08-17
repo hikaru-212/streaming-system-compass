@@ -59,13 +59,19 @@ This is the shortest complete conceptual arc: **problem → executable authority
 | 15 | [ADR 0022 — Traced Write-Side Execution Fails Closed](../adr/0022_traced_write_side_execution_fails_closed_before_business_commit.md) | Accepted producer-specific decision | Understand why the current PostgreSQL traced APIs synchronously construct valid Result + Trace before clean business-UOW exit. |
 | 16 | [Stage 4B.1 Closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Confirm completed producer-specific traces, intentional non-integrations, and the Stage 4B.2 handoff. |
 | 17 | [Stage 4B.2 Closeout](../implementation_notes/stage_4b_2/stage_4b_2_closeout.md) | Stage closeout | Confirm producer-specific measurement, valid Level-B and Level-C evidence, bounded explanation, limitations, and the no-policy handoff. |
-| 18 | [Why Stage 4B.5 Exists](../implementation_notes/stage_4b_5/why_stage_4b_5_exists.md) | Completed stage rationale | Follow coarse semantic rejection into stable exact rule evidence, same-invocation propagation, terminal refinement, and the separate future Retry Governance boundary. |
+| 18 | [ADR 0026 — Projection Trust Continuation Is Not Currently Justified](../adr/0026_projection_trust_continuation_is_not_currently_justified.md) | Accepted closeout decision | Understand why Stage 4B.3 closed after PR1/PR2 investigation without implementing a continuation mechanism and which evidence would justify re-entry. |
+| 19 | [Why Stage 4B.5 Exists](../implementation_notes/stage_4b_5/why_stage_4b_5_exists.md) | Completed stage rationale | Follow coarse semantic rejection into 18 stable rules, exactly six FullProof `TRANSITION_TRUTH` producer-covered rules, same-invocation propagation, terminal refinement, and the separate retry-authorization boundary. |
+| 20 | [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md) | Accepted responsibility boundary | Separate Stage 4C current-response authority, Stage 4D strategy selection, Stage 4E attempt authorization, and execution. |
+| 21 | [Stage 4C — Runtime Decision Authority](../implementation_notes/stage_4c/) | Docs-first stage entry | Review the live/in-memory-first evidence posture, DecisionReceipt durability distinction, non-goals, unresolved questions, and production-entry criteria. |
 
-Stage 4B, Stage 4B.1, Stage 4B.2, and Stage 4B.5 are complete, but mapping does not
-automatically materialize or persist a receipt, and measurement evidence does
-not create production policy. Stage 4B.5 exact rule evidence does not authorize
-retry. Stage 4B.3 remains separately owned and not started; policy, strategy,
-retry, action authorization, and execution remain later work.
+Stage 4B, Stage 4B.1, Stage 4B.2, and Stage 4B.5 are complete. Stage 4B.3 is
+complete and closed as not currently justified: PR1/PR2 remain reference
+evidence, ADR 0026 owns re-entry, and no continuation mechanism was implemented.
+Mapping does not automatically materialize or persist a receipt, measurement
+evidence does not create production policy, and Stage 4B.5 exact rule evidence
+does not authorize retry. ADR 0027 now defines the docs-first Stage 4C–4E
+authority boundary; no production policy, strategy, retry authorization, or
+execution is claimed.
 
 ## 6. Choose by Professional Background
 

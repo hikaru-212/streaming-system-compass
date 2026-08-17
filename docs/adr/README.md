@@ -46,6 +46,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0024 | [Detailed PostgreSQL Write Measurement Is an Opt-In Capability](0024_detailed_postgres_write_measurement_is_opt_in.md) | Accepted | Preserves existing unmeasured writes and makes detailed Stage 4B.2 measurement an explicit execution-level capability. |
 | 0025 | [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) | Accepted | Preserves PR6 as complete comparison evidence while assigning causal decomposition to a separate post-PR6 supplemental investigation. |
 | 0026 | [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) | Accepted | Closes Stage 4B.3 after source-grounded necessity review because the current exact-next projection runtime already owns normal materialization correctness and no concrete consumer requires incremental qualification. |
+| 0027 | [Separate Runtime Decision, Strategy, and Retry Authority](0027_separate_runtime_decision_strategy_and_retry_authority.md) | Accepted | Separates Stage 4C current-response authority, Stage 4D strategy selection, Stage 4E attempt authorization, and later execution while preserving a live/in-memory-first evidence posture. |
 
 ---
 
@@ -88,6 +89,7 @@ Recommended order:
 25. [Detailed PostgreSQL Write Measurement Is an Opt-In Capability](0024_detailed_postgres_write_measurement_is_opt_in.md) — explains why detailed Stage 4B.2 collection uses an explicit measured surface while existing unmeasured execution remains valid.
 26. [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) — explains why the unexpected PR6 latency ordering is preserved as comparison evidence and investigated through a separate bounded explanatory supplement instead of being promoted directly into an architecture conclusion.
 27. [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) — explains why accepted-history authority, exact-next per-order progress, canonical reduction, atomic state/progress persistence, permissions, and replay/rebuild already form the required current projection correctness model without another trust-continuation layer.
+28. [Separate Runtime Decision, Strategy, and Retry Authority](0027_separate_runtime_decision_strategy_and_retry_authority.md) — explains why current-response authority, strategy selection, another-attempt authorization, and execution remain separate, and why the first live decision path does not require durable receipt persistence.
 
 ---
 
@@ -166,6 +168,13 @@ transaction, permission, and replay boundaries already own normal projection
 correctness. PR1 and PR2 remain historical/reference investigation; PR3 and
 later Stage 4B.3 implementation work do not proceed without a concrete consumer
 and a newly demonstrated correctness need.
+
+ADR 0027 opens the Stage 4C+ decision-governance phase by separating Stage 4C
+current-response authority, Stage 4D strategy selection inside prior
+authorization, Stage 4E another-attempt authorization and constraints, and
+actual execution. It also records live in-memory governance as the first design
+center without reducing `DecisionReceipt`'s durable evidence role or treating
+durable evidence as permanent authorization.
 
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
@@ -246,6 +255,7 @@ Recommended pattern:
 0024_detailed_postgres_write_measurement_is_opt_in.md
 0025_pr6_comparison_requires_separate_explanatory_characterization.md
 0026_projection_trust_continuation_is_not_currently_justified.md
+0027_separate_runtime_decision_strategy_and_retry_authority.md
 ```
 
 Evolution or supporting notes may be kept as separate files:

@@ -128,7 +128,7 @@ AttemptLog
 
 DecisionReceipt
 ≠
-RuntimeDecisionPolicy
+RuntimeDecision
 ```
 
 A `SemanticOutcome` describes what a technical result means semantically.
@@ -139,7 +139,8 @@ A `DiagnosticTrace` explains detailed failure paths, replay cursors, partial pro
 
 An `AttemptLog` records retry / replay / attempt sequences.
 
-A `RuntimeDecisionPolicy` decides what the runtime is allowed to do.
+A `RuntimeDecision` records what generic current response is permitted,
+required, or denied. Stage 4E separately owns another-attempt authorization.
 
 Stage 4B should only implement the receipt layer.
 
@@ -417,8 +418,12 @@ PR7 — Stage 4B Closeout — Complete
 Stage 4B.1 PR1–PR7 — Complete
 Stage 4B.2 PR1–PR8 — Complete / Closed
 Stage 4B.5 — Order Correctness Contract v0 — Complete / Closed
-Stage 4B.3 — Projection Trust Boundary and Continuation — Separately Owned / Not Started
+Stage 4B.3 — Projection Trust Boundary and Continuation — Complete / Closed as Not Currently Justified
 ```
+
+Stage 4B.3 PR1/PR2 remain investigation and reference evidence. ADR 0026 owns
+the closeout and re-entry boundary; PR3+ intentionally do not proceed. No
+Projection Trust Continuation mechanism was implemented.
 
 ---
 
@@ -457,7 +462,7 @@ completed Stage 4B contract or the completed Stage 4B.1 boundary.
 
 ---
 
-## Relationship to Future Stage 4 Work
+## Relationship to Later Stage 4 Boundaries
 
 Stage 4B remains narrow.
 
@@ -474,22 +479,27 @@ Stage 4B.5
 = Order Correctness Contract v0 — complete / closed
 
 Stage 4C
-= RuntimeDecisionPolicy
+= Runtime Decision Authority
 
 Stage 4C.5
 = Layer 1 / Layer 2 Outcome Alignment
 
 Stage 4D
-= StrategySelector / Fast-Path Health Policy
+= Strategy Selection Authority inside an already-permitted action
 
 Stage 4E
-= Retry Governance / Attempt Classification
+= Retry / Attempt Authorization
 ```
 
 Stage 4B.5 now provides exact machine-readable correctness evidence without
-implementing Retry Governance. The other later layers remain separately owned.
+implementing Retry Governance. Exactly six FullProof `TRANSITION_TRUTH` rules
+currently have typed runtime producer coverage; the 18-rule contract does not
+imply 18 producer-covered rules. ADR 0027 keeps the later decision, strategy,
+attempt-authorization, and execution boundaries separately owned.
 
-It should preserve clear extension points so those layers can consume receipt evidence later.
+`DecisionReceipt` remains durable governance evidence and a possible later
+supporting input. ADR 0027 does not require receipt persistence before the first
+live, in-memory Stage 4C or Stage 4E decision.
 
 ---
 
@@ -516,16 +526,16 @@ receipt boundary and mapping shape stabilized.
 
 ## Non-goals
 
-Stage 4B does not implement the later governance layers that consume
-DecisionReceipt evidence:
+Stage 4B does not implement later governance layers that may consume receipt
+evidence when a concrete consumer requires it:
 
 ```text
 DiagnosticTrace
 Measurement Matrix
 Order Domain Policy Contract
-RuntimeDecisionPolicy
-StrategySelector
-RetryGovernance
+Runtime Decision Authority
+Strategy Selection Authority
+Retry / Attempt Authorization
 ActionSafetyGate
 automatic receipt materialization
 accepted-history reconciliation

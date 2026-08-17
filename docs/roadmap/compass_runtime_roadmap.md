@@ -21,6 +21,8 @@ For completed and current stage execution notes, see:
 - [Stage 4A Implementation Notes](../implementation_notes/stage_4a/)
 - [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
 - [Stage 4B.3 Implementation Notes](../implementation_notes/stage_4b_3/)
+- [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
+- [Stage 4C Docs-First Entry](../implementation_notes/stage_4c/)
 
 This document focuses on a narrower question:
 
@@ -496,12 +498,29 @@ The high-level flow is:
 ```text
 technical evidence
 → SemanticOutcome
-→ DecisionReceipt
-→ DiagnosticTrace when needed
-→ Measurement Matrix / cost evidence
-→ policy-linked RuntimeDecision
-→ StrategySelector
-→ Retry Governance
+
+durable evidence path:
+SemanticOutcome
+→ DecisionReceipt as separately persisted durable governance evidence
+
+live decision path:
+SemanticOutcome
++ terminally applicable exact rule refinement when source-applicable
+→ current-response RuntimeDecision
+
+normal current execution:
+RuntimeDecision
+→ Stage 4D Strategy Selection
+→ execution
+
+when another attempt is being considered:
+RuntimeDecision / current-response context
+→ Stage 4E Retry / Attempt Authorization
+→ Stage 4D Strategy Selection for the authorized attempt
+→ execution
+
+DiagnosticTrace and measurement
+= optional supporting evidence for concrete later consumers
 ```
 
 ---
@@ -522,6 +541,14 @@ runtime decision
 runtime decision
 ≠
 execution strategy
+
+runtime decision
+≠
+retry authorization
+
+retry authorization
+≠
+retry execution
 
 retry attempt
 ≠
@@ -548,7 +575,7 @@ The capability path is:
 6. convert semantic outcomes into runtime decisions
 7. align Layer 1 and Layer 2 outcome families
 8. select execution strategies among semantically acceptable paths
-9. classify retry attempts without assuming same intent
+9. authorize and constrain another attempt without assuming same intent
 
 Stage 4B.2 is complete and closed after producer-specific write-side
 measurement semantics, controlled PostgreSQL strategy comparison, explanatory
@@ -560,6 +587,20 @@ PR1/PR2 remain reference evidence and PR3+ do not proceed. Stage 4B.5 completed
 as separately owned parallel foundation work, independent from Stage 4B.3.
 Stage 4B.2 and Stage 4B.5 did not implement policy, strategy selection, retry
 governance, or rate admission.
+
+Stage 4B.5 defines 18 stable correctness rules, but exactly six FullProof
+`TRANSITION_TRUTH` rules currently have typed runtime producer coverage. Rule
+identity and observed rule evidence do not authorize a runtime response or
+retry.
+
+[ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
+defines Stage 4C as current-response authority, Stage 4D as strategy selection
+inside prior authorization, and Stage 4E as another-attempt authorization and
+constraints. Actual execution remains separate. The first delivery is
+live/in-memory first: `SemanticOutcome` plus terminally applicable exact rule
+refinement is the primary policy evidence. `DecisionReceipt` remains durable
+governance evidence but is not required for the first live hot path; restart
+recovery remains a distinct deferred consumer.
 
 ---
 
