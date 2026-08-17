@@ -188,6 +188,8 @@ db/migrations/007_create_decision_receipts.sql
 Apply them to the development database when you want to inspect tables manually:
 
 ```bash
+set -euo pipefail
+
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_tables.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
@@ -200,6 +202,8 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/007_create_decision_rec
 Apply them to the test database before running PostgreSQL integration tests:
 
 ```bash
+set -euo pipefail
+
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
@@ -209,9 +213,14 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_project
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/007_create_decision_receipts.sql
 ```
 
-The CI workflow may also apply migrations automatically by iterating through `db/migrations/*.sql` in filename order:
+For full migration/bootstrap verification, use a fresh dedicated `_test`
+database; an already-migrated database is not evidence that every historical
+migration is independently rerunnable. The CI workflow applies migrations
+automatically through this fail-fast filename-order loop:
 
 ```bash
+set -euo pipefail
+
 for migration in db/migrations/*.sql; do
   echo "Applying ${migration}..."
   psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
@@ -650,6 +659,8 @@ TEST_DATABASE_URL
 From the repository root:
 
 ```bash
+set -euo pipefail
+
 # 1. Start PostgreSQL
 docker compose up -d
 

@@ -1,5 +1,8 @@
+import os
+
 import pytest
 from psycopg import Connection
+from psycopg.conninfo import conninfo_to_dict
 from tests.shared.postgres import count_rows
 
 
@@ -7,11 +10,17 @@ pytestmark = pytest.mark.usefixtures("clean_database")
 
 
 def test_connected_to_test_database(db_connection: Connection):
+    configured_database = conninfo_to_dict(
+        os.environ["TEST_DATABASE_URL"]
+    ).get("dbname")
+
     with db_connection.cursor() as cursor:
         cursor.execute("SELECT current_database()")
         row = cursor.fetchone()
 
-    assert row[0] == "compass_test"
+    assert configured_database is not None
+    assert row[0] == configured_database
+    assert row[0].endswith("_test")
 
 
 def test_required_tables_exist(db_connection: Connection):

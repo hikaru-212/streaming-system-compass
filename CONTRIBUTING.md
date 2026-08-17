@@ -95,14 +95,22 @@ Point the destructive test suite only at that database:
 export TEST_DATABASE_URL="postgresql://compass_user:compass_password@localhost:5433/compass_test"
 ```
 
-Apply every migration in order:
+For full migration/bootstrap verification, use a fresh dedicated `_test`
+database; an already-migrated database does not establish that every
+historical migration is independently rerunnable. Apply every migration in
+order:
 
 ```bash
+set -euo pipefail
+
 for migration in db/migrations/*.sql; do
   echo "Applying ${migration}..."
   psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
 done
 ```
+
+`ON_ERROR_STOP` makes `psql` return failure on a SQL error; the shell setting
+prevents later migrations from running after that failure.
 
 Run the same lint rule and coverage threshold used by CI:
 

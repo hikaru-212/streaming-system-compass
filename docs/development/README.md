@@ -180,6 +180,8 @@ db/migrations/007_create_decision_receipts.sql
 The expected migration order is:
 
 ```bash
+set -euo pipefail
+
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
@@ -194,9 +196,13 @@ It does not add a PostgreSQL receipt store or runtime materialization.
 
 Use `DATABASE_URL` instead of `TEST_DATABASE_URL` only when applying migrations to the local development database for manual inspection.
 
-If running migrations through the same automatic loop used by CI, the expected local command is:
+For full migration/bootstrap verification, use a fresh dedicated `_test`
+database. If running migrations through the same fail-fast automatic loop used
+by CI, the expected local command is:
 
 ```bash
+set -euo pipefail
+
 for migration in db/migrations/*.sql; do
   echo "Applying ${migration}..."
   psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
