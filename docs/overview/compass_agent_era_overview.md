@@ -32,7 +32,7 @@
   claimed.
 - The first decision-governance direction is live/in-memory first.
   `SemanticOutcome` plus terminally applicable exact rule refinement is the
-  primary policy evidence; `DecisionReceipt` remains durable governance evidence
+  primary live decision evidence; `DecisionReceipt` remains durable governance evidence
   but is not required for the first live hot path.
 
 See the [Stage 4B closeout](../implementation_notes/stage_4b/stage_4b_closeout.md)
@@ -156,18 +156,28 @@ Compass instead recognizes that the same technical result may mean very differen
 - request identity conflicted;
 - operator review required.
 
-The target architecture separates the runtime path into distinct
-responsibilities. The full flow below is not the current end-to-end
-implementation:
+The target architecture separates live decision evidence from downstream
+responsibilities. The model below is not the current end-to-end implementation:
 
 ```text
-Technical evidence
-→ SemanticOutcome
-→ Policy
-→ Runtime decision
-→ Strategy
-→ Action
+live SemanticOutcome
++ source-applicable terminal exact rule evidence
+→ Runtime Decision Authority
+
+authorized current response
+→ Strategy Selection Authority
+→ execution
+
+another attempt considered
+→ Retry / Attempt Authorization
+→ Strategy Selection Authority for the authorized attempt
+→ execution
 ```
+
+The normal current-response path does not require Retry / Attempt
+Authorization. Durable `DecisionReceipt` evidence may support later consumers,
+but receipt persistence is not a prerequisite for live Runtime Decision
+Authority.
 
 `SemanticOutcome` describes what the evidence means.
 
@@ -180,7 +190,8 @@ It does not decide:
 - whether to notify an operator;
 - whether to execute an irreversible mutation.
 
-Those are later governance responsibilities.
+Those belong to separately owned decision, strategy-selection, attempt-
+authorization, and execution responsibilities.
 
 This separation prevents an apparently convenient status such as `ok = true`,
 a retry-like result, or `FAST_PATH_UNAVAILABLE` from silently becoming

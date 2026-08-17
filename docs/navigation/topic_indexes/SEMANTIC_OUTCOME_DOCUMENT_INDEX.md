@@ -6,9 +6,11 @@
 
 This is topic-based navigation for the completed Stage 4A `SemanticOutcome` core. Existing `docs/` folders remain the source of each document's role and chronology. A document appears under multiple topics only when it makes a substantial contribution to each.
 
-Technical evidence is not semantic meaning. `SemanticOutcome` describes the semantic meaning of bounded evidence but does not authorize action. Stage 4A completed the typed interpretation boundary. Stage 4B then completed the `DecisionReceipt` contract, generic and producer mappings, tri-state flags, strict serializer v1, storage-neutral persistence contracts, and explicit caller-owned PostgreSQL persistence. Mapping remains explicit rather than automatic. Stage 4B.1 completed bounded producer-specific `DiagnosticTrace` / `ResolutionTrace` contracts and PostgreSQL write-side Result + Trace integration while preserving their separation from semantic meaning. Measurement, policy, strategy, retry, and action remain later work.
+Technical evidence is not semantic meaning. `SemanticOutcome` describes the semantic meaning of bounded evidence but does not authorize action. Stage 4A completed the typed interpretation boundary. Stage 4B then completed the `DecisionReceipt` contract, generic and producer mappings, tri-state flags, strict serializer v1, storage-neutral persistence contracts, and explicit caller-owned PostgreSQL persistence. Mapping remains explicit rather than automatic. Stage 4B.1 completed bounded producer-specific `DiagnosticTrace` / `ResolutionTrace` contracts and PostgreSQL write-side Result + Trace integration while preserving their separation from semantic meaning. Stage 4B.2 completed bounded producer-specific Measurement Evidence. Production Runtime Decision Authority is the current next implementation direction; Strategy Selection Authority, Retry / Attempt Authorization, and Action Safety remain future.
 
-This index does not override Stage 4A contracts or establish semantic, runtime-policy, retry, strategy, receipt, trace, or public-serialization authority.
+This index does not override Stage 4A contracts or establish Runtime Decision
+Authority, Strategy Selection Authority, Retry / Attempt Authorization,
+receipt, trace, or public-serialization authority.
 
 ## SemanticOutcome Reading Path
 
@@ -175,7 +177,7 @@ Stage 4A may express that a fast path is unavailable or that authority fallback 
 | [Runtime technical-status mapping](../../implementation_notes/stage_4a/runtime_technical_status_mapping.md) | Implementation boundary | Core | Maps missing snapshot/tail failure into semantic fast-path unavailability. | Generic mapper does not choose fallback. |
 | [Drift validation cost boundary](../../implementation_notes/stage_4a/drift_validation_cost_boundary.md) | Design/implementation note | Deep dive | Preserves cost differences future selectors may use. | Stage 4D is the stated later strategy consumer. |
 
-## SemanticOutcome versus Retry Governance
+## SemanticOutcome versus Retry / Attempt Authorization
 
 Stage 4A may preserve retry-relevant meaning such as idempotent replay classification, concurrency uncertainty, fast-path unavailability, and unresolved evidence. It does not decide whether to retry, whether intent remains valid, retry budget, attempt count, backoff/jitter, irreversible-action safety, or attempt lineage.
 
@@ -183,10 +185,10 @@ Stage 4A may preserve retry-relevant meaning such as idempotent replay classific
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|
-| [Runtime SemanticOutcome boundary](../../boundary_notes/runtime_semantic_outcome_boundary.md) | Boundary note | Start here | Separates retry attempts, preserved intent, and outcome meaning. | Retry governance deferred beyond Stage 4A. |
+| [Runtime SemanticOutcome boundary](../../boundary_notes/runtime_semantic_outcome_boundary.md) | Boundary note | Start here | Separates retry attempts, preserved intent, and outcome meaning. | Retry / Attempt Authorization remains a separate future responsibility. |
 | [Runtime technical-status mapping](../../implementation_notes/stage_4a/runtime_technical_status_mapping.md) | Implementation boundary | Core | Maps idempotency and concurrency evidence without deciding another attempt. | Implemented PR3 baseline. |
 | [Write-side admission outcome mapping](../../implementation_notes/stage_4a/write_side_admission_outcome_mapping.md) | Implementation boundary | Core | Preserves replay/conflict and stale/timeout evidence at the Write-side boundary. | Completed PR5 adapter. |
-| [Stage 4A closeout](../../implementation_notes/stage_4a/stage_4a_closeout.md) | Stage closeout | Core | Confirms retry governance, automatic retry blocking, and attempt records remain deferred. | Current stage maturity. |
+| [Stage 4A closeout](../../implementation_notes/stage_4a/stage_4a_closeout.md) | Stage closeout | Core | Confirms another-attempt authorization, automatic retry blocking, and attempt records remain deferred. | Historical Stage 4A maturity record; ADR 0027 owns current terminology. |
 
 ## SemanticOutcome versus DecisionReceipt and DiagnosticTrace
 
@@ -194,8 +196,9 @@ Stage 4A produces semantic meaning. Completed Stage 4B can explicitly map that m
 
 No mapper automatically invokes the store or reconciles accepted history into
 receipts. Stage 4B.1 producer-specific traces do not add that orchestration or
-compose automatically with `SemanticOutcome`; policy, retry governance,
-strategy selection, and action execution also remain unimplemented.
+compose automatically with `SemanticOutcome`; Runtime Decision Authority,
+Strategy Selection Authority, Retry / Attempt Authorization, and action
+execution also remain unimplemented.
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|
@@ -240,8 +243,9 @@ Stage 4A completed the `SemanticOutcome` core and its generic, Read-side, Snapsh
 Stage 4B completes `DecisionReceipt`, its generic and producer mappings,
 tri-state flags, strict serializer v1, storage-neutral persistence contracts,
 and explicit caller-owned PostgreSQL persistence. Stage 4B itself did not
-implement automatic materialization, accepted-history reconciliation, runtime
-policy, strategy selection, retry governance, attempt logging, fallback
+implement automatic materialization, accepted-history reconciliation, Runtime
+Decision Authority, Strategy Selection Authority, Retry / Attempt
+Authorization, attempt logging, fallback
 execution, rebuild, quarantine, operator-review execution, or action safety.
 Stage 4B.1 later completed bounded producer-specific trace contracts without
 changing those Stage 4B non-goals.
@@ -254,7 +258,7 @@ changing those Stage 4B non-goals.
 | [Read-side outcome mapping](../../implementation_notes/stage_4a/read_side_outcome_mapping.md) | Implementation boundary | Core | Defines the completed Read-side/Snapshot adapter baseline. | Ordinary worker freshness remains outside scope. |
 | [Write-side admission outcome mapping](../../implementation_notes/stage_4a/write_side_admission_outcome_mapping.md) | Implementation boundary | Core | Defines the completed Write-side adapter baseline. | Domain rejection and later receipt policy remain outside the explicit mapping. |
 | [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Start here | Records the completed receipt boundary, mappings, serialization, persistence, and explicit non-goals. | Stage 4B is complete; its Stage 4B.1 transition is historical. |
-| [Stage 4B.1 Closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Start here | Records the completed trace/result boundary and later consumer handoffs. | Stage 4B.1 is complete; Stage 4B.2 is next. |
+| [Stage 4B.1 Closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Start here | Records the completed trace/result boundary and later consumer handoffs. | At that closeout checkpoint, Stage 4B.1 was complete and Stage 4B.2 was next; both are now complete. |
 
 ## Implementation History and Design Evolution
 

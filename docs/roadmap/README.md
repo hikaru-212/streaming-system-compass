@@ -79,7 +79,7 @@ Completed work is recorded in the
 | Document | Purpose |
 |---|---|
 | [Implementation Roadmap](implementation_roadmap.md) | Defines the overall implementation order from transactional semantic core to projection runtime, durable persistence, snapshot trust / replay efficiency, minimal actor / permission boundary, Stage 4 runtime semantic governance, Stage 5 action safety, and later production / agent-facing hardening. |
-| [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward runtime semantic governance, structured semantic outcomes, runtime decisions, strategy selection, retry governance, action safety, and later production / agent-facing hardening. |
+| [Compass Runtime Roadmap](compass_runtime_roadmap.md) | Defines the focused evolution path from the current Compass write-side baseline toward structured semantic outcomes, separate runtime decision / strategy / another-attempt authorities, action safety, and later production / agent-facing hardening. |
 | [Deferred Architecture Backlog](deferred_architecture_backlog.md) | Records architecture concerns intentionally deferred beyond the current implementation scope, including aggregate snapshot revival, UUIDv7 evaluation, protocol boundaries, JSONB evidence hydration, metadata timing, append-only hardening, retry classification, cleanup failure handling, isolated derived-state runtime, and later production / governance-hardening concerns. |
 
 ---
@@ -92,7 +92,10 @@ Completed work is recorded in the
 
 The implementation roadmap gives the global project sequence.
 
-The Compass runtime roadmap gives a more focused view of how Compass should evolve from the current write-side baseline toward runtime semantic governance, structured semantic outcomes, runtime decisions, strategy selection, retry governance, action safety, and later hardening.
+The Compass runtime roadmap gives a more focused view of how Compass should
+evolve from the current write-side baseline toward structured semantic
+outcomes, separate runtime decision / strategy / another-attempt authorities,
+action safety, and later hardening.
 
 The deferred architecture backlog should be read after the main roadmaps. It does not expand the current implementation scope. It records known architecture concerns that have been intentionally postponed until the right stage.
 
@@ -202,7 +205,7 @@ retry authorization ≠ retry execution
 
 ADR 0027 defines the Stage 4C–4E authority boundary. The first delivery is
 live/in-memory first: `SemanticOutcome` plus terminally applicable exact rule
-refinement is the primary policy evidence. `DecisionReceipt` remains durable
+refinement is the primary live decision evidence. `DecisionReceipt` remains durable
 governance evidence but is not required for the first live hot path. Restart
 recovery remains a distinct deferred consumer.
 
