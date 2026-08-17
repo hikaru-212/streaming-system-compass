@@ -26,7 +26,7 @@ This is the shortest complete conceptual arc: **problem → executable authority
 |---:|---|---|
 | 1 | [Semantic Admission manifesto](../semantic_admission/manifesto.md) | Explains why successful agent execution does not establish that an action should become reality. |
 | 2 | [Transactional Core](../architecture/transactional_core.md) | Shows the executable path from command to candidate, validation, concurrency admission, accepted history, and replay. |
-| 3 | [Runtime SemanticOutcome Boundary](../boundary_notes/runtime_semantic_outcome_boundary.md) | Separates technical evidence, semantic meaning, later runtime decision, strategy, and retry governance. |
+| 3 | [Runtime SemanticOutcome Boundary](../boundary_notes/runtime_semantic_outcome_boundary.md) | Separates technical evidence, semantic meaning, later Runtime Decision Authority, strategy selection, and retry / attempt authorization. |
 
 ## 4. Read Five Documents
 
@@ -35,8 +35,8 @@ This is the shortest complete conceptual arc: **problem → executable authority
 | 1 | [Semantic Admission manifesto](../semantic_admission/manifesto.md) | Why must an agent action remain a candidate before mutation? Candidate action is broader than the current candidate-event implementation. | Runtime mechanics and evidence contracts. |
 | 2 | [Transactional Core](../architecture/transactional_core.md) | How does the current candidate-event implementation separate domain decision, semantic validation, concurrency admission, and accepted append? | Durable implementation detail and later governance. |
 | 3 | [ADR 0008 — Candidate/Accepted Identity](../adr/0008_pre_allocated_event_identity_and_candidate_accepted_boundary.md) | Why does identifier existence not establish accepted authority? | Cross-attempt candidate identity policy. |
-| 4 | [Snapshot Trust Contract](../architecture/snapshot_trust_contract.md) | Why are projection and snapshot state derived evidence rather than accepted authority? | Store, hashing, and resolver details. |
-| 5 | [Runtime SemanticOutcome Boundary](../boundary_notes/runtime_semantic_outcome_boundary.md) | How does bounded evidence acquire semantic meaning without becoming action? | Policy, strategy, retry, receipt materialization, and execution. |
+| 4 | [Runtime SemanticOutcome Boundary](../boundary_notes/runtime_semantic_outcome_boundary.md) | How does bounded evidence acquire semantic meaning without becoming action? | Runtime decision, strategy, retry / attempt authorization, receipt materialization, and execution. |
+| 5 | [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md) | How do current-response authority, strategy selection, conditional another-attempt authorization, and execution remain separate? | Concrete Stage 4C–4E production implementations. |
 
 ## 5. Deep Architecture Path
 
@@ -48,7 +48,7 @@ This is the shortest complete conceptual arc: **problem → executable authority
 | 4 | [ADR 0010](../adr/0010_transaction_atomicity_vs_concurrency_admission.md) | Accepted ADR | Separate all-or-nothing persistence from competing-writer admission. |
 | 5 | [ADR 0011](../adr/0011_validation_mode_vs_validation_placement.md) | Accepted, baseline-implemented ADR | Learn the supported validation-placement and admission-strategy combinations. |
 | 6 | [Projection Module Boundary](../boundary_notes/projection_module.md) | Boundary note | Establish projection as deterministic derivation, not truth ownership. |
-| 7 | [Snapshot Trust Contract](../architecture/snapshot_trust_contract.md) | Architecture | Extend the authority model through snapshot qualification and replay fallback. |
+| 7 | [Snapshot Trust Contract](../architecture/snapshot_trust_contract.md) | Optional reference architecture | Extend the authority model through bounded snapshot qualification and replay fallback without making snapshots a current Order-workload dependency. |
 | 8 | [Runtime SemanticOutcome Boundary](../boundary_notes/runtime_semantic_outcome_boundary.md) | Boundary note | Establish technical evidence → semantic meaning and protect later-layer separation. |
 | 9 | [SemanticOutcome Result Contract](../implementation_notes/stage_4a/semantic_outcome_result_contract.md) | Completed Stage 4A implementation boundary | See the typed internal meaning/evidence contract without executable authorization. |
 | 10 | [ADR 0016 — DecisionReceipt](../adr/0016_decision_receipt_is_governance_evidence.md) | Accepted responsibility boundary | Establish DecisionReceipt as governance evidence rather than policy, trace, or action. |
@@ -59,13 +59,19 @@ This is the shortest complete conceptual arc: **problem → executable authority
 | 15 | [ADR 0022 — Traced Write-Side Execution Fails Closed](../adr/0022_traced_write_side_execution_fails_closed_before_business_commit.md) | Accepted producer-specific decision | Understand why the current PostgreSQL traced APIs synchronously construct valid Result + Trace before clean business-UOW exit. |
 | 16 | [Stage 4B.1 Closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Confirm completed producer-specific traces, intentional non-integrations, and the Stage 4B.2 handoff. |
 | 17 | [Stage 4B.2 Closeout](../implementation_notes/stage_4b_2/stage_4b_2_closeout.md) | Stage closeout | Confirm producer-specific measurement, valid Level-B and Level-C evidence, bounded explanation, limitations, and the no-policy handoff. |
-| 18 | [Why Stage 4B.5 Exists](../implementation_notes/stage_4b_5/why_stage_4b_5_exists.md) | Completed stage rationale | Follow coarse semantic rejection into stable exact rule evidence, same-invocation propagation, terminal refinement, and the separate future Retry Governance boundary. |
+| 18 | [ADR 0026 — Projection Trust Continuation Is Not Currently Justified](../adr/0026_projection_trust_continuation_is_not_currently_justified.md) | Accepted closeout decision | Understand why Stage 4B.3 closed after PR1/PR2 investigation without implementing a continuation mechanism and which evidence would justify re-entry. |
+| 19 | [Why Stage 4B.5 Exists](../implementation_notes/stage_4b_5/why_stage_4b_5_exists.md) | Completed stage rationale | Follow coarse semantic rejection into 18 stable rules, exactly six FullProof `TRANSITION_TRUTH` producer-covered rules, same-invocation propagation, terminal refinement, and the separate retry-authorization boundary. |
+| 20 | [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md) | Accepted responsibility boundary | Separate Stage 4C current-response authority, Stage 4D strategy selection, Stage 4E attempt authorization, and execution. |
+| 21 | [Stage 4C — Runtime Decision Authority](../implementation_notes/stage_4c/) | Docs-first stage entry | Review the live/in-memory-first evidence posture, DecisionReceipt durability distinction, non-goals, unresolved questions, and production-entry criteria. |
 
-Stage 4B, Stage 4B.1, Stage 4B.2, and Stage 4B.5 are complete, but mapping does not
-automatically materialize or persist a receipt, and measurement evidence does
-not create production policy. Stage 4B.5 exact rule evidence does not authorize
-retry. Stage 4B.3 remains separately owned and not started; policy, strategy,
-retry, action authorization, and execution remain later work.
+Stage 4B, Stage 4B.1, Stage 4B.2, and Stage 4B.5 are complete. Stage 4B.3 is
+complete and closed as not currently justified: PR1/PR2 remain reference
+evidence, ADR 0026 owns re-entry, and no continuation mechanism was implemented.
+Mapping does not automatically materialize or persist a receipt, measurement
+evidence does not create production policy, and Stage 4B.5 exact rule evidence
+does not authorize retry. ADR 0027 now defines the docs-first Stage 4C–4E
+authority boundary; no production policy, strategy, retry authorization, or
+execution is claimed.
 
 ## 6. Choose by Professional Background
 
@@ -120,15 +126,15 @@ Completion below means the repository's bounded baseline, not production complet
 
 | Area | Current maturity | Important limitation |
 |---|---|---|
-| Write-side durable baseline | Completed | Not complete distributed production hardening or later retry governance. |
+| Write-side durable baseline | Completed | Not complete distributed production hardening or later Retry / Attempt Authorization. |
 | Read-side durable baseline | Completed | Exact-next per-order progress owns current completeness; multi-worker coordination and a global committed watermark remain deferred. |
-| Snapshot Trust bounded baseline | Completed | Projection snapshots only; aggregate snapshots and broader reusable eligibility remain deferred. |
+| Snapshot Trust bounded baseline | Completed reference infrastructure | Optional for the current Order workload; aggregate snapshots, broader reusable eligibility, and further expansion require concrete consumer or workload evidence. |
 | Durable permission baseline | Completed | Not complete IAM, business authorization, or emergency repair governance. |
 | Stage 4A `SemanticOutcome` | Completed | Interprets evidence; does not execute policy, strategy, retry, or action. |
 | Stage 4B `DecisionReceipt` | Completed | Generic and producer mapping, tri-state flags, strict serializer v1, storage-neutral contracts, and explicit caller-owned PostgreSQL persistence exist; automatic materialization does not. |
 | Stage 4B.1 `DiagnosticTrace` / `ResolutionTrace` | Completed | Producer-specific contracts exist and PostgreSQL write-side tracing is integrated; snapshot runtime integration, projection-worker tracing, persistence, and a generic abstraction remain deferred. |
 | Stage 4B.2 measurement / cost evidence | Completed | Producer-specific measurement and bounded Level-B/Level-C evidence exist; they remain distinct from Stage 4B.1 execution topology and later policy. |
-| Policy / strategy / retry / action authorization and execution | Future | Must not be projected backward into current runtime behavior. |
+| Runtime Decision Authority / strategy / retry-attempt authorization / action execution | Stage 4C docs-first; later responsibilities future | No production Stage 4C authority is claimed; Stage 4D and conditional Stage 4E remain future and must not be projected backward into current runtime behavior. |
 
 ## 8. What Not to Assume
 

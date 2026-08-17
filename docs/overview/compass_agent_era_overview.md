@@ -23,15 +23,25 @@
 - Stage 4B.5 Order Correctness Contract v0 is complete and closed: the contract
   has 18 stable rules, while current typed FullProof production covers exactly
   six transition-truth rules and does not authorize retry.
-- Stage 4B.3 Projection Trust Boundary and Continuation remains separately
-  owned and not started.
-- Policy, strategy selection, retry governance, action authorization, and
-  external action execution remain later work.
+- Stage 4B.3 is complete and closed as not currently justified. PR1/PR2 remain
+  investigation/reference evidence, ADR 0026 owns re-entry, and no Projection
+  Trust Continuation mechanism was implemented.
+- Stage 4C is now at a docs-first boundary: current-response Runtime Decision
+  Authority is separate from Stage 4D strategy selection, Stage 4E retry/attempt
+  authorization, and external execution. No production implementation is
+  claimed.
+- The first decision-governance direction is live/in-memory first.
+  `SemanticOutcome` plus terminally applicable exact rule refinement is the
+  primary live decision evidence; `DecisionReceipt` remains durable governance evidence
+  but is not required for the first live hot path.
 
 See the [Stage 4B closeout](../implementation_notes/stage_4b/stage_4b_closeout.md)
 for the completed receipt baseline and the
 [Stage 4B.1 closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
-for the completed trace boundary.
+for the completed trace boundary. See
+[ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
+and the [Stage 4C docs-first entry](../implementation_notes/stage_4c/) for the
+accepted next-phase responsibility boundary.
 
 ## The Problem
 
@@ -146,18 +156,28 @@ Compass instead recognizes that the same technical result may mean very differen
 - request identity conflicted;
 - operator review required.
 
-The target architecture separates the runtime path into distinct
-responsibilities. The full flow below is not the current end-to-end
-implementation:
+The target architecture separates live decision evidence from downstream
+responsibilities. The model below is not the current end-to-end implementation:
 
 ```text
-Technical evidence
-→ SemanticOutcome
-→ Policy
-→ Runtime decision
-→ Strategy
-→ Action
+live SemanticOutcome
++ source-applicable terminal exact rule evidence
+→ Runtime Decision Authority
+
+authorized current response
+→ Strategy Selection Authority
+→ execution
+
+another attempt considered
+→ Retry / Attempt Authorization
+→ Strategy Selection Authority for the authorized attempt
+→ execution
 ```
+
+The normal current-response path does not require Retry / Attempt
+Authorization. Durable `DecisionReceipt` evidence may support later consumers,
+but receipt persistence is not a prerequisite for live Runtime Decision
+Authority.
 
 `SemanticOutcome` describes what the evidence means.
 
@@ -170,7 +190,8 @@ It does not decide:
 - whether to notify an operator;
 - whether to execute an irreversible mutation.
 
-Those are later governance responsibilities.
+Those belong to separately owned decision, strategy-selection, attempt-
+authorization, and execution responsibilities.
 
 This separation prevents an apparently convenient status such as `ok = true`,
 a retry-like result, or `FAST_PATH_UNAVAILABLE` from silently becoming

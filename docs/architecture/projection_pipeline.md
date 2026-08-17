@@ -4,22 +4,24 @@
 
 ## Purpose
 
-This document describes the intended evolution of the projection layer.
+This document preserves the historical Stage 3 evolution of the projection
+layer. It is architecture memory, not the current first-contact projection
+contract or an active implementation plan.
 
-At the current stage of the project, projection is no longer only a replay helper.  
-A minimal Stage 3 baseline projection runtime now exists, but it is still intentionally narrow and in-memory.
-
-This document exists to clarify that distinction and to define the next implementation path toward a more durable and verified projection runtime.
-
-> **Current implementation supersession:** The Stage 3 in-memory evolution
-> below is historical architecture context. The current PostgreSQL projection
+> **Historical / superseded status:** The Stage 3 in-memory evolution and all
+> time-relative “current” or “next” wording below describe the checkpoint at
+> which this document was written. The current PostgreSQL projection
 > reads per-order eligible events from `order_events`, persists derived state in
 > `projection_states`, and atomically advances `projection_order_progress`.
 > ADR 0020 makes exact-next order-local sequence the completeness model.
 > `global_position` remains lineage and deterministic scheduling evidence, not
 > a scalar completeness cursor. The runtime supports one active worker for the
 > current projection definition and epoch; multi-worker coordination remains
-> deferred.
+> deferred. Start with the
+> [Compass Reading Path](../navigation/COMPASS_READING_PATH.md), then use
+> [ADR 0020](../adr/0020_per_order_projection_progress_and_order_local_snapshot_tails.md)
+> and the [Projection Module Boundary](../boundary_notes/projection_module.md)
+> for current authority.
 
 ---
 

@@ -139,12 +139,28 @@ Stage 4B
 = explicit caller-owned PostgreSQL persistence
 
 Stage 4B.1
-= next runtime stage
+= complete
 = DiagnosticTrace / ResolutionTrace
-= not implemented
 
-later work
-= policy, strategy, retry, and external action execution
+Stage 4B.2
+= complete
+= bounded producer-specific Measurement Evidence
+
+Stage 4B.3
+= closed as not currently justified
+
+Stage 4B.5
+= complete
+= Order Correctness Contract v0
+
+Stage 4C
+= current next implementation stage under the docs-first Runtime Decision Authority boundary
+
+Stage 4D / Stage 4E
+= future Strategy Selection Authority and Retry / Attempt Authorization
+
+Stage 5 Action Safety
+= future
 ```
 
 The strict version 1 serializer is an internal serialization contract. It is
@@ -239,7 +255,7 @@ DecisionReceipt
 
 DecisionReceipt
 ≠
-RuntimeDecisionPolicy
+Runtime Decision Authority
 ```
 
 A receipt can be serialized through the strict version 1 JSON contract.

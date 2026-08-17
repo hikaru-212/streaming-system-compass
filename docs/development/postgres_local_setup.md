@@ -4,15 +4,9 @@
 
 ## Purpose
 
-This document explains how to start the local PostgreSQL environment and run the PostgreSQL-backed integration tests for **Streaming System + Compass** through **Stage 3.5D PR2 — Projection Snapshot Schema Baseline
-Stage 3.5D PR3 — PostgresProjectionSnapshotStore Baseline
-Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
-Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
-Stage 3.5E PR2 — Database Role / Privilege Baseline
-Stage 3.5E PR3 — Accepted-History Mutation Hardening Tests
-Stage 3.5E PR4 — Derived-State Mutation Permission Tests
-Stage 3.5E PR5 — Minimal Actor Metadata Boundary
-Stage 3.5E PR6 — Stage Closeout**.
+This document explains how to start the local PostgreSQL environment and run
+the current PostgreSQL-backed integration tests for **Streaming System +
+Compass**.
 
 The local PostgreSQL environment is used for:
 
@@ -31,13 +25,15 @@ The local PostgreSQL environment is used for:
 - PostgreSQL-backed projection worker integration tests
 - durable replay / rebuild validation integration tests
 
-At the current stage, PostgreSQL is used for:
+At the current baseline, PostgreSQL is used for:
 
 - the durable write-side baseline
 - the durable read-side baseline
-- global-position projection worker execution
+- exact-next order-local projection worker execution, with `global_position`
+  retained as lineage and deterministic scheduling evidence
 - durable replay / rebuild validation
-- the projection snapshot schema baseline
+- optional projection snapshot/reference infrastructure
+- database-role hardening and durable `DecisionReceipt` storage
 
 PostgreSQL-backed read-side stores, checkpoint stores, projection worker orchestration, replay validation, and projection snapshot schema constraints are now part of the local setup.
 
@@ -192,6 +188,8 @@ db/migrations/007_create_decision_receipts.sql
 Apply them to the development database when you want to inspect tables manually:
 
 ```bash
+set -euo pipefail
+
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_tables.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
@@ -204,6 +202,8 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/007_create_decision_rec
 Apply them to the test database before running PostgreSQL integration tests:
 
 ```bash
+set -euo pipefail
+
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/001_create_write_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/002_create_read_side_tables.sql
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/003_add_order_events_global_position.sql
@@ -213,9 +213,14 @@ psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/006_create_project
 psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/007_create_decision_receipts.sql
 ```
 
-The CI workflow may also apply migrations automatically by iterating through `db/migrations/*.sql` in filename order:
+For full migration/bootstrap verification, use a fresh dedicated `_test`
+database; an already-migrated database is not evidence that every historical
+migration is independently rerunnable. The CI workflow applies migrations
+automatically through this fail-fast filename-order loop:
 
 ```bash
+set -euo pipefail
+
 for migration in db/migrations/*.sql; do
   echo "Applying ${migration}..."
   psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
@@ -329,7 +334,7 @@ source_event_sequence
 = unique only within one order stream
 
 source_global_position
-= global accepted-history cursor
+= globally unique accepted-history position / lineage boundary
 = globally unique source boundary
 ```
 
@@ -454,33 +459,33 @@ idx_projection_snapshots_order_id_created_at_desc
 After setting `TEST_DATABASE_URL` and applying all migrations to `compass_test`, run:
 
 ```bash
-pytest tests/integration -v
+./.venv/bin/python -m pytest tests/integration -v
 ```
 
 Or run only PostgreSQL storage / pipeline integration tests if needed:
 
 ```bash
-pytest tests/integration/storage -v
-pytest tests/integration/pipeline -v
-pytest tests/integration/pipeline/projection -v
+./.venv/bin/python -m pytest tests/integration/storage -v
+./.venv/bin/python -m pytest tests/integration/pipeline -v
+./.venv/bin/python -m pytest tests/integration/pipeline/projection -v
 ```
 
 To run projection snapshot schema constraint tests only:
 
 ```bash
-pytest tests/integration/storage/test_projection_snapshot_schema_constraints.py -v
+./.venv/bin/python -m pytest tests/integration/storage/test_projection_snapshot_schema_constraints.py -v
 ```
 
 To run durable replay / rebuild validation tests only:
 
 ```bash
-pytest tests/integration/pipeline/projection/test_durable_replay_validation.py -v
+./.venv/bin/python -m pytest tests/integration/pipeline/projection/test_durable_replay_validation.py -v
 ```
 
 To run only the durable read-side schema constraint tests:
 
 ```bash
-pytest tests/integration/storage/test_read_side_schema_constraints.py -v
+./.venv/bin/python -m pytest tests/integration/storage/test_read_side_schema_constraints.py -v
 ```
 
 The exact test directories may evolve, but destructive PostgreSQL tests should continue to use `TEST_DATABASE_URL` rather than `DATABASE_URL`.
@@ -566,39 +571,17 @@ TEST_DATABASE_URL=postgresql://compass_user:compass_password@localhost:5433/comp
 
 ---
 
-## Current Stage Boundary
+## Current Setup Boundary
 
-This setup is current through:
-
-```text
-Stage 3.5B — Durable Write-Side Baseline
-Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening
-Stage 3.5C PR1 — Durable Read-Side Schema Baseline
-Stage 3.5C PR2 — PostgresProjectionStore
-Stage 3.5C PR3 — PostgresCheckpointStore
-Stage 3.5C PR4 — Global-Position Projection Worker Baseline
-Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
-Stage 3.5D PR1 — Snapshot Trust Contract Boundary
-Stage 3.5D PR1.5 — CI Stage Branch Checks
-Stage 3.5D PR2 — Projection Snapshot Schema Baseline
-Stage 3.5D PR3 — PostgresProjectionSnapshotStore Baseline
-Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
-Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
-Stage 3.5E PR2 — Database Role / Privilege Baseline
-Stage 3.5E PR3 — Accepted-History Mutation Hardening Tests
-Stage 3.5E PR4 — Derived-State Mutation Permission Tests
-Stage 3.5E PR5 — Minimal Actor Metadata Boundary
-Stage 3.5E PR6 — Stage Closeout
-```
-
-It supports:
+This PostgreSQL setup supports:
 
 - durable accepted history through `order_events`
 - durable idempotency memory through `idempotency_records`
 - durable projection state schema through `projection_states`
 - repaired per-order progress through `projection_order_progress`
 - durable checkpoint schema through `projection_checkpoints`
-- durable projection snapshot schema through `projection_snapshots`
+- optional durable projection snapshot/reference infrastructure through
+  `projection_snapshots`
 - foundational durable receipt schema through `decision_receipts`
 - caller-transaction-owned DecisionReceipt insert/load through
   `PostgresDecisionReceiptStore`
@@ -616,20 +599,22 @@ It supports:
 - durable event vocabulary and proof-status schema constraints
 - durable read-side schema constraints
 - projection snapshot schema constraints
+- database-role and permission hardening
 - runtime-role permission boundary tests through `tests/integration/security`
 - destructive integration tests isolated through `TEST_DATABASE_URL`
 
 It does not include:
 
-- Compass Layer 2 governance objects
-- `SemanticOutcome`
-- runtime DecisionReceipt materialization or reconciliation
-- `RuntimeDecisionPolicy`
-- production-grade login / session auth
+- production login / session authentication
 - production connection-pool role isolation
 - full RBAC or cloud IAM
+- production deployment topology
+- automatic `DecisionReceipt` materialization or reconciliation orchestration
 
-Those belong to Stage 4 or later production-hardening work.
+`SemanticOutcome` and the current Stage 4C implementation direction do not
+currently introduce additional local infrastructure prerequisites. These are
+local-environment and production-hardening boundaries, not a project-stage
+ledger.
 
 ---
 
@@ -674,6 +659,8 @@ TEST_DATABASE_URL
 From the repository root:
 
 ```bash
+set -euo pipefail
+
 # 1. Start PostgreSQL
 docker compose up -d
 
@@ -704,6 +691,6 @@ psql "$TEST_DATABASE_URL" -c "\d decision_receipts"
 psql "$TEST_DATABASE_URL" -c "\du compass_*"
 
 # 6. Run tests
-pytest tests/integration -v
-pytest tests/integration/security -v
+./.venv/bin/python -m pytest tests/integration -v
+./.venv/bin/python -m pytest tests/integration/security -v
 ```

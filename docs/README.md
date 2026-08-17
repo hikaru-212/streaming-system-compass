@@ -28,6 +28,8 @@ It now also serves as the reference frame for an executable baseline covering:
 - Stage 4B DecisionReceipt PR1–PR7 as a completed runtime-evidence and persistence foundation
 - [Stage 4B.1 DiagnosticTrace / ResolutionTrace](implementation_notes/stage_4b_1/README.md) as a completed producer-specific trace stage, with snapshot runtime integration intentionally deferred and PostgreSQL write-side Result + Trace integration complete
 - [Stage 4B.2 Measurement Evidence](implementation_notes/stage_4b_2/README.md) as a completed producer-measurement and bounded empirical cost-evidence stage
+- [Stage 4B.3 closeout](implementation_notes/stage_4b_3/README.md) as a completed evidence-first necessity review closed as not currently justified, without a continuation mechanism
+- [Stage 4B.5 Order Correctness Contract V0](implementation_notes/stage_4b_5/README.md) as a completed 18-rule contract with exactly six FullProof `TRANSITION_TRUTH` rules currently covered by typed runtime producers
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -71,14 +73,25 @@ The current Stage 4 foundation position is:
 
 - Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
 - Stage 4B.5 — Order Correctness Contract v0 — complete / closed
-- later runtime policy, strategy selection, and retry governance in roadmap order
+- Stage 4C — Runtime Decision Authority — docs-first entry; no production implementation claimed
+- Stage 4D — Strategy Selection Authority — future
+- Stage 4E — Retry / Attempt Authorization — future
 
 Stage 4B.3 PR1 and PR2 remain historical/reference investigation. The canonical
 [ADR 0026 closeout](adr/0026_projection_trust_continuation_is_not_currently_justified.md)
 records why PR3+ do not proceed. Stage 4B.5 completed in a separately owned
 parallel development stream; it is technically independent from and was not
 moved under the closed Stage 4B.3 stage. It does not implement the later
-retry-governance layer.
+Retry / Attempt Authorization boundary.
+
+[ADR 0027](adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
+now separates current-response authority, strategy selection, another-attempt
+authorization, and execution. The first decision-governance delivery is
+live/in-memory first: `SemanticOutcome` plus terminally applicable exact rule
+refinement is the primary live decision evidence. `DecisionReceipt` remains durable
+governance evidence but is not required for the first live hot path. Restart
+recovery remains a distinct deferred consumer. See the
+[Stage 4C docs-first entry](implementation_notes/stage_4c/README.md).
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
 Stage 4B preserves selected evidence through explicit mapping, serialization,
@@ -137,6 +150,11 @@ backpressure, which remains deferred.
 
 Different readers may enter the documentation from different angles.
 
+For the current public route, start with the
+[Compass Reading Path](navigation/COMPASS_READING_PATH.md). It distinguishes
+current architecture authority from deep implementation history, postmortems,
+and non-authoritative reasoning notes.
+
 For high-level public orientation, start with the non-authoritative
 [Overview](overview/README.md).
 
@@ -155,7 +173,10 @@ For non-authoritative candidate proof obligations derived from accepted
 architecture, contracts, and executable evidence, see
 [Test Specifications](test_specs/README.md).
 
-If you want to understand the core system architecture and implementation sequence, follow the reading order below.
+If you want to understand the core system architecture and implementation
+sequence in depth, follow the longer route below. Documents carrying historical
+or supersession banners preserve time-relative architecture memory and do not
+override current source, accepted ADRs, or boundary notes.
 
 Recommended reading order for the core system:
 
@@ -171,15 +192,17 @@ Recommended reading order for the core system:
 10. [Intent-Aware Validation Dispatch for Compass Runtime](adr/0002_intent_aware_validation_dispatch.md)
 11. [Why Compass Split into Two Layers](adr/0004_why_compass_split_into_two_layers.md)
 12. [Compass Layers](architecture/compass_layers.md)
-13. [Projection Pipeline](architecture/projection_pipeline.md)
+13. [Projection Pipeline — historical Stage 3 evolution](architecture/projection_pipeline.md)
 14. [Implementation Roadmap](roadmap/implementation_roadmap.md)
 15. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
-16. [Implementation Notes](implementation_notes/README.md)
-17. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
-18. [Boundary Notes](boundary_notes/README.md)
-19. [Development Setup](development/README.md)
-20. [Reasoning Notes](reasoning_notes/README.md)
-21. [Postmortems](postmortems/README.md)
+16. [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
+17. [Implementation Notes](implementation_notes/README.md)
+18. [Stage 4C — Runtime Decision Authority](implementation_notes/stage_4c/README.md)
+19. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
+20. [Boundary Notes](boundary_notes/README.md)
+21. [Development Setup](development/README.md)
+22. [Reasoning Notes](reasoning_notes/README.md)
+23. [Postmortems](postmortems/README.md)
 
 This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, stage / PR implementation details, module-boundary notes, local development setup, and finally postmortems.
 
@@ -212,8 +235,11 @@ top-level system structure
 → completed Measurement Evidence
 → Stage 4B.3 Projection Trust Boundary and Continuation
   closed as not currently justified after evidence-first investigation
-→ separately owned Order Correctness Contract work
-→ runtime decision policy and action safety
+→ completed separately owned Order Correctness Contract V0
+→ Stage 4C current-response Runtime Decision Authority
+→ Stage 4D Strategy Selection inside prior authorization
+→ Stage 4E Retry / Attempt Authorization when another attempt is considered
+→ action safety
 → boundary clarification
 → reasoning derivations
 → postmortem lessons
