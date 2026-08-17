@@ -378,6 +378,11 @@ For the current decision-governance boundary:
 
 Deep documents preserve architecture history and implementation chronology; the reading path indicates which sources are current authority and which are historical context.
 
+Project participation:
+
+* [Contributing](CONTRIBUTING.md) — environment, test workflows, change boundaries, and pull requests
+* [Security Policy](SECURITY.md) — security-sensitive scope and responsible reporting guidance
+
 ---
 
 ## Who this is for
