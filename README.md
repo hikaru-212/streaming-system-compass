@@ -341,6 +341,7 @@ python3.12 -m venv .venv
 
 The command above runs the database-independent unit suite. The full test suite is PostgreSQL-backed and requires:
 
+* a full Git clone with complete repository history
 * PostgreSQL 16
 * a dedicated test database
 * `TEST_DATABASE_URL` pointing to that test database

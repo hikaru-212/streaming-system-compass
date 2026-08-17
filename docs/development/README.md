@@ -17,9 +17,10 @@ At the current baseline, the main local infrastructure dependency is PostgreSQL.
 
 PostgreSQL is used to support:
 
-- the Stage 3.5B durable write-side baseline
-- the Stage 3.5C durable read-side baseline
-- the Stage 3.5D PR2 projection snapshot schema baseline
+- durable accepted history and idempotency
+- durable projection state and replay
+- optional snapshot/reference infrastructure
+- database-role hardening and durable `DecisionReceipt` storage
 
 ---
 
@@ -91,30 +92,21 @@ The test fixture also verifies that the connected database name ends with `_test
 
 ---
 
-## Current Stage Boundary
+## Current Setup Boundary
 
-This setup is current through:
+The development environment currently supports:
 
-```text
-Stage 3.5B — Durable Write-Side Baseline
-Stage 3.5C PR0 — Durable Order Event Vocabulary Hardening
-Stage 3.5C PR1 — Durable Read-Side Schema Baseline
-Stage 3.5C PR2 — PostgresProjectionStore
-Stage 3.5C PR3 — PostgresCheckpointStore
-Stage 3.5C PR4 — Global-Position Projection Worker Baseline
-Stage 3.5C PR5 — Durable Replay / Rebuild Validation Baseline
-Stage 3.5D PR1 — Snapshot Trust Contract Boundary
-Stage 3.5D PR1.5 — CI Stage Branch Checks
-Stage 3.5D PR2 — Projection Snapshot Schema Baseline
-Stage 3.5D PR3 — PostgresProjectionSnapshotStore Baseline
-Stage 3.5D PR4 — Projection Snapshot-Assisted Replay Validator
-Stage 3.5D PR4.5 — Projection Snapshot-Assisted State Resolver
-Stage 3.5E PR2 — Database Role / Privilege Baseline
-Stage 3.5E PR3 — Accepted-History Mutation Hardening Tests
-Stage 3.5E PR4 — Derived-State Mutation Permission Tests
-Stage 3.5E PR5 — Minimal Actor Metadata Boundary
-Stage 3.5E PR6 — Stage Closeout
-```
+- durable accepted history and idempotency
+- durable read-side projection state and per-order progress
+- optional snapshot/reference infrastructure
+- database-role and permission hardening
+- the durable `DecisionReceipt` storage foundation
+- destructive-test isolation through a dedicated `TEST_DATABASE_URL` whose
+  database name ends with `_test`
+
+`SemanticOutcome` and the current Stage 4C implementation direction do not
+currently introduce additional local infrastructure prerequisites. This is an
+environment capability boundary, not a project-stage ledger.
 
 The current durable write-side tables are:
 
@@ -229,7 +221,7 @@ source_event_id
 = order-local accepted-event sequence boundary
 
 source_global_position
-= globally unique accepted-history cursor boundary
+= globally unique accepted-history position / lineage boundary
 ```
 
 The physical uniqueness constraints are therefore:
@@ -247,7 +239,7 @@ source_event_sequence
 = aggregate-local sequence
 
 source_global_position
-= global accepted-history cursor
+= globally unique accepted-history position / lineage boundary
 
 source_event_id
 = accepted event identity
@@ -270,17 +262,14 @@ This directory is not:
 - a migration history directory
 - a place for runtime business rules
 
-Production-grade concerns such as database role hardening, managed secrets, deployment topology, observability integration, infrastructure-as-code, and append-only trigger enforcement should be documented separately when they become relevant.
+Production-grade extensions such as broader database role hardening, managed secrets, deployment topology, observability integration, infrastructure-as-code, and append-only trigger enforcement should be documented separately when they become relevant.
 
-Current roadmap alignment:
-
-```text
-Stage 3.5C = durable read-side baseline completed
-Stage 3.5D = snapshot trust / replay-efficiency work in progress
-Stage 3.5E = durable history and permission hardening
-```
-
-The next expected development setup expansion is Stage 3.5D PR3 if `PostgresProjectionSnapshotStore` introduces new local testing instructions.
+The current setup supports the completed durable write-side, durable read-side,
+optional snapshot/reference, permission, `SemanticOutcome`, and
+`DecisionReceipt` foundations. Stage 4C is the next implementation direction,
+but it does not yet introduce an additional local environment requirement.
+This guide should expand only when implementation adds a concrete setup,
+migration, or test prerequisite.
 
 ---
 
@@ -316,7 +305,7 @@ Then continue with the current architecture and boundary notes:
 6. [Global-Position Projection Worker Boundary](../boundary_notes/global_position_projection_worker_boundary.md)
 7. [Durable Replay / Rebuild Validation Boundary](../boundary_notes/durable_replay_rebuild_validation_boundary.md)
 8. [Snapshot Trust Contract Boundary](../boundary_notes/snapshot_trust_contract_boundary.md)
-9. [Projection Snapshot Schema Baseline](../implementation_notes/projection_snapshot_schema_baseline.md)
+9. [Projection Snapshot Schema Baseline](../implementation_notes/stage_3_5d/projection_snapshot_schema_baseline.md)
 10. [Implementation Roadmap](../roadmap/implementation_roadmap.md)
 
 ---

@@ -70,16 +70,15 @@ The complete workflow requires:
 * every migration applied in filename order
 * `pytest-cov` and `flake8`
 
-Install the current repository dependencies and CI-only verification tools:
+Install the current repository dependencies and developer verification tools:
 
 ```bash
 python3.12 -m venv .venv
 ./.venv/bin/python -m pip install --upgrade pip
-./.venv/bin/python -m pip install -r requirements.txt
-./.venv/bin/python -m pip install pytest-cov flake8
+./.venv/bin/python -m pip install -r requirements-dev.txt
 ```
 
-`pytest` and `psycopg` are declared in `requirements.txt`. `pytest-cov` and `flake8` are currently installed directly by CI rather than declared in a development dependency file; dependency cleanup belongs to a separate reproducibility change.
+`requirements-dev.txt` includes the repository dependencies from `requirements.txt` and declares the coverage and lint tools used by CI.
 
 Start PostgreSQL and create the dedicated test database if it does not already exist:
 
@@ -108,7 +107,8 @@ done
 Run the same lint rule and coverage threshold used by CI:
 
 ```bash
-./.venv/bin/flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+./.venv/bin/flake8 . --extend-exclude=.venv \
+  --count --select=E9,F63,F7,F82 --show-source --statistics
 ./.venv/bin/python -m pytest -v --durations=10 \
   --cov=src --cov-report=term-missing --cov-fail-under=80
 ```
