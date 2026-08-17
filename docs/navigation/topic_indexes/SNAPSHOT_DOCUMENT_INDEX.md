@@ -199,7 +199,7 @@ runtime API remains intentionally deferred.
 | [Read-side / Snapshot DecisionReceipt Mapping](../../implementation_notes/stage_4b/read_side_snapshot_decision_receipt_mapping.md) | Implementation boundary | Core | Defines completed producer-specific receipt construction and evidence checks. | Stage 4B complete; mapping performs no persistence or policy evaluation. |
 | [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Core | Confirms the current receipt mapping, serialization, persistence, and non-goal baseline. | Its Stage 4B.1 transition is historical. |
 | [Stage 4B.1 Snapshot Trace](../../implementation_notes/stage_4b_1/projection_snapshot_assisted_resolution_trace.md) | Implementation boundary | Core | Defines the retained immutable snapshot-assisted resolution trace and its necessity revalidation. | Contract implemented; parallel traced-resolver runtime integration deferred. |
-| [Stage 4B.1 Closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Core | Records the final snapshot trace disposition and future reopen conditions. | Stage 4B.1 complete; Stage 4B.2 next. |
+| [Stage 4B.1 Closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Core | Records the final snapshot trace disposition and future reopen conditions. | At that closeout checkpoint, Stage 4B.1 was complete and Stage 4B.2 was next; both are now complete. |
 
 ## Aggregate Snapshot Deferral
 

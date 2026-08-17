@@ -9,8 +9,13 @@ This document describes the layered role of Compass in the project.
 > **Current status:** Layer 1 admission is implemented. Stage 4A maps bounded
 > write-side, read-side, and snapshot evidence into `SemanticOutcome`; Stage 4B
 > maps selected evidence into strict, optionally persisted `DecisionReceipt`
-> records. Trace, policy, strategy, retry, and action-governance layers remain
-> future work.
+> records. Stage 4B.1 and Stage 4B.2 completed bounded producer-specific trace
+> and measurement evidence, and Stage 4B.5 completed the Order Correctness
+> Contract v0. Stage 4C PR0 defines the docs-first Runtime Decision Authority
+> boundary; production Stage 4C is next, while Stage 4D Strategy Selection
+> Authority and conditional Stage 4E Retry / Attempt Authorization remain
+> future. These governance responsibilities consume semantic evidence
+> downstream; they are not a new Compass validation layer.
 
 Compass is not treated as a single undifferentiated validator.  
 Instead, it grows through multiple semantic layers, each validating a different aspect of system correctness.
@@ -95,33 +100,33 @@ It cares whether execution over time remains semantically correct.
 
 ---
 
-## Layer 3: Policy and Governance
+## Downstream Governance Consumption — Not a Third Validation Layer
 
 ### Question
-If a semantic violation occurs, what should the system do?
+Given current semantic evidence, which generic response is authorized, which
+eligible strategy may perform it, and—only when relevant—may another attempt be
+made?
 
 ### Scope
-This layer handles response strategy.
+Governance consumes evidence produced by Layer 1, Layer 2, and bounded producer
+adapters. ADR 0027 assigns separate downstream responsibilities:
 
-Typical actions include:
-- ACCEPT
-- WARN
-- REJECT
-- QUARANTINE
-
-It may also include:
-- violation classification
-- evidence reporting
-- audit records
-- downstream action triggers
+- Stage 4C Runtime Decision Authority authorizes the generic current response;
+- Stage 4D Strategy Selection Authority chooses an eligible execution path
+  inside prior authorization;
+- Stage 4E Retry / Attempt Authorization decides whether another attempt is
+  allowed and under what constraints; and
+- execution remains separate from all three.
 
 ### Typical Location
-`src/compass/policy/`
-and
-`src/compass/evidence/`
+No production Stage 4C–4E implementation location is frozen. Stage 4C remains
+docs-first after PR0.
 
 ### Meaning
-This is where Compass stops being only a validator and becomes a semantic governance mechanism.
+This is downstream consumption of semantic evidence, not “Layer 3” validation.
+`DecisionReceipt` may preserve durable evidence for later consumers, but prior
+receipt persistence is not required for the first live Stage 4C or Stage 4E
+path.
 
 ---
 
@@ -133,7 +138,8 @@ They answer different questions:
 
 - transition layer asks whether an event is trustworthy
 - state layer asks whether execution results remain correct
-- policy layer asks how the system should respond to semantic violations
+- downstream governance separately owns current-response authorization,
+  strategy selection, another-attempt authorization, and execution
 
 This layered approach prevents Compass from collapsing multiple concerns into one ambiguous boundary.
 
@@ -166,19 +172,20 @@ In that sense:
 
 ## Current Project Focus
 
-The immediate Compass focus should be:
+The current Compass position is:
 
-1. transition truth validation
-2. later state-level validation
-3. later policy and governance behavior
+1. maintain the implemented Layer 1 transition-truth admission boundary;
+2. preserve bounded write-side and read-side evidence through completed
+   `SemanticOutcome`, `DecisionReceipt`, trace, measurement, and exact-rule
+   contracts; and
+3. enter Stage 4C production work only after its concrete consumer, invocation
+   owner, eligible evidence subset, response vocabulary, and fail-closed
+   behavior are frozen.
 
 This order is intentional.
 
-The system should first decide:
-- what counts as a trustworthy event
-
-before it attempts to decide:
-- whether downstream state remains semantically correct over time
+Layer 1 and Layer 2 remain semantic-validation distinctions. Governance remains
+a downstream consumer rather than a reason to redefine those layers.
 
 ---
 
@@ -192,8 +199,9 @@ into:
 
 - runtime state validation
 - checkpoint verification
-- evidence logging
-- policy-driven governance
+- structured semantic and durable governance evidence
+- separately owned runtime decision, strategy-selection, and conditional
+  retry / attempt-authorization boundaries
 - adversarial semantic survivability under chaos
 
 This evolution matches the broader direction of the project.
@@ -206,6 +214,7 @@ Compass is best understood as a layered semantic defense system.
 
 - Layer 1 protects event truth
 - Layer 2 protects runtime state correctness
-- Layer 3 governs system response to semantic violations
+- downstream governance consumes evidence from those boundaries without
+  becoming a third validation layer
 
 This layered view keeps Compass aligned with both transactional correctness and long-term streaming-runtime governance.

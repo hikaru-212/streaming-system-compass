@@ -82,13 +82,13 @@ Stage 4B.3 PR1 and PR2 remain historical/reference investigation. The canonical
 records why PR3+ do not proceed. Stage 4B.5 completed in a separately owned
 parallel development stream; it is technically independent from and was not
 moved under the closed Stage 4B.3 stage. It does not implement the later
-retry-governance layer.
+Retry / Attempt Authorization boundary.
 
 [ADR 0027](adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
 now separates current-response authority, strategy selection, another-attempt
 authorization, and execution. The first decision-governance delivery is
 live/in-memory first: `SemanticOutcome` plus terminally applicable exact rule
-refinement is the primary policy evidence. `DecisionReceipt` remains durable
+refinement is the primary live decision evidence. `DecisionReceipt` remains durable
 governance evidence but is not required for the first live hot path. Restart
 recovery remains a distinct deferred consumer. See the
 [Stage 4C docs-first entry](implementation_notes/stage_4c/README.md).
@@ -150,6 +150,11 @@ backpressure, which remains deferred.
 
 Different readers may enter the documentation from different angles.
 
+For the current public route, start with the
+[Compass Reading Path](navigation/COMPASS_READING_PATH.md). It distinguishes
+current architecture authority from deep implementation history, postmortems,
+and non-authoritative reasoning notes.
+
 For high-level public orientation, start with the non-authoritative
 [Overview](overview/README.md).
 
@@ -168,7 +173,10 @@ For non-authoritative candidate proof obligations derived from accepted
 architecture, contracts, and executable evidence, see
 [Test Specifications](test_specs/README.md).
 
-If you want to understand the core system architecture and implementation sequence, follow the reading order below.
+If you want to understand the core system architecture and implementation
+sequence in depth, follow the longer route below. Documents carrying historical
+or supersession banners preserve time-relative architecture memory and do not
+override current source, accepted ADRs, or boundary notes.
 
 Recommended reading order for the core system:
 
@@ -184,7 +192,7 @@ Recommended reading order for the core system:
 10. [Intent-Aware Validation Dispatch for Compass Runtime](adr/0002_intent_aware_validation_dispatch.md)
 11. [Why Compass Split into Two Layers](adr/0004_why_compass_split_into_two_layers.md)
 12. [Compass Layers](architecture/compass_layers.md)
-13. [Projection Pipeline](architecture/projection_pipeline.md)
+13. [Projection Pipeline — historical Stage 3 evolution](architecture/projection_pipeline.md)
 14. [Implementation Roadmap](roadmap/implementation_roadmap.md)
 15. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
 16. [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)

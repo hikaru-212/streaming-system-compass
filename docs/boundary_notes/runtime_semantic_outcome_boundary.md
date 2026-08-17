@@ -217,7 +217,7 @@ This does not mean every retry is safe.
 
 A retry may preserve request identity while changing semantic meaning.
 
-Retry governance belongs later.
+Retry / Attempt Authorization belongs later.
 
 ---
 
@@ -235,7 +235,7 @@ INTENT_DRIFT_DETECTED
 
 The system should not treat this as a normal replay.
 
-A later RuntimeDecisionPolicy may block or escalate.
+A later Runtime Decision Authority may block or escalate.
 
 ---
 
@@ -282,9 +282,9 @@ The boundary should remain small.
 
 ---
 
-## Relationship to Future Receipts
+## Relationship to DecisionReceipt
 
-A future DecisionReceipt may record:
+A `DecisionReceipt` may record selected fields derived from:
 
 ```text
 SemanticOutcome
@@ -297,15 +297,16 @@ fallback required
 operator review required
 ```
 
-That does not mean Stage 4A should persist receipts immediately.
-
-Stage 4A defines the meaning that receipts will later preserve.
+Stage 4A defines the meaning that receipts may preserve. Stage 4B implements
+explicit mapping, serialization, and caller-owned persistence foundations; it
+does not automatically materialize a receipt for every `SemanticOutcome`.
 
 ---
 
-## Relationship to Future Runtime Decisions
+## Relationship to Runtime Decision Authority
 
-A future RuntimeDecisionPolicy may consume SemanticOutcome and produce decisions such as:
+Stage 4C Runtime Decision Authority may consume current `SemanticOutcome` plus
+applicable exact rule refinement and authorize generic responses such as:
 
 ```text
 ALLOW
@@ -319,13 +320,15 @@ ESCALATE
 
 Stage 4A should not make those decisions directly.
 
-It only prepares structured semantic input for that policy layer.
+It only prepares structured semantic input for that later authority. Stage 4C
+PR0 defines the docs-first responsibility boundary; no production authority is
+implemented yet.
 
 ---
 
 ## Relationship to Future Strategy Selection
 
-A future StrategySelector may choose among execution paths such as:
+A future Strategy Selection Authority may choose among execution paths such as:
 
 ```text
 full accepted-history replay
@@ -346,10 +349,9 @@ It may only express that a path is semantically unavailable, unresolved, or requ
 
 ```text
 SemanticOutcome gives meaning.
-RuntimeDecision decides action.
-StrategySelector chooses path.
-RetryGovernance controls attempts.
+Runtime Decision Authority authorizes the generic current response.
+Strategy Selection Authority chooses an eligible path inside authorization.
+Retry / Attempt Authorization decides whether another attempt is allowed.
 ```
 
 Stage 4A should implement the first boundary only.
-

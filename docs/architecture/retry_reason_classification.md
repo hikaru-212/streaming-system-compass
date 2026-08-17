@@ -494,7 +494,7 @@ historical candidate
 != accepted schema
 
 restart recovery
-!= live retry governance
+!= live Retry / Attempt Authorization
 ```
 
 Restart recovery, durable attempt evidence, and cross-runtime continuation

@@ -150,7 +150,8 @@ JSON envelope as external API authority.
 The DecisionReceipt boundary note is the current canonical cross-stage owner.
 It clarifies why selected `SemanticOutcome` evidence may become durable
 governance evidence without turning receipts into application logs, diagnostic
-traces, runtime decisions, strategy selection, or retry governance.
+traces, Runtime Decision Authority, Strategy Selection Authority, or Retry /
+Attempt Authorization.
 
 The DecisionReceipt PostgreSQL transaction safety and liveness note is a
 specialized current boundary beneath that canonical owner. It separates
@@ -211,8 +212,9 @@ This roughly follows the intended semantic development order of the project:
 - define accepted-history mutation posture at the database permission boundary
 - define testing layers for mechanism tests, permission-boundary tests, and future governance-flow tests
 - define minimal actor metadata before Stage 4 decision receipts
-- define runtime semantic outcomes before receipts, policies, strategies, and retry governance
-- define durable governance receipts before diagnostic traces, runtime policies, strategies, and retry governance
+- define runtime semantic outcomes before current-response Runtime Decision Authority
+- define explicit durable governance-receipt mapping and persistence as a parallel evidence path, not a prerequisite for live Runtime Decision Authority or Retry / Attempt Authorization
+- keep Runtime Decision Authority, Strategy Selection Authority, Retry / Attempt Authorization, and execution separately owned
 - define semantic validation layers
 - define durable-world persistence discipline
 - define read-side persistence semantics

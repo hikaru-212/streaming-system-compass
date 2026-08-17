@@ -45,7 +45,7 @@ This index does not override domain specifications, architecture documents, ADRs
 | [Aggregate Module](../../boundary_notes/aggregate_module.md) | Boundary note | Start here | Defines the aggregate as the owner of command legality, next transition, sequence progression, candidate production, and event application during replay. | Essential responsibility boundary; no formal ADR status is claimed. |
 | [Order Domain v1 Rules](../../domain/order_domain_v1_rules.md) | Domain specification | Core | Supplies the domain states, commands, and legal transition rules applied by the aggregate. | Domain meaning comes from this specification and the core boundary. |
 | [Transactional Core](../../architecture/transactional_core.md) | Architecture | Core | Places aggregate rehydration and command decision-making before candidate validation and admission. | Do not collapse aggregate legality into Compass validation or persistence checks. |
-| [ADR 0003 — Concurrency Control, Idempotency, and Retry Safety](../../adr/0003_concurrency_idempotency_and_retry_safety.md) | ADR | Deep dive | Shows that a legal domain decision can still fail freshness admission and must then be classified using latest accepted state. | Accepted; the concurrency and retry-safety baseline is implemented, but later retry governance remains separate. |
+| [ADR 0003 — Concurrency Control, Idempotency, and Retry Safety](../../adr/0003_concurrency_idempotency_and_retry_safety.md) | ADR | Deep dive | Shows that a legal domain decision can still fail freshness admission and must then be classified using latest accepted state. | Accepted; the concurrency and retry-safety baseline is implemented, but later Retry / Attempt Authorization remains separate. |
 
 ## Candidate Identity and Accepted History
 
@@ -182,7 +182,10 @@ Successful admitted append grants accepted-history membership. Persistence prese
 
 Stage 3.5B includes durable replay/conflict handling, ambiguous-result recovery, stale-write rejection, stable admission classification, and enough accepted-history and request evidence to avoid treating a stale candidate as accepted.
 
-Automatic retry governance, retry budgets, backoff or jitter, strategy selection, irreversible-action retry policy, and durable attempt lineage remain later-stage work. Stable admission results support those later decisions but do not constitute the complete governed retry model.
+Retry / Attempt Authorization, retry budgets, backoff or jitter, Strategy
+Selection Authority, irreversible-action retry policy, and durable attempt
+lineage remain later-stage work. Stable admission results support those later
+decisions but do not constitute the complete governed retry model.
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|
@@ -219,5 +222,5 @@ These documents preserve how the Stage 3.5B implementation was planned and deliv
 ## Open Questions and Deferred Clarifications
 
 - Cross-attempt candidate identity reuse or regeneration is not yet defined.
-- Stage 3.5B retry safety is a baseline; later retry governance must remain separate from completed Stage 4A/4B evidence mapping.
+- Stage 3.5B retry safety is a baseline; later Retry / Attempt Authorization must remain separate from completed Stage 4A/4B evidence mapping.
 - Planning-era documents may retain older candidate flows and must be read together with later accepted ADRs.

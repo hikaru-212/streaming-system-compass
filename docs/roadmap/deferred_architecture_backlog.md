@@ -178,16 +178,18 @@ After durable replay / rebuild validation exists and before any multi-worker or 
 Do not treat the completed Stage 4B.5 correctness contract as a general-purpose
 policy framework or recovery contract.
 
-The current project should remain focused on:
+The current position is:
 
-- minimal actor / permission boundary
-- Layer 2 validation
-- structured semantic outcomes
-- runtime decisions
-- action safety
+- minimal actor / permission, `SemanticOutcome`, receipt, trace, measurement,
+  and Order correctness foundations are complete
+- Stage 4C production Runtime Decision Authority is next
+- Stage 4D Strategy Selection Authority is future
+- Stage 4E Retry / Attempt Authorization is future
+- Stage 5 Action Safety is future
 
-Later Stage 4 work may introduce a small domain-specific policy contract after
-the completed `SemanticOutcome` and correctness-evidence foundations.
+A concrete future consumer may justify a small domain-specific policy artifact
+as a rule or evidence source within one of those authority boundaries. It is
+not a mandatory Stage 4C intermediate.
 
 This contract should be limited to the current minimal order/payment domain.
 
@@ -284,38 +286,35 @@ not turn semantic observation into retry authorization.
 
 ### Architectural Consequence
 
-This turns Stage 4 from:
+The current live-governance direction is:
 
 ```text
-structured error classification
+SemanticOutcome
++ applicable rule / correctness evidence
+→ Runtime Decision Authority
 ```
 
-into:
-
-```text
-structured semantic outcome
-→ policy-linked recovery basis
-→ runtime decision
-```
-
-It prevents agentic retry from becoming blind trial-and-error against Compass.
+A future policy artifact may supply versioned rules or evidence. It does not
+own action authority, become a mandatory intermediate, or authorize another
+attempt.
 
 ### Current Classification
 
 ```text
-Stage 4 / domain policy contract
+Deferred domain policy / rule-evidence artifact
 ```
 
 ### Suggested Timing
 
-After:
+Only after:
 
 ```text
 Stage 4A — SemanticOutcome Core (complete)
 Stage 4B.5 — Order Correctness Contract v0 (complete)
 ```
 
-and within separately reviewed later governance work:
+and only when a concrete consumer inside separately reviewed governance work
+requires a distinct versioned artifact:
 
 ```text
 Stage 4C — Runtime Decision Authority
@@ -673,13 +672,15 @@ PostgreSQL rows remain mutable by default if a database role has `UPDATE` or `DE
 
 ### Why Not Now
 
-Database role boundaries should wait until the project defines the minimal actor / permission boundary.
+Stage 3.5E completed the bounded database-role and minimal actor / permission
+baseline. The remaining item is production-grade append-only enforcement and
+its operational governance, not the previously missing actor boundary.
 
 This matters because `order_events` should move toward append-only accepted history, while `projection_states` and `projection_checkpoints` must remain mutable enough to support upsert, resume, reset, and rebuild.
 
 ### Future Work
 
-Evaluate during Stage 3.5E:
+Revisit for later production hardening:
 
 - database role boundary documentation
 - migration owner vs runtime role separation
@@ -703,12 +704,13 @@ read_only_observer
 ### Current Classification
 
 ```text
-Stage 3.5E / actor-permission hardening
+Later production append-only hardening; bounded Stage 3.5E baseline complete
 ```
 
 ### Suggested Timing
 
-During Stage 3.5E minimal actor / permission boundary completed work.
+When a concrete production deployment, threat model, or repair-governance need
+justifies stronger database-level enforcement.
 
 ---
 
@@ -756,9 +758,10 @@ same behavior
 less duplicated setup
 ```
 
-Class-based grouping is deferred test-maintainability work because Stage 4B.1,
-Stage 4B.2, Stage 4B.5, Stage 4C, Stage 4D, and Stage 4E may still reshape the
-runtime governance test surface.
+Class-based grouping remains deferred test-maintainability work. Completed
+Stage 4B.1, Stage 4B.2, and Stage 4B.5 already establish the current trace,
+measurement, and exact-rule evidence surfaces. Stage 4C, Stage 4D, and Stage 4E
+may still reshape downstream governance-test organization.
 
 ### Why Not Now
 
@@ -781,10 +784,9 @@ The project should not reorganize tests around classes merely for aesthetic grou
 
 ### Future Work
 
-As Stage 4B.1, Stage 4B.2, Stage 4B.5, Stage 4C, Stage 4D, and Stage 4E
-boundaries become concrete, revisit class-based organization when a specific
-high-density test surface has stable semantic responsibilities and a real
-maintainability need.
+As production Stage 4C, Stage 4D, and Stage 4E boundaries become concrete,
+revisit class-based organization when a specific high-density test surface has
+stable semantic responsibilities and a real maintainability need.
 
 Potential future grouping examples:
 
@@ -851,9 +853,8 @@ Later evaluation / post-Stage-4 governance test organization
 Revisit after at least one of the following is true:
 
 ```text
-a high-density Stage 4B.1, Stage 4B.2, Stage 4B.5, Stage 4C, Stage 4D,
-or Stage 4E test surface has stable semantic responsibilities and concrete
-maintainability pressure
+a completed Stage 4B.x evidence surface or a later Stage 4C, Stage 4D, or
+Stage 4E governance surface develops concrete maintainability pressure
 public-release test readability review begins
 ```
 
@@ -973,7 +974,10 @@ During structured outcome / runtime evidence design.
 
 Do not treat retry as a single generic category.
 
-Retry classification belongs to Stage 4 `SemanticOutcome`, request-attempt evidence, and runtime decision design.
+Stage 4E Retry / Attempt Authorization owns the decision about whether another
+attempt is allowed. It may consume eligible `SemanticOutcome` and
+request-attempt evidence, but those inputs do not authorize an attempt by
+themselves.
 
 ### Why Not Now
 
@@ -988,11 +992,13 @@ The completed baselines already distinguish:
 - snapshot-assisted replay mismatch
 - snapshot trust failure
 
-But they do not yet persist unified request-attempt evidence or structured runtime outcomes.
+`SemanticOutcome` is complete for its bounded producer families. Unified
+request-attempt evidence and production Stage 4E authorization remain future.
 
 ### Future Work
 
-Stage 4 should distinguish:
+The following historical candidate distinctions remain useful input to a
+future Stage 4E design:
 
 ```text
 same request_id + same semantic_fingerprint
@@ -1031,12 +1037,13 @@ semantic_fingerprint
 ### Current Classification
 
 ```text
-Stage 4 / retry classification
+Stage 4E / Retry / Attempt Authorization — future
 ```
 
 ### Suggested Timing
 
-During Stage 4 structured outcome / request-attempt evidence design.
+When a concrete Stage 4E consumer and request-attempt evidence boundary are
+approved.
 
 ---
 
@@ -1141,6 +1148,10 @@ derived-state corruption recovery
 permission bypass attempts during active workflows
 ```
 
-Those scenarios should be revisited after Stage 4 introduces structured semantic outcomes, decision receipts, runtime decision policy, strategy selection, and retry governance.
+Those scenarios should be revisited after Stage 4 establishes structured
+semantic outcomes, applicable durable evidence, Runtime Decision Authority,
+Strategy Selection Authority, and conditional Retry / Attempt Authorization.
 
-The reason is sequencing: chaos tests are most useful after the system can classify what happened, preserve durable evidence, decide allowed recovery, and distinguish operational failure from semantic risk.
+The reason is sequencing: chaos tests are most useful after the system can
+classify what happened, preserve durable evidence when required, authorize a
+current response, and distinguish operational failure from semantic risk.

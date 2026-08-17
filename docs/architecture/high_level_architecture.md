@@ -8,12 +8,17 @@ This document describes the top-level structure of the Streaming System + Compas
 
 The goal is not to explain every implementation detail, but to define the major layers of the system and how they relate to one another.
 
-> **Current status after Stage 4B:** The repository has durable PostgreSQL
-> write-side and read-side baselines, exact-next per-order projection progress
-> under ADR 0020, read-side snapshot trust, `SemanticOutcome`, and an explicit
-> `DecisionReceipt` serialization and persistence foundation. Snapshots remain
-> derived evidence, and receipt materialization is not automatic. Stage 4B.1
-> is next.
+> **Current implementation checkpoint after Stage 4C PR0:** The repository has
+> durable PostgreSQL write-side and read-side baselines, exact-next per-order
+> projection progress under ADR 0020, completed bounded trace and measurement
+> evidence, `SemanticOutcome`, a `DecisionReceipt` serialization and persistence
+> foundation, and the completed Order Correctness Contract v0. Projection
+> snapshots remain optional derived reference infrastructure for the current
+> Order workload. Receipt materialization is not automatic. Stage 4C PR0
+> completed documentation and responsibility alignment; production Runtime
+> Decision Authority is next but not yet frozen or implemented. Stage 4D
+> Strategy Selection Authority and Stage 4E Retry / Attempt Authorization are
+> future responsibilities.
 
 ---
 
@@ -50,10 +55,10 @@ src/
 ├── storage/       # persistence boundaries
 ├── pipeline/      # runtime execution flows
 ├── compass/       # semantic validation and governance
-chaos_engine/      # adversarial testing / failure injection
+chaos_engine/      # failure-scenario documentation / placeholder infrastructure
 experiments/       # isolated demos and prototypes
 docs/              # architecture notes, roadmaps, postmortems
-tests/             # verification across levels
+tests/             # verification across levels, including executable adversarial tests
 ```
 
 ---
@@ -115,22 +120,28 @@ This is where the system answers:
 
 - whether a candidate event truthfully represents a legal transition before persistence
 - whether projected state remains semantically valid after derivation
-- whether violations should be accepted, warned, rejected, or quarantined
+- how bounded producer evidence is interpreted as `SemanticOutcome` and may be
+  preserved as governance evidence
 
 Compass is the semantic checking layer of the system.
 
 At the current baseline, write-side transition truth remains the enforcement
-layer. Stage 4A and Stage 4B also implement semantic outcome and receipt
-evidence contracts for write-side, read-side, and snapshot producers. Policy,
-strategy, retry, and action execution remain later layers.
+layer. Stage 4A and Stage 4B implement semantic-outcome and receipt-evidence
+contracts for bounded write-side, read-side, and snapshot producers. Stage
+4B.1, Stage 4B.2, and Stage 4B.5 add bounded trace, measurement, and exact-rule
+evidence. Stage 4C production Runtime Decision Authority is next; Stage 4D
+strategy selection, conditional Stage 4E retry / attempt authorization, and
+action execution remain later, separately owned responsibilities.
 
 ---
 
 ### `chaos_engine/`
 
-Defines adversarial test pressure.
+Preserves failure-scenario documentation and placeholder infrastructure.
 
-This is where the system injects:
+Executable adversarial correctness tests currently live under
+`tests/adversarial/`. The `chaos_engine/` directory records possible pressure
+such as:
 
 - duplicates
 - out-of-order events
@@ -139,8 +150,8 @@ This is where the system injects:
 - timing distortions
 - load pressure
 
-Chaos does not define correctness.  
-It tests whether the correctness mechanisms in `src/` actually survive real failure conditions.
+These scenarios do not define correctness, and their presence does not claim an
+implemented general chaos runtime.
 
 ---
 
@@ -154,10 +165,13 @@ At a high level, the system evolves in this order:
 4. define how Compass validates event truth before persistence
 5. define projection and read-side runtime execution
 6. map bounded technical evidence into `SemanticOutcome`
-7. preserve selected evidence in `DecisionReceipt`
-8. explicitly persist receipts when caller orchestration chooses to do so
-9. later apply trace, policy, strategy, retry, and action-governance layers
-10. pressure the whole system using chaos scenarios
+7. explicitly preserve selected evidence in `DecisionReceipt`, trace, or
+   measurement contracts when the relevant caller chooses to do so
+8. use live semantic evidence for Stage 4C current-response authority without
+   requiring prior receipt persistence
+9. later hand authorized responses to Stage 4D strategy selection, and enter
+   Stage 4E only when another attempt is considered
+10. validate selected failure scenarios through executable adversarial tests
 
 This sequencing reflects the design philosophy of the project:
 
@@ -192,10 +206,10 @@ Only after those are stable does the system expand toward:
 
 The architecture is intentionally layered.
 
-- `core` defines truth
-- `storage` preserves truth
-- `pipeline` executes truth
-- `compass` validates truth
-- `chaos_engine` attacks truth
+- `core` defines domain semantics
+- `storage` preserves authoritative and derived data according to their boundaries
+- `pipeline` orchestrates candidate, admission, persistence, and derivation flows
+- `compass` validates semantic claims and interprets bounded evidence
+- adversarial tests pressure the truth-preserving boundaries
 
 This separation is essential to keeping the project understandable as it evolves from a semantic prototype into a failure-aware streaming system.

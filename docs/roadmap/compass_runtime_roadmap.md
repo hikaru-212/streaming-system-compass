@@ -42,7 +42,11 @@ This Compass runtime roadmap answers:
 
 > How does Compass become more capable as a runtime semantic control layer?
 
-The two roadmaps overlap around Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 4 because Compass depends on durable write-side, durable read-side, snapshot trust, and completed actor / permission boundaries before stronger runtime validation grows.
+The two roadmaps overlap around Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 4
+because Compass builds on durable write-side, durable read-side, and completed
+actor / permission boundaries. Stage 3.5D supplies optional snapshot reference
+infrastructure; ADR 0021 confirms that the current Order workload and generic
+Stage 4 governance do not depend on it.
 
 However, this document avoids repeating detailed schema columns, migrations, store test matrices, and PR-level implementation history.
 
@@ -67,7 +71,7 @@ Project Stage = repository-wide implementation milestone
 
 For example:
 
-- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, Stage 3.5C, and the Stage 3.5D replay-efficiency substrate.
+- Compass Phases 1–3 correspond to the current write-side validation and durable persistence dependencies across Stage 2, Stage 3, Stage 3.5B, and Stage 3.5C, with Stage 3.5D retained as optional replay-efficiency reference infrastructure.
 - Stage 3.5E provides the completed minimal actor / permission boundary before broader runtime governance.
 - Stage 4A provides the completed `SemanticOutcome` core for runtime semantic interpretation.
 - Compass Phase 4 maps to Stage 4 runtime semantic governance.
@@ -91,12 +95,13 @@ candidate event
 → only allowed event can reach accepted history
 ```
 
-The project has now completed the main durability and replay-efficiency substrate needed before Stage 4:
+The project has completed the durable baselines and optional replay-efficiency
+reference infrastructure developed before Stage 4:
 
 ```text
 Stage 3.5B = durable write-side baseline
 Stage 3.5C = durable read-side baseline
-Stage 3.5D = read-side snapshot trust / replay-efficiency baseline
+Stage 3.5D = optional read-side snapshot trust / replay-efficiency baseline
 ```
 
 This means Compass is already more than a passive checker.
@@ -169,17 +174,35 @@ terminal semantic refinement, deterministic YAML projection, and bounded
 overhead characterization. The Stage 4B.3 closeout did not move, redefine,
 block, or sequence it.
 
+Stage 4C PR0 then completed documentation and responsibility alignment. No
+production Runtime Decision Authority is implemented yet; its first production
+contract is next and not frozen. Stage 4D Strategy Selection Authority and
+conditional Stage 4E Retry / Attempt Authorization remain future work.
+
 ---
 
 ## Current Limitation
 
-Compass does not yet make runtime governance decisions for derived state.
+Compass does not yet implement Runtime Decision Authority over live semantic
+observations.
 
-The system can now preserve durable accepted history, persist derived read-side state, compare persisted projection state against accepted-history replay, validate snapshot-assisted replay, and resolve read-side state from an externally qualified snapshot id.
+The current evidence foundations cover bounded write-side observations,
+read-side / derived-state observations, and source-applicable exact correctness
+rule evidence. Stage 4A maps eligible observations into `SemanticOutcome`;
+Stage 4B provides explicit durable governance-evidence foundations; and Stage
+4B.5 provides terminal exact-rule refinement where supported.
 
-Stage 4A made these results semantically interpretable, and Stage 4B made
-selected evidence durable and reviewable, but Compass has not yet become a
-full state-level governance layer.
+The first Stage 4C live path therefore centers on:
+
+```text
+live SemanticOutcome
++ source-applicable terminal exact rule refinement
+→ Runtime Decision Authority
+```
+
+Projection mismatch, replay validation, and snapshot-assisted observations
+remain valid read-side evidence families. They do not define the entire Stage
+4C governance problem.
 
 Stage 4B.2 answered the next bounded question after execution topology was
 preserved:
@@ -190,15 +213,21 @@ preserved:
 
 That interpretation began in Stage 4A through `SemanticOutcome` mapping and
 continued through the completed Stage 4B receipt foundation and Stage 4B.1
-execution-topology evidence. Measurement remains descriptive; later runtime
-decision policy, strategy selection, rate admission, and Stage 5 action safety
-remain separate work.
+execution-topology evidence. Measurement remains descriptive; production
+Runtime Decision Authority, Strategy Selection Authority, conditional Retry /
+Attempt Authorization, rate admission, and Stage 5 action safety remain
+separate work.
 
 ---
 
 ## Snapshot Substrate Status
 
 Stage 3.5D has completed the read-side projection snapshot trust substrate and explicitly deferred write-side aggregate snapshot implementation.
+
+Under [ADR 0021](../adr/0021_projection_snapshots_are_optional_for_current_order_workload.md),
+this remains bounded reference infrastructure rather than a current Order
+workload or generic Stage 4 dependency. ADR 0026 keeps further snapshot-specific
+continuation closed until a concrete workload or consumer justifies it.
 
 Completed baseline:
 
@@ -236,20 +265,27 @@ Detailed Stage 3.5D execution notes live in:
 
 ## Compass Evolution Principle
 
-Compass should evolve from:
+Compass should evolve from stable truth and evidence foundations into separate
+governance responsibilities:
 
 ```text
 write-side event truth
 → durable accepted history
 → durable derived state
-→ snapshot trust / replay-efficiency substrate
 → minimal actor / permission boundary
 → structured semantic outcomes
-→ DecisionReceipt / DiagnosticTrace
-→ minimal domain policy contract / policy-linked recovery basis
-→ runtime decisions
-→ action safety
-→ dual-dimension governance
+
+selected observations
+→ DecisionReceipt / DiagnosticTrace / Measurement Evidence as applicable
+
+live SemanticOutcome + applicable exact rule refinement
+→ Runtime Decision Authority
+   ├─→ Strategy Selection Authority → execution
+   └─→ Retry / Attempt Authorization when another attempt is considered
+       → Strategy Selection Authority for that attempt → execution
+
+optional snapshot trust / replay-efficiency infrastructure
+= derived-state reference path, not accepted authority or a Stage 4 prerequisite
 ```
 
 The key principle is:
@@ -400,13 +436,15 @@ Completed at the durable read-side baseline level.
 
 ---
 
-# Stage 3.5D Dependency — Snapshot Trust Contract / Replay Efficiency
+# Stage 3.5D Reference Infrastructure — Snapshot Trust Contract / Replay Efficiency
 
 Stage 3.5D is complete at the read-side snapshot trust / replay-efficiency baseline level.
 
 It does not implement Layer 2 validation itself.
 
-Instead, it improves the replay, rehydration, and recovery substrate that Layer 2 may later depend on.
+Instead, it provides optional replay, rehydration, and recovery infrastructure.
+The current Order workload does not require snapshots for business correctness,
+reads, restart, completeness, or current replay performance.
 
 Stage 3.5D treats snapshots as derived state-compression artifacts:
 
@@ -443,19 +481,23 @@ Detailed execution notes live in:
 
 Stage 3.5D should remain persistence / replay hardening.
 
-It should not absorb structured semantic outcomes, runtime decision policy, action safety, or dual-dimension governance.
+It should not absorb structured semantic outcomes, Runtime Decision Authority,
+action safety, or dual-dimension governance.
 
 ---
 
-# Stage 3.5E Dependency — Minimal Actor / Permission Boundary
+# Stage 3.5E Completed Dependency — Minimal Actor / Permission Boundary
 
-Before Compass grows into stronger runtime governance, the system should establish a minimal actor / permission boundary.
+Before Compass entered stronger runtime-governance work, the system established
+a minimal actor / permission boundary.
 
 ```text
 Stage 3.5E — Minimal Actor / Permission Boundary
 ```
 
-This stage does not implement Layer 2 validation, structured semantic outcomes, runtime decision policy, full RBAC, login/session handling, or benchmarking.
+At that checkpoint, this stage did not implement Layer 2 validation, structured
+semantic outcomes, runtime decision policy, full RBAC, login/session handling,
+or benchmarking.
 
 Instead, it clarifies who or what is allowed to produce validation, snapshots, receipts, decisions, rebuilds, and privileged operations.
 
@@ -467,7 +509,9 @@ projection state = derived runtime view
 checkpoint = operational progress metadata
 ```
 
-Stage 3.5E should therefore define minimal actor semantics before Stage 4 receipts need fields such as `created_by`, `validated_by`, `decision_by`, `receipt_by`, or `triggered_by`.
+Stage 3.5E therefore defined minimal actor semantics before later Stage 4
+evidence needed fields such as `created_by`, `validated_by`, `decision_by`,
+`receipt_by`, or `triggered_by`.
 
 Compass-relevant outcomes include:
 
@@ -479,9 +523,10 @@ Compass-relevant outcomes include:
 - read-side tables left mutable for upsert, resume, reset, and rebuild
 - stronger confidence that later Layer 2 receipts can identify who or what produced evidence
 
-This stage should remain minimal actor / permission boundary hardening.
+Stage 3.5E remains the completed minimal actor / permission hardening baseline.
 
-It should not absorb Layer 2 validation, `SemanticOutcome`, runtime decision policy, action safety, or dual-dimension governance.
+It did not absorb Layer 2 validation, `SemanticOutcome`, runtime decision
+policy, action safety, or dual-dimension governance.
 
 ---
 
@@ -489,9 +534,13 @@ It should not absorb Layer 2 validation, `SemanticOutcome`, runtime decision pol
 
 ## Goal
 
-Phase 4 describes how Compass evolves from write-side semantic validation and durable replay evidence into a runtime semantic governance layer.
+Phase 4 describes how Compass evolves from bounded write-side and read-side
+semantic evidence into separately owned runtime governance responsibilities.
 
-At this point, Compass should begin turning technical validation results into structured semantic meaning and reviewable runtime decisions.
+Stage 4A and Stage 4B already provide semantic interpretation and durable
+evidence foundations. The current next step is live Runtime Decision Authority
+over eligible semantic observations, including applicable exact-rule
+refinement.
 
 The high-level flow is:
 
@@ -598,21 +647,32 @@ defines Stage 4C as current-response authority, Stage 4D as strategy selection
 inside prior authorization, and Stage 4E as another-attempt authorization and
 constraints. Actual execution remains separate. The first delivery is
 live/in-memory first: `SemanticOutcome` plus terminally applicable exact rule
-refinement is the primary policy evidence. `DecisionReceipt` remains durable
-governance evidence but is not required for the first live hot path; restart
-recovery remains a distinct deferred consumer.
+refinement is the primary live decision evidence. `DecisionReceipt` remains
+durable governance evidence but is not required for the first live hot path;
+restart recovery remains a distinct deferred consumer.
 
 ---
 
 ## Runtime Meaning
 
-This phase is where Compass starts to answer:
+This phase asks:
 
-> If derived state is stale, untrusted, drifting, or unresolved, what does that mean for the runtime?
+> Given a live semantic observation, what generic current response is
+> semantically permitted, required, or denied?
 
-The answer should not be only a log line.
+Eligible evidence may come from write-side observations, read-side /
+derived-state observations, or source-applicable exact correctness-rule
+evidence. Projection drift, replay mismatch, and derived-state trust remain
+valid examples within the read-side family; they do not define the whole Stage
+4C problem.
 
-It should become structured semantic evidence that can support recovery, fallback, quarantine, rebuild, retry classification, and later action safety.
+The live decision boundary remains:
+
+```text
+live SemanticOutcome
++ source-applicable terminal exact rule refinement
+→ Runtime Decision Authority
+```
 
 ---
 
@@ -648,7 +708,9 @@ operational freshness / runtime trust
 action safety
 ```
 
-Stage 4 creates semantic meaning, evidence, decisions, strategies, and retry governance.
+Stage 4 establishes semantic meaning and evidence foundations, then separates
+Runtime Decision Authority, Strategy Selection Authority, and conditional Retry
+/ Attempt Authorization.
 
 Stage 5 uses those outputs to decide whether an action should execute.
 
@@ -711,7 +773,7 @@ Compass evolves through the following capability path:
 |---|---|
 | 1 | Write-side transition-truth validation |
 | 2 | Durable write-side accepted-history protection |
-| 3 | Durable read-side and snapshot trust substrate |
+| 3 | Durable read-side plus optional snapshot trust reference infrastructure |
 | 4 | Runtime semantic governance |
 | 5 | Action safety / dual-dimension governance demo |
 | 6 | Later production and agent-facing hardening |

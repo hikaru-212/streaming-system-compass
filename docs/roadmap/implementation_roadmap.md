@@ -9,8 +9,8 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after completion of Stage 4B.2 and
-the documentation-only Stage 4B.3 closeout:
+This version reflects the project position after the Stage 4C PR0
+documentation and responsibility-boundary alignment:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
@@ -27,7 +27,12 @@ the documentation-only Stage 4B.3 closeout:
   It was delivered as separately owned parallel Stage 4 foundation work and is
   technically independent from the Stage 4B.3 closeout, which did not move,
   redefine, block, or sequence it.
-- Stage 5 and later stages remain forward-looking governance / production-hardening work.
+- Stage 4C PR0 is complete as documentation and responsibility alignment; no
+  production Runtime Decision Authority is implemented, and its first
+  production contract remains next work rather than a frozen PR1 shape.
+- Stage 4D Strategy Selection Authority and Stage 4E Retry / Attempt
+  Authorization remain future work.
+- Stage 5 Action Safety and later production hardening remain future work.
 
 ---
 
@@ -53,13 +58,18 @@ This means:
 - Stage 3.5A is complete as the pre-persistence money / exact-value hardening step.
 - Stage 3.5B is complete as the durable write-side baseline.
 - Stage 3.5C is complete as the durable read-side baseline.
-- Stage 3.5D is complete as the projection snapshot trust / replay-efficiency baseline.
+- Stage 3.5D is complete as bounded projection-snapshot reference
+  infrastructure; ADR 0021 makes it optional for the current Order workload.
 - Stage 3.5E is complete as the durable history and permission hardening baseline.
 - Write-side aggregate snapshot implementation is explicitly deferred.
 - Stage 4A is complete as the SemanticOutcome core.
 - Stage 4B is complete as the DecisionReceipt evidence and persistence foundation.
 - Stage 4B.1 is complete as the bounded producer-specific DiagnosticTrace / ResolutionTrace stage.
 - Stage 4B.2 is complete as the producer-specific measurement and bounded empirical cost-evidence stage.
+- Stage 4B.3 is complete and closed as not currently justified under ADR 0026.
+- Stage 4B.5 Order Correctness Contract v0 is complete and closed.
+- Stage 4C PR0 documentation alignment is complete; Stage 4C production
+  implementation is next and not yet frozen.
 
 Detailed completed-stage and current-stage records now live under:
 
@@ -80,12 +90,16 @@ The completed Stage 4 foundation position is:
 - **Stage 4B.3 — COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED**
 - **Stage 4B.5 — COMPLETE / CLOSED**
 
-With Stage 4B.2 complete, the current and later responsibilities are:
+With Stage 4C PR0 complete, the current and later responsibilities are:
 
 - Stage 4B.3 remains closed unless ADR 0026 re-entry conditions are met; Stage
   4B.5 Order Correctness Contract is complete
-- Stage 4C+ runtime decision governance
-- Stage 5 dual-dimension governance demo / action safety
+- Stage 4C production Runtime Decision Authority is next; its first contract is
+  not yet frozen
+- Stage 4D Strategy Selection Authority is future
+- Stage 4E Retry / Attempt Authorization is future and conditional when another
+  attempt is considered
+- Stage 5 dual-dimension governance demo / Action Safety is future
 - Stage 5+ production and agent-facing hardening
 
 ---
@@ -110,7 +124,7 @@ The project should evolve from:
 14. decision receipts / runtime evidence
 15. producer-specific trace and measurement evidence
 16. evidence-gated closure of projection trust continuation and separately owned machine-readable order correctness contract work
-17. runtime decision, strategy selection, and retry governance
+17. runtime current-response authority, strategy selection, and conditional retry / attempt authorization as separate responsibilities
 18. action safety gate / dual-dimension governance demo
 19. later production and agent-facing hardening
 
@@ -576,15 +590,25 @@ Stage 4 introduces the first public-facing runtime semantic governance layer aft
 
 The goal is not to add another pile of validators, logs, or retry labels.
 
-The goal is to make runtime correctness evidence governable:
+The goal is to make runtime correctness evidence governable without forcing all
+responsibilities into one pipeline:
 
 ```text
 technical evidence
 → semantic interpretation
-→ durable evidence
-→ policy-linked decision
-→ execution strategy
-→ retry governance
+→ evidence foundations as applicable
+
+live SemanticOutcome + applicable exact rule refinement
+→ Stage 4C Runtime Decision Authority
+
+authorized current response
+→ Stage 4D Strategy Selection Authority
+→ execution
+
+another attempt considered
+→ Stage 4E Retry / Attempt Authorization
+→ Stage 4D strategy selection for the authorized attempt
+→ execution
 ```
 
 Stage 4 is where Compass begins to answer:
@@ -644,10 +668,10 @@ Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 Stage 4B.2 — Measurement Evidence
 Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
 Stage 4B.5 — Order Correctness Contract v0 — complete / closed
-Stage 4C — Runtime Decision Authority
+Stage 4C — Runtime Decision Authority — PR0 docs boundary complete; production implementation next
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
-Stage 4D — Strategy Selection Authority
-Stage 4E — Retry / Attempt Authorization
+Stage 4D — Strategy Selection Authority — future
+Stage 4E — Retry / Attempt Authorization — future and conditional
 ```
 
 This sequence is intentionally staged.
@@ -657,9 +681,10 @@ then preserve producer-specific execution-topology evidence, then measure bounde
 execution cost and obtain empirical evidence. Stage 4B.3 used an evidence-first
 investigation to determine that incremental projection-trust continuation is not
 currently justified. Stage 4B.5 completed as separately owned parallel
-foundation work and remains technically independent from Stage 4B.3. Stage 4C+
-runtime decisions, outcome-family alignment, strategy selection, and retry
-governance remain downstream.
+foundation work and remains technically independent from Stage 4B.3. Stage 4C
+production implementation is next. Stage 4C.5 outcome-family alignment, Stage
+4D Strategy Selection Authority, and conditional Stage 4E Retry / Attempt
+Authorization remain downstream.
 
 ---
 
@@ -891,10 +916,25 @@ rules; current typed FullProof production covers exactly six
 Core boundary:
 
 ```text
-correctness contract defines intended correctness
-Compass verifies runtime semantic truth
-runtime policy decides allowed action
+correctness contract
+= defines intended correctness
+
+semantic evidence / SemanticOutcome
+= describes current semantic meaning
+
+Runtime Decision Authority
+= decides the generic current response permitted, required, or denied
+
+Strategy Selection Authority
+= selects an eligible path within prior authorization
+
+Retry / Attempt Authorization
+= decides whether another attempt is allowed
 ```
+
+These are separately owned responsibilities, not one mandatory runtime
+pipeline. Retry / Attempt Authorization participates only when another attempt
+is being considered.
 
 Correctness contract does not replace Compass.
 
@@ -1103,17 +1143,22 @@ These belong to later hardening stages or Stage 5.
 
 ## Stage 4 Completion Direction
 
-Stage 4 is complete when the system can represent a governable runtime semantic pipeline:
+Stage 4 is complete when the system can represent governable evidence and the
+separate, non-linear authority handoffs that consume it:
 
 ```text
 technical evidence
 → SemanticOutcome
-→ DecisionReceipt
-→ diagnostic trace when needed
-→ measurement matrix / cost evidence
-→ policy-linked runtime decision
-→ strategy selection
-→ retry governance
+
+selected observations
+→ DecisionReceipt / diagnostic trace / measurement evidence as applicable
+
+live SemanticOutcome + applicable exact rule refinement
+→ Stage 4C current-response authority
+   ├─→ Stage 4D strategy selection → execution
+   └─→ Stage 4E authorization when another attempt is considered
+       → Stage 4D strategy selection for that authorized attempt
+       → execution
 ```
 
 The important result is not that every production concern is fully optimized.
@@ -1139,9 +1184,10 @@ A policy rule does not replace runtime admission.
 
 Stage 5 demonstrates how runtime semantic governance can be used before externally meaningful actions are executed.
 
-Stage 4 creates the semantic governance pipeline.
+Stage 4 creates semantic-evidence foundations and separates the authorities
+that consume them.
 
-Stage 5 makes that pipeline visible as a reviewer-facing action-safety demo.
+Stage 5 makes those boundaries visible as a reviewer-facing action-safety demo.
 
 The key relationship is:
 
@@ -1161,14 +1207,18 @@ Action safety should not be built directly from raw technical status.
 
 Before an action-safety gate can make trustworthy decisions, the system needs:
 
-- SemanticOutcome
-- DecisionReceipt
-- runtime decision policy
-- strategy selection
-- retry governance
+- live `SemanticOutcome` and applicable exact refinement
+- Runtime Decision Authority
+- Strategy Selection Authority inside prior authorization
+- Retry / Attempt Authorization when another attempt is considered
 - clear separation between accepted history and derived state
 
-Stage 5 uses those pieces to decide whether a downstream or externally visible action should proceed.
+Durable `DecisionReceipt` evidence may support audit, recovery, and delayed
+governance consumers, but it is not a mandatory prerequisite for the live
+action-safety path.
+
+Stage 5 uses the applicable live authorities and evidence to decide whether a
+downstream or externally visible action should proceed.
 
 ---
 
@@ -1319,9 +1369,10 @@ Runtime Semantic Governance
   4B.5 Order Correctness Contract v0
     complete / closed after separately owned parallel delivery
   4C Runtime Decision Authority
+    PR0 documentation boundary complete; production implementation next
   4C.5 Layer 1 / Layer 2 Outcome Alignment
-  4D Strategy Selection Authority
-  4E Retry / Attempt Authorization
+  4D Strategy Selection Authority — future
+  4E Retry / Attempt Authorization — future and conditional
 
 Stage 5:
 Dual-Dimension Governance Demo / Action Safety
@@ -1351,7 +1402,10 @@ durable truth
 → trace and measurement evidence
 → evidence-gated closure of projection trust continuation
 → separately owned machine-readable correctness contract work
-→ runtime decision, strategy selection, and retry governance
+→ current-response Runtime Decision Authority
+  ├─→ Strategy Selection Authority for an eligible response
+  └─→ Retry / Attempt Authorization when another attempt is considered
+      → Strategy Selection Authority for that authorized attempt
 → action safety / dual-dimension governance demo
 ```
 
@@ -1366,22 +1420,27 @@ It is trying to make semantic failure understandable enough that the runtime can
 
 ## Stage 5+ Candidate — Projection Worker Freshness / Runtime Execution Evidence
 
-Projection worker execution evidence is deferred until after the Stage 4 governance pipeline is stable.
+Projection worker execution evidence is deferred until after the Stage 4
+evidence and authority boundaries are stable.
 
 Stage 4 focuses on:
 
 ```text
 technical correctness evidence
 → SemanticOutcome
-→ DecisionReceipt
-→ DiagnosticTrace / ResolutionTrace
-→ Measurement Evidence
-→ Projection Trust Boundary and Continuation
-  closed as not currently justified
-→ separately owned Order Correctness Contract
-→ current-response RuntimeDecision Authority
-→ Strategy Selection inside prior authorization
-→ Retry / Attempt Authorization when another attempt is considered
+
+selected observations
+→ DecisionReceipt / DiagnosticTrace / ResolutionTrace / Measurement Evidence
+  as applicable
+
+Projection Trust Boundary and Continuation
+= closed as not currently justified
+
+live SemanticOutcome + applicable exact rule refinement
+→ current-response Runtime Decision Authority
+   ├─→ Strategy Selection inside prior authorization
+   └─→ Retry / Attempt Authorization when another attempt is considered
+       → Strategy Selection for that authorized attempt
 ```
 
 Projection worker mapping is not required for Stage 4A because Stage 4A PR4 maps read-side correctness validation results, not ordinary worker execution outcomes.

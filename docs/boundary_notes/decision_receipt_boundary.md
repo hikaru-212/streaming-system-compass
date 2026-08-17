@@ -52,11 +52,20 @@ DecisionReceipt
 = durable governance evidence record for selected semantic interpretation
 ```
 
-A system may stop at `SemanticOutcome` if it only needs immediate runtime classification.
-A system that needs auditability, reviewability, operator investigation, policy-linked recovery, strategy selection, retry governance, or future agent workflow governance needs receipts.
+A live system may consume `SemanticOutcome` directly for immediate runtime
+classification and current-response authority. Under
+[ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md),
+the first live Runtime Decision Authority and Retry / Attempt Authorization
+paths do not require a `DecisionReceipt` or prior receipt persistence.
 
-A receipt provides evidence for those later governance layers.
-It does not execute them.
+A consumer that needs durable auditability, reviewability, operator
+investigation, delayed reconciliation, restart/recovery, or governance
+continuation may require receipts for that durable purpose. Strategy selection
+and retry / attempt authorization may instead consume eligible current live
+evidence; receipt need is consumer-specific rather than categorical.
+
+A receipt provides durable, reviewable evidence for later governance consumers.
+It does not execute or authorize them.
 
 ---
 
@@ -132,7 +141,7 @@ AttemptLog
 
 DecisionReceipt
 ≠
-RuntimeDecisionPolicy
+Runtime Decision Authority
 ```
 
 Operational logs may still exist in ELK, Loki, CloudWatch, local files, or another observability system.
@@ -268,18 +277,19 @@ Those details may be useful, but they belong to Stage 4B.1 `DiagnosticTrace` / `
 
 ---
 
-## Receipt vs Runtime Decision
+## Receipt vs Runtime Decision Authority
 
 A receipt records evidence.
 
-A policy decides action.
+Runtime Decision Authority authorizes the generic response to a current
+observation from eligible evidence.
 
 ```text
 DecisionReceipt
 = evidence
 
-RuntimeDecisionPolicy
-= decision rule over evidence
+Runtime Decision Authority
+= current-response authorization
 ```
 
 A receipt may preserve completed tri-state evaluations such as:
@@ -291,8 +301,9 @@ rebuild_required = TRUE | FALSE | NOT_EVALUATED
 retry_candidate = TRUE | FALSE | NOT_EVALUATED
 ```
 
-but Stage 4B does not execute operator review, fallback, rebuild, quarantine, retry, or strategy selection.
-Those belong to later runtime policy and strategy layers.
+but Stage 4B does not execute operator review, fallback, rebuild, quarantine,
+retry, or strategy selection. Those belong to later, separately owned runtime
+decision, strategy-selection, and retry / attempt-authorization boundaries.
 
 Current producer adapters leave every flag `NOT_EVALUATED`. Only a later
 authorized evaluator may assert `TRUE` or `FALSE`.
@@ -302,7 +313,7 @@ In particular:
 ```text
 retry_candidate
 ≠
-retry_allowed
+authorization for another attempt
 ```
 
 A receipt may preserve retry-relevant evidence.
@@ -616,7 +627,7 @@ full diagnostic paths
 → DiagnosticTrace / ResolutionTrace, not decision_receipts
 
 retry attempt sequences
-→ AttemptLog / RetryGovernance, not decision_receipts
+→ future AttemptLog / attempt-governance evidence, not decision_receipts
 ```
 
 This keeps the persistence layer aligned with the receipt boundary instead of becoming a generic observability table.
@@ -689,12 +700,15 @@ It does not claim that concrete runtime adapters already produce every state in 
 
 ## Summary
 
-Stage 4B introduces:
+Stage 4B introduces explicit mapping for selected observations:
 
 ```text
 SemanticOutcome
 → DecisionReceipt
 ```
+
+This does not mean that every `SemanticOutcome` produces or persists a receipt
+automatically.
 
 The receipt is not a log.
 The receipt is not a trace.
