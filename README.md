@@ -456,20 +456,23 @@ The goal is to make the correctness boundary explicit **before broader automatio
 
 ## License and attribution
 
-Documentation, diagrams, and written materials are licensed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).
+Software and executable repository content are licensed under the [Apache License 2.0](LICENSE).
 
-Unless a separate software license is added later, source code is not licensed for reuse, redistribution, or modification. All rights are reserved for source code.
+Documentation, diagrams, and other prose or research materials are licensed under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/) (CC BY 4.0).
 
-For documentation attribution:
+For documentation attribution, a suggested form is:
 
 ```text
-Compass Framework / Streaming System Compass documentation by Yen-Hua Chen.
+Streaming System + Compass documentation by Yen-Hua Chen.
 Licensed under CC BY 4.0.
 Original source: https://github.com/hikaru-212/streaming-system-compass
 ```
 
+The exact content-role boundary, including executable experiments, Markdown examples, and recorded benchmark evidence, is documented in [LICENSE-CONTENT.md](LICENSE-CONTENT.md).
+
 See:
 
+* [LICENSE](LICENSE)
 * [NOTICE.md](NOTICE.md)
 * [LICENSE-CONTENT.md](LICENSE-CONTENT.md)
 
