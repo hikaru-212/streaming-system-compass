@@ -258,6 +258,25 @@ class CandidateStockReplenished:
 
 
 @dataclass(frozen=True)
+class WarehouseReceiptObservation:
+    """Represent a warehouse-owned factual observation of received stock.
+
+    This deterministic in-memory value is neither a workflow candidate nor an
+    accepted inventory fact. It supplies the factual product and quantity basis
+    for warehouse receipt confirmation without modeling warehouse persistence,
+    external provenance, or cryptographic authenticity.
+    """
+
+    receipt_id: str
+    product_id: str
+    quantity: int
+
+    def __post_init__(self) -> None:
+        _validate_identifier("receipt_id", self.receipt_id)
+        _validate_product_and_quantity(self.product_id, self.quantity)
+
+
+@dataclass(frozen=True)
 class AcceptedStockReplenished:
     """Represent replenishment admitted into authoritative accepted history."""
 
@@ -290,6 +309,7 @@ class AuthorityEvidence:
     kind: EvidenceKind
     issuer: EvidenceIssuer
     candidate_id: str
+    receipt_id: str | None
     product_id: str
     quantity: int
     _issuance_marker: object = field(repr=False, compare=False)
@@ -302,6 +322,7 @@ class AuthorityEvidence:
         candidate_id: str,
         product_id: str,
         quantity: int,
+        receipt_id: str | None = None,
         _issuance_token: object | None = None,
     ) -> None:
         if _issuance_token is not _MODELED_EVIDENCE_ISSUANCE_TOKEN:
@@ -312,10 +333,20 @@ class AuthorityEvidence:
             raise TypeError("issuer must be EvidenceIssuer")
         _validate_identifier("candidate_id", candidate_id)
         _validate_product_and_quantity(product_id, quantity)
+        if receipt_id is not None:
+            _validate_identifier("receipt_id", receipt_id)
+        if kind is EvidenceKind.WAREHOUSE_RECEIPT_CONFIRMATION:
+            if receipt_id is None:
+                raise ValueError(
+                    "warehouse receipt confirmation requires receipt_id"
+                )
+        elif receipt_id is not None:
+            raise ValueError("agent restock evidence must not claim receipt_id")
 
         object.__setattr__(self, "kind", kind)
         object.__setattr__(self, "issuer", issuer)
         object.__setattr__(self, "candidate_id", candidate_id)
+        object.__setattr__(self, "receipt_id", receipt_id)
         object.__setattr__(self, "product_id", product_id)
         object.__setattr__(self, "quantity", quantity)
         object.__setattr__(self, "_issuance_marker", _issuance_token)
@@ -983,22 +1014,28 @@ class WarehouseAuthority:
         self,
         *,
         candidate: CandidateStockReplenished,
+        receipt: WarehouseReceiptObservation,
     ) -> AuthorityEvidence:
-        """Issue receipt evidence correlated to warehouse-observed candidate data.
+        """Issue confirmation using candidate identity and receipt-owned facts.
 
         The warehouse may be called because of an originating request, but the
-        supported proposition derives from its modeled receipt assertion rather
-        than from the request or workflow completion.
+        evidence product and quantity derive from the separate receipt
+        observation rather than from the candidate, request, or workflow
+        completion. Only candidate correlation identity comes from the proposed
+        candidate.
         """
 
         if not isinstance(candidate, CandidateStockReplenished):
             raise TypeError("candidate must be CandidateStockReplenished")
+        if not isinstance(receipt, WarehouseReceiptObservation):
+            raise TypeError("receipt must be WarehouseReceiptObservation")
         return AuthorityEvidence(
             kind=EvidenceKind.WAREHOUSE_RECEIPT_CONFIRMATION,
             issuer=self.issuer,
             candidate_id=candidate.candidate_id,
-            product_id=candidate.product_id,
-            quantity=candidate.quantity,
+            receipt_id=receipt.receipt_id,
+            product_id=receipt.product_id,
+            quantity=receipt.quantity,
             _issuance_token=_MODELED_EVIDENCE_ISSUANCE_TOKEN,
         )
 
@@ -1034,6 +1071,7 @@ __all__ = (
     "SemanticAuthorityAdmission",
     "SemanticAuthorityAdmissionResult",
     "WarehouseAuthority",
+    "WarehouseReceiptObservation",
     "WorkflowExecutionResult",
     "decide_local_capability",
     "evidence_kind_supports",

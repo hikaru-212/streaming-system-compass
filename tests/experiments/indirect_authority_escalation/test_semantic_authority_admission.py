@@ -25,6 +25,7 @@ from experiments.indirect_authority_escalation.model import (
     RestockRequest,
     RestockWorkflow,
     WarehouseAuthority,
+    WarehouseReceiptObservation,
     evidence_kind_supports,
     evidence_matches_candidate,
     source_authorized_for,
@@ -58,6 +59,14 @@ def _prepare_protected_candidate(
     )
     assert preparation.candidate is not None
     return preparation
+
+
+def _matching_warehouse_receipt() -> WarehouseReceiptObservation:
+    return WarehouseReceiptObservation(
+        receipt_id="warehouse-receipt-1",
+        product_id=PROTECTED_PRODUCT_ID,
+        quantity=PROTECTED_QUANTITY,
+    )
 
 
 def test_case_3_keeps_workflow_edges_allowed_and_produces_candidate() -> None:
@@ -151,7 +160,11 @@ def test_matching_warehouse_evidence_accepts_same_agent_origin_candidate() -> No
     assert candidate is not None
 
     agent_evidence = agent.issue_restock_request_evidence(candidate=candidate)
-    warehouse_evidence = warehouse.issue_receipt_confirmation(candidate=candidate)
+    warehouse_receipt = _matching_warehouse_receipt()
+    warehouse_evidence = warehouse.issue_receipt_confirmation(
+        candidate=candidate,
+        receipt=warehouse_receipt,
+    )
     governed_result = workflow.submit_candidate_with_semantic_authority_admission(
         candidate=candidate,
         evidence=(agent_evidence, warehouse_evidence),
@@ -167,6 +180,10 @@ def test_matching_warehouse_evidence_accepts_same_agent_origin_candidate() -> No
         candidate_id=PROTECTED_CANDIDATE_ID,
     )
     assert warehouse_evidence.issued_by_modeled_source is True
+    assert warehouse_evidence.candidate_id == candidate.candidate_id
+    assert warehouse_evidence.receipt_id == warehouse_receipt.receipt_id
+    assert warehouse_evidence.product_id == warehouse_receipt.product_id
+    assert warehouse_evidence.quantity == warehouse_receipt.quantity
     assert evidence_matches_candidate(warehouse_evidence, candidate) is True
     assert evidence_kind_supports(
         warehouse_evidence.kind,
@@ -198,28 +215,50 @@ def test_matching_warehouse_evidence_accepts_same_agent_origin_candidate() -> No
 
 
 @pytest.mark.parametrize(
-    "evidence_candidate",
+    ("evidence_candidate", "warehouse_receipt"),
     (
-        CandidateStockReplenished(
-            product_id=PROTECTED_PRODUCT_ID,
-            quantity=PROTECTED_QUANTITY,
-            candidate_id="candidate:other-request",
+        (
+            CandidateStockReplenished(
+                product_id=PROTECTED_PRODUCT_ID,
+                quantity=PROTECTED_QUANTITY,
+                candidate_id="candidate:other-request",
+            ),
+            WarehouseReceiptObservation(
+                receipt_id="warehouse-receipt-candidate-id-mismatch",
+                product_id=PROTECTED_PRODUCT_ID,
+                quantity=PROTECTED_QUANTITY,
+            ),
         ),
-        CandidateStockReplenished(
-            product_id="product-b",
-            quantity=PROTECTED_QUANTITY,
-            candidate_id=PROTECTED_CANDIDATE_ID,
+        (
+            CandidateStockReplenished(
+                product_id=PROTECTED_PRODUCT_ID,
+                quantity=PROTECTED_QUANTITY,
+                candidate_id=PROTECTED_CANDIDATE_ID,
+            ),
+            WarehouseReceiptObservation(
+                receipt_id="warehouse-receipt-wrong-product",
+                product_id="product-b",
+                quantity=PROTECTED_QUANTITY,
+            ),
         ),
-        CandidateStockReplenished(
-            product_id=PROTECTED_PRODUCT_ID,
-            quantity=11,
-            candidate_id=PROTECTED_CANDIDATE_ID,
+        (
+            CandidateStockReplenished(
+                product_id=PROTECTED_PRODUCT_ID,
+                quantity=PROTECTED_QUANTITY,
+                candidate_id=PROTECTED_CANDIDATE_ID,
+            ),
+            WarehouseReceiptObservation(
+                receipt_id="warehouse-receipt-wrong-quantity",
+                product_id=PROTECTED_PRODUCT_ID,
+                quantity=11,
+            ),
         ),
     ),
     ids=("wrong-candidate-id", "wrong-product-id", "wrong-quantity"),
 )
 def test_warehouse_evidence_must_match_every_candidate_field(
     evidence_candidate: CandidateStockReplenished,
+    warehouse_receipt: WarehouseReceiptObservation,
 ) -> None:
     agent, workflow, warehouse, store = _build_model()
     preparation = _prepare_protected_candidate(agent=agent, workflow=workflow)
@@ -227,7 +266,8 @@ def test_warehouse_evidence_must_match_every_candidate_field(
     assert candidate is not None
 
     mismatched_evidence = warehouse.issue_receipt_confirmation(
-        candidate=evidence_candidate
+        candidate=evidence_candidate,
+        receipt=warehouse_receipt,
     )
     governed_result = workflow.submit_candidate_with_semantic_authority_admission(
         candidate=candidate,
@@ -235,6 +275,10 @@ def test_warehouse_evidence_must_match_every_candidate_field(
     )
 
     assert mismatched_evidence.issued_by_modeled_source is True
+    assert mismatched_evidence.candidate_id == evidence_candidate.candidate_id
+    assert mismatched_evidence.receipt_id == warehouse_receipt.receipt_id
+    assert mismatched_evidence.product_id == warehouse_receipt.product_id
+    assert mismatched_evidence.quantity == warehouse_receipt.quantity
     assert evidence_kind_supports(
         mismatched_evidence.kind,
         Proposition.STOCK_REPLENISHED,
@@ -279,6 +323,7 @@ def test_supported_issuance_api_does_not_let_workflow_impersonate_warehouse() ->
             kind=EvidenceKind.WAREHOUSE_RECEIPT_CONFIRMATION,
             issuer=EvidenceIssuer.WAREHOUSE_AUTHORITY,
             candidate_id=candidate.candidate_id,
+            receipt_id="warehouse-receipt-forged",
             product_id=candidate.product_id,
             quantity=candidate.quantity,
         )
