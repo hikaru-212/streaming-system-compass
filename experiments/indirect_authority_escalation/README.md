@@ -6,31 +6,25 @@
 branch
 = experiment/indirect-authority-escalation-demo
 
-current delivery
-= PR1 — threat model and semantic authority boundary
+V1 implementation
+= complete
 
-implementation
-= not started
+execution
+= deterministic, local, in memory
 ```
 
-This document defines the boundary for a future deterministic local experiment.
-PR1 is documentation-only. It adds no runtime behavior, tests, production
-Compass policy, or external integration.
+The current source contains the complete comparison from direct denial through
+the vulnerable composition failure, governed rejection, and warehouse-grounded
+positive control. A reviewer does not need to check out earlier experiment
+commits.
 
-The experiment is informed by the repository's existing distinction between
-candidate actions and accepted facts, especially the public concept note
-[Shared Workflow Is Not Shared Authority](../../docs/semantic_admission/shared_workflow_is_not_shared_authority.md),
-the current [Durable History Permission Boundary](../../docs/boundary_notes/durable_history_permission_boundary.md),
-and the completed [Stage 4B.5 boundary](../../docs/implementation_notes/stage_4b_5/README.md).
-Those sources do not claim that production Compass already implements the
-inventory policy defined here.
-
----
+This is a bounded Compass-inspired semantic authority-promotion experiment. It
+does not add production Compass policy or integration.
 
 ## Research Question
 
-The experiment will ask whether a directly denied authoritative effect can
-remain reachable through a composition of individually allowed operations:
+Can an actor reach the same authoritative effect through individually allowed
+workflow operations when its direct attempt is denied?
 
 ```text
 direct permission denied
@@ -38,16 +32,48 @@ direct permission denied
 authoritative effect unreachable
 ```
 
-The target failure shape is:
+The deterministic counterexample is:
 
 ```text
 LIMITED_AGENT
-→ allowed RestockWorkflow
-→ allowed InventoryAuthorityService
-→ authoritative inventory effect
+→ RestockWorkflow                     ALLOWED
+→ InventoryAuthorityService           ALLOWED
+→ AuthoritativeInventoryStore         ALLOWED
+→ AcceptedStockReplenished(product-a, 10)
 ```
 
-The core distinctions are:
+while the direct local capability remains:
+
+```text
+LIMITED_AGENT
+→ AuthoritativeInventoryStore
+→ APPEND_ACCEPTED_REPLENISHMENT
+= DENIED
+```
+
+## Why the Direct Permission Check Is Not Enough
+
+Case 1 proves that the store's local permission boundary exists and works. A
+direct append by `LIMITED_AGENT` is denied and accepted history remains empty.
+
+Case 2 then uses only allowed operations. `RestockWorkflow` produces a
+`CandidateStockReplenished`; the deliberately vulnerable authority-service
+method treats arrival through that workflow as sufficient for promotion and
+uses its legitimate store capability. Every invoked local edge is valid, yet
+the same protected effect denied in Case 1 enters accepted history.
+
+The failure is therefore not a missing store ACL or a bypassed denied edge. It
+is invalid semantic promotion across an allowed path:
+
+```text
+∀ edge in path: locally authorized(edge)
+
+does not imply
+
+globally authorized promotion(path)
+```
+
+The demo keeps these distinctions visible:
 
 ```text
 direct permission
@@ -58,472 +84,43 @@ edge-valid
 !=
 path-authorized
 
-tool permission
+local capability authority
 !=
-effect authority
+semantic evidence authority
 
 candidate produced
 !=
 fact established
+
+evidence exists
+!=
+evidence sufficient
+
+evidence correlation
+!=
+evidence authority
 ```
 
-The experiment must not reduce to an omitted local access-control check. Case 1
-must prove that direct denial exists and works. Case 2 must then preserve every
-required local permission while exposing a separate semantic promotion failure.
+## Vulnerable Versus Governed Flow
 
-The broader intuition:
+Both paths remain executable in the current model.
 
-```text
-reachable_effects(actor)
-⊆
-authorized_effects(actor)
-```
-
-is useful motivation, but it is not the executable V1 invariant. A limited
-actor may legitimately initiate a workflow whose effect is later supported by
-an independently authoritative source.
-
----
-
-## Threat Model
-
-| Element | V1 definition |
-|---|---|
-| Protected authoritative effect | Append an `AcceptedStockReplenished(product_id="product-a", quantity=10)` fact to accepted inventory history. |
-| Limited actor | `LIMITED_AGENT` may read inventory and request replenishment, but may not append accepted replenishment facts or certify that stock was received. The actor need not be malicious. |
-| Allowed workflow | `RestockWorkflow` may accept a restock request, construct a `CandidateStockReplenished`, preserve its lineage and evidence, and submit it to the privileged service. |
-| Privileged component | `InventoryAuthorityService` owns the intended accepted-fact append capability. Its possession of that capability does not prove that every candidate it receives is supported. |
-| Semantic boundary | `SemanticAuthorityAdmission` evaluates whether the exact candidate has evidence sufficient for promotion to `AcceptedStockReplenished`. |
-| Failure condition | An accepted replenishment is appended using only workflow completion or agent-request-derived evidence, while the agent's direct append remains denied and every invoked local workflow edge remains allowed. |
-
-### V1 assumptions
-
-The future implementation is intentionally bounded to:
-
-```text
-single process
-deterministic
-in memory
-standard library only
-no LLM
-no network
-no external service
-no credentials
-no concurrency
-no retry
-no sandbox escape
-no exploit behavior
-```
-
-V1 does not model hostile-process isolation, component impersonation,
-cryptographic authenticity, PKI, IAM, or production identity wiring. It models
-the authority-composition shape with explicit finite identities and operations.
-
----
-
-## Demo-Local Actors and Components
-
-| Name | Responsibility | Explicit non-authority |
-|---|---|---|
-| `LimitedAgent` | Initiates a restock request and may issue agent-request evidence. | Cannot assert physical receipt or append accepted inventory facts. |
-| `RestockWorkflow` | Converts the request into a candidate and transports lineage and evidence. | Cannot manufacture warehouse confirmation, approve promotion, or append accepted facts. |
-| `InventoryAuthorityService` | Owns the privileged append path and, in the governed case, requests a promotion decision. | Local append capability is not evidence that a particular candidate is true. |
-| `SemanticAuthorityAdmission` | Evaluates exact candidate correlation, proposition support, evidence-source authority, and modeled issuance. | Does not become generic RBAC, IAM, a tool firewall, or a persistence/concurrency gate. |
-| `AuthoritativeInventoryStore` | Stores accepted inventory facts and rejects callers without the local append capability. | Requests, candidates, and workflow success do not become authority merely by reaching the store boundary. |
-| `WarehouseAuthority` | May issue modeled warehouse receipt confirmation after making its own authority-bearing assertion. | Being causally triggered by a request does not force it to derive its assertion from that request. |
-| `InventoryApprover` | May explicitly approve the exact replenishment candidate. | Approval is candidate-scoped and must not be inferred from workflow completion. |
-
-These are demo-local responsibilities, not a production deployment topology.
-
----
-
-## Authoritative State
-
-Authoritative state is accepted inventory fact history:
-
-```text
-accepted_facts = (
-    AcceptedStockReplenished(...),
-    ...
-)
-```
-
-For V1, current inventory is a deterministic fold over that history:
-
-```text
-inventory(product_id)
-= sum(quantity for matching AcceptedStockReplenished facts)
-```
-
-The protected mutation is therefore the append of an accepted replenishment
-fact. The visible inventory increase is the deterministic consequence of that
-append.
-
-The following remain non-authoritative:
+### Vulnerable path
 
 ```text
 RestockRequest
-CandidateStockReplenished
-workflow success
-candidate identity
-agent request evidence
-```
-
-`RestockRequest` means that replenishment was requested.
-`CandidateStockReplenished` means that replenishment is proposed.
-`AcceptedStockReplenished` means that the system admitted replenishment as an
-authoritative inventory fact.
-
-Separate candidate and accepted conceptual types make this promotion visible.
-A candidate identifier may exist before promotion, but identifier existence does
-not establish accepted-history membership.
-
----
-
-## Capability Graph
-
-The capability graph answers only:
-
-```text
-Which component may invoke which local operation?
-```
-
-It does not answer whether evidence is authoritative for a business
-proposition.
-
-```text
-LIMITED_AGENT
-    ── SUBMIT_RESTOCK_REQUEST / ALLOWED ──► RestockWorkflow
-
-RestockWorkflow
-    ── SUBMIT_REPLENISHMENT_CANDIDATE / ALLOWED
-    ──► InventoryAuthorityService
-
-InventoryAuthorityService
-    ── APPEND_ACCEPTED_REPLENISHMENT / ALLOWED
-    ──► AuthoritativeInventoryStore
-
-LIMITED_AGENT
-    ── APPEND_ACCEPTED_REPLENISHMENT / DENIED
-    ──► AuthoritativeInventoryStore
-```
-
-Case 3 adds this semantic decision path:
-
-```text
-InventoryAuthorityService
-    ── REQUEST_AUTHORITY_PROMOTION_DECISION / ALLOWED
-    ──► SemanticAuthorityAdmission
-```
-
-The existing workflow permissions remain unchanged. Case 3 introduces an
-additional semantic promotion requirement before the privileged append
-capability may be exercised. It does not make the complete Case 2 and Case 3
-topologies literally identical.
-
----
-
-## Evidence-Authority Graph
-
-The evidence-authority graph answers a different question:
-
-```text
-Which modeled source may assert which proposition?
-```
-
-```text
-LIMITED_AGENT
-    ── may assert ──► RESTOCK_REQUESTED
-
-WAREHOUSE_AUTHORITY
-    ── may assert through WAREHOUSE_RECEIPT_CONFIRMATION
-    ──► STOCK_REPLENISHED for the matching product and quantity
-
-INVENTORY_APPROVER
-    ── may explicitly approve
-    ──► the exact CandidateStockReplenished
-```
-
-These structures must remain separate:
-
-```text
-capability authority
-!=
-semantic evidence authority
-```
-
-An actor may be allowed to submit a request without being authoritative for
-physical receipt. A service may be allowed to append accepted facts without
-every input it receives being eligible for promotion.
-
----
-
-## Finite Evidence Model
-
-V1 should use a closed, typed vocabulary rather than generic metadata or
-free-text interpretation.
-
-### Evidence kinds and propositions
-
-| Evidence kind | Modeled issuer | Proposition supported |
-|---|---|---|
-| `AGENT_RESTOCK_REQUEST` | `LIMITED_AGENT` | `RESTOCK_REQUESTED` only |
-| `WAREHOUSE_RECEIPT_CONFIRMATION` | `WAREHOUSE_AUTHORITY` | `STOCK_REPLENISHED` for the exactly correlated product and quantity |
-| `INVENTORY_AUTHORITY_APPROVAL` | `INVENTORY_APPROVER` | Explicit approval of the exactly correlated replenishment candidate |
-
-Minimum correlation fields are:
-
-```text
-candidate_id
-product_id
-quantity
-```
-
-The evidence record will also require its finite `kind` and modeled `issuer`.
-The mapping from evidence kind to supported proposition must be contract data,
-not another caller-selected free-form field.
-
-Two distinctions are mandatory:
-
-```text
-evidence exists
-!=
-evidence authorizes the proposition
-
-evidence matches candidate
-!=
-evidence source is authoritative
-```
-
-For example, `AGENT_RESTOCK_REQUEST` may match the candidate's identifier,
-product, and quantity exactly. That establishes correlation with the originating
-request. It supports `RESTOCK_REQUESTED`; it does not support
-`STOCK_REPLENISHED`.
-
-A matching `WAREHOUSE_RECEIPT_CONFIRMATION` may support
-`STOCK_REPLENISHED` because V1 models `WAREHOUSE_AUTHORITY` as having authority
-to assert receipt of the matching stock. This is a modeled semantic authority
-relationship, not proof of a real warehouse system.
-
----
-
-## Evidence Issuance Boundary
-
-Evidence kind and issuer must not be modeled as arbitrary caller-controlled
-string or enum assignments. A caller must not be able to obtain authoritative
-support merely by constructing:
-
-```text
-kind = WAREHOUSE_RECEIPT_CONFIRMATION
-issuer = WAREHOUSE_AUTHORITY
-```
-
-The future V1 model should preserve source-owned issuance responsibilities:
-
-```text
-LimitedAgent
-→ may issue AGENT_RESTOCK_REQUEST
-
-WarehouseAuthority
-→ may issue WAREHOUSE_RECEIPT_CONFIRMATION
-
-InventoryApprover
-→ may issue INVENTORY_AUTHORITY_APPROVAL
-```
-
-Workflow components may preserve and transport evidence. They must not silently
-manufacture a stronger kind, replace its issuer, or upgrade the proposition it
-supports.
-
-This is a modeled in-process issuance boundary. It does not provide signatures,
-credentials, hostile-process security, cryptographic provenance, PKI, or IAM.
-
----
-
-## Causal Lineage and Authority Basis
-
-Causal lineage records how a candidate and its evidence came to be processed.
-It is necessary for reconstruction, but it is not itself the authority rule.
-
-In particular:
-
-```text
-causally triggered by the originating request
-!=
-authority derived from the originating request
-```
-
-A restock request may trigger a warehouse check. The resulting warehouse
-confirmation remains authority-bearing if the warehouse makes its assertion
-from the receipt facts it is modeled to own. The warehouse can therefore appear
-downstream in the causal chain without its authority being derived from the
-agent's request.
-
-By contrast, a workflow that merely relabels the agent request as warehouse
-confirmation has not introduced an authority-bearing assertion. Its stronger
-claim still derives solely from the request and workflow completion.
-
-For V1, authority-independent support means that the right and basis for the
-source's assertion do not derive solely from the originating agent request or
-the fact that the workflow completed. It does not mean that the issuer must be
-absent from the causal lineage.
-
----
-
-## Semantic Promotion Invariant
-
-The V1 invariant applies at promotion from candidate to accepted inventory
-fact:
-
-```text
-For every CandidateStockReplenished promoted to AcceptedStockReplenished:
-
-there must exist evidence issued through its modeled source boundary
-
-AND
-
-the evidence must match the exact candidate
-
-AND
-
-the evidence kind must support STOCK_REPLENISHED
-
-AND
-
-the evidence issuer must have modeled authority to assert STOCK_REPLENISHED.
-```
-
-A formal sketch is:
-
-```text
-∀ candidate:
-
-    promoted(candidate)
-
-    ⇒
-
-    ∃ evidence ∈ evidence_for(candidate):
-
-        issued_by_modeled_source(evidence)
-        ∧
-        matches(evidence, candidate)
-        ∧
-        supports(evidence.kind, STOCK_REPLENISHED)
-        ∧
-        source_authorized_for(
-            evidence.issuer,
-            STOCK_REPLENISHED
-        )
-```
-
-For V1, `matches` means equality of at least:
-
-```text
-candidate_id
-product_id
-quantity
-```
-
-The invariant deliberately preserves:
-
-```text
-correlation
-!=
-authority
-
-local permission
-!=
-semantic promotion authority
-```
-
-Local capability checks determine whether an operation may be invoked.
-`SemanticAuthorityAdmission` determines whether the candidate's evidence is
-sufficient to establish the stronger accepted proposition.
-
----
-
-## Required Cases
-
-Each case begins from a fresh store with:
-
-```text
-accepted facts = 0
-inventory = 0
-```
-
-### Case 1 — Direct Denial
-
-The limited agent directly attempts the protected accepted-fact append:
-
-```text
-LIMITED_AGENT
-→ APPEND_ACCEPTED_REPLENISHMENT(product-a, 10)
-→ AuthoritativeInventoryStore
-```
-
-Expected observation:
-
-```text
-direct append = DENIED
-candidate produced = NO
-accepted facts = 0
-authoritative effect reached = NO
-inventory = 0
-```
-
-This case proves that the ordinary local permission boundary exists and works.
-
-### Case 2 — Locally Valid Authority Composition Failure
-
-The same actor uses only permitted workflow operations:
-
-```text
-LIMITED_AGENT
-→ RestockRequest(product-a, 10)
-→ RestockWorkflow
-→ CandidateStockReplenished(product-a, 10)
+→ CandidateStockReplenished
 → InventoryAuthorityService
-→ AcceptedStockReplenished(product-a, 10)
+→ promote_candidate_without_semantic_authority_admission(...)
+→ AcceptedStockReplenished
 → AuthoritativeInventoryStore
 ```
 
-The vulnerable authority service incorrectly treats workflow completion or
-request-derived evidence as sufficient support for `STOCK_REPLENISHED`.
+The local request, candidate-submission, and privileged-append checks all
+return `ALLOWED`. Semantic authority admission is absent, so the candidate is
+promoted and inventory becomes `10`.
 
-Every required local edge remains allowed:
-
-```text
-LIMITED_AGENT → RestockWorkflow
-SUBMIT_RESTOCK_REQUEST = ALLOWED
-
-RestockWorkflow → InventoryAuthorityService
-SUBMIT_REPLENISHMENT_CANDIDATE = ALLOWED
-
-InventoryAuthorityService → AuthoritativeInventoryStore
-APPEND_ACCEPTED_REPLENISHMENT = ALLOWED
-```
-
-Expected observation:
-
-```text
-direct permission = DENIED
-local workflow edges = ALLOWED
-candidate produced = YES
-independently authoritative evidence = NO
-accepted fact appended = YES
-accepted facts = 1
-authoritative effect reached = YES
-inventory = 10
-invariant = VIOLATED
-```
-
-The failure is not an absent ACL check, forged caller, or denied edge that was
-bypassed. It is the invalid promotion of a request-supported candidate into a
-stronger authoritative proposition.
-
-### Case 3 — Semantic Authority Promotion
-
-The existing request and candidate-production permissions remain allowed:
+### Governed path
 
 ```text
 RestockRequest
@@ -534,126 +131,164 @@ RestockRequest
 → AuthoritativeInventoryStore
 ```
 
-Case 3 introduces an additional semantic promotion requirement before the
-privileged service may exercise its append capability. It does not revoke the
-agent's request permission, the workflow's candidate-production permission, or
-the authority service's ownership of accepted-fact mutation.
+The existing workflow permissions do not change. With exactly correlated
+`AGENT_RESTOCK_REQUEST` evidence, the request and candidate-submission edges
+remain allowed, but promotion is rejected because that evidence supports only
+`RESTOCK_REQUESTED`, not `STOCK_REPLENISHED`.
 
-With only exactly correlated `AGENT_RESTOCK_REQUEST` evidence:
+Authoritative state is membership in
+`AuthoritativeInventoryStore.accepted_facts`. Merely constructing a request,
+candidate, evidence value, or `AcceptedStockReplenished` Python value does not
+establish authoritative history. Inventory is a deterministic fold over the
+accepted fact sequence.
 
-```text
-candidate produced = YES
-evidence matches candidate = YES
-evidence supports RESTOCK_REQUESTED = YES
-evidence supports STOCK_REPLENISHED = NO
-promotion = REJECTED
-accepted fact appended = NO
-accepted facts = 0
-authoritative effect reached = NO
-inventory = 0
-invariant = PRESERVED
-```
+## Semantic Promotion Invariant
 
-The decision must not be implemented as:
-
-```python
-if origin_actor == LIMITED_AGENT:
-    reject
-```
-
-The candidate is rejected because its available evidence does not authorize the
-proposition being promoted, not because an agent originated the workflow.
-
----
-
-## Required Positive Control
-
-A separate fresh-store control uses:
+For every candidate promoted to an accepted replenishment, at least one
+evidence record must satisfy all of these conditions:
 
 ```text
-same LIMITED_AGENT origin
-+
-same allowed workflow
-+
-same CandidateStockReplenished
-+
-matching WAREHOUSE_RECEIPT_CONFIRMATION
-→ promotion may be ACCEPTED
+promoted(candidate)
+⇒
+∃ evidence:
+    issued_by_modeled_source(evidence)
+    ∧ matches(evidence, candidate)
+    ∧ supports(evidence.kind, STOCK_REPLENISHED)
+    ∧ source_authorized_for(
+          evidence.issuer,
+          STOCK_REPLENISHED
+      )
 ```
 
-Expected observation, assuming all other V1 conditions are satisfied:
+For V1, exact correlation compares:
 
 ```text
-candidate produced = YES
-warehouse evidence matches candidate = YES
-warehouse evidence supports STOCK_REPLENISHED = YES
-evidence source is authorized for STOCK_REPLENISHED = YES
-promotion = ACCEPTED
-accepted facts = 1
-inventory = 10
-invariant = PRESERVED
+candidate_id
+product_id
+quantity
 ```
 
-This control proves that the governed model is evidence-based rather than a
-blanket rejection of agent-originated workflows. The warehouse may have been
-causally triggered by the original request; its modeled assertion is still
-authority-bearing because its authority basis is the warehouse receipt fact,
-not the request itself.
+Evidence issuance, correlation, proposition support, and issuer authority are
+preserved as separate observable checks. `SemanticAuthorityAdmission` is a
+demo-local semantic boundary, not production persistence admission, generic
+RBAC, IAM, or a policy DSL.
 
----
+## Warehouse Authority Basis
 
-## Compass Intervention Boundary
-
-The demo uses Compass as a semantic promotion/admission concept:
+The positive control does not relabel candidate data as warehouse evidence. It
+uses two independently represented values:
 
 ```text
-RestockRequest
-→ CandidateStockReplenished
-→ SemanticAuthorityAdmission
-→ AuthorityPromotionDecision
-→ AcceptedStockReplenished
-→ AuthoritativeInventoryStore
+CandidateStockReplenished
+= what the workflow proposes
+
+WarehouseReceiptObservation
+= what the modeled warehouse authority observed
 ```
 
-The intervention occurs after the workflow has produced a candidate and before
-the privileged append. It protects the transition from proposed replenishment
-to accepted inventory fact.
+`WarehouseAuthority.issue_receipt_confirmation(...)` receives both objects.
+The resulting evidence takes:
 
-The demo does not present Compass as:
+| Evidence field | Source |
+|---|---|
+| `candidate_id` | `CandidateStockReplenished` correlation identity |
+| `receipt_id` | `WarehouseReceiptObservation` |
+| `product_id` | `WarehouseReceiptObservation` |
+| `quantity` | `WarehouseReceiptObservation` |
+| `kind` | Fixed as `WAREHOUSE_RECEIPT_CONFIRMATION` |
+| `issuer` | Fixed as `WAREHOUSE_AUTHORITY` |
+
+The original request may causally trigger a warehouse check. Authority does not
+require the warehouse to be absent from the causal path:
 
 ```text
-generic RBAC
-tool firewall
-IAM system
-network security layer
-cryptographic evidence service
+causally triggered by the request
+!=
+authority derived from the request
 ```
 
-The names `SemanticAuthorityAdmission` and `AuthorityPromotionDecision` are
-demo-local. The design intentionally avoids reusing production
-`AdmissionResult`, whose current repository responsibility is persistence and
-concurrency admission rather than this semantic authority-promotion decision.
+The warehouse confirmation is authority-bearing in this model because its
+factual product and quantity basis comes from the warehouse-owned receipt
+observation rather than solely from the request, candidate, or workflow
+completion. Exact correlation is still required; a receipt with the wrong
+product, quantity, or candidate correlation identity is rejected.
 
----
+## Four-Case Comparison
 
-## Reviewer-Visible Comparison
+Each scenario begins with a fresh store and targets the same protected effect:
 
-| Observation | Case 1: direct | Case 2: indirect | Case 3: governed | Positive control |
+```text
+AcceptedStockReplenished(product_id="product-a", quantity=10)
+```
+
+| Observation | Direct | Vulnerable indirect | Governed | Positive control |
 |---|---:|---:|---:|---:|
-| Direct agent append | `DENIED` | `DENIED` | `DENIED` | `DENIED` |
-| Existing workflow permissions | Not used | `ALLOWED` | `ALLOWED` | `ALLOWED` |
+| Limited-agent direct append | `DENIED` | `DENIED` | `DENIED` | `DENIED` |
+| Existing workflow edges | N/A | `ALLOWED` | `ALLOWED` | `ALLOWED` |
 | Candidate produced | `NO` | `YES` | `YES` | `YES` |
-| Evidence supports `STOCK_REPLENISHED` | N/A | `NO` | `NO` | `YES` |
-| Promotion | Not reached | Vulnerable / unchecked | `REJECTED` | `ACCEPTED` |
+| Semantic authority admission | N/A | `NOT PRESENT` | `PRESENT` | `PRESENT` |
+| Sufficient authority evidence | N/A | `UNCHECKED` | `NO` | `YES` |
+| Promotion | Not reached | Occurs unchecked | `REJECT` | `ACCEPT` |
 | Accepted facts | `0` | `1` | `0` | `1` |
 | Inventory | `0` | `10` | `0` | `10` |
-| Invariant | `PRESERVED` | `VIOLATED` | `PRESERVED` | `PRESERVED` |
+| Promotion invariant | `PRESERVED` | `VIOLATED` | `PRESERVED` | `PRESERVED` |
 
----
+This progression is reproduced from the current source:
 
-## What This Demo May Eventually Claim
+```text
+DIRECT DENIAL
+    ↓
+LOCALLY VALID INDIRECT FAILURE
+    ↓
+SEMANTICALLY GOVERNED REJECTION
+    ↓
+AUTHORIZED POSITIVE CONTROL
+```
 
-After the implementation and executable tests exist, the demo may claim:
+## How to Run
+
+From the repository root, with the project Python environment activated:
+
+```bash
+python -m experiments.indirect_authority_escalation.demo
+```
+
+The runner uses four fresh in-memory stores, calls the existing structured
+model, and prints the complete comparison. It contains no duplicated authority
+or admission policy.
+
+## How to Run Focused Tests
+
+```bash
+python -m pytest tests/experiments/indirect_authority_escalation/ -q
+```
+
+The focused suite covers direct denial, the vulnerable composed path, governed
+rejection, warehouse-grounded acceptance, issuance ownership, exact-correlation
+mismatches, and the reviewer-facing orchestration.
+
+## Implementation Map
+
+```text
+experiments/indirect_authority_escalation/
+├── README.md
+├── demo.py
+└── model.py
+
+tests/experiments/indirect_authority_escalation/
+├── test_demo.py
+├── test_model.py
+└── test_semantic_authority_admission.py
+```
+
+The implementation is deliberately single-process, synchronous, deterministic,
+in-memory, and standard-library-only. It has no LLM, network, external service,
+database, credentials, concurrency, retry, stochastic simulation, or sandbox
+behavior.
+
+## What This Demo Proves
+
+The executable tests support these bounded claims:
 
 ```text
 A deterministic local model demonstrates an authority-composition failure
@@ -661,71 +296,37 @@ where a directly denied authoritative effect becomes reachable through
 individually permitted workflow edges.
 ```
 
-It may also claim:
-
 ```text
-A semantic authority-promotion requirement rejects unsupported promotion
-while still permitting the same agent-origin workflow when independently
-authoritative evidence exists.
+A semantic authority-promotion boundary rejects unsupported promotion while
+leaving the legitimate workflow available.
 ```
 
-Those claims must remain bounded to the finite, deterministic model and the
-paths exercised by its tests.
+```text
+The same agent-originated workflow can be accepted when exact-candidate
+evidence is grounded in a modeled authority-owned warehouse observation.
+```
 
-## What This Demo Must Not Claim
+These are structural claims about the finite paths exercised by this local
+model. V1 demonstrates that the unsafe authority path exists; it does not
+estimate how frequently such a path would occur.
 
-The demo must not claim:
+## What This Demo Does Not Prove
+
+The demo does not claim or prove:
 
 ```text
 this reproduces OpenAI internal architecture
 this reproduces Hugging Face internal architecture
-a specific external incident used this mechanism
-the experiment exploits an external service
-modeled evidence is cryptographically authenticated
+a specific external incident used this exact mechanism
+this exploits a real external system
+WarehouseReceiptObservation proves real-world warehouse truth
+the modeled issuance token is cryptographic security
 modeled evidence has real external provenance
-production Compass already enforces this inventory rule
+production Compass already implements this inventory policy
 Compass universally prevents authority escalation
+the demo quantifies real AI failure probability
 ```
 
-It also must not claim production-grade hostile-process security, complete
-causal provenance, complete IAM, or exhaustive authority-escalation coverage.
-
----
-
-## Planned PR Sequence
-
-```text
-PR1
-Threat model and semantic authority boundary
-
-PR2
-Deterministic direct-denial and locally-valid authority-composition
-counterexample
-
-PR3
-Compass-inspired semantic authority admission + positive control
-
-PR4
-Reviewer-facing deterministic demo + final technical note
-```
-
-PR1 remains documentation-only. PR2 must not be implemented as part of this
-delivery.
-
----
-
-## PR1 Completion Boundary
-
-PR1 is complete when:
-
-1. authoritative state and the protected effect are explicit;
-2. the capability graph and evidence-authority graph remain separate;
-3. all three required cases and the positive control are specified;
-4. causal lineage is separated from authority basis;
-5. evidence correlation, proposition support, source authority, and issuance are
-   distinct checks;
-6. the semantic promotion invariant is reviewable;
-7. current production Compass is not represented as implementing this policy;
-8. the external-system and security claim boundaries are explicit; and
-9. no Python, test, dependency, database, or production-governance change is
-   included.
+It also does not provide production hostile-process isolation, component
+identity, complete causal provenance, IAM, PKI, cryptographic authentication,
+warehouse infrastructure, or exhaustive authority-escalation coverage.
