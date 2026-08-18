@@ -174,10 +174,11 @@ terminal semantic refinement, deterministic YAML projection, and bounded
 overhead characterization. The Stage 4B.3 closeout did not move, redefine,
 block, or sequence it.
 
-Stage 4C PR0 then completed documentation and responsibility alignment. No
-production Runtime Decision Authority is implemented yet; its first production
-contract is next and not frozen. Stage 4D Strategy Selection Authority and
-conditional Stage 4E Retry / Attempt Authorization remain future work.
+Stage 4C PR1 establishes in this branch the documentation-only, source-grounded
+first implementation profile and downstream decision gates. No production
+Runtime Decision Authority is implemented yet. Stage 4D Strategy Selection
+Authority and conditional Stage 4E Retry / Attempt Authorization remain future
+work.
 
 ---
 
@@ -192,13 +193,23 @@ rule evidence. Stage 4A maps eligible observations into `SemanticOutcome`;
 Stage 4B provides explicit durable governance-evidence foundations; and Stage
 4B.5 provides terminal exact-rule refinement where supported.
 
-The first Stage 4C live path therefore centers on:
+The generic Stage 4C responsibility remains producer- and domain-neutral. Its
+first concrete profile is live, in memory, caller-owned, and Layer-1 PostgreSQL
+write-side first:
 
 ```text
-live SemanticOutcome
-+ source-applicable terminal exact rule refinement
+PostgresWriteSideResult
+→ PostgresWriteSideSemanticRuleFeedback
+→ required live SemanticOutcome
++ source-applicable terminal exact OrderRuleViolationEvidence
 → Runtime Decision Authority
+→ caller-owned current-response use
 ```
+
+That first profile supports allowing use of a completed current result,
+returning a prior accepted result, blocking current continuation, and requiring
+escalation. `CONCURRENCY_UNCERTAIN` remains unsupported: it produces no
+authoritative first-profile decision and never implicit allow.
 
 Projection mismatch, replay validation, and snapshot-assisted observations
 remain valid read-side evidence families. They do not define the entire Stage
@@ -552,10 +563,14 @@ durable evidence path:
 SemanticOutcome
 → DecisionReceipt as separately persisted durable governance evidence
 
-live decision path:
-SemanticOutcome
-+ terminally applicable exact rule refinement when source-applicable
-→ current-response RuntimeDecision
+generic live decision responsibility:
+eligible current SemanticOutcome
+→ producer/domain-neutral current-response RuntimeDecision
+
+first concrete Layer-1 PostgreSQL / Order profile:
+required SemanticOutcome
++ terminally applicable exact OrderRuleViolationEvidence when source-applicable
+→ generic current-response RuntimeDecision meaning
 
 normal current execution:
 RuntimeDecision
@@ -646,10 +661,11 @@ retry.
 defines Stage 4C as current-response authority, Stage 4D as strategy selection
 inside prior authorization, and Stage 4E as another-attempt authorization and
 constraints. Actual execution remains separate. The first delivery is
-live/in-memory first: `SemanticOutcome` plus terminally applicable exact rule
-refinement is the primary live decision evidence. `DecisionReceipt` remains
-durable governance evidence but is not required for the first live hot path;
-restart recovery remains a distinct deferred consumer.
+live/in-memory first. Its generic decision responsibility remains producer- and
+domain-neutral; the first concrete Layer-1 PostgreSQL / Order profile requires
+`SemanticOutcome` and may consume terminally applicable exact rule refinement.
+`DecisionReceipt` remains durable governance evidence but is not required for
+the first live hot path; restart recovery remains a distinct deferred consumer.
 
 ---
 

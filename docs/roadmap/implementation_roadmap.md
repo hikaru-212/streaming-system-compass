@@ -9,8 +9,8 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the Stage 4C PR0
-documentation and responsibility-boundary alignment:
+This version reflects the project position after the Stage 4C PR1
+source-grounded implementation-entry boundary:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
@@ -27,9 +27,9 @@ documentation and responsibility-boundary alignment:
   It was delivered as separately owned parallel Stage 4 foundation work and is
   technically independent from the Stage 4B.3 closeout, which did not move,
   redefine, block, or sequence it.
-- Stage 4C PR0 is complete as documentation and responsibility alignment; no
-  production Runtime Decision Authority is implemented, and its first
-  production contract remains next work rather than a frozen PR1 shape.
+- Stage 4C PR1 establishes in this branch the documentation-only,
+  source-grounded first implementation profile and downstream decision gates.
+  No production Runtime Decision Authority is implemented.
 - Stage 4D Strategy Selection Authority and Stage 4E Retry / Attempt
   Authorization remain future work.
 - Stage 5 Action Safety and later production hardening remain future work.
@@ -68,8 +68,8 @@ This means:
 - Stage 4B.2 is complete as the producer-specific measurement and bounded empirical cost-evidence stage.
 - Stage 4B.3 is complete and closed as not currently justified under ADR 0026.
 - Stage 4B.5 Order Correctness Contract v0 is complete and closed.
-- Stage 4C PR0 documentation alignment is complete; Stage 4C production
-  implementation is next and not yet frozen.
+- Stage 4C PR1 documentation boundary is established in this branch; Stage 4C
+  production Runtime Decision Authority remains unimplemented.
 
 Detailed completed-stage and current-stage records now live under:
 
@@ -90,12 +90,13 @@ The completed Stage 4 foundation position is:
 - **Stage 4B.3 — COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED**
 - **Stage 4B.5 — COMPLETE / CLOSED**
 
-With Stage 4C PR0 complete, the current and later responsibilities are:
+With the Stage 4C PR1 documentation boundary established in this branch, the
+current and later responsibilities are:
 
 - Stage 4B.3 remains closed unless ADR 0026 re-entry conditions are met; Stage
   4B.5 Order Correctness Contract is complete
-- Stage 4C production Runtime Decision Authority is next; its first contract is
-  not yet frozen
+- Stage 4C production Runtime Decision Authority is next; PR1 freezes semantic
+  responsibility and the first profile without freezing its Python API
 - Stage 4D Strategy Selection Authority is future
 - Stage 4E Retry / Attempt Authorization is future and conditional when another
   attempt is considered
@@ -668,7 +669,7 @@ Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 Stage 4B.2 — Measurement Evidence
 Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
 Stage 4B.5 — Order Correctness Contract v0 — complete / closed
-Stage 4C — Runtime Decision Authority — PR0 docs boundary complete; production implementation next
+Stage 4C — Runtime Decision Authority — PR1 source-grounded docs boundary established in this branch; production unimplemented
 Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
 Stage 4D — Strategy Selection Authority — future
 Stage 4E — Retry / Attempt Authorization — future and conditional
@@ -682,9 +683,10 @@ execution cost and obtain empirical evidence. Stage 4B.3 used an evidence-first
 investigation to determine that incremental projection-trust continuation is not
 currently justified. Stage 4B.5 completed as separately owned parallel
 foundation work and remains technically independent from Stage 4B.3. Stage 4C
-production implementation is next. Stage 4C.5 outcome-family alignment, Stage
-4D Strategy Selection Authority, and conditional Stage 4E Retry / Attempt
-Authorization remain downstream.
+PR1 establishes in this branch its documentation-only first profile; production
+implementation is next. Stage 4C.5 outcome-family alignment, Stage 4D Strategy
+Selection Authority, and conditional Stage 4E Retry / Attempt Authorization
+remain downstream.
 
 ---
 
@@ -985,10 +987,19 @@ Examples of runtime decisions may include:
 Stage 4C decides what generic current response is semantically allowed. It does
 not execute that response.
 
-Its first design center is live, in-memory `SemanticOutcome` plus terminally
-applicable exact `OrderRuleViolationEvidence` when source-applicable. For the
-current PostgreSQL write-side path, `PostgresWriteSideSemanticRuleFeedback` may
-carry that pair without becoming a universal Stage 4C abstraction.
+Its generic responsibility and output remain producer- and domain-neutral. The
+first concrete profile is live, in memory, caller-owned, and Layer-1 PostgreSQL
+write-side first. That profile requires `SemanticOutcome` and may consume
+terminally applicable exact `OrderRuleViolationEvidence` when
+source-applicable. `PostgresWriteSideSemanticRuleFeedback` may carry that
+producer-specific composition without becoming a universal Stage 4C input
+contract.
+
+PR1 supports four initial current-response meanings for that concrete profile:
+allow use of a completed current result, return a prior accepted result, block
+current continuation, and require escalation. `CONCURRENCY_UNCERTAIN` remains
+unsupported and cannot become implicit allow. PR1 freezes these meanings and
+refusal semantics without freezing production Python identifiers.
 
 `DecisionReceipt` remains durable governance evidence but is not required for
 the first live Stage 4C hot path. Restart-recovery governance is a distinct
@@ -1369,7 +1380,8 @@ Runtime Semantic Governance
   4B.5 Order Correctness Contract v0
     complete / closed after separately owned parallel delivery
   4C Runtime Decision Authority
-    PR0 documentation boundary complete; production implementation next
+    PR1 source-grounded implementation-entry boundary established in this branch
+    production Runtime Decision Authority remains unimplemented; implementation next
   4C.5 Layer 1 / Layer 2 Outcome Alignment
   4D Strategy Selection Authority — future
   4E Retry / Attempt Authorization — future and conditional
