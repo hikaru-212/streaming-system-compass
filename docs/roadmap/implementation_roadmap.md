@@ -31,10 +31,11 @@ documentation closeout:
   implementation-entry boundary; PR2 delivered the generic immutable
   `RuntimeDecision` and first Layer-1 PostgreSQL / Order profile; Stage 4C.5
   completed compatibility review and documentation reconciliation.
-- Stage 4D retains a valid Strategy Selection Authority responsibility, but its
-  implementation is deferred.
-- Stage 4E Retry / Attempt Authorization is the next formal implementation
-  direction and remains unimplemented.
+- Stage 4D retains a valid Strategy Selection Authority responsibility under
+  ADR 0028, but its implementation is deferred.
+- Stage 4E PR0 establishes Same-Request Re-Invocation Authority as the first
+  formal responsibility, with preparation `LOCK_TIMEOUT` as the accepted first
+  positive profile. The production contract remains unimplemented.
 - Stage 5 Action Safety and later production hardening remain future work.
 
 ---
@@ -87,6 +88,7 @@ Detailed completed-stage and current-stage records now live under:
 - [Stage 4B.3 Implementation Notes](../implementation_notes/stage_4b_3/)
 - [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
 - [Stage 4C Implementation Notes and Closeout](../implementation_notes/stage_4c/)
+- [Stage 4E Same-Request Re-Invocation Authority](../implementation_notes/stage_4e/)
 
 The completed Stage 4 foundation position is:
 
@@ -103,9 +105,9 @@ After the Stage 4C closeout, the current and later responsibilities are:
   Stage 4C production code is currently justified
 - Stage 4D Strategy Selection Authority retains responsibility for dynamic
   `HOW` selection, but implementation is deferred
-- Stage 4E Retry / Attempt Authorization is the next formal implementation
-  direction and participates only when another invocation of the same complete
-  `RequestSignature` is considered
+- Stage 4E Same-Request Re-Invocation Authority has a completed PR0 boundary;
+  its production contract remains unimplemented and participates only when
+  another invocation of the same complete `RequestSignature` is considered
 - Stage 5 dual-dimension governance demo / Action Safety is future
 - Stage 5+ production and agent-facing hardening
 
@@ -678,8 +680,8 @@ Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed 
 Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 Stage 4C — Runtime Decision Authority — complete / closed
 Stage 4C.5 — Compatibility / documentation closeout — complete
-Stage 4D — Strategy Selection Authority — responsibility retained / implementation deferred
-Stage 4E — Retry / Attempt Authorization — next formal implementation direction / not implemented
+Stage 4D — Strategy Selection Authority — responsibility retained / implementation deferred under ADR 0028
+Stage 4E — Same-Request Re-Invocation Authority — PR0 boundary established / production not implemented
 ```
 
 This inventory preserves stage ownership and delivery history. It is not a
@@ -695,8 +697,9 @@ foundation work and remains technically independent from Stage 4B.3. Stage 4C
 PR1 established the source-grounded entry boundary; PR2 delivered the generic
 contract and first Layer-1 PostgreSQL / Order profile; Stage 4C.5 confirmed
 compatibility through the shared producer-neutral `SemanticOutcome` structure
-and closed the stage. Stage 4D retains its responsibility but is deferred.
-Stage 4E is the next formal implementation direction.
+and closed the stage. Stage 4D retains its responsibility but is deferred under
+ADR 0028. Stage 4E PR0 establishes the first formal responsibility and profile;
+production implementation remains next.
 
 ---
 
@@ -940,13 +943,14 @@ Runtime Decision Authority
 Strategy Selection Authority
 = selects an eligible path within prior authorization
 
-Retry / Attempt Authorization
-= decides whether another attempt is allowed
+Same-Request Re-Invocation Authority
+= decides whether one additional invocation of the same complete request is
+  authorized in the first formal profile
 ```
 
 These are separately owned responsibilities, not one mandatory runtime
-pipeline. Retry / Attempt Authorization participates only when another attempt
-is being considered.
+pipeline. Same-Request Re-Invocation Authority participates only when another
+invocation of the same complete request is being considered.
 
 Correctness contract does not replace Compass.
 
@@ -1086,6 +1090,9 @@ envelope, automatic caller wiring, or a production consumer for symmetry.
 
 Responsibility retained; implementation deferred.
 
+The accepted deferral and re-entry condition are recorded in
+[ADR 0028](../adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md).
+
 ### Goal
 
 Given an already-permitted action, Stage 4D selects an eligible execution path
@@ -1127,11 +1134,11 @@ creating the underlying authority.
 
 ---
 
-## Stage 4E — Retry / Attempt Authorization
+## Stage 4E — Same-Request Re-Invocation Authority
 
 ### Status
 
-Next formal implementation direction; not implemented.
+PR0 architecture boundary established; production contract not implemented.
 
 ### Goal
 
@@ -1202,10 +1209,12 @@ Stage 4C refusal is neither Stage 4E authorization nor Stage 4E refusal. Stage
 the separate another-invocation question. `C → D → E` is not a mandatory
 runtime pipeline.
 
-Experimental evidence supports bounded same-complete-request public-writer
-re-invocation authority. The first formal profile should remain narrower than
-the experiment. Preparation `LOCK_TIMEOUT` is the most portable first candidate
-because existing producer-owned evidence is largely sufficient.
+The completed experiment supports bounded same-complete-request public-writer
+re-invocation authority. PR0 accepts preparation `LOCK_TIMEOUT` as the first
+formal positive profile because existing producer-owned evidence is sufficient
+for the narrow precondition. The source audit and formal boundary are recorded
+in the
+[Stage 4E implementation notes](../implementation_notes/stage_4e/README.md).
 
 The formal transition does not promote the experimental
 `PublicWriterInvocationObservation`, candidate monkeypatch, observation
@@ -1327,8 +1336,8 @@ Before an action-safety gate can make trustworthy decisions, the system needs:
   observation
 - Stage 4D Strategy Selection Authority only where an authorized action has
   multiple eligible execution paths
-- Stage 4E Retry / Attempt Authorization only when another invocation of the
-  same complete `RequestSignature` is considered
+- Stage 4E Same-Request Re-Invocation Authority only when another invocation
+  of the same complete `RequestSignature` is considered
 - clear separation between accepted history and derived state
 
 Durable `DecisionReceipt` evidence may support audit, recovery, and delayed
@@ -1491,8 +1500,8 @@ Runtime Semantic Governance
     PR1 source-grounded implementation-entry boundary
     PR2 generic RuntimeDecision + first Layer-1 PostgreSQL / Order profile
   4C.5 Compatibility / documentation closeout — complete
-  4D Strategy Selection Authority — responsibility retained / implementation deferred
-  4E Retry / Attempt Authorization — next formal implementation direction / not implemented
+  4D Strategy Selection Authority — responsibility retained / implementation deferred under ADR 0028
+  4E Same-Request Re-Invocation Authority — PR0 boundary established / production not implemented
 
 Stage 5:
 Dual-Dimension Governance Demo / Action Safety
@@ -1524,7 +1533,7 @@ durable truth
 → separately owned machine-readable correctness contract work
 → completed Stage 4C current-response Runtime Decision Authority or refusal
 → caller handling
-→ Stage 4E Retry / Attempt Authorization when another invocation of the same complete RequestSignature is considered
+→ Stage 4E authorization or refusal when another invocation of the same complete RequestSignature is considered
 → Stage 4D Strategy Selection only when that authorized invocation has multiple eligible strategies
 → execution
 → fresh result and Stage 4C handling when applicable

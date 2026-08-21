@@ -21,6 +21,7 @@ For project-wide sequencing, see:
 - [Stage 4B.3 — Projection Trust Boundary and Continuation Closeout](./stage_4b_3/)
 - [Stage 4B.5 — Order Correctness Contract v0](./stage_4b_5/)
 - [Stage 4C — Runtime Decision Authority — complete / closed](./stage_4c/)
+- [Stage 4E — Same-Request Re-Invocation Authority — PR0 boundary](./stage_4e/)
 
 ## Current Position
 
@@ -88,7 +89,7 @@ Stage 4B.5 — Order Correctness Contract v0 — COMPLETE / CLOSED
 Stage 4C   — Runtime Decision Authority — COMPLETE / CLOSED
 Stage 4C.5 — Compatibility / documentation closeout — COMPLETE
 Stage 4D   — Strategy Selection Authority — RESPONSIBILITY RETAINED / IMPLEMENTATION DEFERRED
-Stage 4E   — Retry / Attempt Authorization — NEXT FORMAL IMPLEMENTATION DIRECTION
+Stage 4E   — Same-Request Re-Invocation Authority — PR0 BOUNDARY ESTABLISHED / PRODUCTION UNIMPLEMENTED
 ```
 
 Stage 4C is complete and closed under
@@ -103,10 +104,15 @@ Stage 4D retains the valid responsibility for dynamic `HOW` selection, but its
 implementation is deferred because current strategy composition is static, no
 authorized operation has multiple dynamically eligible strategies, no reviewed
 selection rule exists, and a selector would not change observable behavior.
-Stage 4E is the next formal implementation direction. Its first formal slice
-should be narrower than the experiment, with preparation `LOCK_TIMEOUT` as the
-most portable initial same-request re-invocation candidate. Stage 4E remains
-unimplemented here.
+This disposition is recorded in
+[ADR 0028](../adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md).
+
+Stage 4E PR0 establishes
+[Same-Request Re-Invocation Authority](stage_4e/README.md) as the first formal
+responsibility. Preparation `LOCK_TIMEOUT` is the accepted first positive
+profile for at most one additional public-writer invocation of the same
+complete `RequestSignature`. The production contract remains unimplemented;
+`STALE_WRITE` and broader retry concerns remain deferred candidates.
 
 ## Boundary
 

@@ -33,7 +33,7 @@ design context; ADR 0020 owns current projection completeness.
 | [Read-Side Schema Baseline](read_side_schema_baseline.md) | Defines the initial Stage 3.5C durable read-side schema baseline for `projection_states` and `projection_checkpoints`. Its original global-checkpoint model is historical context for the later per-order repair recorded by ADR 0020. |
 | [Aggregate-Local Progress, Partition-Local Logs, and Commit-Consistent Boundaries](aggregate_local_progress_partition_logs_and_commit_boundaries.md) | Compares the repaired per-order PostgreSQL projection with Kafka partition-local offsets and WAL / LSN-based committed observation, including the shared boundary-scoping rule, where the analogy stops, current trade-offs, and future decision triggers. |
 | [Snapshot Trust Contract](snapshot_trust_contract.md) | Defines how snapshots can support replay / rehydration efficiency while remaining derived, discardable, and subordinate to accepted history. |
-| [Retry Reason Classification](retry_reason_classification.md) | Defines the future Stage 4 classification boundary for retry-like situations, including physical retry, concurrency retry, semantic conflict, intent consistency, and why retry evidence should not live in `idempotency_records`. |
+| [Retry Reason Classification](retry_reason_classification.md) | Preserves historical/future candidate taxonomy for retry-like situations and why retry evidence should not live in `idempotency_records`; it is not the accepted first formal Stage 4E contract. |
 
 ---
 
@@ -86,7 +86,7 @@ For example:
 - `read_side_schema_baseline.md` preserves the initial durable read-side schema and scalar-checkpoint baseline as historical architecture context.
 - `aggregate_local_progress_partition_logs_and_commit_boundaries.md` explains how aggregate-local projection progress relates to Kafka partition-local consumption and WAL / LSN committed observation without claiming that the mechanisms are identical.
 - `snapshot_trust_contract.md` explains how snapshot-assisted replay and rehydration can be introduced without letting snapshots replace accepted history.
-- `retry_reason_classification.md` explains how future Stage 4 runtime outcomes should distinguish idempotent replay, concurrency retry, infrastructure retry, semantic conflict, and future agent intent drift.
+- `retry_reason_classification.md` preserves historical/future candidate distinctions among idempotent replay, concurrency retry, infrastructure retry, semantic conflict, and agent intent drift without promoting them into the first formal Stage 4E profile.
 - `adr/0003_concurrency_idempotency_and_retry_safety.md` explains a specific decision inside the transactional write-side path.
 - `adr/0004_why_compass_split_into_two_layers.md` explains why Compass evolved from a single runtime-verification idea into two layers.
 - `adr/0005_persistent_storage_baseline_strategy.md` explains why Stage 3.5 should prioritize PostgreSQL-backed durable persistence before more advanced runtime concerns.

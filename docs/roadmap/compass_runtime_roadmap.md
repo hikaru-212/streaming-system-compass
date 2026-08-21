@@ -179,9 +179,10 @@ implementation-entry boundary; PR2 delivered the generic immutable
 `RuntimeDecision` contract and first Layer-1 PostgreSQL / Order write-side
 profile; Stage 4C.5 completed compatibility review and repository
 reconciliation. Stage 4D retains a valid Strategy Selection Authority
-responsibility, but implementation is deferred. Stage 4E Retry / Attempt
-Authorization is the next formal implementation direction and remains
-unimplemented.
+responsibility, but implementation is deferred under ADR 0028. Stage 4E PR0
+establishes Same-Request Re-Invocation Authority and accepts preparation
+`LOCK_TIMEOUT` as the first formal positive profile; the production contract
+remains unimplemented.
 
 ---
 
@@ -237,9 +238,9 @@ preserved:
 That interpretation began in Stage 4A through `SemanticOutcome` mapping and
 continued through the completed Stage 4B receipt foundation and Stage 4B.1
 execution-topology evidence. Measurement remains descriptive. Strategy
-Selection Authority, conditional Retry / Attempt Authorization, rate admission,
-and Stage 5 action safety remain separate work. Runtime Decision Authority is
-complete and closed within its first reviewed profile.
+Selection Authority, conditional Same-Request Re-Invocation Authority, rate
+admission, and Stage 5 action safety remain separate work. Runtime Decision
+Authority is complete and closed within its first reviewed profile.
 
 ---
 
@@ -569,9 +570,9 @@ semantic evidence into separately owned runtime governance responsibilities.
 
 Stage 4A and Stage 4B provide semantic interpretation and durable evidence
 foundations. Stage 4C now provides the closed generic current-response contract
-and first reviewed Layer-1 PostgreSQL / Order profile. Stage 4E is the next
-formal implementation direction; Stage 4D responsibility is retained while
-implementation is deferred.
+and first reviewed Layer-1 PostgreSQL / Order profile. Stage 4E PR0 now defines
+the first formal same-request boundary while production implementation remains
+next; Stage 4D responsibility is retained and implementation is deferred.
 
 The high-level flow is:
 
@@ -663,7 +664,7 @@ The capability path is:
 8. retain strategy-selection responsibility and defer implementation until
    dynamic `HOW` selection is required
 9. authorize and constrain another invocation of the same complete
-   `RequestSignature` — next formal implementation direction
+   `RequestSignature` — PR0 boundary established / production unimplemented
 
 Here, same request means structural equality of the complete
 `RequestSignature`, including `request_id`, `command_type`, `order_id`, and
@@ -702,8 +703,10 @@ retry.
 [ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
 defines Stage 4C as current-response authority, Stage 4D as strategy selection
 inside prior authorization, and Stage 4E as separately owned another-invocation
-authority. The accepted first formal Stage 4E direction narrows that
-responsibility to one additional public writer invocation of the same complete
+authority. [ADR 0028](../adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
+retains Stage 4D responsibility while deferring implementation. The accepted
+first formal Stage 4E boundary narrows another-invocation authority to one
+additional public writer invocation of the same complete
 `RequestSignature`. Actual execution remains separate. The completed Stage 4C
 delivery is live/in-memory first. Its generic decision responsibility remains
 producer- and domain-neutral; the first concrete Layer-1 PostgreSQL / Order
@@ -715,10 +718,11 @@ deferred consumer.
 Stage 4D implementation is deferred because current strategy composition is
 static, no authorized operation has multiple dynamically eligible strategies,
 no reviewed runtime selection rule exists, and a selector would not change
-observable behavior. Stage 4E is the next formal implementation direction.
-Preparation `LOCK_TIMEOUT` is the most portable candidate for a narrow first
-profile governing one additional invocation of the same complete
-`RequestSignature`, which remains unimplemented.
+observable behavior. Stage 4E PR0 accepts preparation `LOCK_TIMEOUT` as the
+first formal positive profile governing one additional invocation of the same
+complete `RequestSignature`. The source audit and bounded PR direction are in
+the [Stage 4E implementation notes](../implementation_notes/stage_4e/README.md);
+the production contract remains unimplemented.
 
 ---
 

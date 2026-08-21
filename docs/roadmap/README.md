@@ -170,10 +170,10 @@ semantic truth
 → Runtime Decision Authority — complete / closed
 
 retained responsibility
-→ Strategy Selection Authority — implementation deferred
+→ Strategy Selection Authority — implementation deferred under ADR 0028
 
-next formal implementation direction
-→ Retry / Attempt Authorization
+PR0 architecture boundary established / production unimplemented
+→ Same-Request Re-Invocation Authority
 
 → action safety demo
 → later production and agent-facing hardening
@@ -238,13 +238,14 @@ not require identical evidence, decision policy, or caller behavior.
 `DecisionReceipt` remains durable governance evidence but is not required for
 the live Stage 4C path. Restart recovery remains a distinct deferred consumer.
 
-Stage 4D responsibility remains valid, but implementation is deferred because
-strategy composition is currently static, no authorized operation has multiple
-dynamically eligible strategies, no reviewed selection rule exists, and a
-selector would not change observable behavior. Stage 4E is the next formal
-implementation direction. Preparation `LOCK_TIMEOUT` is the most portable
-candidate for a narrow first same-request re-invocation profile; Stage 4E is not
-implemented by the Stage 4C closeout.
+Stage 4D responsibility remains valid, but implementation is deferred under
+[ADR 0028](../adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
+because strategy composition is currently static, no authorized operation has
+multiple dynamically eligible strategies, no reviewed selection rule exists,
+and a selector would not change observable behavior. Stage 4E PR0 establishes
+[Same-Request Re-Invocation Authority](../implementation_notes/stage_4e/README.md)
+and accepts preparation `LOCK_TIMEOUT` as the first formal positive profile.
+The production contract remains unimplemented.
 
 Stage 4 does not yet claim to implement production benchmarking, full observability, full authorization, general policy authoring, agent workflow orchestration, or final action safety.
 
@@ -264,8 +265,8 @@ Stage 4 proceeds through:
 * Stage 4B.5 — Order Correctness Contract v0 — complete / closed / independently delivered
 * Stage 4C — Runtime Decision Authority — complete / closed
 * Stage 4C.5 — compatibility / documentation closeout — complete
-* Stage 4D — Strategy Selection Authority inside prior authorization — responsibility retained / implementation deferred
-* Stage 4E — Retry / Attempt Authorization — next formal implementation direction / not implemented
+* Stage 4D — Strategy Selection Authority inside prior authorization — responsibility retained / implementation deferred under ADR 0028
+* Stage 4E — Same-Request Re-Invocation Authority — PR0 boundary established / production not implemented
 
 The detailed implementation of each step belongs in stage-specific implementation notes and PRs, not in this roadmap index.
 
