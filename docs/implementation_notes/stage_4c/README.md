@@ -5,31 +5,33 @@
 ## Status
 
 ```text
+STAGE 4C COMPLETE / CLOSED
+PR1 SOURCE-GROUNDED IMPLEMENTATION-ENTRY BOUNDARY
 PR2 IMPLEMENTED
 GENERIC RUNTIMEDECISION + FIRST LAYER-1 POSTGRESQL / ORDER PROFILE
-EXPLICIT CALLABLE CAPABILITY; NO AUTOMATIC CALLER WIRING
+STAGE 4C.5 COMPATIBILITY / DOCUMENTATION CLOSEOUT
 ```
 
-This stage entry retains the source-grounded Stage 4C PR1 boundary and defines
-the PR2 delivery: the generic immutable `RuntimeDecision` contract and the first
-Layer-1 PostgreSQL / Order evaluator. The two responsibilities remain separately
-owned in separate modules. They are delivered together because the current
-source has no standalone call site that requires `RuntimeDecision` before the
-first evaluation profile exists. PR2 does not add a strategy selector,
-same-request re-invocation authority, executor, or automatic caller wiring.
+This stage entry records the source-grounded Stage 4C PR1 boundary, the PR2
+delivery of the generic immutable `RuntimeDecision` contract and first Layer-1
+PostgreSQL / Order evaluator, and the Stage 4C.5 compatibility disposition. The
+two PR2 responsibilities remain separately owned in separate modules. The
+implemented evaluator is an explicit callable capability with no automatic
+production caller wiring. No additional Stage 4C production code is currently
+justified.
 
 The accepted authority decision is
 [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](../../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md).
 
-The current implementation sequence is maintained separately in the
+The implementation sequence is preserved separately in the
 [Stage 4C PR Breakdown](pr_breakdown.md). This README owns the current
-source-grounded implementation boundary; the breakdown owns PR sequencing and
-may be revised when concrete downstream consumer requirements change that
-sequencing.
+source-grounded implementation boundary; the breakdown preserves delivery
+sequencing and downstream re-entry gates. The final completion authority is the
+[Stage 4C closeout](stage_4c_closeout.md).
 
 ## Purpose
 
-Stage 4C introduces Runtime Decision Authority.
+Stage 4C owns Runtime Decision Authority.
 
 It answers:
 
@@ -447,6 +449,29 @@ not form a mandatory linear pipeline. Same-request re-invocation authorization
 does not execute the re-invocation, authorize an append or accepted effect,
 permit old-candidate reuse, or grant unlimited request invocations.
 
+## Stage 4C.5 Compatibility Disposition
+
+Existing Layer-1 and Layer-2 producer families already share the
+producer-neutral `SemanticOutcome` structural contract:
+
+```text
+compatible semantic contract
+!= identical producer evidence
+!= identical RuntimeDecision policy
+!= identical caller behavior
+```
+
+Only the Layer-1 PostgreSQL / Order write-side family currently has a reviewed
+`RuntimeDecision` profile. Layer-2, read-side, and snapshot families have no
+concrete production current-response caller, guarded action requiring Stage 4C
+authority, reviewed response rules, or demonstrated need for a generic
+cross-layer evaluator.
+
+Stage 4C.5 therefore closes as compatibility and documentation reconciliation.
+It adds no Layer-2 or snapshot policy, rebuild/fallback/quarantine policy,
+universal evaluator, generic evidence envelope, automatic caller wiring, or
+production consumer created for symmetry.
+
 ## Explicit Non-Goals
 
 This PR2 implementation does not introduce:
@@ -473,11 +498,12 @@ The first profile does not map `REQUIRES_REBUILD`, `FAST_PATH_UNAVAILABLE`,
 `DERIVED_STATE_UNTRUSTED`, or `DRIFT_DETECTED`. It does not decide snapshot
 fallback, quarantine, rebuild, or snapshot trust selection.
 
-Those are possible future Stage 4C producer-family profiles only after a
-separate source-grounded consumer audit. This deferral does not reopen Stage
-4B.3; ADR 0026 continues to own Projection Trust Continuation re-entry.
+Any future proposal for those producer families must satisfy the Stage 4C
+re-entry conditions through a separate source-grounded consumer audit. This
+deferral does not reopen Stage 4B.3; ADR 0026 continues to own Projection Trust
+Continuation re-entry.
 
-## PR2 Delivery Boundary
+## PR2 Delivery and Closeout Boundary
 
 The combined first production delivery preserves:
 
@@ -506,16 +532,24 @@ The combined first production delivery preserves:
 PR1 supplied the source-grounded prerequisites. PR2 therefore delivers the
 generic contract and first evaluator together while preserving their separate
 module and dependency ownership. No standalone contract-only delivery is
-required by the current source.
+required by the current source. Stage 4C.5 finds the existing producer-neutral
+`SemanticOutcome` structure compatible across Layer-1 and Layer-2 families and
+does not justify another production profile.
 
 ## Current Position
 
-Stage 4C PR2 implements an explicit callable production capability for the
-live, in-memory, Layer-1 PostgreSQL write-side first profile. The generic
-`RuntimeDecision` remains producer- and domain-neutral; terminal Order-rule
-refinement remains owned by the concrete feedback and evaluation delivery.
+Stage 4C is complete and closed. PR2 implements an explicit callable production
+capability for the live, in-memory, Layer-1 PostgreSQL write-side first profile.
+The generic `RuntimeDecision` remains producer- and domain-neutral; terminal
+Order-rule refinement remains owned by the concrete feedback and evaluation
+delivery.
 
 No production caller currently exists above `PostgresTransactionalWriteSide`,
 so PR2 adds no writer integration or automatic application composition. Any
-future caller-owned wiring remains conditional on a concrete source-grounded
-caller rather than being manufactured to make the evaluator automatic.
+future Stage 4C re-entry or caller-owned wiring remains conditional on a
+concrete source-grounded caller and guarded current-response action rather than
+being manufactured to make the evaluator automatic. Stage 4D retains a valid
+`HOW`-selection responsibility but its implementation is deferred; Stage 4E is
+the next formal implementation direction and remains unimplemented here. See
+the [Stage 4C closeout](stage_4c_closeout.md) for the final delivery map,
+compatibility verdict, downstream boundaries, and transition record.

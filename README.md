@@ -53,6 +53,8 @@ The current implementation provides:
 * runtime semantic interpretation through `SemanticOutcome`
 * structured governance evidence through `DecisionReceipt`
 * a machine-readable Order Correctness Contract
+* a generic immutable `RuntimeDecision` contract and first reviewed Layer-1
+  PostgreSQL / Order write-side evaluation profile
 
 Producer-specific execution traces and bounded measurement evidence support this foundation without acting as general tracing or measurement platforms.
 
@@ -184,6 +186,7 @@ Agent-facing action governance is the architectural target for this foundation, 
 | `SemanticOutcome` interpretation             | ✅ Complete                                                             |
 | `DecisionReceipt` evidence foundation        | ✅ Complete — explicit components; automatic materialization deferred   |
 | Order Correctness Contract v0                | ✅ Complete                                                             |
+| Stage 4C — Runtime Decision Authority        | ✅ Complete / closed — generic contract + first Layer-1 profile          |
 
 Producer-specific execution traces and bounded PostgreSQL measurement evidence support this foundation. The existing permission work is a bounded database-role and accepted-history mutation-hardening baseline, not general IAM or business authorization.
 
@@ -191,12 +194,15 @@ Producer-specific execution traces and bounded PostgreSQL measurement evidence s
 
 | Responsibility                                  | Status                                                                     |
 | ----------------------------------------------- | -------------------------------------------------------------------------- |
-| Stage 4C — Runtime Decision Authority           | 🚧 Current implementation direction; production contract not yet frozen   |
-| Stage 4D — Strategy Selection Authority         | Future                                                                     |
-| Stage 4E — Retry / Attempt Authorization        | Future                                                                     |
+| Stage 4D — Strategy Selection Authority         | Responsibility retained; implementation deferred                          |
+| Stage 4E — Retry / Attempt Authorization        | Next formal direction; first slice not implemented                         |
 | Stage 5 — Action Safety                         | Future                                                                     |
 
-Stage 4C PR0 completed the documentation and responsibility boundary. It did not implement Runtime Decision Authority. A first production contract remains next work and will require a concrete consumer, invocation owner, eligible evidence subset, response vocabulary, and fail-closed behavior before its shape is frozen.
+Stage 4C is complete and closed. PR1 established the source-grounded
+implementation-entry boundary; PR2 delivered the generic immutable
+`RuntimeDecision` contract and first Layer-1 PostgreSQL / Order write-side
+profile; Stage 4C.5 completed compatibility review and documentation closeout.
+No additional Stage 4C production code is currently justified.
 
 Detailed stage histories, ADRs, experiments, PR records, and closeouts live under [`docs/`](docs/).
 
@@ -227,21 +233,33 @@ The responsibility vocabulary is precise:
 * `SemanticOutcome` is live semantic interpretation of bounded technical evidence.
 * `DecisionReceipt` is structured governance evidence that may be persisted explicitly.
 * **Runtime Decision Authority** decides the generic current response within its approved boundary. It does not select strategy, authorize another attempt, or execute an action.
-* **Strategy Selection Authority** later selects an eligible execution path inside prior authorization.
-* **Retry / Attempt Authorization** alone decides whether another attempt is allowed and under what constraints.
+* **Strategy Selection Authority** selects `HOW` inside prior authorization only when multiple eligible strategies exist. Its responsibility is retained and implementation is deferred.
+* **Retry / Attempt Authorization** alone decides whether another same-request invocation is allowed and under what constraints. It is the next formal implementation direction and remains unimplemented.
 * execution remains separate from evidence, authorization, and strategy selection.
 
-These responsibilities are non-linear. An ordinary authorized response may proceed from Stage 4C to Stage 4D without retry authority. If another attempt is being considered, the conceptual handoff may instead be:
+These responsibilities are non-linear. For one completed result:
 
 ```text
 current evidence
-→ Stage 4C current-response decision
-→ Stage 4E attempt authorization
-→ Stage 4D strategy selection for the authorized attempt
-→ execution
+→ Stage 4C current-response decision or refusal
+→ caller handling
 ```
 
-Stage 4C, Stage 4D, and Stage 4E are not implemented as one mandatory runtime chain.
+When another same-request invocation is considered:
+
+```text
+eligible prior-invocation evidence
+→ Stage 4E authorization or refusal
+
+if another invocation is authorized:
+→ Stage 4D selects HOW only if multiple eligible strategies exist
+→ execution
+→ fresh result
+→ Stage 4C handling when applicable
+```
+
+Stage 4C refusal is neither Stage 4E authorization nor Stage 4E refusal.
+`C → D → E` is not a mandatory runtime pipeline.
 
 ---
 
@@ -376,6 +394,7 @@ For the current decision-governance boundary:
 
 * [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](docs/adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
 * [Stage 4C — Live Decision Governance](docs/implementation_notes/stage_4c/README.md)
+* [Stage 4C Closeout](docs/implementation_notes/stage_4c/stage_4c_closeout.md)
 
 Deep documents preserve architecture history and implementation chronology; the reading path indicates which sources are current authority and which are historical context.
 
@@ -429,34 +448,22 @@ What should the system do next?
 
 Compass is an active personal design-research and reference implementation.
 
-The transactional, durable persistence, projection, semantic-outcome, decision-evidence, and correctness-contract foundations are executable today. Trace and measurement support is producer-specific and bounded.
-
-The project has established:
-
-```text
-detect
-→ interpret
-→ preserve evidence
-```
-
-The current implementation direction is Stage 4C Runtime Decision Authority. That production contract is not yet frozen or implemented.
-
-Later responsibilities branch rather than form one mandatory sequence:
+The project has completed the durable correctness, semantic-evidence,
+Order correctness-contract, and Stage 4C Runtime Decision Authority foundations.
 
 ```text
-current evidence
-→ current-response authority
-   ├─→ future strategy selection for an eligible response
-   └─→ future retry / attempt authorization, when another attempt is considered
-       → future strategy selection for the authorized attempt
-
-future Stage 5
-→ action safety for externally meaningful effects
+Stage 4C — complete / closed
+Stage 4D — responsibility retained; implementation deferred
+Stage 4E — next formal implementation direction; not implemented
+Stage 5  — future action-safety / dual-dimension governance
 ```
+
+Detailed stage history, architecture decisions, experiments, and closeouts live
+under [`docs/`](docs/).
 
 The goal is not to claim production readiness early.
-
-The goal is to make the correctness boundary explicit **before broader automation depends on it**.
+It is to make the correctness boundary explicit before broader automation
+depends on it.
 
 ---
 
