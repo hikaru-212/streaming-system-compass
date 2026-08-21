@@ -9,8 +9,8 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the Stage 4C PR1
-source-grounded implementation-entry boundary:
+This version reflects the project position after the Stage 4C compatibility and
+documentation closeout:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
@@ -27,11 +27,14 @@ source-grounded implementation-entry boundary:
   It was delivered as separately owned parallel Stage 4 foundation work and is
   technically independent from the Stage 4B.3 closeout, which did not move,
   redefine, block, or sequence it.
-- Stage 4C PR1 establishes in this branch the documentation-only,
-  source-grounded first implementation profile and downstream decision gates.
-  No production Runtime Decision Authority is implemented.
-- Stage 4D Strategy Selection Authority and Stage 4E Retry / Attempt
-  Authorization remain future work.
+- Stage 4C is complete and closed. PR1 established the source-grounded
+  implementation-entry boundary; PR2 delivered the generic immutable
+  `RuntimeDecision` and first Layer-1 PostgreSQL / Order profile; Stage 4C.5
+  completed compatibility review and documentation reconciliation.
+- Stage 4D retains a valid Strategy Selection Authority responsibility, but its
+  implementation is deferred.
+- Stage 4E Retry / Attempt Authorization is the next formal implementation
+  direction and remains unimplemented.
 - Stage 5 Action Safety and later production hardening remain future work.
 
 ---
@@ -68,8 +71,8 @@ This means:
 - Stage 4B.2 is complete as the producer-specific measurement and bounded empirical cost-evidence stage.
 - Stage 4B.3 is complete and closed as not currently justified under ADR 0026.
 - Stage 4B.5 Order Correctness Contract v0 is complete and closed.
-- Stage 4C PR1 documentation boundary is established in this branch; Stage 4C
-  production Runtime Decision Authority remains unimplemented.
+- Stage 4C Runtime Decision Authority is complete and closed with the generic
+  contract and first Layer-1 PostgreSQL / Order evaluation profile.
 
 Detailed completed-stage and current-stage records now live under:
 
@@ -83,23 +86,26 @@ Detailed completed-stage and current-stage records now live under:
 - [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
 - [Stage 4B.3 Implementation Notes](../implementation_notes/stage_4b_3/)
 - [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
+- [Stage 4C Implementation Notes and Closeout](../implementation_notes/stage_4c/)
 
 The completed Stage 4 foundation position is:
 
 - **Stage 4B.2 — COMPLETE / CLOSED**
 - **Stage 4B.3 — COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED**
 - **Stage 4B.5 — COMPLETE / CLOSED**
+- **Stage 4C — COMPLETE / CLOSED**
 
-With the Stage 4C PR1 documentation boundary established in this branch, the
-current and later responsibilities are:
+After the Stage 4C closeout, the current and later responsibilities are:
 
 - Stage 4B.3 remains closed unless ADR 0026 re-entry conditions are met; Stage
   4B.5 Order Correctness Contract is complete
-- Stage 4C production Runtime Decision Authority is next; PR1 freezes semantic
-  responsibility and the first profile without freezing its Python API
-- Stage 4D Strategy Selection Authority is future
-- Stage 4E Retry / Attempt Authorization is future and conditional when another
-  attempt is considered
+- Stage 4C Runtime Decision Authority is complete and closed; no additional
+  Stage 4C production code is currently justified
+- Stage 4D Strategy Selection Authority retains responsibility for dynamic
+  `HOW` selection, but implementation is deferred
+- Stage 4E Retry / Attempt Authorization is the next formal implementation
+  direction and participates only when another invocation of the same complete
+  `RequestSignature` is considered
 - Stage 5 dual-dimension governance demo / Action Safety is future
 - Stage 5+ production and agent-facing hardening
 
@@ -600,16 +606,17 @@ technical evidence
 → evidence foundations as applicable
 
 live SemanticOutcome + applicable exact rule refinement
-→ Stage 4C Runtime Decision Authority
+→ Stage 4C current-response decision or refusal
+→ caller handling
 
-authorized current response
-→ Stage 4D Strategy Selection Authority
-→ execution
+eligible prior-invocation evidence
+→ Stage 4E authorization or refusal
 
-another attempt considered
-→ Stage 4E Retry / Attempt Authorization
-→ Stage 4D strategy selection for the authorized attempt
+if another invocation of the same complete RequestSignature is authorized
+→ Stage 4D selects HOW only if multiple eligible strategies exist
 → execution
+→ fresh result
+→ Stage 4C handling when applicable
 ```
 
 Stage 4 is where Compass begins to answer:
@@ -669,13 +676,15 @@ Stage 4B.1 — DiagnosticTrace / ResolutionTrace Boundary
 Stage 4B.2 — Measurement Evidence
 Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
 Stage 4B.5 — Order Correctness Contract v0 — complete / closed
-Stage 4C — Runtime Decision Authority — PR1 source-grounded docs boundary established in this branch; production unimplemented
-Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
-Stage 4D — Strategy Selection Authority — future
-Stage 4E — Retry / Attempt Authorization — future and conditional
+Stage 4C — Runtime Decision Authority — complete / closed
+Stage 4C.5 — Compatibility / documentation closeout — complete
+Stage 4D — Strategy Selection Authority — responsibility retained / implementation deferred
+Stage 4E — Retry / Attempt Authorization — next formal implementation direction / not implemented
 ```
 
-This sequence is intentionally staged.
+This inventory preserves stage ownership and delivery history. It is not a
+mandatory runtime pipeline or a rule that Stage 4D implementation must precede
+Stage 4E.
 
 Compass should first define semantic meaning, then preserve decision evidence,
 then preserve producer-specific execution-topology evidence, then measure bounded
@@ -683,10 +692,11 @@ execution cost and obtain empirical evidence. Stage 4B.3 used an evidence-first
 investigation to determine that incremental projection-trust continuation is not
 currently justified. Stage 4B.5 completed as separately owned parallel
 foundation work and remains technically independent from Stage 4B.3. Stage 4C
-PR1 establishes in this branch its documentation-only first profile; production
-implementation is next. Stage 4C.5 outcome-family alignment, Stage 4D Strategy
-Selection Authority, and conditional Stage 4E Retry / Attempt Authorization
-remain downstream.
+PR1 established the source-grounded entry boundary; PR2 delivered the generic
+contract and first Layer-1 PostgreSQL / Order profile; Stage 4C.5 confirmed
+compatibility through the shared producer-neutral `SemanticOutcome` structure
+and closed the stage. Stage 4D retains its responsibility but is deferred.
+Stage 4E is the next formal implementation direction.
 
 ---
 
@@ -962,6 +972,10 @@ Stage 4B.5 does not implement:
 
 ## Stage 4C — Runtime Decision Authority
 
+### Status
+
+Complete and closed.
+
 ### Goal
 
 Stage 4C converts a current semantic observation and eligible supporting
@@ -995,11 +1009,16 @@ source-applicable. `PostgresWriteSideSemanticRuleFeedback` may carry that
 producer-specific composition without becoming a universal Stage 4C input
 contract.
 
-PR1 supports four initial current-response meanings for that concrete profile:
-allow use of a completed current result, return a prior accepted result, block
-current continuation, and require escalation. `CONCURRENCY_UNCERTAIN` remains
-unsupported and cannot become implicit allow. PR1 freezes these meanings and
-refusal semantics without freezing production Python identifiers.
+PR1 froze four initial current-response meanings for that concrete profile.
+PR2 implements them as `USE_CURRENT_RESULT`,
+`RETURN_PRIOR_ACCEPTED_RESULT`, `BLOCK_CURRENT_CONTINUATION`, and
+`REQUIRE_ESCALATION`. `CONCURRENCY_UNCERTAIN` remains unsupported and produces
+typed refusal rather than implicit allow or a fabricated positive block.
+
+PR2 also delivers the generic immutable `RuntimeDecision`, the exact consumed
+`SemanticOutcome`, non-authoritative review explanation, and a profile-specific
+delivery retaining the exact source feedback. The evaluator is an explicit
+callable capability with no automatic production caller wiring.
 
 `DecisionReceipt` remains durable governance evidence but is not required for
 the first live Stage 4C hot path. Restart-recovery governance is a distinct
@@ -1021,11 +1040,17 @@ max_attempts
 
 ---
 
-## Stage 4C.5 — Layer 1 / Layer 2 Outcome Alignment
+## Stage 4C.5 — Compatibility and Documentation Closeout
+
+### Status
+
+Complete.
 
 ### Goal
 
-Stage 4C.5 aligns write-side Layer 1 and read-side Layer 2 around compatible semantic outcome and runtime decision vocabulary.
+Stage 4C.5 confirms that write-side Layer 1 and read-side Layer 2 producer
+families already share the producer-neutral `SemanticOutcome` structural
+contract.
 
 Layer 1 protects:
 
@@ -1039,13 +1064,27 @@ Layer 2 protects:
 accepted history → derived runtime state
 ```
 
-They should not become separate semantic worlds.
+They do not need identical producer evidence, `RuntimeDecision` policy, or
+caller behavior to remain semantically compatible.
 
-The purpose of Stage 4C.5 is alignment, not rewriting the already-working write-side admission model.
+Layer-1 currently has one reviewed PostgreSQL / Order write-side
+`RuntimeDecision` profile. Layer-2, read-side, and snapshot families have no
+concrete production current-response caller, guarded action requiring Stage 4C
+authority, reviewed response rules, or demonstrated need for a generic
+cross-layer evaluator.
+
+Stage 4C.5 therefore closes through compatibility review and repository
+reconciliation. It does not add Layer-2 or snapshot policy,
+rebuild/fallback/quarantine policy, a universal evaluator, a generic evidence
+envelope, automatic caller wiring, or a production consumer for symmetry.
 
 ---
 
 ## Stage 4D — Strategy Selection Authority
+
+### Status
+
+Responsibility retained; implementation deferred.
 
 ### Goal
 
@@ -1074,63 +1113,122 @@ Stage 4D must not independently authorize `REBUILD`, `QUARANTINE`, `ESCALATE`,
 or another generic current response. It may choose how an already-authorized
 response is performed. Strategy selection does not execute the response.
 
+The implementation deferral is source- and behavior-grounded:
+
+- current write-side strategy composition is statically selected;
+- no authorized operation currently has multiple dynamically eligible
+  execution strategies;
+- no reviewed runtime selection rule exists;
+- adding a selector would not change observable behavior.
+
+Stage 4D re-enters implementation when an already-authorized operation has
+multiple eligible strategies and reviewed evidence can choose `HOW` without
+creating the underlying authority.
+
 ---
 
 ## Stage 4E — Retry / Attempt Authorization
 
+### Status
+
+Next formal implementation direction; not implemented.
+
 ### Goal
 
-Stage 4E decides whether another attempt is authorized and, if so, under which
-explicit constraints.
+The first formal Stage 4E responsibility is same-complete-request public writer
+re-invocation authority. It answers:
 
-Core rule:
+> Given eligible evidence from one completed invocation, is exactly one
+> additional public writer invocation of the same complete `RequestSignature`
+> authorized?
+
+The request identity boundary is structural:
 
 ```text
-retry attempt
-≠
-same intent
+same complete RequestSignature
+= same request
+
+complete RequestSignature
+= request_id
++ command_type
++ order_id
++ amount
+
+same request_id alone
+!= same request
 ```
 
-A retry loop may preserve request identity while changing action path, target state, semantic meaning, or safety boundary.
-
-Stage 4E owns retry/attempt classification, retry safety,
-reload-before-retry and revalidation-before-retry requirements, backoff and
-timing constraints, total and per-class attempt limits, attempt budget,
-same-candidate versus regenerated-candidate constraints, intent consistency,
-prior-attempt lineage, and cross-attempt governance.
-
-It should distinguish retry-like situations such as:
-
-- idempotent replay
-- concurrency retry
-- infrastructure retry
-- semantic conflict
-- semantic drift
-- rebuild-required retry
-- future agent intent drift
-
-Current-attempt failure does not authorize another attempt. Retry authorization
-does not execute retry, permit reuse of the same candidate, or grant unlimited
-attempts.
-
-For a later attempt, the conceptual handoff may be:
+The narrow first formal slice evaluates eligible evidence from one completed
+invocation and may authorize or refuse exactly one additional public writer
+invocation with that same complete signature. It preserves:
 
 ```text
-current execution evidence
-→ Stage 4C current-response decision
-→ Stage 4E attempt authorization and constraints
-→ Stage 4D strategy selection for the authorized attempt
+technical failure
+!= authority for another invocation
+
+semantic failure
+!= authority for another invocation
+
+another invocation authorized
+!= execution
+
+Stage 4E
+!= Stage 4D strategy selection
+```
+
+For one completed result, the current-response handoff is:
+
+```text
+current evidence
+→ Stage 4C current-response decision or refusal
+→ caller handling
+```
+
+When another invocation of the same complete `RequestSignature` is considered:
+
+```text
+eligible prior-invocation evidence
+→ Stage 4E authorization or refusal
+
+if another invocation is authorized:
+→ Stage 4D selects HOW only if multiple eligible strategies exist
 → execution
+→ fresh result
+→ Stage 4C handling when applicable
 ```
 
-This is not a mandatory path for normal execution. An execution that does not
-consider another attempt does not need to pass through Stage 4E, and
-`C → D → E` is not a mandatory irreversible runtime pipeline.
+Stage 4C refusal is neither Stage 4E authorization nor Stage 4E refusal. Stage
+4C current-response authority is not a prerequisite for Stage 4E to evaluate
+the separate another-invocation question. `C → D → E` is not a mandatory
+runtime pipeline.
 
-The first Stage 4E delivery shares Stage 4C's live/in-memory design center.
-Durable `DecisionReceipt` evidence may support a later restart-recovery
-consumer, but receipt persistence is not required before a live in-process
-attempt decision. Stage 4E authorizes attempts; it does not perform them.
+Experimental evidence supports bounded same-complete-request public-writer
+re-invocation authority. The first formal profile should remain narrower than
+the experiment. Preparation `LOCK_TIMEOUT` is the most portable first candidate
+because existing producer-owned evidence is largely sufficient.
+
+The formal transition does not promote the experimental
+`PublicWriterInvocationObservation`, candidate monkeypatch, observation
+wrappers, exact Python writer identity, mutable observation-owned lifecycle,
+one-shot consumer, or `STALE_WRITE` authorization profile.
+
+The first formal Stage 4E slice does not yet claim ownership of:
+
+- generic backoff or jitter;
+- general retry timing;
+- generic retry budgets;
+- general attempt-class limits;
+- candidate-regeneration policy;
+- semantic-drift retry;
+- general retry planning;
+- durable attempt lineage;
+- restart recovery;
+- universal retry orchestration.
+
+These remain unaccepted future candidate concerns. Concrete evidence must
+re-justify each concern before it becomes a Stage 4E responsibility. The first
+formal slice remains live and in memory, authorizes at most one additional
+invocation of the same complete `RequestSignature`, and does not perform it.
 
 ---
 
@@ -1165,11 +1263,17 @@ selected observations
 → DecisionReceipt / diagnostic trace / measurement evidence as applicable
 
 live SemanticOutcome + applicable exact rule refinement
-→ Stage 4C current-response authority
-   ├─→ Stage 4D strategy selection → execution
-   └─→ Stage 4E authorization when another attempt is considered
-       → Stage 4D strategy selection for that authorized attempt
-       → execution
+→ Stage 4C current-response decision or refusal
+→ caller handling
+
+eligible prior-invocation evidence
+→ Stage 4E authorization or refusal when another invocation of the same complete RequestSignature is considered
+
+if another invocation is authorized
+→ Stage 4D strategy selection only when multiple eligible paths exist
+→ execution
+→ fresh result
+→ Stage 4C handling when applicable
 ```
 
 The important result is not that every production concern is fully optimized.
@@ -1219,9 +1323,12 @@ Action safety should not be built directly from raw technical status.
 Before an action-safety gate can make trustworthy decisions, the system needs:
 
 - live `SemanticOutcome` and applicable exact refinement
-- Runtime Decision Authority
-- Strategy Selection Authority inside prior authorization
-- Retry / Attempt Authorization when another attempt is considered
+- completed Stage 4C Runtime Decision Authority for the applicable current
+  observation
+- Stage 4D Strategy Selection Authority only where an authorized action has
+  multiple eligible execution paths
+- Stage 4E Retry / Attempt Authorization only when another invocation of the
+  same complete `RequestSignature` is considered
 - clear separation between accepted history and derived state
 
 Durable `DecisionReceipt` evidence may support audit, recovery, and delayed
@@ -1380,11 +1487,12 @@ Runtime Semantic Governance
   4B.5 Order Correctness Contract v0
     complete / closed after separately owned parallel delivery
   4C Runtime Decision Authority
-    PR1 source-grounded implementation-entry boundary established in this branch
-    production Runtime Decision Authority remains unimplemented; implementation next
-  4C.5 Layer 1 / Layer 2 Outcome Alignment
-  4D Strategy Selection Authority — future
-  4E Retry / Attempt Authorization — future and conditional
+    complete / closed
+    PR1 source-grounded implementation-entry boundary
+    PR2 generic RuntimeDecision + first Layer-1 PostgreSQL / Order profile
+  4C.5 Compatibility / documentation closeout — complete
+  4D Strategy Selection Authority — responsibility retained / implementation deferred
+  4E Retry / Attempt Authorization — next formal implementation direction / not implemented
 
 Stage 5:
 Dual-Dimension Governance Demo / Action Safety
@@ -1414,10 +1522,12 @@ durable truth
 → trace and measurement evidence
 → evidence-gated closure of projection trust continuation
 → separately owned machine-readable correctness contract work
-→ current-response Runtime Decision Authority
-  ├─→ Strategy Selection Authority for an eligible response
-  └─→ Retry / Attempt Authorization when another attempt is considered
-      → Strategy Selection Authority for that authorized attempt
+→ completed Stage 4C current-response Runtime Decision Authority or refusal
+→ caller handling
+→ Stage 4E Retry / Attempt Authorization when another invocation of the same complete RequestSignature is considered
+→ Stage 4D Strategy Selection only when that authorized invocation has multiple eligible strategies
+→ execution
+→ fresh result and Stage 4C handling when applicable
 → action safety / dual-dimension governance demo
 ```
 
@@ -1449,10 +1559,14 @@ Projection Trust Boundary and Continuation
 = closed as not currently justified
 
 live SemanticOutcome + applicable exact rule refinement
-→ current-response Runtime Decision Authority
-   ├─→ Strategy Selection inside prior authorization
-   └─→ Retry / Attempt Authorization when another attempt is considered
-       → Strategy Selection for that authorized attempt
+→ completed Stage 4C current-response decision or refusal
+→ caller handling
+
+eligible prior-invocation evidence
+→ Stage 4E authorization or refusal when another invocation of the same complete RequestSignature is considered
+→ Stage 4D Strategy Selection only for an authorized invocation with multiple eligible paths
+→ execution
+→ fresh result and Stage 4C handling when applicable
 ```
 
 Projection worker mapping is not required for Stage 4A because Stage 4A PR4 maps read-side correctness validation results, not ordinary worker execution outcomes.

@@ -4,21 +4,23 @@
 
 ## Purpose
 
-This note records the accepted delivery topology and remaining planning for:
+This note records the final accepted delivery topology for:
 
 ```text
 Stage 4C — Runtime Decision Authority
 ```
 
 It records the source-audit decision to combine the generic contract and first
-evaluation profile in PR2 while preserving their separate ownership. Future PR
-count remains conditional on concrete consumers.
+evaluation profile in PR2 while preserving their separate ownership, followed
+by the bounded Stage 4C.5 compatibility and documentation closeout. Additional
+work requires downstream re-entry through a concrete source-grounded demand.
 
 The governing authority remains
 [ADR 0027](../../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md).
-The [Stage 4C README](README.md) owns the current implementation boundary
-and first concrete profile. This note owns only downstream sequencing, decision
-gates, and completion criteria.
+The [Stage 4C README](README.md) owns the implementation boundary and first
+concrete profile. The [Stage 4C closeout](stage_4c_closeout.md) owns the final
+completion decision. This note preserves delivery sequencing and downstream
+re-entry gates.
 
 ## Current Status
 
@@ -34,8 +36,13 @@ PR2
 = explicit callable capability only
 = no automatic caller wiring
 
-later work
-= conditional on concrete source-grounded consumer requirements
+Stage 4C.5
+= bounded compatibility / documentation closeout
+= complete
+
+Stage 4C
+= COMPLETE / CLOSED
+= no additional production code currently justified
 ```
 
 ## Stage Principle
@@ -45,8 +52,8 @@ accepted authority boundary
 → source-grounded first profile
 → minimal generic contract
 → concrete evaluation profile
-→ caller-owned composition only when a real caller exists
-→ separately justified producer-family expansion
+→ bounded consumer experiment as behavioral evidence only
+→ Layer-1 / Layer-2 compatibility audit
 → closeout
 ```
 
@@ -87,12 +94,14 @@ PR2
 + first source-grounded Layer-1 PostgreSQL / Order write-side profile
 → separate module and dependency ownership in one delivery
 
-possible later PR
-→ caller-owned composition when a real production caller is identified
-
-later
-→ separately justified Stage 4C producer-family expansion
+Stage 4C.5
+→ compatibility and repository reconciliation
+→ no new production profile
 → Stage 4C closeout
+
+downstream re-entry
+→ caller-owned composition or producer-family expansion only when a concrete
+  current-response demand satisfies the closeout gates
 ```
 
 PR2 delivers the generic contract and first evaluator together because the
@@ -163,7 +172,11 @@ PR1 records that:
 10. separate decision identity and policy identity/versioning are deferred for
     lack of a current consumer.
 
-## PR1 Completion Criteria
+## Historical PR1 Completion Criteria
+
+The following criteria describe the documentation-only PR1 delivery at the
+time it completed. They are preserved as chronology and do not describe the
+repository's post-PR2 status:
 
 PR1 is complete when:
 
@@ -290,12 +303,13 @@ Focused validation should prove:
 
 ---
 
-# Conditional Future — Caller-Owned Composition
+# Downstream Re-Entry — Caller-Owned Composition
 
 ## Planning Responsibility
 
-Add explicit caller-owned composition only if a real production caller is
-identified by a future source audit. No such caller exists above
+Add explicit caller-owned composition only if a real production caller and
+guarded current-response action are identified by a future source audit. No
+such caller exists above
 `PostgresTransactionalWriteSide` in current production source.
 
 The intended ownership is:
@@ -319,7 +333,7 @@ truthfully rather than hidden behind speculative orchestration.
 
 ---
 
-# Later Producer-Family Expansion
+# Downstream Re-Entry — Producer-Family Expansion
 
 Read-side and snapshot families require separate consumer audits before they
 enter Stage 4C policy. The first slice does not decide responses for:
@@ -348,15 +362,16 @@ Each future family must independently establish:
 
 ---
 
-# Stage 4C Closeout Gate
+# Stage 4C Closeout Decision
 
-Stage 4C closeout should not be scheduled solely because the first contract or
-profile exists. Closeout is justified only when the accepted Stage 4C scope is
-complete and no remaining concrete current-response consumer requires additional
-Stage 4C work. If such a source-grounded consumer remains, closeout is deferred
-until that boundary is resolved.
+Stage 4C closes because the accepted scope is complete and the Stage 4C.5 audit
+found no remaining concrete current-response demand that justifies additional
+production code. Existing Layer-1 and Layer-2 producer families already share
+the producer-neutral `SemanticOutcome` structural contract. Compatibility does
+not require identical producer evidence, `RuntimeDecision` policy, or caller
+behavior.
 
-Closeout evidence should include:
+The closeout evidence includes:
 
 - implemented generic current-response contract boundaries;
 - implemented producer-family profiles and exact supported tuples;
@@ -366,6 +381,9 @@ Closeout evidence should include:
   execution remain separately owned;
 - explicit durable/restart deferrals;
 - source-grounded test and validation results.
+
+The final evidence and transition record is the
+[Stage 4C closeout](stage_4c_closeout.md).
 
 ## Downstream Non-Goals
 
@@ -399,4 +417,8 @@ source-grounded delivery dependencies
 
 responsibility ownership
 → must remain explicit
+
+Stage 4C closure
+→ does not automatically schedule Stage 4D
+→ does not implement Stage 4E
 ```

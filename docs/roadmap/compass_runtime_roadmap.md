@@ -22,7 +22,7 @@ For completed and current stage execution notes, see:
 - [Stage 4B Implementation Notes](../implementation_notes/stage_4b/)
 - [Stage 4B.3 Implementation Notes](../implementation_notes/stage_4b_3/)
 - [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
-- [Stage 4C Docs-First Entry](../implementation_notes/stage_4c/)
+- [Stage 4C Implementation Notes and Closeout](../implementation_notes/stage_4c/)
 
 This document focuses on a narrower question:
 
@@ -174,18 +174,22 @@ terminal semantic refinement, deterministic YAML projection, and bounded
 overhead characterization. The Stage 4B.3 closeout did not move, redefine,
 block, or sequence it.
 
-Stage 4C PR1 establishes in this branch the documentation-only, source-grounded
-first implementation profile and downstream decision gates. No production
-Runtime Decision Authority is implemented yet. Stage 4D Strategy Selection
-Authority and conditional Stage 4E Retry / Attempt Authorization remain future
-work.
+Stage 4C is complete and closed. PR1 established the source-grounded
+implementation-entry boundary; PR2 delivered the generic immutable
+`RuntimeDecision` contract and first Layer-1 PostgreSQL / Order write-side
+profile; Stage 4C.5 completed compatibility review and repository
+reconciliation. Stage 4D retains a valid Strategy Selection Authority
+responsibility, but implementation is deferred. Stage 4E Retry / Attempt
+Authorization is the next formal implementation direction and remains
+unimplemented.
 
 ---
 
-## Current Limitation
+## Current Runtime-Decision Boundary
 
-Compass does not yet implement Runtime Decision Authority over live semantic
-observations.
+Compass implements one reviewed Runtime Decision Authority profile over live
+Layer-1 PostgreSQL / Order semantic observations. It does not implement a
+universal policy or a Layer-2 / snapshot profile.
 
 The current evidence foundations cover bounded write-side observations,
 read-side / derived-state observations, and source-applicable exact correctness
@@ -193,23 +197,31 @@ rule evidence. Stage 4A maps eligible observations into `SemanticOutcome`;
 Stage 4B provides explicit durable governance-evidence foundations; and Stage
 4B.5 provides terminal exact-rule refinement where supported.
 
-The generic Stage 4C responsibility remains producer- and domain-neutral. Its
-first concrete profile is live, in memory, caller-owned, and Layer-1 PostgreSQL
-write-side first:
+The generic Stage 4C responsibility and output remain producer- and
+domain-neutral. Its first concrete profile is live, in memory, caller-owned,
+and Layer-1 PostgreSQL write-side:
 
 ```text
 PostgresWriteSideResult
 → PostgresWriteSideSemanticRuleFeedback
 → required live SemanticOutcome
 + source-applicable terminal exact OrderRuleViolationEvidence
-→ Runtime Decision Authority
+→ evaluate_postgres_write_side_runtime_decision
+→ RuntimeDecision or typed refusal
 → caller-owned current-response use
 ```
 
-That first profile supports allowing use of a completed current result,
-returning a prior accepted result, blocking current continuation, and requiring
-escalation. `CONCURRENCY_UNCERTAIN` remains unsupported: it produces no
-authoritative first-profile decision and never implicit allow.
+That implemented profile supports using a completed current result, returning
+a prior accepted result, blocking current continuation, and requiring
+escalation. `CONCURRENCY_UNCERTAIN` remains unsupported: it produces typed
+refusal and never implicit allow.
+
+Existing Layer-1 and Layer-2 producer families already share the
+producer-neutral `SemanticOutcome` structural contract. Compatibility does not
+mean identical producer evidence, `RuntimeDecision` policy, or caller behavior.
+Layer-2 and snapshot families have no concrete production current-response
+caller, guarded action requiring Stage 4C authority, reviewed response rules,
+or demonstrated need for a generic cross-layer evaluator.
 
 Projection mismatch, replay validation, and snapshot-assisted observations
 remain valid read-side evidence families. They do not define the entire Stage
@@ -224,10 +236,10 @@ preserved:
 
 That interpretation began in Stage 4A through `SemanticOutcome` mapping and
 continued through the completed Stage 4B receipt foundation and Stage 4B.1
-execution-topology evidence. Measurement remains descriptive; production
-Runtime Decision Authority, Strategy Selection Authority, conditional Retry /
-Attempt Authorization, rate admission, and Stage 5 action safety remain
-separate work.
+execution-topology evidence. Measurement remains descriptive. Strategy
+Selection Authority, conditional Retry / Attempt Authorization, rate admission,
+and Stage 5 action safety remain separate work. Runtime Decision Authority is
+complete and closed within its first reviewed profile.
 
 ---
 
@@ -290,10 +302,17 @@ selected observations
 → DecisionReceipt / DiagnosticTrace / Measurement Evidence as applicable
 
 live SemanticOutcome + applicable exact rule refinement
-→ Runtime Decision Authority
-   ├─→ Strategy Selection Authority → execution
-   └─→ Retry / Attempt Authorization when another attempt is considered
-       → Strategy Selection Authority for that attempt → execution
+→ completed Stage 4C current-response decision or refusal
+→ caller handling
+
+eligible prior-invocation evidence
+→ Stage 4E authorization or refusal when another invocation of the same complete RequestSignature is considered
+
+if another invocation is authorized
+→ Stage 4D selects HOW only if multiple eligible strategies exist
+→ execution
+→ fresh result
+→ Stage 4C handling when applicable
 
 optional snapshot trust / replay-efficiency infrastructure
 = derived-state reference path, not accepted authority or a Stage 4 prerequisite
@@ -548,10 +567,11 @@ policy, action safety, or dual-dimension governance.
 Phase 4 describes how Compass evolves from bounded write-side and read-side
 semantic evidence into separately owned runtime governance responsibilities.
 
-Stage 4A and Stage 4B already provide semantic interpretation and durable
-evidence foundations. The current next step is live Runtime Decision Authority
-over eligible semantic observations, including applicable exact-rule
-refinement.
+Stage 4A and Stage 4B provide semantic interpretation and durable evidence
+foundations. Stage 4C now provides the closed generic current-response contract
+and first reviewed Layer-1 PostgreSQL / Order profile. Stage 4E is the next
+formal implementation direction; Stage 4D responsibility is retained while
+implementation is deferred.
 
 The high-level flow is:
 
@@ -565,23 +585,23 @@ SemanticOutcome
 
 generic live decision responsibility:
 eligible current SemanticOutcome
-→ producer/domain-neutral current-response RuntimeDecision
+→ completed Stage 4C current-response RuntimeDecision or refusal
+→ caller handling
 
 first concrete Layer-1 PostgreSQL / Order profile:
 required SemanticOutcome
 + terminally applicable exact OrderRuleViolationEvidence when source-applicable
 → generic current-response RuntimeDecision meaning
 
-normal current execution:
-RuntimeDecision
-→ Stage 4D Strategy Selection
-→ execution
+when another invocation of the same complete RequestSignature is being considered:
+eligible prior-invocation evidence
+→ Stage 4E authorization or refusal
 
-when another attempt is being considered:
-RuntimeDecision / current-response context
-→ Stage 4E Retry / Attempt Authorization
-→ Stage 4D Strategy Selection for the authorized attempt
+if another invocation is authorized:
+→ Stage 4D selects HOW only if multiple eligible strategies exist
 → execution
+→ fresh result
+→ Stage 4C handling when applicable
 
 DiagnosticTrace and measurement
 = optional supporting evidence for concrete later consumers
@@ -636,10 +656,26 @@ The capability path is:
 5. close projection trust continuation when no additional correctness need or
    consumer is demonstrated, while keeping order correctness references as
    separately owned foundation work
-6. convert semantic outcomes into runtime decisions
-7. align Layer 1 and Layer 2 outcome families
-8. select execution strategies among semantically acceptable paths
-9. authorize and constrain another attempt without assuming same intent
+6. convert eligible semantic outcomes into reviewed runtime decisions —
+   complete for the first Layer-1 profile
+7. confirm Layer-1 / Layer-2 structural compatibility and close Stage 4C —
+   complete
+8. retain strategy-selection responsibility and defer implementation until
+   dynamic `HOW` selection is required
+9. authorize and constrain another invocation of the same complete
+   `RequestSignature` — next formal implementation direction
+
+Here, same request means structural equality of the complete
+`RequestSignature`, including `request_id`, `command_type`, `order_id`, and
+`amount`:
+
+```text
+same complete RequestSignature
+= same request
+
+same request_id alone
+!= same request
+```
 
 Stage 4B.2 is complete and closed after producer-specific write-side
 measurement semantics, controlled PostgreSQL strategy comparison, explanatory
@@ -652,6 +688,12 @@ as separately owned parallel foundation work, independent from Stage 4B.3.
 Stage 4B.2 and Stage 4B.5 did not implement policy, strategy selection, retry
 governance, or rate admission.
 
+Stage 4C is complete and closed. PR1 supplied the source-grounded entry
+boundary; PR2 delivered the generic immutable contract and first Layer-1
+PostgreSQL / Order profile; Stage 4C.5 confirmed compatibility through the
+producer-neutral `SemanticOutcome` structure without adding Layer-2 or snapshot
+policy.
+
 Stage 4B.5 defines 18 stable correctness rules, but exactly six FullProof
 `TRANSITION_TRUTH` rules currently have typed runtime producer coverage. Rule
 identity and observed rule evidence do not authorize a runtime response or
@@ -659,13 +701,24 @@ retry.
 
 [ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
 defines Stage 4C as current-response authority, Stage 4D as strategy selection
-inside prior authorization, and Stage 4E as another-attempt authorization and
-constraints. Actual execution remains separate. The first delivery is
-live/in-memory first. Its generic decision responsibility remains producer- and
-domain-neutral; the first concrete Layer-1 PostgreSQL / Order profile requires
-`SemanticOutcome` and may consume terminally applicable exact rule refinement.
-`DecisionReceipt` remains durable governance evidence but is not required for
-the first live hot path; restart recovery remains a distinct deferred consumer.
+inside prior authorization, and Stage 4E as separately owned another-invocation
+authority. The accepted first formal Stage 4E direction narrows that
+responsibility to one additional public writer invocation of the same complete
+`RequestSignature`. Actual execution remains separate. The completed Stage 4C
+delivery is live/in-memory first. Its generic decision responsibility remains
+producer- and domain-neutral; the first concrete Layer-1 PostgreSQL / Order
+profile requires `SemanticOutcome` and may consume terminally applicable exact
+rule refinement. `DecisionReceipt` remains durable governance evidence but is
+not required for the live hot path; restart recovery remains a distinct
+deferred consumer.
+
+Stage 4D implementation is deferred because current strategy composition is
+static, no authorized operation has multiple dynamically eligible strategies,
+no reviewed runtime selection rule exists, and a selector would not change
+observable behavior. Stage 4E is the next formal implementation direction.
+Preparation `LOCK_TIMEOUT` is the most portable candidate for a narrow first
+profile governing one additional invocation of the same complete
+`RequestSignature`, which remains unimplemented.
 
 ---
 
@@ -682,13 +735,18 @@ evidence. Projection drift, replay mismatch, and derived-state trust remain
 valid examples within the read-side family; they do not define the whole Stage
 4C problem.
 
-The live decision boundary remains:
+The generic live decision responsibility remains:
 
 ```text
 live SemanticOutcome
 + source-applicable terminal exact rule refinement
 → Runtime Decision Authority
 ```
+
+The implemented production profile is limited to the reviewed Layer-1
+PostgreSQL / Order write-side tuples. Read-side and snapshot observations do not
+acquire `RuntimeDecision` policy merely because they share this generic
+responsibility description.
 
 ---
 
