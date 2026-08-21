@@ -6,12 +6,13 @@ This glossary defines the core vocabulary used in the Semantic Admission section
 
 The glossary is intentionally public-facing. It defines the conceptual language of the project, but it does not define complete implementation schemas, validator algorithms, or enforcement internals.
 
-The terms are grouped into four layers:
+The terms are grouped into five areas:
 
 1. **System Truth & Admission Core** — the base vocabulary for candidates, accepted facts, durable truth, and semantic admission.
 2. **Technical & Semantic Concurrency Control** — the vocabulary for conflicts, ordering, stale reads, and meaning-preserving admission under concurrent proposals.
 3. **Storage, Authority & Evidence Boundaries** — the vocabulary for CRUD integration, mutable state, destructive updates, authority checks, and admission evidence.
 4. **Multi-Agent Semantic Contracts & Governance** — the vocabulary for shared context, shared contracts, agent claims, evidence freshness, and workflow-level correctness.
+5. **CQRS for AI Governance & Cross-Cutting Principles** — conceptual vocabulary for effect-side versus claim-side governance, collective selection, and semantic-authority boundaries that span multiple technical layers.
 
 ---
 
@@ -19,7 +20,7 @@ The terms are grouped into four layers:
 
 ### Candidate Artifact
 
-A candidate artifact is any output, action, event, claim, plan, or generated object that has been proposed but not yet admitted as trusted system truth.
+A candidate artifact is any output, action, event, claim, plan, or generated object that has been proposed but has not yet received the trusted semantic status appropriate to its type.
 
 Examples include:
 
@@ -30,9 +31,7 @@ Examples include:
 - candidate tool call
 - candidate agent plan
 
-A candidate artifact may be useful, executable, or plausible.
-
-That does not make it accepted truth.
+A candidate artifact may be useful, executable, plausible, fluent, or well-formed. None of those properties makes it an accepted fact or trusted meaning by default.
 
 ### Candidate Action
 
@@ -54,6 +53,14 @@ A candidate action is not system truth.
 A candidate event is a proposed event that has not yet entered accepted history.
 
 In Compass, a candidate event must pass validation before it becomes part of durable accepted history.
+
+### Candidate Claim
+
+A candidate claim is a proposed assertion, interpretation, summary, conclusion, or semantic statement that has not yet been granted trusted or accepted meaning.
+
+A candidate claim may be fluent, cited, repeated by multiple agents, or grounded in some retrieved evidence.
+
+Those properties do not by themselves establish that the claim is justified for its stated scope, time, or authority domain.
 
 ### Accepted Fact
 
@@ -93,27 +100,49 @@ A tool call result, model output, or workflow step is not system truth by defaul
 
 ### Semantic Admission
 
-Semantic admission is the process of deciding whether a candidate action, event, claim, or artifact is allowed to become accepted system truth.
+Semantic admission is the process of deciding whether a candidate artifact may cross a governed semantic boundary and receive trusted status appropriate to its type.
 
-It asks:
+For the implemented Compass state-changing path:
 
-> Should this candidate be allowed to mutate durable state or become trusted meaning?
+```text
+Candidate Action / Event
+→ Accepted Fact / Accepted History
+```
+
+For the broader conceptual claim-side path:
+
+```text
+Candidate Claim
+→ Trusted or Accepted Meaning
+```
+
+The write-side path is the historical and implemented core. The claim-side path remains conceptual and research-oriented; this definition does not imply that a production claim-admission runtime exists.
 
 Semantic admission is not the same as output evaluation.
 
 It is a boundary decision before or during state mutation, public exposure, or durable admission.
 
+### Claim Admission
+
+Claim admission is a conceptual claim-side specialization of Semantic Admission.
+
+It asks whether a candidate claim has sufficient source authority, evidence coverage, freshness, provenance, scope, conflict handling, inference support, and uncertainty treatment to become trusted or accepted meaning.
+
+Claim admission is working conceptual vocabulary in the current project. It does not imply that a production claim-admission runtime already exists.
+
 ### Admission Boundary
 
-An admission boundary is the system boundary where candidate actions are accepted, rejected, escalated, transformed, or revalidated before they can mutate durable state or become trusted facts.
+An admission boundary is the governed boundary where candidate artifacts are accepted, rejected, escalated, transformed, or revalidated before they can receive trusted status appropriate to their type.
+
+For state-changing candidates, it protects the transition into durable state or accepted facts. For the conceptual claim-side path, it protects the transition into trusted or accepted meaning.
 
 For state-changing agents, this boundary is critical because the agent may generate action paths dynamically.
 
 ### Semantic Correctness
 
-Semantic correctness means that a system state or transformation preserves the intended business meaning, not merely that the code executed successfully.
+Semantic correctness means that a system state, transformation, or governed interpretation preserves or accurately represents the intended business meaning, rather than merely succeeding technically.
 
-A pipeline can finish, a schema can match, and a workflow can complete while still producing the wrong business meaning.
+A pipeline can finish, a schema can match, a workflow can complete, retrieval can succeed, and generation can finish while the resulting meaning is still wrong.
 
 ### Technical Success
 
@@ -210,6 +239,8 @@ Technical concurrency control is necessary, but it does not fully determine whet
 ### Semantic Concurrency
 
 Semantic concurrency refers to conflicts between multiple candidate actions that may be technically valid but semantically incompatible.
+
+A candidate may be semantically valid against state `S1` and become invalid after another accepted fact changes the authoritative state to `S2`.
 
 It asks:
 
@@ -481,7 +512,7 @@ Shared contract defines what may be safely claimed, executed, or admitted.
 
 A Shared Compass Layer is a conceptual semantic contract layer for multi-agent workflows.
 
-It protects the transition from agent-generated claims and actions into accepted business facts.
+It protects the distinct transitions from agent-generated claims into trusted or accepted meaning and from agent-generated actions into accepted business facts.
 
 ### Agent Observation
 
@@ -613,7 +644,7 @@ Workflow-level correctness means the full chain of agents, claims, evidence, and
 
 An agent-generated possibility is an option, plan, candidate, or claim produced by an agent before admission.
 
-An agent-generated possibility may become useful input, but it is not an accepted fact.
+An agent-generated possibility may become useful input, but it is not an accepted fact or trusted meaning by default.
 
 ### Accepted Public-Facing Meaning
 
@@ -623,12 +654,71 @@ This term is useful for generated summaries, AI overviews, recommendations, and 
 
 ---
 
+## 5. CQRS for AI Governance & Cross-Cutting Principles
+
+This section records conceptual and taxonomy vocabulary supporting the CQRS for AI Governance lens. It does not redefine conventional CQRS or imply that one production runtime implements every boundary described below.
+
+### State-Change / Effect-Side Governance
+
+State-change or effect-side governance is conceptual taxonomy vocabulary for the part of Semantic Admission concerned with proposed actions that may change authoritative business state.
+
+Its primary question is:
+
+> What may become true?
+
+Typical concerns include candidate admission, action-path validity, business authority, current-state validity, concurrency, retry intent, and durable accepted facts.
+
+The implemented Compass write-side path is the current concrete specialization within this broader conceptual category.
+
+### Claim-Side Semantic Governance
+
+Claim-side semantic governance is conceptual taxonomy vocabulary for the part of Semantic Admission concerned with candidate claims, interpretations, summaries, or conclusions that downstream humans or agents may rely on.
+
+Its primary question is:
+
+> What may be claimed as true?
+
+Typical concerns include source authority, evidence coverage, freshness, supersession, conflict, provenance, fact-versus-inference boundaries, uncertainty, and claim lifecycle.
+
+Claim-side governance is currently conceptual and research-oriented. It is not a claim that a production claim-admission runtime already exists.
+
+### Collective Selection
+
+Collective selection is the process by which multiple agents, models, reviewers, or decision producers choose one candidate through voting, ranking, quorum, aggregation, debate, or another coordination mechanism.
+
+Collective selection answers:
+
+> Which candidate was selected?
+
+It does not by itself answer:
+
+> Is that candidate semantically admissible?
+
+### Trusted Meaning
+
+Trusted meaning is broad conceptual vocabulary for generated or inferred meaning that a governed system permits a downstream consumer to rely on.
+
+Where the audience is public-facing, the more precise existing term **Accepted Public-Facing Meaning** should be preferred.
+
+Trusted meaning is intentionally broader because some admitted claims may be consumed internally by agents or decision-support systems rather than exposed publicly. It does not imply one specific durable store or implementation mechanism.
+
+---
+
 ## Reusable Principles
 
 ```text
-A candidate artifact is not an accepted fact.
+A candidate action is not an accepted fact.
+
+A candidate claim is not trusted or accepted meaning.
 
 Technical success does not imply semantic correctness.
+
+Technical correctness at one layer does not grant semantic authority
+at the next boundary.
+
+Selection is not admission.
+
+Agreement does not create semantic authority.
 
 Shared context is not shared contract.
 
