@@ -4,19 +4,19 @@
 
 ## Purpose
 
-This note records the planning hypothesis for implementing:
+This note records the accepted delivery topology and remaining planning for:
 
 ```text
 Stage 4C — Runtime Decision Authority
 ```
 
-It sequences separately reviewable work after the source-grounded PR1 boundary.
-It does not make the proposed PR count, module topology, or Python API
-mandatory.
+It records the source-audit decision to combine the generic contract and first
+evaluation profile in PR2 while preserving their separate ownership. Future PR
+count remains conditional on concrete consumers.
 
 The governing authority remains
 [ADR 0027](../../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md).
-The [Stage 4C README](README.md) owns the current implementation-entry boundary
+The [Stage 4C README](README.md) owns the current implementation boundary
 and first concrete profile. This note owns only downstream sequencing, decision
 gates, and completion criteria.
 
@@ -25,14 +25,17 @@ gates, and completion criteria.
 ```text
 PR1
 = documentation-only source-grounded boundary
-= established in the current branch
+= complete
 
-production Runtime Decision Authority
-= not implemented
+PR2
+= generic immutable RuntimeDecision contract
++ first Layer-1 PostgreSQL / Order evaluation profile
+= implemented
+= explicit callable capability only
+= no automatic caller wiring
 
-PR2 and later
-= planning hypothesis
-= subject to source and human review
+later work
+= conditional on concrete source-grounded consumer requirements
 ```
 
 ## Stage Principle
@@ -64,28 +67,27 @@ RuntimeDecision
 != strategy selection
 != execution
 
-current attempt failed
-!= another attempt authorized
+current request invocation failed
+!= same-request re-invocation authorized
 
-RetryAuthorization
-!= RetryExecution
+same-request re-invocation authorization
+!= re-invocation execution
 ```
 
-## Planning Topology Is Not Frozen
+## Accepted PR2 Topology
 
-The current planning hypothesis is:
+The source-grounded PR2 delivery topology is:
 
 ```text
 PR1
 → source-grounded documentation boundary
 
-likely PR2
+PR2
 → minimal immutable producer/domain-neutral current-response contract
++ first source-grounded Layer-1 PostgreSQL / Order write-side profile
+→ separate module and dependency ownership in one delivery
 
-likely PR3
-→ first source-grounded Layer-1 PostgreSQL / Order write-side profile
-
-possible PR4
+possible later PR
 → caller-owned composition when a real production caller is identified
 
 later
@@ -93,17 +95,12 @@ later
 → Stage 4C closeout
 ```
 
-This is a review aid, not a mandatory PR count.
-
-Source audit may combine adjacent PRs when a standalone seam would expose a
-dormant abstraction without a concrete consumer. Source audit may split a PR
-when it would otherwise own more than one independently reviewable semantic
-responsibility. The combined Stage 4B.5 PR5+PR6 delivery is process precedent
-for changing topology after discovering the real production consumer; it is
-not Stage 4C semantic or API precedent.
-
-Any combination or split requires human review before implementation scope is
-changed.
+PR2 delivers the generic contract and first evaluator together because the
+current source has no standalone call site that requires `RuntimeDecision`
+before the first evaluation profile exists. Keeping them in one delivery avoids
+a contract-only increment while separate modules and one-way dependencies
+preserve independent responsibility ownership. This delivery choice does not
+make future PR numbers architectural boundaries.
 
 ---
 
@@ -121,19 +118,31 @@ caller-owned
 Layer-1 PostgreSQL write-side first
 ```
 
-The first concrete observation flow is:
+PR1 recorded this conceptual end-to-end flow:
 
 ```text
 PostgresWriteSideResult
 → PostgresWriteSideSemanticRuleFeedback
-→ future Stage 4C evaluation
+→ Stage 4C evaluation
 → caller-owned use of RuntimeDecision
 ```
+
+PR2 implements only the explicit Stage 4C capability segment:
+
+```text
+PostgresWriteSideSemanticRuleFeedback
+→ evaluate_postgres_write_side_runtime_decision
+→ PostgresWriteSideRuntimeDecisionEvaluation
+```
+
+The existing upstream feedback mapper remains separately callable.
+Caller-owned invocation and use remain explicit and unwired because no
+production caller currently exists above `PostgresTransactionalWriteSide`.
 
 The evaluator remains outside `PostgresTransactionalWriteSide` transaction and
 admission execution.
 
-## PR1 Human Decisions
+## PR1 Boundary Decisions
 
 PR1 records that:
 
@@ -168,66 +177,70 @@ PR1 is complete when:
 
 ---
 
-# Likely PR2 — Minimal Generic Current-Response Contract
+# PR2 — Generic Contract + First Write-Side Evaluation Profile
 
-## Planning Responsibility
+## Generic Contract Responsibility
 
 Introduce the smallest immutable producer/domain-neutral contract necessary to
-represent a generic current-response decision.
-
-Potential semantic response concepts include:
+represent a generic current-response decision:
 
 ```text
-allow use or return of a completed current result
-permit replay or return of a prior accepted result
-block current downstream continuation
-require escalation of the current condition
+RuntimeDecision
+= RuntimeDecisionResponse
++ exact consumed SemanticOutcome
++ non-empty human-readable explanation
 ```
 
-PR1 does not freeze the production module, class name, enum name, enum values,
-exception type, function signatures, or policy class. PR2 must choose those
-only after a fresh source and call-site audit.
-
-## Entry Gate
-
-Before implementation, human review must confirm:
-
-- the contract represents current-response authority rather than execution;
-- it contains no Order-specific field in its generic vocabulary;
-- it contains no retry authorization, retry count, budget, backoff, reload,
-  revalidation, candidate-regeneration, intent, or lineage field;
-- its reviewability requirements can be met in memory without persistence;
-- unsupported or incoherent observations cannot become implicit allow;
-- no separate `decision_id`, `policy_id`, or `policy_version` has acquired a
-  concrete source-grounded consumer.
-
-## Combination Gate
-
-If the generic contract would otherwise be a dormant production seam with no
-concrete evaluator, combine this responsibility with the first profile after
-human approval. Do not add speculative public abstraction merely to preserve
-the proposed PR number.
-
----
-
-# Likely PR3 — First Layer-1 Write-Side Evaluation Profile
-
-## Planning Responsibility
-
-Evaluate the reviewed Layer-1 PostgreSQL write-side profile using:
+The closed response vocabulary is:
 
 ```text
-required SemanticOutcome
-+ terminally applicable OrderRuleViolationEvidence when source-applicable
-→ generic current-response RuntimeDecision
+USE_CURRENT_RESULT
+RETURN_PRIOR_ACCEPTED_RESULT
+BLOCK_CURRENT_CONTINUATION
+REQUIRE_ESCALATION
 ```
 
-The generic contract remains domain-neutral. Order-specific evidence is
-consumed only by this concrete evaluation profile.
+The generic contract has no Order/PostgreSQL fields, copied outcome tuple,
+separate reason taxonomy, decision identity, policy identity/versioning,
+request re-invocation authorization or state, strategy, execution instruction,
+persistence field, metadata bag, or evidence bag.
 
-The supported semantic inputs are limited to the four tuples established in
-the README. `CONCURRENCY_UNCERTAIN`, read-side outcomes, and snapshot outcomes
-remain outside this profile.
+## First Profile Responsibility
+
+Evaluate the reviewed Layer-1 PostgreSQL / Order write-side profile using:
+
+```text
+PostgresWriteSideSemanticRuleFeedback
+→ evaluate_postgres_write_side_runtime_decision
+→ PostgresWriteSideRuntimeDecisionEvaluation
+   = generic RuntimeDecision
+   + exact source PostgresWriteSideSemanticRuleFeedback
+```
+
+The generic contract remains domain-neutral. The profile-specific delivery
+preserves exact source context, including terminally applicable
+`OrderRuleViolationEvidence`, without creating a universal evidence envelope.
+
+The supported mappings are exactly:
+
+```text
+LAYER_1_WRITE_SIDE / VALID / SEMANTICALLY_VALID
+→ USE_CURRENT_RESULT
+
+LAYER_1_WRITE_SIDE / RETRY_CLASSIFIED / IDEMPOTENT_REPLAY_ALLOWED
+→ RETURN_PRIOR_ACCEPTED_RESULT
+
+LAYER_1_WRITE_SIDE / BLOCK_REQUIRED / SEMANTIC_CONFLICT_DETECTED
+→ BLOCK_CURRENT_CONTINUATION
+
+LAYER_1_WRITE_SIDE / ESCALATION_REQUIRED / REQUIRES_OPERATOR_REVIEW
+→ REQUIRE_ESCALATION
+```
+
+`CONCURRENCY_UNCERTAIN`, unsupported boundaries, unsupported category/code
+combinations, and otherwise coherent tuples outside this first profile raise
+the evaluator-specific typed refusal exception. Refusal is neither a positive
+block decision nor implicit use authority.
 
 ## Evidence Gate
 
@@ -251,6 +264,16 @@ evidence to select a different generic response requires a new source-grounded
 policy review; it is not prohibited by architecture merely because this first
 profile does not need it.
 
+The legacy/unsupported-validator allowance above does not mean that PR2 accepts
+a raw coarse outcome. The first evaluator deliberately consumes
+`PostgresWriteSideSemanticRuleFeedback`, whose source-controlled construction
+requires exact Order rule evidence for a terminal `VALIDATION_BLOCKED` result.
+An evidence-less validation block therefore cannot enter this first evaluation
+path through the current carrier. That boundary neither invalidates the coarse
+`SemanticOutcome`, permits fabricated evidence, nor weakens Stage 4B.5. Future
+support requires separate source-grounded review and is not permanently
+prohibited by this first profile.
+
 ## Validation Gate
 
 Focused validation should prove:
@@ -260,18 +283,20 @@ Focused validation should prove:
 - `CONCURRENCY_UNCERTAIN` refusal;
 - no implicit allow on malformed or incoherent input;
 - no retroactive write authorization;
-- idempotent prior-result replay is not another-attempt authorization;
+- idempotent prior-result replay is not authorization for another request
+  invocation;
 - exact refinement cannot create repair or retry authority;
 - no producer coverage is inferred for the other 12 Order rules.
 
 ---
 
-# Possible PR4 — Caller-Owned Composition
+# Conditional Future — Caller-Owned Composition
 
 ## Planning Responsibility
 
 Add explicit caller-owned composition only if a real production caller is
-identified by source audit.
+identified by a future source audit. No such caller exists above
+`PostgresTransactionalWriteSide` in current production source.
 
 The intended ownership is:
 
@@ -316,16 +341,20 @@ Each future family must independently establish:
 - eligible producer evidence and observation boundary;
 - supported typed semantic tuples;
 - response meanings and refusal behavior;
-- the Stage 4C authorization stop before Stage 4D strategy and execution;
-- any Stage 4E handoff when another attempt is considered.
+- the Stage 4C authority boundary before any strategy selection or execution
+  that depends on the current-response decision;
+- an independent Stage 4E authority boundary when another same-request
+  invocation is considered.
 
 ---
 
 # Stage 4C Closeout Gate
 
 Stage 4C closeout should not be scheduled solely because the first contract or
-profile exists. Human review must determine whether the accepted Stage 4C scope
-is complete or whether another concrete current-response consumer is required.
+profile exists. Closeout is justified only when the accepted Stage 4C scope is
+complete and no remaining concrete current-response consumer requires additional
+Stage 4C work. If such a source-grounded consumer remains, closeout is deferred
+until that boundary is resolved.
 
 Closeout evidence should include:
 
@@ -333,8 +362,8 @@ Closeout evidence should include:
 - implemented producer-family profiles and exact supported tuples;
 - actual invocation ownership and any intentionally explicit-only capability;
 - refusal and reviewability behavior;
-- confirmation that strategy, another-attempt authorization, and execution
-  remain separately owned;
+- confirmation that strategy, same-request re-invocation authorization, and
+  execution remain separately owned;
 - explicit durable/restart deferrals;
 - source-grounded test and validation results.
 
@@ -345,14 +374,14 @@ This planning note does not approve:
 - Stage 4D strategy selection;
 - authority replay versus snapshot selection;
 - PRE/OCC versus pessimistic strategy selection;
-- Stage 4E retry classification or authorization;
+- Stage 4E same-request re-invocation classification or authorization;
 - reload, revalidation, backoff, limits, budgets, candidate regeneration,
-  intent consistency, or cross-attempt lineage;
-- retry or action execution;
+  intent consistency, or cross-invocation lineage;
+- request re-invocation or action execution;
 - a policy engine, DSL, registry, hot reload, or configuration store;
 - a generic plugin framework or universal evidence envelope;
 - automatic `DecisionReceipt` materialization;
-- RuntimeDecision or attempt persistence;
+- RuntimeDecision or request-invocation lineage persistence;
 - restart recovery or new migrations;
 - Agent orchestration or candidate repair;
 - new rule-evidence producers;
@@ -365,8 +394,8 @@ This planning note does not approve:
 PR number
 != architecture boundary
 
-source and human review
-→ may combine or split delivery units
+source-grounded delivery dependencies
+→ may combine or split implementation units
 
 responsibility ownership
 → must remain explicit
