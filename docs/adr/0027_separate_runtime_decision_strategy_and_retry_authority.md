@@ -15,6 +15,21 @@ No production `RuntimeDecision`, strategy selector, retry-governance component,
 execution mechanism, persistence schema, or attempt record is implemented by
 this decision.
 
+Subsequent implementation and boundary status:
+
+- Stage 4C is complete and closed with a production `RuntimeDecision` contract
+  and first Layer-1 PostgreSQL / Order profile.
+- [ADR 0028](0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
+  retains Stage 4D responsibility while deferring dynamic selection.
+- [Stage 4E PR0](../implementation_notes/stage_4e/README.md) narrows the first
+  formal profile to one additional invocation of the same complete
+  `RequestSignature`, initially from preparation `LOCK_TIMEOUT` evidence.
+
+The broader retry-classification, timing, budget, candidate, intent, and
+lineage examples below preserve the responsibility-separation context accepted
+by this ADR. They are not accepted fields or responsibilities of the first
+formal Stage 4E production slice.
+
 ---
 
 ## Decision Scope
@@ -29,7 +44,7 @@ Stage 4D
 = Strategy Selection Authority inside an already-permitted action
 
 Stage 4E
-= Retry / Attempt Authorization
+= Another-Invocation Authority
 
 execution
 = a separate boundary after authorization and strategy selection
@@ -74,10 +89,9 @@ retry_allowed
 max_attempts
 ```
 
-That shape collapses current-response authority and cross-attempt authority.
-It conflicts with the later Stage 4E responsibility for retry classification,
-attempt safety, reload requirements, attempt limits, intent consistency, and
-cross-attempt lineage.
+That shape collapses current-response authority and another-invocation
+authority. It conflicts with the Stage 4E responsibility for deciding whether
+another invocation is authorized.
 
 The roadmap also contained Stage 4D examples in which a strategy selector could
 appear to authorize `REBUILD`, `QUARANTINE`, or `ESCALATE`. Those are generic
@@ -130,40 +144,43 @@ Stage 4D may choose how an already-authorized response is performed. It must not
 independently create authority for `REBUILD`, `QUARANTINE`, `ESCALATE`, or any
 other generic action.
 
-### Stage 4E Owns Retry and Attempt Authorization
+### Stage 4E Owns Another-Invocation Authority
 
 Stage 4E answers:
 
-> Is another attempt authorized, and if so, under which explicit constraints?
+> Is another invocation authorized?
 
-Stage 4E exclusively owns:
+The accepted first formal responsibility is:
 
-- retry and attempt classification;
-- whether another attempt is allowed;
-- retry safety;
-- reload-before-retry and revalidation-before-retry requirements;
-- backoff and timing constraints;
-- total and per-class attempt limits and attempt budget;
-- same-candidate versus regenerated-candidate constraints;
-- intent consistency;
-- prior-attempt lineage and cross-attempt governance.
+```text
+eligible completed A1
++ complete RequestSignature
++ accepted preparation LOCK_TIMEOUT evidence
+→ authorization or refusal for exactly one additional invocation
+```
 
-Current-attempt failure does not authorize another attempt. Retry authorization
-does not execute a retry, permit reuse of the same candidate, or grant unlimited
-attempts.
+Broader retry concerns such as classification, reload or revalidation,
+backoff or timing, limits or budget, candidate regeneration, intent
+consistency, and cross-attempt lineage remain historical or future candidate
+concerns. They are not accepted Stage 4E responsibilities merely because they
+concern a later attempt. Each requires separate concrete evidence before
+future promotion.
+
+Current-invocation failure does not authorize another invocation.
+Another-invocation authorization does not execute that invocation.
 
 ### Execution Remains Separate
 
 A runtime decision authorizes or denies a response; it does not execute that
-response. A retry decision authorizes or denies another attempt; it does not
-perform that attempt.
+response. A Stage 4E decision authorizes or refuses one additional invocation;
+it does not perform that invocation.
 
 For a later attempt, the conceptual handoff may be:
 
 ```text
 current execution evidence
 → Stage 4C current-response decision
-→ Stage 4E attempt authorization
+→ Stage 4E another-invocation authorization
 → Stage 4D strategy selection for the authorized attempt
 → execution
 ```
@@ -217,8 +234,9 @@ replay an old action merely because a `DecisionReceipt` exists.
 
 ### Positive
 
-- Current-response authority cannot silently authorize another attempt.
-- Retry limits, reload requirements, backoff, and lineage have one owner.
+- Current-response authority cannot silently authorize another invocation.
+- Another-invocation authority has one owner without pre-assigning broader
+  retry concerns to that owner.
 - Strategy selection remains constrained by semantic authorization.
 - Authorization remains distinguishable from execution.
 - The first live path can consume the semantic evidence already available in
@@ -229,7 +247,7 @@ replay an old action merely because a `DecisionReceipt` exists.
 ### Negative / Deferred
 
 - Stage 4C cannot by itself complete a retry loop.
-- Stage 4E needs a source-grounded attempt model before implementation.
+- Broader retry concerns need separate concrete evidence before promotion.
 - The Stage 4D/4E handoff must be explicit whenever a new attempt needs a new
   strategy.
 - Restart-recovery governance, durable runtime decisions, and cross-runtime
@@ -249,7 +267,7 @@ operating inside prior authorization.
 
 ### Require every execution to follow C → D → E
 
-Rejected because Stage 4E is relevant only when another attempt is considered.
+Rejected because Stage 4E is relevant only when another invocation is considered.
 For an authorized later attempt, E may precede D's strategy choice.
 
 ### Require DecisionReceipt for every live decision or retry
@@ -302,7 +320,7 @@ Stage 4D
 = strategy inside prior authorization
 
 Stage 4E
-= another-attempt authorization and constraints
+= another-invocation authority
 
 authorization
 != execution
