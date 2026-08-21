@@ -65,6 +65,7 @@ than a concrete episode, use [Reasoning Notes](../reasoning_notes/README.md).
 | [When Individually Valid Fields Admit Invalid Semantic Objects](stage_4b_5_postmortem_invalid_semantic_state_space.md) | Correctness Contract / AI-Assisted Engineering | Records the Stage 4B.5 PR2 correction where individually valid typed fields still admitted semantically invalid compositions, moving rule, transition, amount, and contract-edition relationships to identity-driven authoritative definitions as an AI-assisted correctness-contract lesson. |
 | [From Snapshot Trust to Snapshot Necessity Revalidation](from_snapshot_trust_to_snapshot_necessity_revalidation.md) | Snapshot Necessity / Stage Reprioritization | Records why a valid Snapshot Trust Contract does not establish runtime necessity for the current shallow Order workload, and why further snapshot-specific expansion became evidence-gated. |
 | [From Local Environment Capability to Declared CI Dependency](from_local_environment_capability_to_declared_ci_dependency.md) | CI Portability / Environment Contracts | Records the Stage 4B.5 incident where a worktree masked one real undeclared Git-history dependency and one incidental virtualenv convention, preserving the rule that required capabilities must be provisioned while incidental constraints must be removed. |
+| [Stage 4C Consumer Absence and Architectural Demand](stage_4c_consumer_absence_architectural_demand_postmortem.md) | Runtime Governance / Architecture Reasoning | Records the Stage 4C PR2 episode where the true source fact “no current production consumer exists” was repeatedly overextended into a stronger architecture conclusion, and preserves the rule that current absence is a repository fact rather than proof of architectural non-need. |
 
 ---
 
@@ -153,14 +154,23 @@ This postmortem is also related to the philosophy note [From Local ETL to Stream
 
 ---
 
+The postmortem [Stage 4C Consumer Absence and Architectural Demand](stage_4c_consumer_absence_architectural_demand_postmortem.md) is related to Stage 4C PR2 and the later C/D/E runtime-governance experiment:
+
+- PR2 introduced the explicit `RuntimeDecision` contract and first PostgreSQL write-side evaluator while no production caller consumed the result.
+- The source audit correctly established that no production consumer existed, but that fact did not prove that current-response consumption had no architectural value.
+- The bounded runtime-owner experiment demonstrated that consuming Stage 4C changes caller-visible handling without changing writer safety, transaction behavior, or accepted-history authority.
+- The later C/D/E counterfactual review validated Stage 4C current-response authority, retained Stage 4D as a future `HOW` responsibility without a current selector, and narrowed Stage 4E toward bounded same-request re-invocation authority.
+- The postmortem preserves the review rule that `no current consumer` is a repository fact, not an architecture verdict.
+
+---
+
 ## How to Use These Notes
 
 Use postmortems when you want to understand:
 
 - what concrete engineering episode occurred;
 - what evidence exposed the problem;
-- what unsafe path, inconsistency, regression, failed test, or missing guarantee
-  was repaired;
+- what unsafe path, inconsistency, regression, failed test, or missing guarantee was repaired;
 - what repository effect resulted; and
 - what reusable engineering lesson should be retained.
 
