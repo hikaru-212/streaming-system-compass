@@ -10,9 +10,25 @@ This section focuses on the higher-level problem framing:
 
 > When an AI agent proposes a state-changing action, what makes that action eligible to become system truth?
 
+That question remains the historical and implemented write-side core of
+Semantic Admission. The broader corpus now also asks two related but asymmetric
+questions:
+
+```text
+STATE-CHANGE / EFFECT-SIDE GOVERNANCE
+What may become true?
+
+CLAIM-SIDE SEMANTIC GOVERNANCE
+What may be claimed as true?
+```
+
 Compass treats agent output as a candidate, not as truth.
 
 A successful tool call, database write, or workflow completion may prove execution success, but it does not automatically prove semantic correctness.
+
+The effect-side path is substantially grounded in implemented Compass behavior.
+The claim-side path remains primarily conceptual and research-oriented; this
+broader framing does not claim that production claim admission already exists.
 
 ---
 
@@ -36,6 +52,27 @@ A state-changing agent system needs a boundary between:
 - **accepted fact**: what the system formally allows to become durable truth
 
 This boundary is called **semantic admission**.
+
+At the broader conceptual level, Semantic Admission can apply to a candidate
+artifact before it becomes either trusted state or trusted meaning:
+
+```text
+candidate artifact
+        ↓
+governed semantic boundary
+        ↓
+accepted fact or trusted / accepted meaning
+```
+
+The two specializations remain distinct:
+
+```text
+Candidate Action
+→ Accepted Fact
+
+Candidate Claim
+→ Trusted or Accepted Meaning
+```
 
 ---
 
@@ -181,6 +218,198 @@ Task completion is not truth preservation.
 
 ---
 
+## Semantic Admission Taxonomy
+
+This taxonomy answers:
+
+> What class of semantic-governance problem is this?
+
+The numbered reading order that follows answers a different question:
+
+> What should I read next?
+
+The taxonomy is navigational and conceptual. Where its labels are also described
+in the glossary, they remain conceptual or taxonomy vocabulary and do not imply
+equal implementation maturity or runtime contracts.
+
+```text
+SEMANTIC ADMISSION
+│
+├── Foundations
+│
+├── CQRS for AI Governance
+│   ├── Effect-Side Governance
+│   ├── Claim-Side Semantic Governance
+│   └── Cross-Cutting Governance
+│
+└── Compass-Specific Mapping
+```
+
+### Foundations
+
+Foundations establish shared candidate, truth, authority, evidence, and
+admission vocabulary:
+
+- [Semantic Admission for State-Changing AI Systems](./manifesto.md)
+- [Semantic Admission Glossary](./glossary.md)
+- [Candidate Actions Are Not Accepted Facts](./candidate_actions_are_not_accepted_facts.md)
+- [CQRS for AI Governance](./cqrs_for_ai_governance.md) — the general
+  semantic-authority split between effects and claims
+
+### Effect-Side Governance
+
+Primary question:
+
+> **What may become true?**
+
+This side is substantially grounded in the implemented Compass write-side
+baseline and production-inspired repository paths.
+
+#### Candidate / Admission Boundary
+
+- [Admission Before Mutation](./admission_before_mutation.md)
+- [An Agent Action Is a Hypothesis Until Admitted](./agent_action_as_hypothesis.md)
+
+Failure: a generated or executable candidate is treated as accepted truth
+without an independent semantic boundary.
+
+#### Action Path / Authority
+
+- [Action Path Admission](./action_path_admission.md)
+- [Shared Workflow Is Not Shared Authority](./shared_workflow_is_not_shared_authority.md)
+- [Model Autonomy Is Not Business Authority](./model_autonomy_vs_business_authority.public.md)
+- [Input Guardrails Are Not Admission Boundaries](./input_guardrail_vs_admission_boundary_origin.public.md)
+
+Failure: a technically reachable, executable, or apparently correct path is
+mistaken for authorized business truth.
+
+#### State-Evolution / Temporal Correctness
+
+[Semantic Concurrency](./semantic_concurrency.md) asks whether a candidate that
+was valid at state `S1` remains valid after an authoritative change produces
+state `S2`.
+
+```text
+technically serialized
+but semantically wrong
+```
+
+#### Retry / Intent Preservation
+
+- [Retry Is Not Intent Preservation](./retry_is_not_intent_preservation.md)
+- [Causal Failure Modeling](./causal_failure_modeling.md)
+
+Failure: operational repetition or regenerated work no longer represents the
+original semantic intent.
+
+### Claim-Side Semantic Governance
+
+Primary question:
+
+> **What may be claimed as true?**
+
+This side is currently more research-oriented. Its concerns include source
+authority, evidence coverage, freshness and supersession, conflict resolution,
+fact versus inference, provenance, uncertainty, and claim lifecycle or
+invalidation.
+
+Representative work includes:
+
+- [Agent-Assisted Compass Layer Construction](./agent_assisted_compass_layer_construction.md)
+- [From Generated Language to Source-Grounded Semantic Admission](../research/ai_governance/from_generated_language_to_source_grounded_semantic_admission.md)
+- [Admitted Overviews, Cache Freshness, and Event-Driven Invalidation](../research/ai_governance/admitted_overview_cache_and_event_driven_invalidation.md)
+
+[Multi-pass Suspicion Reasoning](../research/ai_governance/multi_pass_suspicion_reasoning.md)
+is exploratory secondary work about candidate-answer review. These documents do
+not establish production claim-admission mechanisms.
+
+### Cross-Cutting Governance
+
+Some failures cross the effect and claim boundaries rather than belonging
+exclusively to one side:
+
+```text
+bad effect
+→ future context
+→ bad claim
+```
+
+```text
+bad or stale claim
+→ reasoning
+→ proposed action
+→ bad effect
+```
+
+Representative documents include:
+
+- [Consensus Is Not Semantic Authority](./consensus_is_not_semantic_authority.md)
+- [Shared Context Is Not Shared Contract](./shared_context_is_not_shared_contract.md)
+- [When Bad State Becomes Future Context](./bad_state_as_future_context.md)
+- [Agent Pipelines as a Stochastic Process](./agent_pipelines_as_stochastic_process.md)
+
+Their maturity varies by article. This category groups shared failure models;
+it does not claim one implemented cross-cutting runtime.
+
+The distinction between concurrency and agreement is especially important:
+
+- **Semantic Concurrency:** state changed, so candidate meaning may have
+  changed. It asks, “Is the candidate still valid?” Its failure shape is
+  `technically serialized, but semantically wrong`.
+- **Consensus / collective selection:** many agents agreed and selected a
+  candidate that may still be invalid. It asks, “Did agreement establish
+  semantic authority?” Its failure shape is `technically agreed, but
+  semantically wrong`.
+
+The two problems share Semantic Admission as a downstream correctness boundary,
+but they are not the same failure mode.
+
+### Shared Lower-Level Principle
+
+The existing principle remains:
+
+> **Technical success does not establish semantic correctness.**
+
+A deeper architectural interpretation is:
+
+> **Technical correctness at one layer does not grant semantic authority at the
+> next boundary.**
+
+Examples include:
+
+```text
+concurrency control
+→ candidate
+→ semantic revalidation
+→ accepted fact
+```
+
+```text
+multi-agent selection
+→ selected candidate
+→ semantic admission
+→ accepted result
+```
+
+```text
+retrieval / generation
+→ candidate claim
+→ evidence-grounded review
+→ trusted meaning
+```
+
+These are related responsibility patterns, not a claim that one current Compass
+runtime implements every path.
+
+### Compass-Specific Mapping
+
+[CQRS as a Lens for AI Governance](./cqrs_ai_governance_write_read_side.md)
+maps the general thesis onto `Accepted History`, `Governed Source Corpus`,
+projection and consumption modes, `SemanticOutcome`, `DecisionReceipt`, and
+current implementation-maturity boundaries.
+
+---
+
 ## Reading Order
 
 Start with:
@@ -190,16 +419,27 @@ Start with:
 3. [candidate_actions_are_not_accepted_facts.md](./candidate_actions_are_not_accepted_facts.md)
 4. [action_path_admission.md](./action_path_admission.md)
 5. [admission_before_mutation.md](./admission_before_mutation.md)
-6. [semantic_concurrency.md](./semantic_concurrency.md)
-7. [bad_state_as_future_context.md](./bad_state_as_future_context.md)
-8. [Agent Pipelines as a Stochastic Process](./agent_pipelines_as_stochastic_process.md)
-9. [agent_action_as_hypothesis.md](./agent_action_as_hypothesis.md)
-10. [retry_is_not_intent_preservation.md](./retry_is_not_intent_preservation.md)
-11. [Causal Failure Modeling: From Failure Classification to Failure Genesis](./causal_failure_modeling.md)
-12. [shared_context_is_not_shared_contract.md](./shared_context_is_not_shared_contract.md)
-13. [crud_is_not_a_safe_boundary_for_agentic_commerce.md](./crud_is_not_a_safe_boundary_for_agentic_commerce.md)
-14. [Agent-Assisted Compass Layer Construction](./agent_assisted_compass_layer_construction.md)
-15. [input_guardrail_vs_admission_boundary_origin.public](./input_guardrail_vs_admission_boundary_origin.public.md)
+6. [CQRS for AI Governance](./cqrs_for_ai_governance.md)
+   — the general thesis that state-changing effects and trustworthy claims need
+   separate semantic-authority and admission boundaries.
+7. [CQRS as a Lens for AI Governance](./cqrs_ai_governance_write_read_side.md)
+   — the Compass-specific mapping of that thesis across `Accepted History`,
+   `Governed Source Corpus`, consumption modes, and current implementation
+   maturity.
+8. [semantic_concurrency.md](./semantic_concurrency.md)
+   — state-evolution and temporal correctness after authoritative state changes.
+9. [Consensus Is Not Semantic Authority](./consensus_is_not_semantic_authority.md)
+   — shows why multi-agent agreement can select a candidate without granting it
+   effect or claim authority.
+10. [bad_state_as_future_context.md](./bad_state_as_future_context.md)
+11. [Agent Pipelines as a Stochastic Process](./agent_pipelines_as_stochastic_process.md)
+12. [agent_action_as_hypothesis.md](./agent_action_as_hypothesis.md)
+13. [retry_is_not_intent_preservation.md](./retry_is_not_intent_preservation.md)
+14. [Causal Failure Modeling: From Failure Classification to Failure Genesis](./causal_failure_modeling.md)
+15. [shared_context_is_not_shared_contract.md](./shared_context_is_not_shared_contract.md)
+16. [crud_is_not_a_safe_boundary_for_agentic_commerce.md](./crud_is_not_a_safe_boundary_for_agentic_commerce.md)
+17. [Agent-Assisted Compass Layer Construction](./agent_assisted_compass_layer_construction.md)
+18. [input_guardrail_vs_admission_boundary_origin.public](./input_guardrail_vs_admission_boundary_origin.public.md)
 
 ---
 
@@ -220,7 +460,7 @@ authority matrices, policy engines, schemas, or runtime commitments.
 
 ## Glossary Structure
 
-The glossary is grouped into four areas:
+The glossary is grouped into five areas:
 
 1. **System Truth & Admission Core**  
    Defines candidate artifacts, accepted facts, semantic admission, admission boundaries, durable state, and core correctness language.
@@ -234,33 +474,60 @@ The glossary is grouped into four areas:
 4. **Multi-Agent Semantic Contracts & Governance**  
    Defines shared context, shared semantic contracts, semantic escalation, commit-time truth, intent drift, and workflow-level correctness.
 
+5. **CQRS for AI Governance & Cross-Cutting Principles**
+   Defines conceptual vocabulary supporting effect-side versus claim-side governance, collective selection, and cross-boundary principles without creating runtime contracts.
+
 ---
 
 ## Relationship to the Main Project
 
-The main project implements the runtime evidence behind this framing.
+The main project grounds part of this framing in implemented and
+production-inspired behavior. That grounding is primarily the effect-side
+state-change boundary, together with bounded evidence, projection, snapshot,
+and replay-validation foundations.
 
 In the full Compass system:
 
-- candidate events are validated before entering accepted history
-- accepted history is treated as the source of truth
+- candidate events are validated before entering `Accepted History`
+- `Accepted History` is treated as the durable event authority
 - idempotency and concurrency are treated as separate boundaries
-- projections are checked against accepted history
+- projections are checked against `Accepted History`
 - snapshots are derived, discardable, traceable, and subordinate
 - replay validation is used to detect read-side semantic drift
 - retry-like situations are classified by semantic meaning, not collapsed into one generic retry category
 
-This folder does not replace the implementation notes or ADRs.
-
-It provides the shortest path into the AI governance problem that the implementation is designed to test:
+The implemented write-side specialization can be summarized as:
 
 ```text
-candidate output
-→ admission boundary
+candidate output / action
+→ candidate event
+→ validation / admission
 → accepted fact
-→ protected accepted history
-→ safer future reasoning
+→ Accepted History
 ```
+
+This path is a concrete specialization within the broader Semantic Admission
+taxonomy, not the whole taxonomy.
+
+The current maturity boundary is:
+
+```text
+Implemented / production-inspired Compass baseline
+→ primarily effect-side state-change correctness
+→ plus bounded evidence / projection foundations
+
+Claim-side semantic governance
+→ conceptual and research-oriented
+→ no production claim-admission runtime is asserted
+
+Cross-cutting taxonomy
+→ conceptual grouping of failure modes
+→ not one implemented cross-cutting runtime
+```
+
+This folder does not replace the implementation notes or ADRs. The
+Compass-specific CQRS bridge records the more detailed mapping between this
+taxonomy and current project terminology and maturity.
 
 ---
 
@@ -280,40 +547,70 @@ Those notes are related to semantic admission, but they are intentionally separa
 
 ## Summary
 
-Semantic Admission is the boundary between agent-generated possibility and accepted system truth.
+Semantic Admission governs the boundary between a candidate artifact and the
+trusted semantic status granted to it.
 
-The central claim is:
+The two primary specializations are:
+
+```text
+Candidate Action
+→ Accepted Fact
+
+Candidate Claim
+→ Trusted / Accepted Meaning
+```
+
+Their maturity is asymmetric. Effect-side governance is the historical and
+implemented core of Compass. Claim-side governance is the broader conceptual
+and research-oriented extension. Cross-cutting governance describes failure
+modes that can affect both boundaries; it does not identify one implemented
+runtime.
+
+The CQRS framing makes the top-level distinction concise:
+
+```text
+STATE-CHANGE / EFFECT SIDE
+What may become true?
+
+CLAIM SIDE
+What may be claimed as true?
+```
+
+The original Semantic Admission principles remain:
 
 ```text
 A candidate action is not an accepted fact.
-```
 
-The propagation extension adds:
-
-```text
 Bad state can become future context.
-```
 
-The multi-agent extension adds:
-
-```text
 Shared context is not shared contract.
-```
 
-The mutable-state case study adds:
-
-```text
 Current row state is not history.
+
 Task completion is not truth preservation.
+
 Tool permission is not business authority.
-```
 
-The semantic-contract extension adds:
-
-```text
 Inferred semantic meaning is not an accepted semantic contract.
 ```
 
-Together, these principles describe why commercial agent systems need more than execution success, shared context, and CRUD state mutation.
+A cross-cutting principle now adds:
 
-They need explicit admission boundaries for business meaning.
+> **Agreement does not create semantic authority.**
+
+Collective selection may choose a candidate, but:
+
+```text
+collective selection
+≠
+semantic admission
+```
+
+The deeper shared architectural principle is:
+
+> **Technical correctness at one layer does not grant semantic authority at the
+> next boundary.**
+
+Together, these principles explain why AI systems need explicit, separately
+owned boundaries for what may become accepted fact and what may become trusted
+or accepted meaning.

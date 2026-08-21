@@ -117,11 +117,34 @@ It asks:
 
 > Even if the system can order these actions technically, should they all be allowed to become durable truth?
 
-This is different from ordinary write concurrency.
+```text
+            TECHNICAL CONCURRENCY VS SEMANTIC CONCURRENCY
 
-Technical concurrency control protects ordering, isolation, and version continuity.
+┌──────────────────────────────────────────────┬──────────────────────────────────────────────┐
+│ TECHNICAL CONCURRENCY                        │ SEMANTIC CONCURRENCY                         │
+├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ Core question                                │ Core question                                │
+│ Who writes first, and can this write proceed?│ Is the candidate still semantically valid?   │
+├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ Governed object                              │ Governed object                              │
+│ Version, lock, isolation, or write order     │ Candidate meaning under current state        │
+├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ Failure mode                                 │ Failure mode                                 │
+│ Write conflict, stale version, order failure │ Serialized but semantically invalid change   │
+├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ Evidence / decision basis                    │ Evidence / decision basis                    │
+│ OCC, locks, isolation, version continuity    │ Accepted History, current state, domain rules│
+├──────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ Defense goal                                 │ Defense goal                                 │
+│ Preserve technical write correctness         │ Preserve valid business-state transitions    │
+└──────────────────────────────────────────────┴──────────────────────────────────────────────┘
+```
 
-Semantic concurrency control protects business meaning, accepted-history consistency, and intent validity.
+Technical concurrency determines ordering, isolation, and version continuity.
+Semantic concurrency determines whether the candidate's meaning remains
+admissible under the current authoritative state. It supplements rather than
+replaces optimistic concurrency control, pessimistic locking, transaction
+isolation, or version checks.
 
 ## Candidate Validity Can Expire
 
@@ -242,6 +265,3 @@ It belongs near the agent-governance framing because the central question is not
 It is:
 
 > Should this action still be accepted?
-
-```
-```
