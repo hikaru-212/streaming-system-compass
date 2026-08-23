@@ -4,12 +4,12 @@
 
 ## Status
 
-PR0 architecture boundary established.
+PR0 architecture boundary established. PR1 contract and evaluator implemented.
 
-Production Stage 4E remains unimplemented. This document promotes accepted
-behavioral findings from the completed Stage 4C-to-4E experiment into the first
-formal Stage 4E responsibility. It does not promote the experiment's scaffolding
-into production APIs.
+PR1 implements the immutable authorization/no-authority contracts and first
+source-specific evaluator. Invocation ownership, one-shot consumption, and
+Stage 4C production consumption remain sequenced separately. This document does
+not promote the experiment's scaffolding into production APIs.
 
 The stage position is:
 
@@ -24,7 +24,8 @@ Stage 4D
 
 Stage 4E
 = Same-Request Re-Invocation Authority
-= first formal production contract not yet implemented
+= PR1 contract and first evaluator implemented
+= PR2 owner and consumption not yet implemented
 ```
 
 ## First Formal Responsibility
@@ -307,7 +308,7 @@ eligible preparation LOCK_TIMEOUT evidence
 → positive one-additional-invocation authorization
 
 unsupported or incoherent evidence
-→ typed NoStage4EAuthority / refusal
+→ typed absence of re-invocation authority / refusal
 ```
 
 Typed absence of authority is not a reviewed denial:
@@ -393,7 +394,6 @@ own concrete evidence before promotion.
 
 The bounded PR plan is maintained in [PR Breakdown](pr_breakdown.md).
 
-PR1 is proposed to establish the minimum immutable formal contract and the
-small in-process ownership seam required to bind complete request identity,
-eligible A1 evidence, one-shot consumption, and composition preservation. No
-production mechanism beyond that bounded responsibility is accepted by PR0.
+PR1 establishes the immutable formal contracts and source-specific preparation
+`LOCK_TIMEOUT` evaluator. PR2 owns invocation ownership and one-shot A2
+consumption. PR3 owns Stage 4C production consumption through the PR2 owner.
