@@ -65,4 +65,21 @@ production.
 
 ## Result
 
-Pending execution...
+The hypothesis is supported by both deterministic PostgreSQL
+characterizations.
+
+While B remained unresolved, both A1 and A2 independently observed
+preparation LOCK_TIMEOUT.
+
+After crossing B's transaction-resolution boundary:
+
+- B rollback allowed A3 to proceed to ACCEPTED;
+- B commit of the same request allowed A3 to resolve through the real
+  idempotency path as REPLAY.
+
+Therefore successive fresh re-invocation demonstrated information value:
+a later invocation observed authoritative state that earlier invocations
+could not observe while the competing transaction remained unresolved.
+
+This does not establish retry timing, retry count, polling efficiency,
+backoff policy, reconciliation strategy, or a production A3 lifecycle.
