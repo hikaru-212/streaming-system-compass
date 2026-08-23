@@ -90,45 +90,40 @@ findings.
 ### PR1 Entry Readiness
 
 No separate production-code or characterization PR is required before PR1.
-The smallest missing invocation-owner/binding seam and the focused concurrent
-one-shot characterization belong inside PR1's proposed responsibility. PR0
-does not need an intermediate writer-result mutation, test hook, or experiment
-promotion to make PR1 ready.
+PR1 can establish the immutable contracts and source-specific evaluator from
+existing production-owned typed evidence. It does not need an intermediate
+writer-result mutation, test hook, owner, lifecycle, or experiment promotion.
 
 ### PR0 Non-Goals
 
 PR0 does not change production code, tests, migrations, dependencies, writer
 behavior, database state, or runtime wiring. It does not implement Stage 4E.
 
-## PR1 — Minimum Formal Same-Request Authority Contract
+## PR1 — Immutable Authority Contract and First Evaluator
 
 ### Status
 
-Proposed next responsibility. Not implemented by PR0.
+Implemented in Stage 4E PR1.
 
 ### Goal
 
-Establish the minimum immutable, live/in-memory contract needed to represent:
+Establish the minimum immutable, live/in-memory contract and evaluation needed
+to represent:
 
 - complete same-request identity;
 - one eligible producer-owned A1 evidence profile;
-- positive authority for one additional public-writer entry;
-- typed refusal / no authority for unsupported evidence;
-- one shared one-shot issuance and consumption lifecycle;
-- consumption before public-writer entry;
-- private preservation of the A1 execution composition.
+- positive authority for one additional invocation of that complete request;
+- typed refusal / no authority for unsupported or incoherent evidence.
 
-PR1 should not freeze module or class names until its source-level design is
-reviewed. The following descriptions are responsibilities, not API names.
+PR1 does not implement authority ownership or consumption.
 
 ### Minimum Input Boundary
 
-The evaluator needs one trusted in-process composition of:
+The evaluator consumes only:
 
 ```text
 complete RequestSignature
 + exact A1 PostgresWriteSideResult
-+ owner-held configured writer/composition
 ```
 
 It should validate the accepted preparation profile through typed fields:
@@ -147,13 +142,13 @@ Human-readable reason text is not policy input.
 ### Minimum Output Boundary
 
 Eligible evidence should produce an immutable positive authority that retains
-the complete signature and its bounded one-shot issuance/consumption state.
+the complete signature.
 The authorization artifact must not own or expose a writer, execution callable,
-replacement strategy, or execution-composition capability.
+strategy, execution composition, mutable lifecycle state, retry policy, timing,
+or persistence identity.
 
-The invocation owner may privately retain the complete signature, exact A1
-result, configured writer/composition, and positive authorization. Actual
-writer/composition custody belongs to that owner, not to the authorization.
+Mutable availability, spent state, and consumption belong to PR2 rather than
+the authorization artifact.
 
 Unsupported or incoherent evidence should produce a typed no-authority/refusal
 result. It should not produce a universal negative policy decision.
@@ -167,72 +162,25 @@ not
 universal ALLOWED / DENIED policy
 ```
 
-### Minimum Lifecycle Boundary
-
-PR1 must preserve:
-
-- at most one A2 public-writer entry per A1 authorization;
-- atomic, thread-safe consumption;
-- consumption before A2 writer entry;
-- no restoration after A2 acceptance, replay, rejection, timeout, or exception;
-- no independent authorities minted by repeated or concurrent evaluation of
-  the same owner-held A1 invocation context within one trusted live in-process
-  flow;
-- no automatic A3;
-- no persistence or restart recovery.
-
-Exact Python authorization-object reuse may be the smallest in-process
-implementation, but the semantic requirement is one shared issuance and
-consumption lifecycle, not public Python identity.
-
-Structurally equivalent independently reconstructed
-`PostgresWriteSideResult` values do not establish the same historical A1
-execution and must not join that owner-scoped lifecycle.
-
-### Minimum Invocation-Owner Seam
-
-Current source has no PostgreSQL owner above
-`PostgresTransactionalWriteSide`. PR1 therefore needs the smallest owner seam
-that can:
-
-- retain the complete signature before A1;
-- bind that signature to the exact A1 result;
-- retain the already-configured writer privately;
-- request evaluation;
-- consume a positive authority before any A2 call;
-- perform at most the explicitly authorized normal public-writer entry.
-
-This owner must not accept a replacement writer, signature, validation
-decision, candidate, or strategy at consumption time.
-
-The owner is not a workflow engine, scheduler, retry loop, or Stage 4D selector.
-
-### Required Characterization
+### Required Unit Characterization
 
 PR1 should characterize at least:
 
 - independently constructed but structurally equal complete signatures count
   as the same request;
-- same `request_id` with a changed command, order, or amount cannot consume the
-  authority;
-- the accepted production `LOCK_TIMEOUT` result shape authorizes once;
+- same `request_id` with a changed command, order, or amount is not the same
+  request;
+- the accepted production `LOCK_TIMEOUT` result shape authorizes;
 - append-time `LOCK_TIMEOUT`, `STALE_WRITE`, accepted, replay, conflict,
-  validation-blocked, infrastructure, and exceptional A1 shapes receive typed
+  validation-blocked, infrastructure, and incoherent A1 shapes receive typed
   refusal in the first profile;
 - Stage 4C decision or refusal is not an evaluator prerequisite;
-- writer/composition substitution is impossible at consumption;
-- repeated and concurrent evaluation of the same owner-held A1 invocation
-  context within one trusted live in-process flow cannot mint multiple
-  spendable authorities;
-- concurrent consumers yield at most one public-writer entry;
-- authority is already spent when the writer is entered;
-- accepted, replayed, rejected, timed-out, and exceptional A2 outcomes all
-  leave it spent;
-- no automatic A3 occurs.
+- authorization exposes no execution, strategy, lifecycle, timing, count, or
+  persistence capability.
 
 The experiment already supplies behavioral evidence for these boundaries.
-Production characterization should target only the formal source-owned seam,
-not reproduce its monkeypatch and observation framework.
+PR1 unit characterization targets only the formal source-owned evaluation
+seam and does not reproduce its monkeypatch and observation framework.
 
 ### PR1 Evidence Exclusions
 
@@ -258,8 +206,47 @@ PR1 must not introduce:
 - restart recovery or distributed consumption;
 - dynamic strategy selection;
 - writer/strategy identity registries;
-- automatic A2 scheduling, retry loops, or A3;
+- an invocation owner, mutable lifecycle, synchronization, consumption API,
+  writer entry, automatic A2 scheduling, retry loops, or A3;
+- Stage 4C production consumption;
 - Stage 5 action execution or safety policy.
+
+## PR2 — Invocation Owner and One-Shot Consumption
+
+### Responsibility
+
+PR2 owns the live PostgreSQL invocation boundary required to make one issued
+authorization consumable at most once:
+
+- retain the complete signature, exact A1 result, and configured writer;
+- provide one owner-scoped evaluation/issuance cache;
+- protect that cache and `AVAILABLE → SPENT` with one synchronization boundary;
+- mark authority spent before A2 public-writer entry;
+- preserve spent state after every A2 result or exception;
+- prevent writer/composition substitution;
+- perform no automatic A3.
+
+PR2 adds the real PostgreSQL characterization for preparation `LOCK_TIMEOUT`
+followed by one guarded A2 entry. It does not change PR1 eligibility.
+
+## PR3 — Stage 4C Production Consumption
+
+### Responsibility
+
+PR3 uses the invocation owner established by PR2 to consume the already-complete
+Stage 4C current-response authority. It addresses:
+
+- `outcome_id` ownership or generation;
+- result plus `RuntimeDecision` or typed-refusal delivery;
+- `USE_CURRENT_RESULT`;
+- `RETURN_PRIOR_ACCEPTED_RESULT`;
+- `BLOCK_CURRENT_CONTINUATION`;
+- `REQUIRE_ESCALATION`;
+- typed Stage 4C refusal transport;
+- caller-visible continuation semantics.
+
+PR3 must not change Stage 4E eligibility or lifecycle merely to consume Stage
+4C authority.
 
 ## Later Work
 
@@ -272,7 +259,8 @@ experiment's observation wrappers or monkeypatches.
 Stage 4D may re-enter only under the condition in
 [ADR 0028](../../adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md).
 
-No additional Stage 4E PR is planned merely to hold generic retry concerns.
+PR2 and PR3 are the bounded downstream responsibilities above. No additional
+Stage 4E PR is planned merely to hold generic retry concerns.
 
 ## PR0 Promotion Table
 
