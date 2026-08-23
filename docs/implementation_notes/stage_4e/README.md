@@ -5,11 +5,13 @@
 ## Status
 
 PR0 architecture boundary established. PR1 contract and evaluator implemented.
+PR2 invocation owner and one-shot lifecycle implemented.
 
 PR1 implements the immutable authorization/no-authority contracts and first
-source-specific evaluator. Invocation ownership, one-shot consumption, and
-Stage 4C production consumption remain sequenced separately. This document does
-not promote the experiment's scaffolding into production APIs.
+source-specific evaluator. PR2 implements live PostgreSQL A1 custody, explicit
+cached evaluation, and guarded one-shot A2 entry through the same configured
+writer. Stage 4C production consumption remains deferred to PR3. This document
+does not promote the experiment's scaffolding into production APIs.
 
 The stage position is:
 
@@ -25,7 +27,8 @@ Stage 4D
 Stage 4E
 = Same-Request Re-Invocation Authority
 = PR1 contract and first evaluator implemented
-= PR2 owner and consumption not yet implemented
+= PR2 invocation owner and one-shot consumption implemented
+= PR3 Stage 4C production consumption deferred
 ```
 
 ## First Formal Responsibility
@@ -113,15 +116,16 @@ The source audit found the following current contracts and ownership seams.
 | `src/pipeline/transactional/admission.py` | Typed stream-preparation and append-admission results | Keeps preparation evidence distinct from append evidence. |
 | `src/pipeline/transactional/postgres_admission.py` | PostgreSQL optimistic and pessimistic admission gates | `PostgresPessimisticAdmissionGate.prepare_stream()` produces the first positive `LOCK_TIMEOUT` evidence. |
 | `src/pipeline/transactional/postgres_write_side.py` | Public PostgreSQL writer, orchestration, result, and static composition ownership | Carries A1 producer evidence but accepts decomposed request arguments and does not retain the complete signature on a timeout result. |
+| `src/pipeline/transactional/postgres_write_side_invocation_owner.py` | Live A1 custody, cached Stage 4E evaluation, and atomic one-shot A2 entry | Retains the complete request and configured writer, publishes the exact A1 result under one lifecycle lock, and spends positive authority before A2 writer entry. |
 | `src/pipeline/transactional/postgres_write_side_config.py` | Immutable validation-placement configuration | Confirms current strategy placement is a construction choice. |
 | `src/compass/runtime/write_side_outcome_mapping.py` | Maps producer results to `SemanticOutcome` | Demonstrates why the semantic projection is too coarse to prove the first Stage 4E profile by itself. |
 | `src/compass/runtime/write_side_runtime_decision.py` | Stage 4C current-response evaluation | Refuses `CONCURRENCY_UNCERTAIN`; it is not a Stage 4E prerequisite. |
 | `src/bootstrap/build_transactional_runtime.py` and `src/pipeline/transactional/registry.py` | In-memory composition root and single-invocation registry | Provide ownership patterns but are not a PostgreSQL A1/A2 runtime owner. |
 
-No production application service, command handler, runtime owner, or bootstrap
-currently owns a `PostgresTransactionalWriteSide` across A1 authorization and a
-possible A2 invocation. That absence is a repository fact, not an architecture
-verdict against Stage 4E.
+PR2 now provides the PostgreSQL-specific live invocation owner across A1,
+explicit Stage 4E evaluation, and a possible guarded A2 invocation. No
+production application service, command handler, or PostgreSQL bootstrap is
+wired to construct it; application wiring remains outside this PR.
 
 No production source fact materially contradicts the accepted experimental
 findings.
@@ -150,10 +154,10 @@ an idempotency `MISS` with no `IdempotencyRecord`. It therefore does not retain
 the complete incoming signature. In particular, same `request_id` alone cannot
 reconstruct or prove the same request.
 
-A future Stage 4E invocation owner must retain the complete signature
-separately and bind it to the exact A1 producer result in the same trusted
-in-process flow. Adding the signature to every production result is not
-required by the current evidence.
+The Stage 4E invocation owner retains the complete signature separately and
+binds it to the exact A1 producer result in the same trusted in-process flow.
+Adding the signature to every production result is not required by the current
+implementation.
 
 ## First Positive Profile
 
@@ -225,8 +229,8 @@ complete RequestSignature
 
 ## Invocation and Composition Ownership
 
-Stage 4E evaluates and issues authority; it does not execute A2. A legitimate
-owner must be able to retain:
+The Compass Stage 4E evaluator evaluates and issues authority; it does not
+execute A2. The transactional invocation owner retains:
 
 ```text
 complete RequestSignature
@@ -235,9 +239,9 @@ complete RequestSignature
 + Stage 4E authorization or refusal
 ```
 
-No such PostgreSQL owner exists in current production source. The smallest
-required seam is a live, in-process command/runtime owner around the existing
-public writer. Its responsibility is bounded:
+PR2 implements that seam as the PostgreSQL-specific, live, in-process
+`PostgresWriteSideInvocationOwner` around the existing public writer. Its
+responsibility is bounded:
 
 - receive or construct the complete signature before A1;
 - invoke the normal public writer with the decomposed fields;
@@ -273,7 +277,7 @@ one A1 authorization
 → at most one later A2 public-writer entry
 ```
 
-The live invocation owner and authorization lifecycle must preserve all of the
+The live invocation owner and authorization lifecycle preserve all of the
 following:
 
 - consumption is atomic and thread-safe;
@@ -395,5 +399,9 @@ own concrete evidence before promotion.
 The bounded PR plan is maintained in [PR Breakdown](pr_breakdown.md).
 
 PR1 establishes the immutable formal contracts and source-specific preparation
-`LOCK_TIMEOUT` evaluator. PR2 owns invocation ownership and one-shot A2
-consumption. PR3 owns Stage 4C production consumption through the PR2 owner.
+`LOCK_TIMEOUT` evaluator. PR2 implements invocation ownership, synchronized
+result publication, exact evaluation caching, and one-shot A2 consumption. Its
+real PostgreSQL characterization covers preparation `LOCK_TIMEOUT`, explicit
+authority, release of the competing lock, one accepted A2, and terminal refusal
+without extra rows. PR3 remains responsible for Stage 4C production consumption
+through the PR2 owner.

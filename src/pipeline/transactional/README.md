@@ -50,6 +50,7 @@ This module is responsible for:
 - transactional write-side commit / rollback boundary
 - validation placement strategy
 - optimistic / pessimistic PostgreSQL admission strategy integration
+- live PostgreSQL invocation ownership and guarded one-shot A2 entry
 
 ---
 
@@ -213,6 +214,23 @@ PostgresOptimisticAdmissionGate
 `IN_TRANSACTION` remains available through explicit configuration.
 The default `PRE_TRANSACTION` path remains guarded by an authoritative
 in-transaction idempotency re-check and append-time admission.
+
+---
+
+### `postgres_write_side_invocation_owner.py`
+
+Defines the live PostgreSQL owner for one complete `RequestSignature` and one
+already-configured `PostgresTransactionalWriteSide`.
+
+The owner invokes A1 itself, publishes the exact normal result under one
+owner-scoped lifecycle lock, explicitly caches the existing Stage 4E
+evaluation, and atomically spends positive authority before at most one A2
+public-writer entry. The lock is not held during writer execution. A1 and A2
+dispatch the same retained request fields through the same retained writer and
+composition.
+
+It does not define Stage 4E eligibility, Stage 4C policy, strategy selection,
+generic retry infrastructure, scheduling, durable lifecycle identity, or A3.
 
 ---
 

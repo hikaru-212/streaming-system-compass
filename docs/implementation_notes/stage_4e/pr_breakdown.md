@@ -213,6 +213,10 @@ PR1 must not introduce:
 
 ## PR2 — Invocation Owner and One-Shot Consumption
 
+### Status
+
+Implemented in Stage 4E PR2.
+
 ### Responsibility
 
 PR2 owns the live PostgreSQL invocation boundary required to make one issued
@@ -229,11 +233,28 @@ authorization consumable at most once:
 PR2 adds the real PostgreSQL characterization for preparation `LOCK_TIMEOUT`
 followed by one guarded A2 entry. It does not change PR1 eligibility.
 
+The implemented owner accepts only one complete `RequestSignature` and one
+already-configured `PostgresTransactionalWriteSide`. It invokes A1 itself,
+publishes the exact normal result under one owner-scoped lock, evaluates only
+when explicitly requested, and caches the exact authorization or no-authority
+object. Positive authority is spent under that same lock before A2 writer
+entry; every A2 result or exception leaves it terminally spent. Writer execution
+occurs outside the lock, and both invocations use the same retained request and
+writer composition.
+
+The PostgreSQL integration characterization uses the concrete
+`IN_TRANSACTION` plus pessimistic composition. A real held advisory lock makes
+A1 return the accepted early preparation `LOCK_TIMEOUT` shape without reaching
+validation. After lock release, explicit one-shot consumption enters the same
+writer composition and A2 returns `ACCEPTED`, with one validation call, one
+accepted event row, one idempotency row, and no changes after a refused second
+consumption.
+
 ## PR3 — Stage 4C Production Consumption
 
 ### Responsibility
 
-PR3 uses the invocation owner established by PR2 to consume the already-complete
+PR3 will use the invocation owner established by PR2 to consume the already-complete
 Stage 4C current-response authority. It addresses:
 
 - `outcome_id` ownership or generation;
