@@ -90,6 +90,7 @@ This folder currently includes notes for the most important module and cross-cut
 - [Registry Module Boundary](registry_module.md)
 - [Concurrency Boundary](concurrency_boundary.md)
 - [PostgreSQL Concurrency Admission Boundary](postgres_concurrency_admission_boundary.md)
+- [PostgreSQL Write-Side Invocation Owner Boundary](postgres_write_side_invocation_owner_boundary.md)
 - [Validation Placement Strategy Boundary](validation_placement_strategy_boundary.md)
 - [Projection Module Boundary](projection_module.md)
 - [Projection Runtime Boundary](projection_boundary.md)
@@ -112,6 +113,13 @@ This folder currently includes notes for the most important module and cross-cut
 These were prioritized because they directly affect the main implementation stages of the project.
 
 The PostgreSQL concurrency admission note is intentionally separate from the older concurrency boundary note. The older note explains the conceptual distinction between idempotency, retry safety, and concurrency control. The PostgreSQL concurrency admission note records the Stage 3.5B PR5 implementation boundary: translating writer competition into stable admission results without leaking raw database exceptions upward.
+
+The PostgreSQL write-side invocation owner note records the live Stage 4E
+boundary above the public writer: complete-request and configured-composition
+custody, synchronized A1-result publication, explicit cached authority
+evaluation, and atomic one-shot consumption before any A2 writer entry. It does
+not define Stage 4E eligibility, retry policy, Stage 4C caller behavior, or
+durable lifecycle identity.
 
 The validation placement strategy note builds on ADR 0011 and PR5 admission. It records the Stage 3.5B PR6 / Stage 4 Prelude boundary for comparing `IN_TRANSACTION` Compass validation against `PRE_TRANSACTION` validation plus append-time concurrency admission.
 
