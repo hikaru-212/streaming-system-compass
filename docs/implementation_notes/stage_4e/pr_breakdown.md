@@ -279,19 +279,89 @@ decision exists and is not a block, denial, or escalation decision. PR3 does
 not change Stage 4E eligibility or one-shot lifecycle, retain attempt history,
 or add application/bootstrap enforcement.
 
+## PR4 — Append Version-Mismatch Evidence Refinement
+
+### Status
+
+Implemented in Stage 4E PR4.
+
+### Responsibility
+
+PR4 preserves stable typed producer evidence for exactly one characterized
+physical stale source:
+
+```text
+PostgresEventStore.append(...)
+observed_current_version != expected_current_version
+→ AppendVersionMismatchError
+→ PostgreSQL admission
+→ AdmissionResult.append_version_mismatch_evidence
+→ PostgresWriteSideResult.admission_result
+```
+
+The retained evidence contains only `expected_current_version` and
+`observed_current_version`. `AdmissionVerdict.STALE_WRITE` remains unchanged.
+The internal storage exception preserves the observation across the storage
+boundary but does not escape as the write-side control language.
+
+The distinction is source-specific. Evidence remains absent for candidate
+continuity mismatch, generic `ValueError`, generic `StaleWriteError`,
+`AppendConflictError`, recognized stream-position `UniqueViolation`, and
+manual/coarse `STALE_WRITE` construction.
+
+The existing PostgreSQL experiment retains both deterministic schedules. Its
+A1 results now identify the physical source through exact typed version
+evidence—`expected=0, observed=1` and `expected=1, observed=2`—rather than
+reason text. A1 has no durable accepted effect; a fresh full invocation either
+observes the winning request as `REPLAY` or reloads changed authoritative state
+and follows current domain reasoning.
+
+### Consequence Boundary
+
+PR4 does not change eligibility:
+
+```text
+technical outcome
+!= physical evidence
+!= semantic interpretation
+!= authority
+!= execution
+
+completed invocation
++ AppendVersionMismatchEvidence
+→ NoReinvocationAuthority
+```
+
+The preparation `LOCK_TIMEOUT` positive profile remains exactly as implemented
+in PR1. PR4 adds no generic stale authorization, retry taxonomy, execution,
+loop, A3, budget, backoff, scheduler, persistence, Stage 4A interpretation, or
+Stage 4C behavior.
+
+### PR5 Handoff
+
+PR5 is not implemented here. A separately reviewed PR5 may evaluate only this
+open question:
+
+> Given a completed prior invocation with exact characterized append
+> version-mismatch evidence, under what additional invariants—if any—may
+> exactly one fresh invocation of the same complete `RequestSignature` enter?
+
+No possible additional invariant is an established PR4 rule.
+
 ## Later Work
 
 Later work remains provisional and evidence-gated.
 
-`STALE_WRITE` may re-enter only after production-owned evidence can prove the
-required candidate, validation, append, and invocation provenance without the
-experiment's observation wrappers or monkeypatches.
+Generic `STALE_WRITE` authorization remains outside the accepted boundary.
+Only the characterized append version mismatch now has production-owned typed
+source evidence, and that evidence remains non-authorizing pending the separate
+PR5 question above.
 
 Stage 4D may re-enter only under the condition in
 [ADR 0028](../../adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md).
 
-PR2 and PR3 are the bounded downstream responsibilities above. No additional
-Stage 4E PR is planned merely to hold generic retry concerns.
+PR2 through PR4 are the bounded downstream responsibilities above. No
+additional Stage 4E PR is planned merely to hold generic retry concerns.
 
 ## PR0 Promotion Table
 
@@ -300,7 +370,8 @@ Stage 4E PR is planned merely to hold generic retry concerns.
 | Complete `RequestSignature` defines same request | Accepted requirement | Preserve all four fields. |
 | Same `request_id` alone is insufficient | Accepted requirement | Refuse request-ID-only authorization. |
 | Preparation `LOCK_TIMEOUT` | Accepted first profile | Consume producer-owned preparation evidence. |
-| `STALE_WRITE` | Experimental evidence only | Defer pending a production evidence contract. |
+| Append current-version mismatch | Typed physical evidence implemented in PR4 | Remains non-authorizing pending separate PR5 review. |
+| Generic `STALE_WRITE` | Not accepted as a positive profile | Other physical stale sources remain coarse. |
 | Stage 4C / 4E independence | Accepted architecture result | Do not require a Stage 4C decision. |
 | One-shot / consume before entry | Accepted safety requirement | Atomic lifecycle guards A2 writer entry. |
 | A2 outcome never restores authority | Accepted safety requirement | Spent is terminal. |

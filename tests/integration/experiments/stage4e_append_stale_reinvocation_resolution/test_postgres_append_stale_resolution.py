@@ -34,6 +34,7 @@ from src.core.order.events import OrderEvent
 from src.pipeline.transactional.admission import (
     AdmissionResult,
     AdmissionVerdict,
+    AppendVersionMismatchEvidence,
     ConcurrencyGate,
     StreamAdmissionResult,
 )
@@ -289,10 +290,11 @@ def _assert_a1_append_stale(
         result.admission_result.candidate_event_id
         == validation.candidate_event.event_id
     )
-    assert (
-        f"Version conflict: store_version={expected_store_version}, "
-        f"expected_version={expected_old_version}"
-        in result.admission_result.reason
+    assert result.admission_result.append_version_mismatch_evidence == (
+        AppendVersionMismatchEvidence(
+            expected_current_version=expected_old_version,
+            observed_current_version=expected_store_version,
+        )
     )
     return validation.candidate_event
 

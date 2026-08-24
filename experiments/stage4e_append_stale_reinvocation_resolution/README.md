@@ -6,8 +6,10 @@ Can a fresh full same-request invocation, started only after a real PostgreSQL
 append-time `STALE_WRITE` and confirmed rollback, observe authoritative state
 that the stale invocation could no longer safely use?
 
-This is an experimental PostgreSQL characterization. It is not production
-Stage 4E PR4 and does not change the existing production authorization profile.
+This remains an experimental PostgreSQL characterization. Stage 4E PR4 now
+uses its schedules to assert the production typed evidence for the targeted
+physical source, but neither the experiment nor PR4 changes the existing
+production authorization profile.
 
 ## Physical Model
 
@@ -24,13 +26,15 @@ event. It does not replace append behavior or manufacture a stale result.
 The exact stale source targeted in both schedules is the production event
 store's current-version check. B commits a new accepted stream position before
 A1 delegates to `PostgresEventStore.append(...)`; A1 then observes
-`store_version != expected_current_version`. The resulting `ValueError` is
-translated by the real PostgreSQL admission gate to `AdmissionVerdict.STALE_WRITE`.
+`store_version != expected_current_version`. The resulting
+`AppendVersionMismatchError` transports both versions to the real PostgreSQL
+admission gate, which returns `AdmissionVerdict.STALE_WRITE` with subordinate
+`AppendVersionMismatchEvidence`.
 
-This is one concrete physical source currently collapsed into the broader
-`STALE_WRITE` verdict. Other sources include candidate continuity mismatch,
-explicit `StaleWriteError`, `AppendConflictError`, and a recognized
-stream-position uniqueness conflict.
+This concrete physical source is now distinguished by subordinate evidence
+while retaining the broader `STALE_WRITE` verdict. Other sources include
+candidate continuity mismatch, explicit `StaleWriteError`,
+`AppendConflictError`, and a recognized stream-position uniqueness conflict.
 
 ## Deterministic Schedule A — Same-request Winner
 
@@ -79,8 +83,8 @@ the following:
 
 - A1 reaches real candidate construction, real strict validation ALLOW, stream
   admission, and the real append boundary;
-- A1 returns a real `PostgresWriteSideResult` with append `STALE_WRITE` whose
-  reason identifies the expected production version mismatch;
+- A1 returns a real `PostgresWriteSideResult` with append `STALE_WRITE` and
+  exact typed expected/observed version-mismatch evidence;
 - A1's transaction is idle after explicit rollback and its candidate event is
   absent from accepted history;
 - schedule A's B commits the exact request and A2 resolves through real REPLAY,
@@ -91,11 +95,11 @@ the following:
 - per-invocation validation and gate observations show that no A1 candidate or
   validation object is carried into A2.
 
-The hypothesis is falsified if real append does not produce the targeted stale
-result, rollback leaves an A1 effect, A2 cannot observe the committed authority,
-or the schedule requires synthetic stale injection. The assertions on the
-version-conflict reason deliberately fail if the broad result stops exposing
-enough information to identify this concrete source.
+The hypothesis is falsified if real append does not produce the targeted typed
+stale evidence, rollback leaves an A1 effect, A2 cannot observe the committed
+authority, or the schedule requires synthetic stale injection. Source identity
+is established from `AppendVersionMismatchEvidence`, not reason or exception
+text.
 
 ## Result
 
@@ -128,9 +132,11 @@ The established conclusion is narrow: fresh full re-invocation has
 semantic/information value after the characterized append-time version-mismatch
 `STALE_WRITE` schedules.
 
-The current generic `STALE_WRITE` carrier remains too broad for direct
-production authorization because multiple physical stale sources collapse into
-the same verdict. Human reason text is not proposed as a production contract.
+The generic `STALE_WRITE` verdict remains too broad for direct production
+authorization because multiple physical stale sources still share that
+technical outcome. PR4 preserves typed evidence only for the characterized
+append version mismatch. Human reason text is neither source evidence nor
+policy input.
 
 ## What Success Would Prove
 
@@ -148,7 +154,7 @@ Even success would not prove that:
   re-invocation;
 - append retry or resuming the old attempt is safe;
 - candidate reuse or validation reuse is safe;
-- production Stage 4E PR4 is justified;
+- typed append-version-mismatch evidence authorizes another invocation;
 - retry count, timing, budget, backoff, or an A3 lifecycle is determined.
 
 This experiment does not characterize PR2 retained-writer identity or exact
