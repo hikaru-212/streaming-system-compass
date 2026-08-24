@@ -1,0 +1,150 @@
+{
+  "schema": "stage4b5-runtime-governance-a-replay-review",
+  "schema_version": 1,
+  "historical_a_source_commit": "0bd2f515bcc49e8e1f0e9d2f9dba4a294adadd0d",
+  "reviewed_current_source_commit": "0563657b186b1e5948b8d80bb3d4071cd49ac08b",
+  "replay_status": "REFUSED",
+  "reason": "Stage 4E PR4 changed protected current transitive dependencies after the Stage 4B.5 audit; no performance-equivalence review has been performed for historical A replay.",
+  "protected_current_dependencies": [
+    {
+      "module": "src",
+      "path": "src/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "src.compass",
+      "path": "src/compass/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "src.compass.transition",
+      "path": "src/compass/transition/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "src.compass.transition.types",
+      "path": "src/compass/transition/types.py",
+      "sha256": "6f7975e86c8b8ba240ad8e4c89acd0726204a668ea2d66d6be734629e3e4565f"
+    },
+    {
+      "module": "src.core",
+      "path": "src/core/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "src.core.common",
+      "path": "src/core/common/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "src.core.common.ids",
+      "path": "src/core/common/ids.py",
+      "sha256": "02a126761a1dcc92184a58849b3eb59e3c708f043ab8368daf309470be0c2738"
+    },
+    {
+      "module": "src.core.common.money",
+      "path": "src/core/common/money.py",
+      "sha256": "6cbbaaaf851d2d2e138d75795cc47d546ab655c5d401f300917c6e2a2d4258b5"
+    },
+    {
+      "module": "src.core.order",
+      "path": "src/core/order/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "src.core.order.aggregate",
+      "path": "src/core/order/aggregate.py",
+      "sha256": "f6024cc741cf5062e02018972346e2cf30a2a566a1365578b453ec8a38a543ee"
+    },
+    {
+      "module": "src.core.order.enums",
+      "path": "src/core/order/enums.py",
+      "sha256": "1e7db62edfc069a270a7dbf02b644af3e9fd61c9cdc11b68abebc27b87252f6f"
+    },
+    {
+      "module": "src.core.order.events",
+      "path": "src/core/order/events.py",
+      "sha256": "be010ed160e92fc4c13aa22bffc93b3f76af5a526d4c0363f38529519d405ff8"
+    },
+    {
+      "module": "src.core.order.proofs",
+      "path": "src/core/order/proofs.py",
+      "sha256": "bd9ed5d35de120735d4d29ee76286c3414a34c2ba826fc2ccff6901c1b4b5f17"
+    },
+    {
+      "module": "src.pipeline",
+      "path": "src/pipeline/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "src.pipeline.transactional",
+      "path": "src/pipeline/transactional/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "src.pipeline.transactional.admission",
+      "path": "src/pipeline/transactional/admission.py",
+      "sha256": "1f1bbe4901e4b122a6989360e2f846dc06565ae1a74b66792ab4ce31a3b1792d"
+    },
+    {
+      "module": "src.pipeline.transactional.postgres_admission",
+      "path": "src/pipeline/transactional/postgres_admission.py",
+      "sha256": "5761c323d7e852edf85a6e0d8630d13d5da9ef4aeb6883791d25fa917f39d38e"
+    },
+    {
+      "module": "src.pipeline.transactional.postgres_unit_of_work",
+      "path": "src/pipeline/transactional/postgres_unit_of_work.py",
+      "sha256": "06ce032f966acd31fba80e9a523e07cfcd27f8e0c32506b232d490041f11e9b3"
+    },
+    {
+      "module": "src.pipeline.transactional.postgres_write_side_config",
+      "path": "src/pipeline/transactional/postgres_write_side_config.py",
+      "sha256": "72877a05d7a1258d484da39f5bbfa3321c521d91988364d7f3c29419889a76a2"
+    },
+    {
+      "module": "src.pipeline.transactional.postgres_write_side_execution_trace",
+      "path": "src/pipeline/transactional/postgres_write_side_execution_trace.py",
+      "sha256": "e9a3be9b5f43dbcc8344d7e87232ce41dcb2070983d768c16ac5aed76b6cef53"
+    },
+    {
+      "module": "src.pipeline.transactional.postgres_write_side_measurement_instrumentation",
+      "path": "src/pipeline/transactional/postgres_write_side_measurement_instrumentation.py",
+      "sha256": "bc8951016fd22646d101c42e6c921773241518335a927f5afbc1d8358d358c04"
+    },
+    {
+      "module": "src.storage",
+      "path": "src/storage/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "module": "src.storage.errors",
+      "path": "src/storage/errors.py",
+      "sha256": "dbbcceec18f09047b81309247ab5c375195f3f94f03b16de00b4e57939f57129"
+    },
+    {
+      "module": "src.storage.event_store",
+      "path": "src/storage/event_store.py",
+      "sha256": "2856dae0fcc036e065296286829d74828e5493a179b1923a80a686680a7727df"
+    },
+    {
+      "module": "src.storage.idempotency_store",
+      "path": "src/storage/idempotency_store.py",
+      "sha256": "09b47f84f3aa063067b32aac66ee15ddc5ebc022663309f8f95ea4170b174099"
+    },
+    {
+      "module": "src.storage.order_event_hydration",
+      "path": "src/storage/order_event_hydration.py",
+      "sha256": "5c252e2e71d2812c552925d8ebb9104b7796321402158a24fad388c87ee4a3bf"
+    },
+    {
+      "module": "src.storage.postgres_event_store",
+      "path": "src/storage/postgres_event_store.py",
+      "sha256": "bd010c60111c0d91abc6fe95144f74b842e4d70b606f7d3b813bfc1bcd8bcce1"
+    },
+    {
+      "module": "src.storage.postgres_idempotency_store",
+      "path": "src/storage/postgres_idempotency_store.py",
+      "sha256": "bc03e3c0bcfd1c064d0a1a1c6910d6c7673ad91262cb7f7982aa3bf93a38ea67"
+    }
+  ]
+}

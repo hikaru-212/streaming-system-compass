@@ -121,6 +121,32 @@ limitation is that audited-unchanged transitive dependencies load from the
 current checkout. Their source parity is therefore an evidence prerequisite,
 not an assumption that may silently drift.
 
+### Historical integrity and later replay review
+
+Historical evidence validity and current replay availability are separate
+properties.
+
+`tests/fixtures/stage4b5_runtime_governance_overhead/provenance.json` remains
+the immutable audit-time identity for historical A. In particular,
+`allowed_current_source_differences` records the source differences reviewed at
+measurement time; it is not extended when later production source evolves.
+The canonical evidence namespaces, manifests, samples, timings, and bootstrap
+correction remain unchanged.
+
+Later replay review is recorded separately in
+`tests/fixtures/stage4b5_runtime_governance_overhead/replay_review.json`. One
+reviewed `REFUSED` state is bound to the exact SHA-256 identity of every current
+transitive dependency in A's protected import surface. That refusal means only
+that historical A must not execute against those bytes because no
+performance-equivalence review has been performed. It does not invalidate the
+recorded historical characterization.
+
+Both committed `HEAD` bytes and the working-tree bytes that a worker would
+actually import must match the reviewed identities. An exact match produces the
+reviewed `REFUSED` status. Any later protected difference is unreviewed drift
+and fails closed; it is not silently accepted as another refusal. Files outside
+the protected import surface do not affect this review.
+
 ---
 
 ## Compared Surfaces
