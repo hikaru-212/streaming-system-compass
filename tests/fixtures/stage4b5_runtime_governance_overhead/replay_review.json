@@ -2,7 +2,7 @@
   "schema": "stage4b5-runtime-governance-a-replay-review",
   "schema_version": 1,
   "historical_a_source_commit": "0bd2f515bcc49e8e1f0e9d2f9dba4a294adadd0d",
-  "reviewed_current_source_commit": "0563657b186b1e5948b8d80bb3d4071cd49ac08b",
+  "reviewed_current_source_commit": "30b54ad4b9c3edd6245d7925c250ed48b965022b",
   "replay_status": "REFUSED",
   "reason": "Stage 4E PR4 changed protected current transitive dependencies after the Stage 4B.5 audit; no performance-equivalence review has been performed for historical A replay.",
   "protected_current_dependencies": [
@@ -89,7 +89,7 @@
     {
       "module": "src.pipeline.transactional.postgres_admission",
       "path": "src/pipeline/transactional/postgres_admission.py",
-      "sha256": "5761c323d7e852edf85a6e0d8630d13d5da9ef4aeb6883791d25fa917f39d38e"
+      "sha256": "ddd6aa88e21940bd80adb6f8a613ec8a3d10565fc7b44eea4bc31a765f51e303"
     },
     {
       "module": "src.pipeline.transactional.postgres_unit_of_work",
@@ -139,7 +139,7 @@
     {
       "module": "src.storage.postgres_event_store",
       "path": "src/storage/postgres_event_store.py",
-      "sha256": "bd010c60111c0d91abc6fe95144f74b842e4d70b606f7d3b813bfc1bcd8bcce1"
+      "sha256": "33445768a347c69844f56399802f58ad1afc55cea2c9f7c89267853213de7e37"
     },
     {
       "module": "src.storage.postgres_idempotency_store",

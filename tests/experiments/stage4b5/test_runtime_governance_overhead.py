@@ -163,7 +163,7 @@ def test_a_replay_review_exact_committed_state_is_reviewed_refused(
 
     assert replay.status is AReplayStatus.REFUSED
     assert replay.reviewed_current_source_commit == (
-        "0563657b186b1e5948b8d80bb3d4071cd49ac08b"
+        "30b54ad4b9c3edd6245d7925c250ed48b965022b"
     )
     assert "no performance-equivalence review" in replay.reason
 
