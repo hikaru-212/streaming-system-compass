@@ -21,10 +21,12 @@ from src.core.order.events import OrderEvent
 from src.pipeline.transactional.admission import (
     AdmissionResult,
     AdmissionVerdict,
+    AppendVersionMismatchEvidence,
     StreamAdmissionResult,
 )
 from src.storage.errors import (
     AppendConflictError,
+    AppendVersionMismatchError,
     StaleWriteError,
     StorageInfrastructureError,
 )
@@ -188,6 +190,19 @@ def _append_with_translation(
         event_store.append(
             candidate_event,
             expected_current_version=expected_current_version,
+        )
+    except AppendVersionMismatchError as exc:
+        return AdmissionResult(
+            verdict=AdmissionVerdict.STALE_WRITE,
+            reason=f"Stale write rejected by {gate_name}: {exc}",
+            candidate_event_id=candidate_event.event_id,
+            accepted_event_id=None,
+            append_version_mismatch_evidence=(
+                AppendVersionMismatchEvidence(
+                    expected_current_version=exc.expected_current_version,
+                    observed_current_version=exc.observed_current_version,
+                )
+            ),
         )
     except (ValueError, StaleWriteError, AppendConflictError) as exc:
         return AdmissionResult(
