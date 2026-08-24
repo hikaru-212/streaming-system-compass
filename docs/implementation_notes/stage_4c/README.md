@@ -10,6 +10,7 @@ PR1 SOURCE-GROUNDED IMPLEMENTATION-ENTRY BOUNDARY
 PR2 IMPLEMENTED
 GENERIC RUNTIMEDECISION + FIRST LAYER-1 POSTGRESQL / ORDER PROFILE
 STAGE 4C.5 COMPATIBILITY / DOCUMENTATION CLOSEOUT
+STAGE 4E PR3 LIVE OWNER DELIVERY CAPABILITY IMPLEMENTED
 ```
 
 This stage entry records the source-grounded Stage 4C PR1 boundary, the PR2
@@ -17,8 +18,10 @@ delivery of the generic immutable `RuntimeDecision` contract and first Layer-1
 PostgreSQL / Order evaluator, and the Stage 4C.5 compatibility disposition. The
 two PR2 responsibilities remain separately owned in separate modules. The
 implemented evaluator is an explicit callable capability with no automatic
-production caller wiring. No additional Stage 4C production code is currently
-justified.
+application caller wiring. Stage 4E PR3 now gives the live PostgreSQL
+invocation owner an explicit production delivery capability over its current
+normal result without changing Stage 4C profile semantics. No application or
+bootstrap consumer currently enforces the returned delivery.
 
 The accepted authority decision is
 [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](../../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md).
@@ -538,18 +541,21 @@ does not justify another production profile.
 
 ## Current Position
 
-Stage 4C is complete and closed. PR2 implements an explicit callable production
-capability for the live, in-memory, Layer-1 PostgreSQL write-side first profile.
+Stage 4C is complete and closed. PR2 implements the explicit callable
+Layer-1 PostgreSQL write-side profile. Stage 4E PR3 consumes that unchanged
+profile inside `PostgresWriteSideInvocationOwner`: the owner explicitly maps
+only its currently published normal result and returns one cached decided or
+refused current-response delivery with a stable owner-held `outcome_id`.
 The generic `RuntimeDecision` remains producer- and domain-neutral; terminal
 Order-rule refinement remains owned by the concrete feedback and evaluation
 delivery.
 
-No production caller currently exists above `PostgresTransactionalWriteSide`,
-so PR2 adds no writer integration or automatic application composition. Any
-future Stage 4C re-entry or caller-owned wiring remains conditional on a
-concrete source-grounded caller and guarded current-response action rather than
-being manufactured to make the evaluator automatic. Stage 4D retains a valid
-`HOW`-selection responsibility but its implementation is deferred; Stage 4E is
-the next formal implementation direction and remains unimplemented here. See
-the [Stage 4C closeout](stage_4c_closeout.md) for the final delivery map,
-compatibility verdict, downstream boundaries, and transition record.
+This is the first production caller at the live producer-result boundary, not
+an application/bootstrap consumer. It does not enforce continuation, execute
+block or escalation effects, make evaluation automatic, or retain attempt
+history. Stage 4C refusal remains only the absence of an authoritative
+current-response decision and does not gate independent Stage 4E authority.
+Stage 4D retains a valid `HOW`-selection responsibility but its implementation
+is deferred. See the [Stage 4C closeout](stage_4c_closeout.md) for the historical
+delivery map, compatibility verdict, downstream boundaries, and transition
+record.

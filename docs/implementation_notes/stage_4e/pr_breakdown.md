@@ -252,22 +252,32 @@ consumption.
 
 ## PR3 — Stage 4C Production Consumption
 
+### Status
+
+Implemented in Stage 4E PR3 as a production current-response delivery
+capability. End-to-end application consumption remains outside this PR.
+
 ### Responsibility
 
-PR3 will use the invocation owner established by PR2 to consume the already-complete
-Stage 4C current-response authority. It addresses:
+PR3 uses the invocation owner established by PR2 to deliver the already-complete
+Stage 4C current-response authority for only its currently published normal
+result. It implements:
 
-- `outcome_id` ownership or generation;
-- result plus `RuntimeDecision` or typed-refusal delivery;
+- one stable owner-held `outcome_id` per current result;
+- immutable result plus `RuntimeDecision` evaluation or typed-refusal delivery;
 - `USE_CURRENT_RESULT`;
 - `RETURN_PRIOR_ACCEPTED_RESULT`;
 - `BLOCK_CURRENT_CONTINUATION`;
 - `REQUIRE_ESCALATION`;
 - typed Stage 4C refusal transport;
-- caller-visible continuation semantics.
+- exact replay event selection;
+- atomic current-response invalidation at A2 start;
+- fresh current-response publication after normal A2 completion.
 
-PR3 must not change Stage 4E eligibility or lifecycle merely to consume Stage
-4C authority.
+The delivery is explicit and cached; refusal means no authoritative Stage 4C
+decision exists and is not a block, denial, or escalation decision. PR3 does
+not change Stage 4E eligibility or one-shot lifecycle, retain attempt history,
+or add application/bootstrap enforcement.
 
 ## Later Work
 

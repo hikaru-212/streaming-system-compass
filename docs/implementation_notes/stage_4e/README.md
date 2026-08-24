@@ -6,12 +6,15 @@
 
 PR0 architecture boundary established. PR1 contract and evaluator implemented.
 PR2 invocation owner and one-shot lifecycle implemented.
+PR3 live-owner Stage 4C current-response delivery implemented.
 
 PR1 implements the immutable authorization/no-authority contracts and first
 source-specific evaluator. PR2 implements live PostgreSQL A1 custody, explicit
 cached evaluation, and guarded one-shot A2 entry through the same configured
-writer. Stage 4C production consumption remains deferred to PR3. This document
-does not promote the experiment's scaffolding into production APIs.
+writer. PR3 adds explicit Stage 4C delivery for only the owner's currently
+published normal result. It does not add application/bootstrap consumption or
+enforcement. This document does not promote the experiment's scaffolding into
+production APIs.
 
 The stage position is:
 
@@ -28,7 +31,7 @@ Stage 4E
 = Same-Request Re-Invocation Authority
 = PR1 contract and first evaluator implemented
 = PR2 invocation owner and one-shot consumption implemented
-= PR3 Stage 4C production consumption deferred
+= PR3 current-response delivery capability implemented in the same owner
 ```
 
 ## First Formal Responsibility
@@ -116,16 +119,18 @@ The source audit found the following current contracts and ownership seams.
 | `src/pipeline/transactional/admission.py` | Typed stream-preparation and append-admission results | Keeps preparation evidence distinct from append evidence. |
 | `src/pipeline/transactional/postgres_admission.py` | PostgreSQL optimistic and pessimistic admission gates | `PostgresPessimisticAdmissionGate.prepare_stream()` produces the first positive `LOCK_TIMEOUT` evidence. |
 | `src/pipeline/transactional/postgres_write_side.py` | Public PostgreSQL writer, orchestration, result, and static composition ownership | Carries A1 producer evidence but accepts decomposed request arguments and does not retain the complete signature on a timeout result. |
-| `src/pipeline/transactional/postgres_write_side_invocation_owner.py` | Live A1 custody, cached Stage 4E evaluation, and atomic one-shot A2 entry | Retains the complete request and configured writer, publishes the exact A1 result under one lifecycle lock, and spends positive authority before A2 writer entry. |
+| `src/pipeline/transactional/postgres_write_side_invocation_owner.py` | Live current-result custody, explicit Stage 4C delivery, cached Stage 4E evaluation, and atomic one-shot A2 entry | Retains the complete request and configured writer, keeps one stable outcome identity and delivery for the current normal result, invalidates that state at A2 start, and independently spends positive Stage 4E authority before A2 writer entry. |
 | `src/pipeline/transactional/postgres_write_side_config.py` | Immutable validation-placement configuration | Confirms current strategy placement is a construction choice. |
 | `src/compass/runtime/write_side_outcome_mapping.py` | Maps producer results to `SemanticOutcome` | Demonstrates why the semantic projection is too coarse to prove the first Stage 4E profile by itself. |
 | `src/compass/runtime/write_side_runtime_decision.py` | Stage 4C current-response evaluation | Refuses `CONCURRENCY_UNCERTAIN`; it is not a Stage 4E prerequisite. |
 | `src/bootstrap/build_transactional_runtime.py` and `src/pipeline/transactional/registry.py` | In-memory composition root and single-invocation registry | Provide ownership patterns but are not a PostgreSQL A1/A2 runtime owner. |
 
-PR2 now provides the PostgreSQL-specific live invocation owner across A1,
-explicit Stage 4E evaluation, and a possible guarded A2 invocation. No
+PR2 provides the PostgreSQL-specific live invocation owner across A1, explicit
+Stage 4E evaluation, and a possible guarded A2 invocation. PR3 adds explicit
+decided/refused Stage 4C delivery over only its current normal result. No
 production application service, command handler, or PostgreSQL bootstrap is
-wired to construct it; application wiring remains outside this PR.
+wired to construct or enforce that delivery; application wiring remains
+outside this PR.
 
 No production source fact materially contradicts the accepted experimental
 findings.
@@ -403,5 +408,7 @@ PR1 establishes the immutable formal contracts and source-specific preparation
 result publication, exact evaluation caching, and one-shot A2 consumption. Its
 real PostgreSQL characterization covers preparation `LOCK_TIMEOUT`, explicit
 authority, release of the competing lock, one accepted A2, and terminal refusal
-without extra rows. PR3 remains responsible for Stage 4C production consumption
-through the PR2 owner.
+without extra rows. PR3 adds the current-result Stage 4C delivery capability to
+that same owner, including stable outcome identity, typed refusal transport,
+atomic invalidation at A2 start, and a fresh A2 current-response lifecycle. It
+does not provide application-level enforcement or attempt history.
