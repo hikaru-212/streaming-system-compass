@@ -11,6 +11,8 @@ import pytest
 
 import experiments.stage4b5.runtime_governance_overhead as overhead
 from experiments.stage4b5.runtime_governance_overhead import (
+    AReplayReviewError,
+    AReplayStatus,
     HISTORICAL_SOURCE_COMMIT,
     MICRO_CONFIG,
     MICRO_SCENARIOS,
@@ -27,8 +29,9 @@ from experiments.stage4b5.runtime_governance_overhead import (
     compute_batch_comparisons,
     compute_batch_summaries,
     expected_sample_count,
+    evaluate_a_current_replay_compatibility,
     fixed_surface_permutations,
-    load_and_verify_a_source_provenance,
+    load_and_verify_historical_a_source_provenance,
     nearest_rank,
     validate_recorded_population,
     validate_run_id,
@@ -88,7 +91,7 @@ def test_fixed_matrices_and_schedule_population() -> None:
 
 
 def test_a_provenance_resolves_exact_commit_blobs_and_digests() -> None:
-    provenance = load_and_verify_a_source_provenance()
+    provenance = load_and_verify_historical_a_source_provenance()
     assert provenance["source_commit"] == HISTORICAL_SOURCE_COMMIT
     assert [entry["module"] for entry in provenance["modules"]] == [
         "src.compass.transition.validators",
@@ -114,46 +117,194 @@ def test_a_provenance_pins_historical_audit_time_source_differences() -> None:
     )
 
 
-def test_a_provenance_ignores_unrelated_current_source_difference(
+def test_a_replay_review_is_separate_exact_state_metadata() -> None:
+    document = json.loads(
+        overhead.A_REPLAY_REVIEW_PATH.read_text(encoding="utf-8")
+    )
+
+    assert set(document) == {
+        "schema",
+        "schema_version",
+        "historical_a_source_commit",
+        "reviewed_current_source_commit",
+        "replay_status",
+        "reason",
+        "protected_current_dependencies",
+    }
+    assert document["schema"] == (
+        "stage4b5-runtime-governance-a-replay-review"
+    )
+    assert document["schema_version"] == 1
+    assert document["historical_a_source_commit"] == HISTORICAL_SOURCE_COMMIT
+    assert document["replay_status"] == "REFUSED"
+    assert [
+        (entry["module"], entry["path"])
+        for entry in document["protected_current_dependencies"]
+    ] == list(overhead._A_CURRENT_TRANSITIVE_DEPENDENCIES)
+    assert all(
+        len(entry["sha256"]) == 64
+        for entry in document["protected_current_dependencies"]
+    )
+
+
+def test_a_replay_review_exact_committed_state_is_reviewed_refused(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    real_git = overhead._git
+    # The checked-in review is based on committed bytes. The repository may
+    # carry unrelated protected working-tree work while this maintenance commit
+    # is validated, so this test deliberately supplies the reviewed HEAD bytes.
+    monkeypatch.setattr(
+        overhead,
+        "_read_working_tree_protected_source",
+        overhead._read_head_protected_source,
+    )
 
-    def git_with_unrelated_difference(
-        *args: str,
-        binary: bool = False,
-    ) -> str | bytes:
-        if args[:2] == ("diff", "--name-only"):
-            return "src/pipeline/projection/README.md"
-        return real_git(*args, binary=binary)
+    replay = evaluate_a_current_replay_compatibility()
 
-    monkeypatch.setattr(overhead, "_git", git_with_unrelated_difference)
-
-    provenance = overhead.load_and_verify_a_source_provenance()
-
-    assert provenance["source_commit"] == HISTORICAL_SOURCE_COMMIT
+    assert replay.status is AReplayStatus.REFUSED
+    assert replay.reviewed_current_source_commit == (
+        "30b54ad4b9c3edd6245d7925c250ed48b965022b"
+    )
+    assert "no performance-equivalence review" in replay.reason
 
 
-def test_a_provenance_rejects_audited_current_dependency_drift(
+def test_a_replay_review_rejects_future_committed_protected_drift(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    real_git = overhead._git
+    real_head_source = overhead._read_head_protected_source
 
-    def git_with_relevant_difference(
-        *args: str,
-        binary: bool = False,
-    ) -> str | bytes:
-        if args[:2] == ("diff", "--name-only"):
-            return "src/core/order/events.py"
-        return real_git(*args, binary=binary)
+    def changed_head_source(source_path: str) -> bytes:
+        if source_path == "src/core/order/events.py":
+            return b"future reviewed-surface change"
+        return real_head_source(source_path)
 
-    monkeypatch.setattr(overhead, "_git", git_with_relevant_difference)
+    monkeypatch.setattr(overhead, "_read_head_protected_source", changed_head_source)
+    monkeypatch.setattr(
+        overhead,
+        "_read_working_tree_protected_source",
+        changed_head_source,
+    )
 
     with pytest.raises(
-        ValueError,
-        match="current A transitive dependencies drifted: .*events.py",
+        AReplayReviewError,
+        match="unreviewed current A protected dependency drift: HEAD=.*events.py",
     ):
-        overhead.load_and_verify_a_source_provenance()
+        evaluate_a_current_replay_compatibility()
+
+
+def test_a_replay_review_identity_tampering_is_a_hard_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    document = json.loads(
+        overhead.A_REPLAY_REVIEW_PATH.read_text(encoding="utf-8")
+    )
+    document["protected_current_dependencies"][0]["sha256"] = "0" * 64
+    tampered_review = tmp_path / "replay_review.json"
+    tampered_review.write_text(
+        json.dumps(document, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(overhead, "A_REPLAY_REVIEW_PATH", tampered_review)
+
+    with pytest.raises(
+        AReplayReviewError,
+        match="does not match its reviewed commit",
+    ):
+        evaluate_a_current_replay_compatibility()
+
+
+def test_a_replay_review_rejects_protected_working_tree_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_head_source = overhead._read_head_protected_source
+
+    def changed_working_tree_source(source_path: str) -> bytes:
+        if source_path == "src/storage/postgres_event_store.py":
+            return b"uncommitted protected source"
+        return real_head_source(source_path)
+
+    monkeypatch.setattr(
+        overhead,
+        "_read_working_tree_protected_source",
+        changed_working_tree_source,
+    )
+
+    with pytest.raises(
+        AReplayReviewError,
+        match="working-tree=.*postgres_event_store.py",
+    ):
+        evaluate_a_current_replay_compatibility()
+
+
+def test_a_replay_review_ignores_unrelated_working_tree_files(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    unrelated_source = tmp_path / "unrelated_current_source.py"
+    unrelated_source.write_text("unrelated = True\n", encoding="utf-8")
+    monkeypatch.setattr(
+        overhead,
+        "_read_working_tree_protected_source",
+        overhead._read_head_protected_source,
+    )
+
+    replay = evaluate_a_current_replay_compatibility()
+
+    assert unrelated_source.exists()
+    assert replay.status is AReplayStatus.REFUSED
+
+
+@pytest.mark.parametrize(
+    ("tamper", "message"),
+    (
+        ("schema", "unexpected A source provenance schema"),
+        ("commit", "does not match the pinned"),
+        ("module_order", "retain the audited dependency order"),
+        ("blob", "Git blob mismatch"),
+        ("digest", "SHA-256 mismatch"),
+        ("audit_metadata", "audit-time differences changed"),
+    ),
+)
+def test_historical_a_provenance_tampering_remains_a_hard_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    tamper: str,
+    message: str,
+) -> None:
+    document = json.loads(
+        overhead.A_SOURCE_PROVENANCE_PATH.read_text(encoding="utf-8")
+    )
+    if tamper == "schema":
+        document["schema"] = "tampered"
+    elif tamper == "commit":
+        document["source_commit"] = "0" * 40
+    elif tamper == "module_order":
+        document["modules"][0], document["modules"][1] = (
+            document["modules"][1],
+            document["modules"][0],
+        )
+    elif tamper == "blob":
+        document["modules"][0]["git_blob"] = "0" * 40
+    elif tamper == "digest":
+        document["modules"][0]["sha256"] = "0" * 64
+    else:
+        document["allowed_current_source_differences"].append(
+            "src/unreviewed.py"
+        )
+    tampered_provenance = tmp_path / "provenance.json"
+    tampered_provenance.write_text(
+        json.dumps(document, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        overhead,
+        "A_SOURCE_PROVENANCE_PATH",
+        tampered_provenance,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        load_and_verify_historical_a_source_provenance()
 
 
 def test_nearest_rank_is_empirical_and_non_interpolating() -> None:

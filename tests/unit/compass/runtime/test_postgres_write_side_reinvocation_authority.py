@@ -35,6 +35,7 @@ from src.core.order.enums import CommandType
 from src.pipeline.transactional.admission import (
     AdmissionResult,
     AdmissionVerdict,
+    AppendVersionMismatchEvidence,
     StreamAdmissionResult,
 )
 from src.pipeline.transactional.postgres_write_side import (
@@ -271,7 +272,44 @@ def test_append_time_concurrency_result_refuses(
         ),
     )
 
+    assert result.admission_result is not None
+    assert result.admission_result.append_version_mismatch_evidence is None
     assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_append_version_mismatch_evidence_does_not_authorize() -> None:
+    request_signature = _signature()
+    validation_decision = _validation_decision()
+    validation_evidence = ValidationDecisionWithRuleEvidence._build(
+        decision=validation_decision,
+        observed_violation=None,
+    )
+    result = PostgresWriteSideResult(
+        outcome=PostgresWriteSideOutcome.ADMISSION_REJECTED,
+        accepted_event=None,
+        idempotency_decision=_miss(),
+        stream_admission_result=StreamAdmissionResult(
+            verdict=AdmissionVerdict.ADMITTED,
+            reason="stream preparation admitted",
+            order_id=request_signature.order_id,
+        ),
+        validation_decision=validation_decision,
+        validation_decision_evidence=validation_evidence,
+        admission_result=AdmissionResult(
+            verdict=AdmissionVerdict.STALE_WRITE,
+            reason="typed append version mismatch",
+            candidate_event_id="stage4e-candidate-001",
+            append_version_mismatch_evidence=AppendVersionMismatchEvidence(
+                expected_current_version=1,
+                observed_current_version=2,
+            ),
+        ),
+    )
+
+    assert isinstance(
+        _evaluate(result, request_signature=request_signature),
+        NoReinvocationAuthority,
+    )
 
 
 def test_preparation_timeout_after_validation_was_reached_refuses() -> None:

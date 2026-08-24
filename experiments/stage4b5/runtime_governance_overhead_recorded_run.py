@@ -32,6 +32,7 @@ if str(_ENTRYPOINT_REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(_ENTRYPOINT_REPOSITORY_ROOT))
 
 from experiments.stage4b5.runtime_governance_overhead import (
+    AReplayStatus,
     BOOTSTRAP_REPETITIONS,
     MICRO_CONFIG,
     MICRO_SCENARIOS,
@@ -53,10 +54,11 @@ from experiments.stage4b5.runtime_governance_overhead import (
     compute_batch_comparisons,
     compute_batch_summaries,
     current_source_identity,
+    evaluate_a_current_replay_compatibility,
     environment_facts,
     fixed_surface_permutations,
     install_verified_historical_modules,
-    load_and_verify_a_source_provenance,
+    load_and_verify_historical_a_source_provenance,
     scenario_by_name,
     validate_recorded_population,
     validate_run_id,
@@ -1008,7 +1010,7 @@ def _manifest(
         "run_id": run_id,
         "layer": layer.value,
         "source_identities": {
-            "A": load_and_verify_a_source_provenance(),
+            "A": load_and_verify_historical_a_source_provenance(),
             "B_C": current_source_identity(),
             "worker_processes": worker_hello,
             "shared_transitive_import_basis": (
@@ -1115,11 +1117,34 @@ def _require_canonical_preconditions(confirmation: str) -> dict[str, Any]:
     return source
 
 
+def _require_historical_a_replay() -> dict[str, Any]:
+    """Require verified history and an exact reviewed compatible replay state.
+
+    A reviewed refusal is an expected replay-availability result, not evidence
+    corruption or a benchmark execution failure. Unreviewed source drift remains
+    a hard preflight failure. Both outcomes stop before workers are opened.
+    """
+
+    try:
+        provenance = load_and_verify_historical_a_source_provenance()
+        replay = evaluate_a_current_replay_compatibility()
+    except (OSError, ValueError, subprocess.CalledProcessError) as exc:
+        raise RecordedRunError(
+            f"historical A replay review failed: {exc}"
+        ) from exc
+    if replay.status is AReplayStatus.REFUSED:
+        raise RecordedRunError(
+            f"historical A replay status REFUSED: {replay.reason}"
+        )
+    return provenance
+
+
 def _run_canonical(*, layer: Layer, run_id: str, confirmation: str) -> Path:
     try:
         validate_run_id(run_id)
     except ValueError as exc:
         raise RecordedRunError(str(exc)) from exc
+    _require_historical_a_replay()
     _require_canonical_preconditions(confirmation)
     if layer is Layer.POSTGRES and not os.environ.get(TEST_DATABASE_URL_ENV):
         raise RecordedRunError("PostgreSQL run requires test database environment")
@@ -1206,6 +1231,7 @@ def _run_canonical(*, layer: Layer, run_id: str, confirmation: str) -> Path:
 def _run_micro_smoke() -> dict[str, Any]:
     """Exercise every semantic cell once without persisting timing results."""
 
+    _require_historical_a_replay()
     workers = _open_workers()
     try:
         verification: dict[str, Any] = {}

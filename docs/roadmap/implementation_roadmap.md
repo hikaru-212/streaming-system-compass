@@ -9,8 +9,8 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the Stage 4C compatibility and
-documentation closeout:
+This version reflects the project position after the Stage 4E PR4
+append-version-mismatch evidence-refinement closeout:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
@@ -33,9 +33,11 @@ documentation closeout:
   completed compatibility review and documentation reconciliation.
 - Stage 4D retains a valid Strategy Selection Authority responsibility under
   ADR 0028, but its implementation is deferred.
-- Stage 4E PR0 establishes Same-Request Re-Invocation Authority as the first
-  formal responsibility, with preparation `LOCK_TIMEOUT` as the accepted first
-  positive profile. The production contract remains unimplemented.
+- Stage 4E PR1–PR4 implement the first Same-Request Re-Invocation Authority
+  slice: preparation `LOCK_TIMEOUT` is the only positive profile, ownership and
+  one-shot consumption are live, Stage 4C delivery is integrated, and one
+  append version-mismatch source now has typed physical evidence that remains
+  non-authorizing.
 - Stage 5 Action Safety and later production hardening remain future work.
 
 ---
@@ -97,7 +99,7 @@ The completed Stage 4 foundation position is:
 - **Stage 4B.5 — COMPLETE / CLOSED**
 - **Stage 4C — COMPLETE / CLOSED**
 
-After the Stage 4C closeout, the current and later responsibilities are:
+The current and later responsibilities are:
 
 - Stage 4B.3 remains closed unless ADR 0026 re-entry conditions are met; Stage
   4B.5 Order Correctness Contract is complete
@@ -105,9 +107,10 @@ After the Stage 4C closeout, the current and later responsibilities are:
   Stage 4C production code is currently justified
 - Stage 4D Strategy Selection Authority retains responsibility for dynamic
   `HOW` selection, but implementation is deferred
-- Stage 4E Same-Request Re-Invocation Authority has a completed PR0 boundary;
-  its production contract remains unimplemented and participates only when
-  another invocation of the same complete `RequestSignature` is considered
+- Stage 4E Same-Request Re-Invocation Authority has implemented PR1–PR4. Its
+  only positive profile remains preparation `LOCK_TIMEOUT`; characterized
+  append version-mismatch evidence still returns no authority and participates
+  only as input to any separately reviewed PR5 question
 - Stage 5 dual-dimension governance demo / Action Safety is future
 - Stage 5+ production and agent-facing hardening
 
@@ -681,7 +684,7 @@ Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 Stage 4C — Runtime Decision Authority — complete / closed
 Stage 4C.5 — Compatibility / documentation closeout — complete
 Stage 4D — Strategy Selection Authority — responsibility retained / implementation deferred under ADR 0028
-Stage 4E — Same-Request Re-Invocation Authority — PR0 boundary established / production not implemented
+Stage 4E — Same-Request Re-Invocation Authority — PR1–PR4 implemented / append mismatch remains non-authorizing
 ```
 
 This inventory preserves stage ownership and delivery history. It is not a
@@ -698,8 +701,10 @@ PR1 established the source-grounded entry boundary; PR2 delivered the generic
 contract and first Layer-1 PostgreSQL / Order profile; Stage 4C.5 confirmed
 compatibility through the shared producer-neutral `SemanticOutcome` structure
 and closed the stage. Stage 4D retains its responsibility but is deferred under
-ADR 0028. Stage 4E PR0 establishes the first formal responsibility and profile;
-production implementation remains next.
+ADR 0028. Stage 4E PR1–PR4 implement the first formal responsibility,
+preparation-time positive profile, live one-shot ownership, Stage 4C delivery,
+and source-specific append version-mismatch evidence. PR5 remains a separate
+consequence-bearing review; PR4 does not authorize that source.
 
 ---
 
@@ -1138,7 +1143,9 @@ creating the underlying authority.
 
 ### Status
 
-PR0 architecture boundary established; production contract not implemented.
+PR1–PR4 implemented. Preparation `LOCK_TIMEOUT` remains the only positive
+authority profile. Append version-mismatch evidence is implemented but remains
+non-authorizing.
 
 ### Goal
 
@@ -1220,6 +1227,26 @@ The formal transition does not promote the experimental
 `PublicWriterInvocationObservation`, candidate monkeypatch, observation
 wrappers, exact Python writer identity, mutable observation-owned lifecycle,
 one-shot consumer, or `STALE_WRITE` authorization profile.
+
+PR1 implements the immutable authority contract and first evaluator; PR2 owns
+one-shot live issuance and consumption; PR3 integrates current-response
+delivery in the invocation owner. PR4 adds a narrower physical distinction
+without adding authority:
+
+```text
+PostgresEventStore append current-version inequality
+→ AppendVersionMismatchEvidence
+→ retained through AdmissionResult and PostgresWriteSideResult
+→ NoReinvocationAuthority
+```
+
+Generic `STALE_WRITE` remains coarse. Candidate continuity mismatch, generic
+`StaleWriteError`, `AppendConflictError`, recognized stream-position
+`UniqueViolation`, and manual/coarse `STALE_WRITE` do not receive this evidence.
+Stage 4A and Stage 4C behavior remain unchanged. PR5 may separately review
+whether exact characterized evidence plus additional invariants can justify
+one fresh same-complete-request invocation; this roadmap does not pre-answer
+that question.
 
 The first formal Stage 4E slice does not yet claim ownership of:
 

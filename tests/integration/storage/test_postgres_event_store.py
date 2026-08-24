@@ -6,6 +6,7 @@ import pytest
 from src.core.order.enums import EventType, OrderStatus
 from src.core.order.events import OrderEvent
 from src.core.order.proofs import Proof
+from src.storage.errors import AppendVersionMismatchError, StaleWriteError
 from src.storage.postgres_event_store import PostgresEventStore
 from tests.shared.order_events import make_created_event
 from tests.shared.order_events import make_paid_event
@@ -76,8 +77,17 @@ def test_append_rejects_stale_expected_version(db_connection):
         ),
     )
 
-    with pytest.raises(ValueError, match="Version conflict"):
+    with pytest.raises(
+        AppendVersionMismatchError,
+        match="Version conflict",
+    ) as exc_info:
         store.append(stale_event, expected_current_version=0)
+
+    error = exc_info.value
+    assert error.expected_current_version == 0
+    assert error.observed_current_version == 1
+    assert isinstance(error, StaleWriteError)
+    assert isinstance(error, ValueError)
 
 
 def test_uuid_decimal_and_proof_status_round_trip(db_connection):
@@ -159,5 +169,10 @@ def test_append_rejects_broken_sequence(db_connection):
         ),
     )
 
-    with pytest.raises(ValueError, match="Append-time continuity broken"):
+    with pytest.raises(
+        ValueError,
+        match="Append-time continuity broken",
+    ) as exc_info:
         store.append(broken_event, expected_current_version=1)
+
+    assert not isinstance(exc_info.value, AppendVersionMismatchError)

@@ -2,7 +2,10 @@ import os
 import psycopg
 import pytest
 
-from src.pipeline.transactional.admission import AdmissionVerdict
+from src.pipeline.transactional.admission import (
+    AdmissionVerdict,
+    AppendVersionMismatchEvidence,
+)
 from src.pipeline.transactional.postgres_admission import (
     PostgresPessimisticAdmissionGate,
 )
@@ -104,6 +107,12 @@ def test_postgres_pessimistic_gate_rejects_stale_expected_version_after_prepare(
     assert result.admitted is False
     assert result.candidate_event_id == stale_candidate.event_id
     assert result.accepted_event_id is None
+    assert result.append_version_mismatch_evidence == (
+        AppendVersionMismatchEvidence(
+            expected_current_version=0,
+            observed_current_version=1,
+        )
+    )
 
     assert count_rows(db_connection, "order_events") == 1
 

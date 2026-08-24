@@ -7,14 +7,16 @@
 PR0 architecture boundary established. PR1 contract and evaluator implemented.
 PR2 invocation owner and one-shot lifecycle implemented.
 PR3 live-owner Stage 4C current-response delivery implemented.
+PR4 append version-mismatch evidence refinement implemented.
 
 PR1 implements the immutable authorization/no-authority contracts and first
 source-specific evaluator. PR2 implements live PostgreSQL A1 custody, explicit
 cached evaluation, and guarded one-shot A2 entry through the same configured
 writer. PR3 adds explicit Stage 4C delivery for only the owner's currently
 published normal result. It does not add application/bootstrap consumption or
-enforcement. This document does not promote the experiment's scaffolding into
-production APIs.
+enforcement. PR4 preserves one characterized physical append source as stable
+typed evidence without changing Stage 4E eligibility. This document does not
+promote the experiment's scaffolding into production APIs.
 
 The stage position is:
 
@@ -32,6 +34,8 @@ Stage 4E
 = PR1 contract and first evaluator implemented
 = PR2 invocation owner and one-shot consumption implemented
 = PR3 current-response delivery capability implemented in the same owner
+= PR4 source-specific append version-mismatch evidence implemented
+= append version-mismatch remains outside the positive authority profile
 ```
 
 ## First Formal Responsibility
@@ -116,8 +120,9 @@ The source audit found the following current contracts and ownership seams.
 | Production source | Current responsibility | Stage 4E relevance |
 |---|---|---|
 | `src/storage/idempotency_store.py` | Frozen `RequestSignature` and idempotency classification | Provides the complete same-request identity contract. |
-| `src/pipeline/transactional/admission.py` | Typed stream-preparation and append-admission results | Keeps preparation evidence distinct from append evidence. |
-| `src/pipeline/transactional/postgres_admission.py` | PostgreSQL optimistic and pessimistic admission gates | `PostgresPessimisticAdmissionGate.prepare_stream()` produces the first positive `LOCK_TIMEOUT` evidence. |
+| `src/pipeline/transactional/admission.py` | Typed stream-preparation and append-admission results | Keeps preparation evidence distinct from append evidence and retains source-specific append version-mismatch evidence. |
+| `src/pipeline/transactional/postgres_admission.py` | PostgreSQL optimistic and pessimistic admission gates | `PostgresPessimisticAdmissionGate.prepare_stream()` produces the first positive `LOCK_TIMEOUT` evidence; append translation preserves characterized version-mismatch evidence without authorizing it. |
+| `src/storage/postgres_event_store.py` | PostgreSQL accepted-history append boundary | Owns the physical expected/observed current-version inequality and emits its typed internal transport. |
 | `src/pipeline/transactional/postgres_write_side.py` | Public PostgreSQL writer, orchestration, result, and static composition ownership | Carries A1 producer evidence but accepts decomposed request arguments and does not retain the complete signature on a timeout result. |
 | `src/pipeline/transactional/postgres_write_side_invocation_owner.py` | Live current-result custody, explicit Stage 4C delivery, cached Stage 4E evaluation, and atomic one-shot A2 entry | Retains the complete request and configured writer, keeps one stable outcome identity and delivery for the current normal result, invalidates that state at A2 start, and independently spends positive Stage 4E authority before A2 writer entry. |
 | `src/pipeline/transactional/postgres_write_side_config.py` | Immutable validation-placement configuration | Confirms current strategy placement is a construction choice. |
@@ -207,10 +212,79 @@ the former is owned by `stream_admission_result` with no append result, while
 the latter is owned by `admission_result` after admitted stream preparation and
 an allowing validation decision.
 
-No narrower production-owned Stage 4E source result currently exists. The raw
-`PostgresWriteSideResult`, validated against the typed shape above, is therefore
-sufficient for the first profile. PR0 does not create a generic evidence
-envelope.
+For the first positive profile, no narrower production-owned Stage 4E source
+result exists. The raw `PostgresWriteSideResult`, validated against the typed
+shape above, is therefore sufficient for that profile. PR0 does not create a
+generic evidence envelope.
+
+## PR4 Append Version-Mismatch Evidence Refinement
+
+PR4 is complete. It preserves one characterized physical append fact:
+
+```text
+PostgresEventStore.append(...)
+observes:
+
+observed_current_version != expected_current_version
+```
+
+The stable retained payload is exactly:
+
+```text
+AppendVersionMismatchEvidence(
+  expected_current_version,
+  observed_current_version,
+)
+```
+
+The production ownership and retention chain is:
+
+```text
+PostgresEventStore
+→ AppendVersionMismatchError as typed internal transport
+→ PostgreSQL admission translation
+→ AdmissionResult.append_version_mismatch_evidence
+→ PostgresWriteSideResult.admission_result
+```
+
+The storage exception does not escape as the upper control language, and the
+admission gate does not parse human-readable text. The experiment's two real
+PostgreSQL schedules observe exact version transitions `0 → 1` and `1 → 2`.
+In both, A1 has no durable accepted effect and the complete fresh invocation
+obtains information from newly authoritative history rather than retrying the
+old append or reusing the old candidate or validation.
+
+This evidence is deliberately source-specific. It remains absent for:
+
+- candidate continuity mismatch;
+- generic `ValueError` and generic `StaleWriteError`;
+- `AppendConflictError`;
+- recognized stream-position `UniqueViolation`;
+- manually constructed or otherwise coarse `STALE_WRITE`.
+
+The technical verdict remains `AdmissionVerdict.STALE_WRITE`. Stage 4A may
+continue to apply its existing coarse interpretation for its current
+responsibility; that shared projection does not establish global consequence
+equivalence among physical stale sources. Stage 4C, `DecisionReceipt`, and the
+Stage 4E evaluator remain unchanged.
+
+```text
+technical outcome
+!= physical evidence
+!= semantic interpretation
+!= authority
+!= execution
+
+completed invocation
++ append version-mismatch evidence
+→ NoReinvocationAuthority
+```
+
+PR4 evidence availability is not Stage 4E `ReinvocationAuthorization`. A
+separately reviewed PR5 may ask, without pre-answering: given a completed prior
+invocation with this exact characterized evidence, under what additional
+invariants—if any—may exactly one fresh invocation of the same complete
+`RequestSignature` enter?
 
 ## Evidence Deliberately Not Required
 
@@ -340,7 +414,8 @@ not add a universal `ALLOWED`/`DENIED` policy vocabulary.
 | Complete `RequestSignature` defines same request | Accepted requirement | Formal contract preserves the full signature. |
 | Same `request_id` alone is insufficient | Accepted requirement | No request-ID-only authorization. |
 | Preparation `LOCK_TIMEOUT` positive profile | Accepted first profile | Producer-owned timeout evidence is required. |
-| `STALE_WRITE` positive profile | Experimental evidence only | Deferred until a production evidence contract exists. |
+| Append current-version mismatch | Typed physical evidence implemented in PR4 | Remains non-authorizing; any consequence belongs to separate PR5 review. |
+| Generic `STALE_WRITE` positive profile | Not accepted | Other physical stale sources remain coarse and no generic authorization exists. |
 | Stage 4C / Stage 4E independence | Accepted architecture result | No mandatory C→E dependency. |
 | One-shot authorization | Accepted safety requirement | At most one later writer entry. |
 | Consume before writer entry | Accepted safety requirement | A2 failure cannot restore authority. |
@@ -411,4 +486,8 @@ authority, release of the competing lock, one accepted A2, and terminal refusal
 without extra rows. PR3 adds the current-result Stage 4C delivery capability to
 that same owner, including stable outcome identity, typed refusal transport,
 atomic invalidation at A2 start, and a fresh A2 current-response lifecycle. It
-does not provide application-level enforcement or attempt history.
+does not provide application-level enforcement or attempt history. PR4 retains
+the characterized append current-version inequality through the real
+PostgreSQL write-side result and proves that its presence still produces
+`NoReinvocationAuthority`. PR5, if separately accepted, owns any
+consequence-bearing eligibility change.

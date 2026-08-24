@@ -9,13 +9,12 @@ import sys
 
 import pytest
 
+import experiments.stage4b5.runtime_governance_overhead as overhead
 import experiments.stage4b5.runtime_governance_overhead_recorded_run as recorded_run
 from experiments.stage4b5.runtime_governance_overhead import (
     MICRO_SCENARIOS,
     REPOSITORY_ROOT,
-    SEQUENCE_RULE_ID,
     Surface,
-    Terminal,
 )
 from experiments.stage4b5.runtime_governance_overhead_recorded_run import (
     CANONICAL_CONFIRMATION,
@@ -181,6 +180,12 @@ import sys
 from types import ModuleType
 import experiments.stage4b5.runtime_governance_overhead as module
 
+module.evaluate_a_current_replay_compatibility = lambda: module.AReplayCompatibility(
+    status=module.AReplayStatus.COMPATIBLE,
+    reason="controlled parent-import test seam",
+    reviewed_current_source_commit="test-only",
+)
+
 real_import = module.importlib.import_module
 
 def injecting_import(name):
@@ -218,6 +223,12 @@ import sys
 from types import ModuleType
 import experiments.stage4b5.runtime_governance_overhead as module
 
+module.evaluate_a_current_replay_compatibility = lambda: module.AReplayCompatibility(
+    status=module.AReplayStatus.COMPATIBLE,
+    reason="controlled import-closure test seam",
+    reviewed_current_source_commit="test-only",
+)
+
 real_import = module.importlib.import_module
 
 def injecting_import(name):
@@ -248,30 +259,30 @@ else:
     )
 
 
-def test_micro_smoke_uses_isolated_a_b_c_and_discards_timings() -> None:
-    completed = subprocess.run(
-        (sys.executable, str(RUNNER), "smoke-micro"),
-        cwd=REPOSITORY_ROOT,
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
+def test_micro_smoke_reports_reviewed_replay_refusal_before_workers(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Evaluate the permanent committed review baseline rather than the
+    # unrelated protected PR4 producer work currently present in this worktree.
+    monkeypatch.setattr(
+        overhead,
+        "_read_working_tree_protected_source",
+        overhead._read_head_protected_source,
     )
-    document = json.loads(completed.stdout)
-    assert document["status"] == "smoke-only; timings discarded; no benchmark result"
-    assert set(document["verification"]) == {
-        scenario.name for scenario in MICRO_SCENARIOS
-    }
-    for scenario in MICRO_SCENARIOS:
-        observations = document["verification"][scenario.name]
-        assert set(observations) == {surface.value for surface in Surface}
-        assert observations["A"]["rule_id"] is None
-        if scenario.terminal is Terminal.VALIDATION_BLOCKED:
-            assert observations["B"]["rule_id"] == SEQUENCE_RULE_ID
-            assert observations["C"]["rule_id"] == SEQUENCE_RULE_ID
-        else:
-            assert observations["B"]["rule_id"] is None
-            assert observations["C"]["rule_id"] is None
+
+    def workers_must_not_start() -> None:
+        raise AssertionError("reviewed replay refusal must precede worker startup")
+
+    monkeypatch.setattr(recorded_run, "_open_workers", workers_must_not_start)
+
+    assert recorded_run.main(["smoke-micro"]) == 2
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "recorded run refused" in captured.err
+    assert "historical A replay status REFUSED" in captured.err
+    assert "no performance-equivalence review" in captured.err
 
 
 def test_canonical_cli_refuses_wrong_confirmation_without_writing() -> None:

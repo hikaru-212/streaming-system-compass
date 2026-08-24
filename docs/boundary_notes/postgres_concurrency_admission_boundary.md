@@ -110,6 +110,85 @@ These are separate boundaries.
 
 ---
 
+## Current Stage 4E PR4 Append-Version-Mismatch Evidence Refinement
+
+Stage 4E PR4 adds one narrow evidence refinement to the existing PostgreSQL
+append-admission boundary. It does not change the earlier Stage 3.5B admission
+responsibility recorded by this note.
+
+The refinement preserves these distinctions:
+
+```text
+technical outcome
+!= physical evidence
+!= semantic interpretation
+!= authority
+```
+
+`AdmissionVerdict.STALE_WRITE` remains the existing coarse technical outcome.
+PR4 separately defines typed physical evidence for only this characterized
+storage observation:
+
+```text
+PostgresEventStore.append(...)
+observes:
+
+observed_current_version != expected_current_version
+```
+
+Therefore:
+
+```text
+append version-mismatch evidence
+!= generic STALE_WRITE evidence
+```
+
+The production ownership chain is:
+
+```text
+PostgresEventStore
+→ owns the physical expected/observed version observation
+
+structured storage failure
+→ transports that typed observation internally
+
+PostgreSQL admission gate
+→ translates it into stable admission evidence
+
+AdmissionResult
+→ retains the append-admission evidence
+```
+
+The structured storage failure is internal transport. Raw storage exceptions
+do not become the upper write-side control language. The retained admission
+evidence contains only the expected and observed current versions; enclosing
+append and invocation results already retain the relevant candidate and stream
+correlation.
+
+The evidence must remain absent for all other current coarse stale sources:
+
+- candidate continuity mismatch;
+- generic `ValueError`;
+- generic `StaleWriteError`;
+- `AppendConflictError`;
+- recognized stream-position `UniqueViolation`;
+- manually constructed or otherwise coarse `STALE_WRITE` results.
+
+PR4 makes this physical evidence available without changing Stage 4A semantic
+mapping, Stage 4C current-response evaluation, DecisionReceipt semantics, or
+Stage 4E eligibility:
+
+```text
+PR4 evidence availability
+!= Stage 4E ReinvocationAuthorization
+```
+
+Any later consequence-bearing use requires a separately reviewed Stage 4E
+authority change. This boundary defines no retry classification, execution,
+budget, backoff, scheduler, or additional invocation authority.
+
+---
+
 ## Why Stable Admission Results Matter
 
 Raw PostgreSQL exceptions are physical failure shapes.
