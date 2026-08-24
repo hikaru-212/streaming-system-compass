@@ -4,8 +4,13 @@ from decimal import Decimal
 
 import pytest
 
+from src.compass.runtime.runtime_decision import RuntimeDecisionResponse
 from src.compass.runtime.reinvocation_authority import (
     ReinvocationAuthorization,
+)
+from src.compass.runtime.semantic_outcome import SemanticOutcomeCategory
+from src.compass.runtime.write_side_runtime_decision import (
+    PostgresWriteSideRuntimeDecisionRefused,
 )
 from src.compass.transition.types import (
     EnforcementAction,
@@ -28,6 +33,8 @@ from src.pipeline.transactional.postgres_write_side_config import (
     ValidationPlacement,
 )
 from src.pipeline.transactional.postgres_write_side_invocation_owner import (
+    PostgresWriteSideCurrentResponseEvaluation,
+    PostgresWriteSideCurrentResponseRefusal,
     PostgresWriteSideInvocationLifecycleError,
     PostgresWriteSideInvocationOwner,
 )
@@ -70,7 +77,7 @@ def _pessimistic_gate_factory(uow) -> PostgresPessimisticAdmissionGate:
     )
 
 
-def test_real_lock_timeout_authority_allows_exactly_one_same_composition_a2(
+def test_real_lock_timeout_supports_independent_stage4c_delivery_and_one_a2(
     db_connection,
     db_connection_factory,
 ) -> None:
@@ -132,6 +139,22 @@ def test_real_lock_timeout_authority_allows_exactly_one_same_composition_a2(
     assert initial_result.admission_result is None
     assert validation_runtime.call_count == 0
 
+    initial_delivery = owner.evaluate_current_response()
+    assert isinstance(
+        initial_delivery,
+        PostgresWriteSideCurrentResponseRefusal,
+    )
+    assert initial_delivery.producer_result is initial_result
+    assert initial_delivery.source_feedback.semantic_outcome.category is (
+        SemanticOutcomeCategory.CONCURRENCY_UNCERTAIN
+    )
+    assert isinstance(
+        initial_delivery.refusal,
+        PostgresWriteSideRuntimeDecisionRefused,
+    )
+    assert not hasattr(initial_delivery, "decision")
+    assert not hasattr(initial_delivery, "selected_result")
+
     authority = owner.evaluate_reinvocation_authority()
     assert isinstance(authority, ReinvocationAuthorization)
     assert authority.request_signature is signature
@@ -153,6 +176,17 @@ def test_real_lock_timeout_authority_allows_exactly_one_same_composition_a2(
     assert second_result.validation_decision.action is EnforcementAction.ALLOW
     assert second_result.admission_result is not None
     assert second_result.admission_result.verdict is AdmissionVerdict.ADMITTED
+    second_delivery = owner.evaluate_current_response()
+    assert isinstance(
+        second_delivery,
+        PostgresWriteSideCurrentResponseEvaluation,
+    )
+    assert second_delivery.producer_result is second_result
+    assert (
+        second_delivery.evaluation.decision.response
+        is RuntimeDecisionResponse.USE_CURRENT_RESULT
+    )
+    assert second_delivery.selected_result is second_result
     assert validation_runtime.call_count == 1
     assert count_rows(db_connection, "order_events") == 1
     assert count_rows(db_connection, "idempotency_records") == 1
