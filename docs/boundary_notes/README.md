@@ -117,9 +117,12 @@ The PostgreSQL concurrency admission note is intentionally separate from the old
 The PostgreSQL write-side invocation owner note records the live Stage 4E
 boundary above the public writer: complete-request and configured-composition
 custody, synchronized A1-result publication, explicit cached authority
-evaluation, and atomic one-shot consumption before any A2 writer entry. It does
-not define Stage 4E eligibility, retry policy, Stage 4C caller behavior, or
-durable lifecycle identity.
+evaluation, and atomic one-shot consumption before any A2 writer entry. It also
+records the Stage 4C delivery capability over the currently published normal
+result: one stable outcome identity, explicit decided/refused delivery, exact
+replay selection, and atomic current-response invalidation at A2 start. It does
+not define Stage 4C or Stage 4E eligibility, application enforcement, retry
+policy, attempt history, or durable lifecycle identity.
 
 The validation placement strategy note builds on ADR 0011 and PR5 admission. It records the Stage 3.5B PR6 / Stage 4 Prelude boundary for comparing `IN_TRANSACTION` Compass validation against `PRE_TRANSACTION` validation plus append-time concurrency admission.
 
