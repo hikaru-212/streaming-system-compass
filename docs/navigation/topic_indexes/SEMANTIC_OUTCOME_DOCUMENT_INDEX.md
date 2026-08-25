@@ -6,7 +6,7 @@
 
 This is topic-based navigation for the completed Stage 4A `SemanticOutcome` core. Existing `docs/` folders remain the source of each document's role and chronology. A document appears under multiple topics only when it makes a substantial contribution to each.
 
-Technical evidence is not semantic meaning. `SemanticOutcome` describes the semantic meaning of bounded evidence but does not authorize action. Stage 4A completed the typed interpretation boundary. Stage 4B then completed the `DecisionReceipt` contract, generic and producer mappings, tri-state flags, strict serializer v1, storage-neutral persistence contracts, and explicit caller-owned PostgreSQL persistence. Mapping remains explicit rather than automatic. Stage 4B.1 completed bounded producer-specific `DiagnosticTrace` / `ResolutionTrace` contracts and PostgreSQL write-side Result + Trace integration while preserving their separation from semantic meaning. Stage 4B.2 completed bounded producer-specific Measurement Evidence. Production Runtime Decision Authority is the current next implementation direction; Strategy Selection Authority, Retry / Attempt Authorization, and Action Safety remain future.
+Technical evidence is not semantic meaning. `SemanticOutcome` describes the semantic meaning of bounded evidence but does not authorize action. Stage 4A completed the typed interpretation boundary. Stage 4B then completed the `DecisionReceipt` contract, generic and producer mappings, tri-state flags, strict serializer v1, storage-neutral persistence contracts, and explicit caller-owned PostgreSQL persistence. Mapping remains explicit rather than automatic. Stage 4B.1 completed bounded producer-specific `DiagnosticTrace` / `ResolutionTrace` contracts and PostgreSQL write-side Result + Trace integration while preserving their separation from semantic meaning. Stage 4B.2 completed bounded producer-specific Measurement Evidence. Stage 4C Runtime Decision Authority and Stage 4E Same-Request Re-Invocation Authority are complete and closed. Stage 4D Strategy Selection Authority remains deferred; Action Safety remains future.
 
 This index does not override Stage 4A contracts or establish Runtime Decision
 Authority, Strategy Selection Authority, Retry / Attempt Authorization,
@@ -157,7 +157,12 @@ Snapshot validation and resolution retain different assurance histories even whe
 
 ## SemanticOutcome versus Runtime Decision
 
-`SemanticOutcome` describes meaning. A future runtime decision chooses action. Stage 4A does not allow or block a mutation, order a rebuild, create a quarantine, execute escalation, or authorize downstream activity. Outcome categories such as `BLOCK_REQUIRED`, `ESCALATION_REQUIRED`, or `FALLBACK_REQUIRED` are semantic classifications for later policy consumers, not executable commands.
+`SemanticOutcome` describes meaning. The separately implemented Stage 4C
+evaluator may issue a reviewed current-response decision, but Stage 4A itself
+does not allow or block a mutation, order a rebuild, create a quarantine,
+execute escalation, or authorize downstream activity. Outcome categories such
+as `BLOCK_REQUIRED`, `ESCALATION_REQUIRED`, or `FALLBACK_REQUIRED` remain
+semantic classifications, not executable commands.
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|
@@ -185,10 +190,12 @@ Stage 4A may preserve retry-relevant meaning such as idempotent replay classific
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|
-| [Runtime SemanticOutcome boundary](../../boundary_notes/runtime_semantic_outcome_boundary.md) | Boundary note | Start here | Separates retry attempts, preserved intent, and outcome meaning. | Retry / Attempt Authorization remains a separate future responsibility. |
+| [Runtime SemanticOutcome boundary](../../boundary_notes/runtime_semantic_outcome_boundary.md) | Boundary note | Start here | Separates retry attempts, preserved intent, and outcome meaning. | Stage 4E remains a separate, now closed bounded responsibility. |
 | [Runtime technical-status mapping](../../implementation_notes/stage_4a/runtime_technical_status_mapping.md) | Implementation boundary | Core | Maps idempotency and concurrency evidence without deciding another attempt. | Implemented PR3 baseline. |
 | [Write-side admission outcome mapping](../../implementation_notes/stage_4a/write_side_admission_outcome_mapping.md) | Implementation boundary | Core | Preserves replay/conflict and stale/timeout evidence at the Write-side boundary. | Completed PR5 adapter. |
 | [Stage 4A closeout](../../implementation_notes/stage_4a/stage_4a_closeout.md) | Stage closeout | Core | Confirms another-attempt authorization, automatic retry blocking, and attempt records remain deferred. | Historical Stage 4A maturity record; ADR 0027 owns current terminology. |
+| [Stage 4E implementation index](../../implementation_notes/stage_4e/README.md) | Completed stage index | Core | Defines exactly two reviewed authority profiles and the one-shot same-request owner boundary. | Current Stage 4E scope; not generic retry governance. |
+| [Stage 4E closeout](../../implementation_notes/stage_4e/stage_4e_closeout.md) | Stage closeout | Core | Freezes evidence/authority/execution separation and Stage 4E non-goals. | Stage 4E complete / closed. |
 
 ## SemanticOutcome versus DecisionReceipt and DiagnosticTrace
 
@@ -196,9 +203,9 @@ Stage 4A produces semantic meaning. Completed Stage 4B can explicitly map that m
 
 No mapper automatically invokes the store or reconciles accepted history into
 receipts. Stage 4B.1 producer-specific traces do not add that orchestration or
-compose automatically with `SemanticOutcome`; Runtime Decision Authority,
-Strategy Selection Authority, Retry / Attempt Authorization, and action
-execution also remain unimplemented.
+compose automatically with `SemanticOutcome`. Later Stage 4C and Stage 4E
+authority implementations remain separate from receipt/trace construction;
+Stage 4D and action execution remain unimplemented.
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|

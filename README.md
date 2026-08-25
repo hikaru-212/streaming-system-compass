@@ -187,6 +187,7 @@ Agent-facing action governance is the architectural target for this foundation, 
 | `DecisionReceipt` evidence foundation        | ✅ Complete — explicit components; automatic materialization deferred   |
 | Order Correctness Contract v0                | ✅ Complete                                                             |
 | Stage 4C — Runtime Decision Authority        | ✅ Complete / closed — generic contract + first Layer-1 profile          |
+| Stage 4E — Same-Request Re-Invocation Authority | ✅ Complete / closed — two reviewed evidence profiles; one-shot owner |
 
 Producer-specific execution traces and bounded PostgreSQL measurement evidence support this foundation. The existing permission work is a bounded database-role and accepted-history mutation-hardening baseline, not general IAM or business authorization.
 
@@ -195,7 +196,6 @@ Producer-specific execution traces and bounded PostgreSQL measurement evidence s
 | Responsibility                                  | Status                                                                     |
 | ----------------------------------------------- | -------------------------------------------------------------------------- |
 | Stage 4D — Strategy Selection Authority         | Responsibility retained; implementation deferred                          |
-| Stage 4E — Retry / Attempt Authorization        | Next formal direction; first slice not implemented                         |
 | Stage 5 — Action Safety                         | Future                                                                     |
 
 Stage 4C is complete and closed. PR1 established the source-grounded
@@ -203,6 +203,15 @@ implementation-entry boundary; PR2 delivered the generic immutable
 `RuntimeDecision` contract and first Layer-1 PostgreSQL / Order write-side
 profile; Stage 4C.5 completed compatibility review and documentation closeout.
 No additional Stage 4C production code is currently justified.
+
+Stage 4E is complete and closed as bounded same-request re-invocation
+authority. Reviewed evidence from one completed invocation may authorize at
+most one fresh public-writer invocation with the owner-retained same complete
+`RequestSignature`. The production boundary has exactly two positive profiles:
+early preparation `LOCK_TIMEOUT` with authoritative idempotency miss and no
+accepted A1 effect, and coherent append-version-advance `STALE_WRITE` with
+typed version-mismatch evidence, validation `ALLOW`, candidate coherence, and
+no accepted A1 effect. This is not generic retry governance.
 
 Detailed stage histories, ADRs, experiments, PR records, and closeouts live under [`docs/`](docs/).
 
@@ -234,7 +243,7 @@ The responsibility vocabulary is precise:
 * `DecisionReceipt` is structured governance evidence that may be persisted explicitly.
 * **Runtime Decision Authority** decides the generic current response within its approved boundary. It does not select strategy, authorize another attempt, or execute an action.
 * **Strategy Selection Authority** selects `HOW` inside prior authorization only when multiple eligible strategies exist. Its responsibility is retained and implementation is deferred.
-* **Retry / Attempt Authorization** alone decides whether another same-request invocation is allowed and under what constraints. It is the next formal implementation direction and remains unimplemented.
+* **Same-Request Re-Invocation Authority** decides whether reviewed completed-invocation evidence authorizes at most one fresh public-writer invocation with the same complete `RequestSignature`. Stage 4E implements only its two reviewed positive profiles; it is not a generic retry framework or reusable retry budget.
 * execution remains separate from evidence, authorization, and strategy selection.
 
 These responsibilities are non-linear. For one completed result:
@@ -454,7 +463,7 @@ Order correctness-contract, and Stage 4C Runtime Decision Authority foundations.
 ```text
 Stage 4C — complete / closed
 Stage 4D — responsibility retained; implementation deferred
-Stage 4E — next formal implementation direction; not implemented
+Stage 4E — Same-Request Re-Invocation Authority — complete / closed
 Stage 5  — future action-safety / dual-dimension governance
 ```
 

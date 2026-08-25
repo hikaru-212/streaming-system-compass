@@ -27,6 +27,8 @@ This index does not override domain specifications, architecture documents, ADRs
 | 11 | [Write-side Admission Outcome Mapping](../../implementation_notes/stage_4a/write_side_admission_outcome_mapping.md) | Completed Stage 4A mapping | Follow write-side evidence into typed `SemanticOutcome` without changing admission behavior. |
 | 12 | [Write-side DecisionReceipt Mapping](../../implementation_notes/stage_4b/write_side_decision_receipt_mapping.md) | Completed Stage 4B mapping | Follow producer evidence into `DecisionReceipt` without automatic persistence or policy evaluation. |
 | 13 | [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Confirm the completed mapping, serialization, explicit persistence, and later-stage non-goals. |
+| 14 | [Stage 4E — Same-Request Re-Invocation Authority](../../implementation_notes/stage_4e/README.md) | Completed Stage 4E index | Follow two reviewed completed-invocation evidence shapes into bounded one-shot authority. |
+| 15 | [Stage 4E Closeout](../../implementation_notes/stage_4e/stage_4e_closeout.md) | Stage closeout | Confirm the final same-request custody, mixed-topology characterization, and non-goals. |
 
 ## Write-side Overview and Responsibility Map
 
@@ -45,7 +47,7 @@ This index does not override domain specifications, architecture documents, ADRs
 | [Aggregate Module](../../boundary_notes/aggregate_module.md) | Boundary note | Start here | Defines the aggregate as the owner of command legality, next transition, sequence progression, candidate production, and event application during replay. | Essential responsibility boundary; no formal ADR status is claimed. |
 | [Order Domain v1 Rules](../../domain/order_domain_v1_rules.md) | Domain specification | Core | Supplies the domain states, commands, and legal transition rules applied by the aggregate. | Domain meaning comes from this specification and the core boundary. |
 | [Transactional Core](../../architecture/transactional_core.md) | Architecture | Core | Places aggregate rehydration and command decision-making before candidate validation and admission. | Do not collapse aggregate legality into Compass validation or persistence checks. |
-| [ADR 0003 — Concurrency Control, Idempotency, and Retry Safety](../../adr/0003_concurrency_idempotency_and_retry_safety.md) | ADR | Deep dive | Shows that a legal domain decision can still fail freshness admission and must then be classified using latest accepted state. | Accepted; the concurrency and retry-safety baseline is implemented, but later Retry / Attempt Authorization remains separate. |
+| [ADR 0003 — Concurrency Control, Idempotency, and Retry Safety](../../adr/0003_concurrency_idempotency_and_retry_safety.md) | ADR | Deep dive | Shows that a legal domain decision can still fail freshness admission and must then be classified using latest accepted state. | Accepted; the concurrency and retry-safety baseline is implemented, while closed Stage 4E remains a separate bounded authority. |
 
 ## Candidate Identity and Accepted History
 
@@ -182,10 +184,12 @@ Successful admitted append grants accepted-history membership. Persistence prese
 
 Stage 3.5B includes durable replay/conflict handling, ambiguous-result recovery, stale-write rejection, stable admission classification, and enough accepted-history and request evidence to avoid treating a stale candidate as accepted.
 
-Retry / Attempt Authorization, retry budgets, backoff or jitter, Strategy
+Stage 4E Same-Request Re-Invocation Authority is complete and closed with
+exactly two reviewed positive evidence profiles and one-shot owner custody.
+Generic retry governance, retry budgets, backoff or jitter, deferred Strategy
 Selection Authority, irreversible-action retry policy, and durable attempt
-lineage remain later-stage work. Stable admission results support those later
-decisions but do not constitute the complete governed retry model.
+lineage remain outside that boundary. Stable admission results alone do not
+constitute another-invocation authority.
 
 | Document | Document role | Reading level | Contribution to this topic | Status or chronology note |
 |---|---|---|---|---|
@@ -221,6 +225,10 @@ These documents preserve how the Stage 3.5B implementation was planned and deliv
 
 ## Open Questions and Deferred Clarifications
 
-- Cross-attempt candidate identity reuse or regeneration is not yet defined.
-- Stage 3.5B retry safety is a baseline; later Retry / Attempt Authorization must remain separate from completed Stage 4A/4B evidence mapping.
+- Stage 4E authorizes a fresh invocation through the normal public-writer path;
+  it does not authorize old candidate or validation reuse. Broader candidate
+  policy outside the closed profiles remains undefined.
+- Stage 3.5B retry safety is a baseline; closed Stage 4E authority remains
+  separate from completed Stage 4A/4B evidence mapping and is not a generic
+  retry framework.
 - Planning-era documents may retain older candidate flows and must be read together with later accepted ADRs.
