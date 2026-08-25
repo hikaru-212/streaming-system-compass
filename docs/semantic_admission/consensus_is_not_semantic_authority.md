@@ -2,6 +2,11 @@
 
 [← Back to Semantic Admission Index](README.md)
 
+> **Current reading:**
+> [Consensus Is Not Semantic Authority — distributed rate-limiter example](consensus_is_not_semantic_authority_rate_limiter.md)
+> is the stronger current operational case. This document is retained as the
+> earlier formulation.
+
 ## Why Agreement Is Not Enough
 
 Distributed systems need agreement.
