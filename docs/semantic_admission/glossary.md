@@ -12,7 +12,7 @@ The terms are grouped into five areas:
 2. **Technical & Semantic Concurrency Control** — the vocabulary for conflicts, ordering, stale reads, and meaning-preserving admission under concurrent proposals.
 3. **Storage, Authority & Evidence Boundaries** — the vocabulary for CRUD integration, mutable state, destructive updates, authority checks, and admission evidence.
 4. **Multi-Agent Semantic Contracts & Governance** — the vocabulary for shared context, shared contracts, agent claims, evidence freshness, and workflow-level correctness.
-5. **CQRS for AI Governance & Cross-Cutting Principles** — conceptual vocabulary for effect-side versus claim-side governance, collective selection, and semantic-authority boundaries that span multiple technical layers.
+5. **CQRS for AI Governance & Cross-Cutting Principles** — conceptual vocabulary for effect-side versus claim-side governance, Delegation and Influence boundaries, collective selection, and semantic-authority boundaries that span multiple technical layers.
 
 ---
 
@@ -117,6 +117,12 @@ Candidate Claim
 ```
 
 The write-side path is the historical and implemented core. The claim-side path remains conceptual and research-oriented; this definition does not imply that a production claim-admission runtime exists.
+
+For a state-changing candidate, Semantic Admission may govern whether the
+candidate may cross into authoritative state. The admission decision is not the
+execution of that change. Where a later machine-controlled consequence is
+considered, additional consequence-specific authority may remain separately
+owned and may not be required for every admission path.
 
 Semantic admission is not the same as output evaluation.
 
@@ -658,6 +664,41 @@ This term is useful for generated summaries, AI overviews, recommendations, and 
 
 This section records conceptual and taxonomy vocabulary supporting the CQRS for AI Governance lens. It does not redefine conventional CQRS or imply that one production runtime implements every boundary described below.
 
+### Delegation Boundary
+
+The Delegation Boundary is the upstream governance question that asks whether
+probabilistic AI should participate in a particular decision at all.
+
+If authoritative facts or deterministic rules already resolve the question,
+the decision should normally remain deterministic rather than being delegated
+to model judgment. This is public research vocabulary, not an implemented
+universal Compass evaluator.
+
+### Influence Boundary
+
+The Influence Boundary asks what a probabilistic agent may affect, select,
+construct, route, or activate while participating in a workflow.
+
+Its scope can include sources, evidence, tools, workflow paths, preconditions,
+privileged services, and candidate construction. It remains distinct from both
+the decision to delegate work to AI and the later admission of a resulting
+candidate.
+
+### Reachable Business Influence
+
+Reachable business influence is an actor's ability to affect authoritative
+business outcomes through allowed workflow paths, intermediate services, or
+changed preconditions even when the actor lacks direct permission to perform
+the final protected mutation.
+
+```text
+direct permission
+!=
+reachable business influence
+```
+
+Reachability does not itself establish business authority.
+
 ### State-Change / Effect-Side Governance
 
 State-change or effect-side governance is conceptual taxonomy vocabulary for the part of Semantic Admission concerned with proposed actions that may change authoritative business state.
@@ -719,6 +760,10 @@ at the next boundary.
 Selection is not admission.
 
 Agreement does not create semantic authority.
+
+Direct permission is not reachable business influence.
+
+Semantic admission is not execution.
 
 Shared context is not shared contract.
 

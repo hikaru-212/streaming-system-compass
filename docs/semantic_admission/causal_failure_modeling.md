@@ -425,21 +425,23 @@ Its original source classification was:
 Future Stage 4B.1 / Stage 4E design note
 ```
 
-That classification is now historical because Stage 4B.1 is complete. The
-current classification is:
+That classification is now historical because Stage 4B.1 and bounded Stage 4E
+are complete and closed. The current classification is:
 
 ```text
 Stage 4B.1-informed
-post-Stage-4B.1 causal-governance design note
+post-completed-Stage-4 causal-governance design note
 ```
 
-Its likely primary revisit is around:
+Stage 4E itself is not future work and does not own complete causal-failure
+genesis. A future revisit would require a concrete consumer for currently
+unimplemented concerns such as:
 
 ```text
-Stage 4E
-Retry Governance
+general attempt governance
 AttemptLog
 intent consistency
+cross-attempt causal lineage
 ```
 
 Earlier concrete consumers may expose a narrower need, but this note does not
