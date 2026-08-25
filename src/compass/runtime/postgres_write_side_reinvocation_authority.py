@@ -1,4 +1,4 @@
-"""First Stage 4E PostgreSQL write-side re-invocation authority profile."""
+"""Reviewed Stage 4E PostgreSQL write-side re-invocation authority profiles."""
 
 from __future__ import annotations
 
@@ -10,12 +10,17 @@ from src.compass.runtime.reinvocation_authority import (
     ReinvocationAuthorization,
 )
 from src.compass.transition.runtime import ValidationDecisionWithRuleEvidence
-from src.compass.transition.types import ValidationDecision
+from src.compass.transition.types import (
+    EnforcementAction,
+    ValidationDecision,
+    ValidationResult,
+)
 from src.core.order.enums import CommandType
 from src.core.order.events import OrderEvent
 from src.pipeline.transactional.admission import (
     AdmissionResult,
     AdmissionVerdict,
+    AppendVersionMismatchEvidence,
     StreamAdmissionResult,
 )
 from src.pipeline.transactional.postgres_write_side import (
@@ -40,7 +45,7 @@ def evaluate_postgres_write_side_reinvocation_authority(
     request_signature: RequestSignature,
     result: PostgresWriteSideResult,
 ) -> PostgresWriteSideReinvocationAuthorityEvaluation:
-    """Evaluate the first reviewed Stage 4E PostgreSQL write-side profile.
+    """Evaluate the reviewed Stage 4E PostgreSQL write-side profiles.
 
     Args:
         request_signature: Complete identity retained by the trusted caller for
@@ -49,9 +54,10 @@ def evaluate_postgres_write_side_reinvocation_authority(
 
     Returns:
         Immutable authority for one additional invocation of the complete
-        request when and only when ``result`` has the accepted preparation
-        ``LOCK_TIMEOUT`` shape. Every other well-typed result returns immutable
-        typed no-authority. Human-readable producer reasons are never read.
+        request when and only when ``result`` has either the accepted
+        preparation ``LOCK_TIMEOUT`` shape or the accepted append-version-
+        advance shape. Every other well-typed result returns immutable typed
+        no-authority. Human-readable producer reasons are never read.
 
     Raises:
         TypeError: If either top-level input or a required typed source field
@@ -73,11 +79,20 @@ def evaluate_postgres_write_side_reinvocation_authority(
             request_signature=request_signature,
         )
 
+    if _is_eligible_append_version_mismatch(
+        request_signature=request_signature,
+        result=result,
+    ):
+        return ReinvocationAuthorization._from_evaluation(
+            request_signature=request_signature,
+        )
+
     return NoReinvocationAuthority._from_evaluation(
         request_signature=request_signature,
         explanation=(
             "The completed PostgreSQL write-side result is outside the accepted "
-            "preparation LOCK_TIMEOUT profile; no Stage 4E authority was issued."
+            "preparation LOCK_TIMEOUT and append version-advance profiles; no "
+            "Stage 4E authority was issued."
         ),
     )
 
@@ -145,13 +160,32 @@ def _validate_result_types(result: PostgresWriteSideResult) -> None:
                 "result.stream_admission_result.order_id must be str"
             )
 
-    if result.validation_decision is not None and not isinstance(
-        result.validation_decision,
-        ValidationDecision,
-    ):
-        raise TypeError(
-            "result.validation_decision must be ValidationDecision or None"
-        )
+    validation_decision = result.validation_decision
+    if validation_decision is not None:
+        if not isinstance(validation_decision, ValidationDecision):
+            raise TypeError(
+                "result.validation_decision must be ValidationDecision or None"
+            )
+        if not isinstance(validation_decision.action, EnforcementAction):
+            raise TypeError(
+                "result.validation_decision.action must be EnforcementAction"
+            )
+        if not isinstance(
+            validation_decision.validation_result,
+            ValidationResult,
+        ):
+            raise TypeError(
+                "result.validation_decision.validation_result must be "
+                "ValidationResult"
+            )
+        if not isinstance(
+            validation_decision.validation_result.candidate_event_id,
+            str,
+        ):
+            raise TypeError(
+                "result.validation_decision.validation_result."
+                "candidate_event_id must be str"
+            )
     if result.validation_decision_evidence is not None and not isinstance(
         result.validation_decision_evidence,
         ValidationDecisionWithRuleEvidence,
@@ -171,6 +205,33 @@ def _validate_result_types(result: PostgresWriteSideResult) -> None:
             raise TypeError(
                 "result.admission_result.verdict must be AdmissionVerdict"
             )
+        if not isinstance(admission_result.candidate_event_id, str):
+            raise TypeError(
+                "result.admission_result.candidate_event_id must be str"
+            )
+        if admission_result.accepted_event_id is not None and not isinstance(
+            admission_result.accepted_event_id,
+            str,
+        ):
+            raise TypeError(
+                "result.admission_result.accepted_event_id must be str or None"
+            )
+        mismatch = admission_result.append_version_mismatch_evidence
+        if mismatch is not None:
+            if not isinstance(mismatch, AppendVersionMismatchEvidence):
+                raise TypeError(
+                    "result.admission_result."
+                    "append_version_mismatch_evidence must be "
+                    "AppendVersionMismatchEvidence or None"
+                )
+            if type(mismatch.expected_current_version) is not int:
+                raise TypeError(
+                    "append version mismatch expected_current_version must be int"
+                )
+            if type(mismatch.observed_current_version) is not int:
+                raise TypeError(
+                    "append version mismatch observed_current_version must be int"
+                )
 
 
 def _is_eligible_preparation_lock_timeout(
@@ -194,6 +255,48 @@ def _is_eligible_preparation_lock_timeout(
         and result.validation_decision is None
         and result.validation_decision_evidence is None
         and result.admission_result is None
+    )
+
+
+def _is_eligible_append_version_mismatch(
+    *,
+    request_signature: RequestSignature,
+    result: PostgresWriteSideResult,
+) -> bool:
+    """Match only the reviewed append-version-advance source profile.
+
+    This predicate authorizes one fresh full invocation so current
+    authoritative state can be observed. It does not authorize candidate or
+    validation reuse, append retry, acceptance, replay, or any other business
+    outcome.
+    """
+
+    idempotency_decision = result.idempotency_decision
+    stream_admission_result = result.stream_admission_result
+    validation_decision = result.validation_decision
+    admission_result = result.admission_result
+
+    if validation_decision is None or admission_result is None:
+        return False
+
+    mismatch = admission_result.append_version_mismatch_evidence
+
+    return (
+        result.outcome is PostgresWriteSideOutcome.ADMISSION_REJECTED
+        and result.accepted_event is None
+        and idempotency_decision.verdict is IdempotencyVerdict.MISS
+        and idempotency_decision.record is None
+        and stream_admission_result is not None
+        and stream_admission_result.verdict is AdmissionVerdict.ADMITTED
+        and stream_admission_result.order_id == request_signature.order_id
+        and validation_decision.action is EnforcementAction.ALLOW
+        and admission_result.verdict is AdmissionVerdict.STALE_WRITE
+        and admission_result.accepted_event_id is None
+        and isinstance(mismatch, AppendVersionMismatchEvidence)
+        and mismatch.observed_current_version
+        > mismatch.expected_current_version
+        and admission_result.candidate_event_id
+        == validation_decision.validation_result.candidate_event_id
     )
 
 

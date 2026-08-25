@@ -81,18 +81,63 @@ def _record(signature: RequestSignature) -> IdempotencyRecord:
     )
 
 
-def _validation_decision() -> ValidationDecision:
+def _validation_decision(
+    *,
+    action: EnforcementAction = EnforcementAction.ALLOW,
+    reason: str = "test-owned validation reached",
+    candidate_event_id: str = "stage4e-candidate-001",
+) -> ValidationDecision:
     return ValidationDecision(
-        action=EnforcementAction.ALLOW,
+        action=action,
         validation_result=ValidationResult(
             verdict=ValidationVerdict.PASSED,
-            reason="test-owned validation reached",
-            candidate_event_id="stage4e-candidate-001",
+            reason=reason,
+            candidate_event_id=candidate_event_id,
             validator_name="test-validator",
             validation_mode=ValidationMode.STRICT,
             logic_validation_time_ms=0.0,
             io_time_ms=0.0,
             total_time_ms=0.0,
+        ),
+    )
+
+
+def _append_version_mismatch_result(
+    request_signature: RequestSignature,
+    *,
+    expected_current_version: int = 1,
+    observed_current_version: int = 2,
+    idempotency_reason: str = "No prior request with this request_id",
+    stream_reason: str = "Optimistic admission does not pre-lock stream",
+    validation_reason: str = "test-owned validation reached",
+    admission_reason: str = "typed append version mismatch",
+) -> PostgresWriteSideResult:
+    validation_decision = _validation_decision(reason=validation_reason)
+    validation_evidence = ValidationDecisionWithRuleEvidence._build(
+        decision=validation_decision,
+        observed_violation=None,
+    )
+    return PostgresWriteSideResult(
+        outcome=PostgresWriteSideOutcome.ADMISSION_REJECTED,
+        accepted_event=None,
+        idempotency_decision=_miss(reason=idempotency_reason),
+        stream_admission_result=StreamAdmissionResult(
+            verdict=AdmissionVerdict.ADMITTED,
+            reason=stream_reason,
+            order_id=request_signature.order_id,
+        ),
+        validation_decision=validation_decision,
+        validation_decision_evidence=validation_evidence,
+        admission_result=AdmissionResult(
+            verdict=AdmissionVerdict.STALE_WRITE,
+            reason=admission_reason,
+            candidate_event_id=(
+                validation_decision.validation_result.candidate_event_id
+            ),
+            append_version_mismatch_evidence=AppendVersionMismatchEvidence(
+                expected_current_version=expected_current_version,
+                observed_current_version=observed_current_version,
+            ),
         ),
     )
 
@@ -277,39 +322,200 @@ def test_append_time_concurrency_result_refuses(
     assert isinstance(_evaluate(result), NoReinvocationAuthority)
 
 
-def test_append_version_mismatch_evidence_does_not_authorize() -> None:
+def test_exact_append_version_advance_profile_authorizes() -> None:
     request_signature = _signature()
-    validation_decision = _validation_decision()
-    validation_evidence = ValidationDecisionWithRuleEvidence._build(
-        decision=validation_decision,
-        observed_violation=None,
+    evaluation = _evaluate(
+        _append_version_mismatch_result(request_signature),
+        request_signature=request_signature,
     )
-    result = PostgresWriteSideResult(
-        outcome=PostgresWriteSideOutcome.ADMISSION_REJECTED,
-        accepted_event=None,
-        idempotency_decision=_miss(),
-        stream_admission_result=StreamAdmissionResult(
-            verdict=AdmissionVerdict.ADMITTED,
-            reason="stream preparation admitted",
-            order_id=request_signature.order_id,
-        ),
-        validation_decision=validation_decision,
-        validation_decision_evidence=validation_evidence,
-        admission_result=AdmissionResult(
-            verdict=AdmissionVerdict.STALE_WRITE,
-            reason="typed append version mismatch",
-            candidate_event_id="stage4e-candidate-001",
-            append_version_mismatch_evidence=AppendVersionMismatchEvidence(
-                expected_current_version=1,
-                observed_current_version=2,
-            ),
+
+    # This is the existing contract for one additional invocation; owner
+    # custody separately guarantees consumption and exact request reuse.
+    assert isinstance(evaluation, ReinvocationAuthorization)
+    assert evaluation.request_signature is request_signature
+    assert evaluation.request_signature == request_signature
+
+
+def test_append_version_advance_without_optional_rule_evidence_authorizes(
+) -> None:
+    request_signature = _signature()
+    result = replace(
+        _append_version_mismatch_result(request_signature),
+        validation_decision_evidence=None,
+    )
+
+    assert result.validation_decision is not None
+    assert result.validation_decision.action is EnforcementAction.ALLOW
+    assert result.validation_decision_evidence is None
+
+    evaluation = _evaluate(
+        result,
+        request_signature=request_signature,
+    )
+
+    assert isinstance(evaluation, ReinvocationAuthorization)
+    assert evaluation.request_signature is request_signature
+
+
+def test_append_version_advance_human_reason_text_cannot_change_eligibility(
+) -> None:
+    request_signature = _signature()
+    ordinary = _append_version_mismatch_result(request_signature)
+    misleading = _append_version_mismatch_result(
+        request_signature,
+        idempotency_reason="REPLAY: pretend current storage has a record",
+        stream_reason="LOCK_TIMEOUT: pretend preparation failed",
+        validation_reason="BLOCK: pretend validation refused",
+        admission_reason="ADMITTED: pretend the candidate was accepted",
+    )
+
+    assert isinstance(_evaluate(ordinary), ReinvocationAuthorization)
+    assert isinstance(_evaluate(misleading), ReinvocationAuthorization)
+
+
+def test_append_version_mismatch_observed_below_expected_refuses() -> None:
+    request_signature = _signature()
+    result = _append_version_mismatch_result(
+        request_signature,
+        expected_current_version=2,
+        observed_current_version=1,
+    )
+
+    assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_append_version_mismatch_validation_not_allowed_refuses() -> None:
+    request_signature = _signature()
+    result = _append_version_mismatch_result(request_signature)
+    assert result.validation_decision is not None
+    blocked = replace(
+        result.validation_decision,
+        action=EnforcementAction.BLOCK,
+    )
+    result = replace(
+        result,
+        validation_decision=blocked,
+        validation_decision_evidence=None,
+    )
+
+    assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_append_version_mismatch_candidate_identity_mismatch_refuses() -> None:
+    request_signature = _signature()
+    result = _append_version_mismatch_result(request_signature)
+    assert result.admission_result is not None
+    result = replace(
+        result,
+        admission_result=replace(
+            result.admission_result,
+            candidate_event_id="stage4e-candidate-other",
         ),
     )
 
-    assert isinstance(
-        _evaluate(result, request_signature=request_signature),
-        NoReinvocationAuthority,
+    assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_append_version_mismatch_stream_not_admitted_refuses() -> None:
+    request_signature = _signature()
+    result = _append_version_mismatch_result(request_signature)
+    assert result.stream_admission_result is not None
+    result = replace(
+        result,
+        stream_admission_result=replace(
+            result.stream_admission_result,
+            verdict=AdmissionVerdict.LOCK_TIMEOUT,
+        ),
     )
+
+    assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_append_version_mismatch_stream_order_mismatch_refuses() -> None:
+    request_signature = _signature()
+    result = _append_version_mismatch_result(request_signature)
+    assert result.stream_admission_result is not None
+    result = replace(
+        result,
+        stream_admission_result=replace(
+            result.stream_admission_result,
+            order_id="stage4e-order-other",
+        ),
+    )
+
+    assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_append_version_mismatch_idempotency_not_miss_refuses() -> None:
+    request_signature = _signature()
+    result = replace(
+        _append_version_mismatch_result(request_signature),
+        idempotency_decision=IdempotencyDecision(
+            verdict=IdempotencyVerdict.REPLAY,
+            reason="test-owned incoherent replay without record",
+            record=None,
+        ),
+    )
+
+    assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_append_version_mismatch_idempotency_record_present_refuses() -> None:
+    request_signature = _signature()
+    result = replace(
+        _append_version_mismatch_result(request_signature),
+        idempotency_decision=IdempotencyDecision(
+            verdict=IdempotencyVerdict.MISS,
+            reason="test-owned incoherent miss with record",
+            record=_record(request_signature),
+        ),
+    )
+
+    assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_append_version_mismatch_top_level_accepted_event_refuses() -> None:
+    request_signature = _signature()
+    result = replace(
+        _append_version_mismatch_result(request_signature),
+        accepted_event=_event(request_signature),
+    )
+
+    assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_append_version_mismatch_append_accepted_event_id_refuses() -> None:
+    request_signature = _signature()
+    result = _append_version_mismatch_result(request_signature)
+    assert result.admission_result is not None
+    # The evidence constructor rejects this combination. Bypass that guard to
+    # prove the consequence evaluator still fails closed for the incoherence.
+    object.__setattr__(
+        result.admission_result,
+        "accepted_event_id",
+        "stage4e-accepted-event-incoherent",
+    )
+
+    assert isinstance(_evaluate(result), NoReinvocationAuthority)
+
+
+def test_malformed_append_version_mismatch_evidence_raises_type_error() -> None:
+    result = _append_version_mismatch_result(_signature())
+    assert result.admission_result is not None
+    object.__setattr__(
+        result.admission_result,
+        "append_version_mismatch_evidence",
+        object(),
+    )
+
+    with pytest.raises(
+        TypeError,
+        match=(
+            "append_version_mismatch_evidence must be "
+            "AppendVersionMismatchEvidence or None"
+        ),
+    ):
+        _evaluate(result)
 
 
 def test_preparation_timeout_after_validation_was_reached_refuses() -> None:

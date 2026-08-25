@@ -11,6 +11,40 @@ uses its schedules to assert the production typed evidence for the targeted
 physical source, but neither the experiment nor PR4 changes the existing
 production authorization profile.
 
+## PR5 Promotion Addendum
+
+The original question, schedules, result, conclusion, and experiment-only
+non-claims below remain the historical PR4 characterization. Stage 4E PR5
+separately promotes the existing evidence into one additional source-specific
+production issuance profile; it does not reinterpret generic `STALE_WRITE`.
+
+For both unchanged schedules, the integration test now passes the real A1
+`PostgresWriteSideResult` and the same complete `RequestSignature` to the
+production Stage 4E evaluator. The coherent forward-version shapes—`0 → 1` in
+schedule A and `1 → 2` in schedule B—produce
+`ReinvocationAuthorization`, retaining the exact supplied signature. Existing
+fresh-invocation behavior then remains unchanged:
+
+```text
+schedule A: authority → fresh invocation → REPLAY
+schedule B: authority → fresh invocation → current domain rejection
+```
+
+The promoted theorem is narrow: a completed trusted write-side result showing
+a coherent append version advance, with no accepted A1 effect, may issue
+authority for exactly one fresh invocation of the invocation owner's retained
+complete `RequestSignature`. The result does not independently prove all four
+request fields belong to A1; same-request identity comes from the unchanged
+invocation owner's custody. PR5 relies on that custody together with the exact
+trusted result, source-specific typed evidence, structural coherence, and known
+write-side control flow.
+
+Authority permits one re-entry through the full normal write-side boundary so
+current authoritative state can be observed. It predicts neither replay nor
+success, and it does not authorize candidate reuse, validation reuse, append
+retry, domain acceptance, or accepted-history mutation. Stage 4C remains
+unchanged and independently owns the current A1 response.
+
 ## Physical Model
 
 Both schedules use `PostgresTransactionalWriteSide` configured with

@@ -1,13 +1,14 @@
 """Characterize fresh invocation after real PostgreSQL append STALE_WRITE.
 
-The schedules use the production write side, validation runtime, optimistic
-admission gate, event store, and idempotency store. The only scheduling seam is
-an invocation-local wrapper that pauses immediately before delegating to the
-real optimistic append.
+The schedules use the production write side, validation runtime, PostgreSQL
+admission gates, event store, and idempotency store. The only scheduling seams
+are invocation-local wrappers that pause immediately before delegating to a
+real append.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from queue import Empty, Queue
@@ -16,6 +17,12 @@ from threading import Event, Thread
 import pytest
 from psycopg.pq import TransactionStatus
 
+from src.compass.runtime.postgres_write_side_reinvocation_authority import (
+    evaluate_postgres_write_side_reinvocation_authority,
+)
+from src.compass.runtime.reinvocation_authority import (
+    ReinvocationAuthorization,
+)
 from src.compass.transition.runtime import (
     ValidationDecisionWithRuleEvidence,
     ValidationDispatcher,
@@ -40,6 +47,7 @@ from src.pipeline.transactional.admission import (
 )
 from src.pipeline.transactional.postgres_admission import (
     PostgresOptimisticAdmissionGate,
+    PostgresPessimisticAdmissionGate,
 )
 from src.pipeline.transactional.postgres_write_side import (
     PostgresTransactionalWriteSide,
@@ -177,6 +185,71 @@ class _ObservedOptimisticGateFactory:
         )
 
 
+class _BeforeAppendPessimisticGate:
+    """Run one mixed-topology action before the real pessimistic append."""
+
+    def __init__(
+        self,
+        delegate: PostgresPessimisticAdmissionGate,
+        *,
+        before_append: Callable[[], None],
+        preparation_results: list[StreamAdmissionResult],
+        append_candidates: list[OrderEvent],
+        expected_versions: list[int],
+    ) -> None:
+        self._delegate = delegate
+        self._before_append = before_append
+        self._preparation_results = preparation_results
+        self._append_candidates = append_candidates
+        self._expected_versions = expected_versions
+        self._append_called = False
+
+    def prepare_stream(self, order_id: str) -> StreamAdmissionResult:
+        result = self._delegate.prepare_stream(order_id)
+        self._preparation_results.append(result)
+        return result
+
+    def append_if_admitted(
+        self,
+        candidate_event: OrderEvent,
+        expected_current_version: int,
+    ) -> AdmissionResult:
+        if self._append_called:
+            raise AssertionError("mixed-topology append checkpoint repeated")
+        self._append_called = True
+        self._append_candidates.append(candidate_event)
+        self._expected_versions.append(expected_current_version)
+        self._before_append()
+        return self._delegate.append_if_admitted(
+            candidate_event,
+            expected_current_version,
+        )
+
+
+class _ObservedPessimisticGateFactory:
+    """Wrap the real pessimistic gate at its append-entry boundary."""
+
+    def __init__(self, *, before_append: Callable[[], None]) -> None:
+        self._before_append = before_append
+        self.call_count = 0
+        self.preparation_results: list[StreamAdmissionResult] = []
+        self.append_candidates: list[OrderEvent] = []
+        self.expected_versions: list[int] = []
+
+    def __call__(self, uow) -> ConcurrencyGate:
+        self.call_count += 1
+        return _BeforeAppendPessimisticGate(
+            PostgresPessimisticAdmissionGate(
+                connection=uow.connection,
+                event_store=uow.event_store,
+            ),
+            before_append=self._before_append,
+            preparation_results=self.preparation_results,
+            append_candidates=self.append_candidates,
+            expected_versions=self.expected_versions,
+        )
+
+
 def _writer(
     connection,
     validation_runtime: _RecordingValidationRuntime,
@@ -256,7 +329,9 @@ def _assert_a1_append_stale(
     *,
     result: PostgresWriteSideResult,
     validation_runtime: _RecordingValidationRuntime,
-    gate_factory: _ObservedOptimisticGateFactory,
+    gate_factory: (
+        _ObservedOptimisticGateFactory | _ObservedPessimisticGateFactory
+    ),
     expected_store_version: int,
     expected_old_version: int,
 ) -> OrderEvent:
@@ -383,6 +458,13 @@ def test_same_request_winner_then_fresh_invocation_observes_real_replay(
             expected_store_version=1,
             expected_old_version=0,
         )
+        authority = evaluate_postgres_write_side_reinvocation_authority(
+            request_signature=signature,
+            result=a1_result,
+        )
+        assert isinstance(authority, ReinvocationAuthorization)
+        assert authority.request_signature is signature
+        assert authority.request_signature == signature
 
         durable_history = PostgresEventStore(db_connection).load(
             signature.order_id
@@ -549,6 +631,13 @@ def test_competing_pay_invalidates_work_and_fresh_invocation_reloads(
             expected_store_version=2,
             expected_old_version=1,
         )
+        authority = evaluate_postgres_write_side_reinvocation_authority(
+            request_signature=a_signature,
+            result=a1_result,
+        )
+        assert isinstance(authority, ReinvocationAuthorization)
+        assert authority.request_signature is a_signature
+        assert authority.request_signature == a_signature
 
         authoritative_history = PostgresEventStore(db_connection).load(
             order_id
@@ -608,5 +697,127 @@ def test_competing_pay_invalidates_work_and_fresh_invocation_reloads(
             a1_thread.join(timeout=WAIT_SECONDS)
         a1_connection.rollback()
         a1_connection.close()
+        b_connection.rollback()
+        b_connection.close()
+
+
+def test_mixed_pessimistic_and_optimistic_version_advance_authorizes(
+    db_connection,
+    db_connection_factory,
+) -> None:
+    """Apply PR5 authority to real mixed-topology append evidence."""
+
+    order_id = "stage4e-mixed-topology-order"
+    seed_signature = RequestSignature(
+        request_id="stage4e-mixed-topology-seed",
+        command_type=CommandType.CREATE,
+        order_id=order_id,
+        amount=AMOUNT,
+    )
+    a_signature = RequestSignature(
+        request_id="stage4e-mixed-topology-pessimistic-pay",
+        command_type=CommandType.PAY,
+        order_id=order_id,
+        amount=AMOUNT,
+    )
+    b_signature = RequestSignature(
+        request_id="stage4e-mixed-topology-optimistic-pay",
+        command_type=CommandType.PAY,
+        order_id=order_id,
+        amount=AMOUNT,
+    )
+
+    seed_result = _invoke_signature(
+        _writer(db_connection, _RecordingValidationRuntime()),
+        seed_signature,
+    )
+    assert seed_result.outcome is PostgresWriteSideOutcome.ACCEPTED
+    assert seed_result.accepted_event is not None
+    assert seed_result.accepted_event.sequence == 1
+    assert db_connection.info.transaction_status is TransactionStatus.IDLE
+
+    a_connection = db_connection_factory()
+    b_connection = db_connection_factory()
+    a_validation = _RecordingValidationRuntime()
+    b_validation = _RecordingValidationRuntime()
+    b_writer = _writer(b_connection, b_validation)
+    b_results: list[PostgresWriteSideResult] = []
+
+    def commit_optimistically_before_a_append() -> None:
+        # This is not the normal failure mode for cooperating IN_TRANSACTION
+        # pessimistic writers: participants honoring the same advisory-lock
+        # protocol serialize at prepare_stream(), where contention normally
+        # appears as LOCK_TIMEOUT. B uses PRE_TRANSACTION plus optimistic
+        # admission and does not honor A's advisory lock. Advisory locks
+        # serialize cooperating participants, not arbitrary writers that ignore
+        # the protocol, so B can commit before A enters its real append.
+        assert a_connection.info.transaction_status is TransactionStatus.INTRANS
+        b_results.append(_invoke_signature(b_writer, b_signature))
+
+    a_gate_factory = _ObservedPessimisticGateFactory(
+        before_append=commit_optimistically_before_a_append,
+    )
+    a_writer = PostgresTransactionalWriteSide(
+        connection=a_connection,
+        validation_runtime=a_validation,
+        admission_gate_factory=a_gate_factory,
+        config=PostgresWriteSideConfig(
+            validation_placement=ValidationPlacement.IN_TRANSACTION,
+        ),
+    )
+
+    try:
+        a_result = _invoke_signature(a_writer, a_signature)
+
+        assert len(a_gate_factory.preparation_results) == 1
+        preparation = a_gate_factory.preparation_results[0]
+        assert preparation.verdict is AdmissionVerdict.ADMITTED
+        assert preparation.order_id == order_id
+        assert len(b_results) == 1
+        b_result = b_results[0]
+        assert b_result.outcome is PostgresWriteSideOutcome.ACCEPTED
+        assert b_result.accepted_event is not None
+        assert b_result.accepted_event.sequence == 2
+        assert a_connection.info.backend_pid != b_connection.info.backend_pid
+        assert b_connection.info.transaction_status is TransactionStatus.IDLE
+
+        a_candidate = _assert_a1_append_stale(
+            result=a_result,
+            validation_runtime=a_validation,
+            gate_factory=a_gate_factory,
+            expected_store_version=2,
+            expected_old_version=1,
+        )
+        assert a_connection.info.transaction_status is TransactionStatus.IDLE
+
+        authoritative_history = PostgresEventStore(db_connection).load(order_id)
+        assert authoritative_history == [
+            seed_result.accepted_event,
+            b_result.accepted_event,
+        ]
+        assert all(
+            event.event_id != a_candidate.event_id
+            for event in authoritative_history
+        )
+        assert (
+            PostgresIdempotencyStore(db_connection)
+            .check(a_signature)
+            .verdict
+            is IdempotencyVerdict.MISS
+        )
+        assert count_rows(db_connection, "order_events") == 2
+        assert count_rows(db_connection, "idempotency_records") == 2
+        _assert_observer_idle(db_connection)
+
+        authority = evaluate_postgres_write_side_reinvocation_authority(
+            request_signature=a_signature,
+            result=a_result,
+        )
+        assert isinstance(authority, ReinvocationAuthorization)
+        assert authority.request_signature is a_signature
+        assert authority.request_signature == a_signature
+    finally:
+        a_connection.rollback()
+        a_connection.close()
         b_connection.rollback()
         b_connection.close()
