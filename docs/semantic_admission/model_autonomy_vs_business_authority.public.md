@@ -625,9 +625,13 @@ candidate output must not become system truth by default
 
 Stage 4B now provides the `DecisionReceipt` contract, mapping, strict
 serialization, and explicit persistence foundation for durable governance
-evidence. Current Compass does not automatically materialize every agent action
-as a receipt, and it does not yet implement the policy, strategy, retry, or
-external action layers described conceptually in this case study.
+evidence. The completed Stage 4 baseline also contains bounded Stage 4C
+current-response authority and Stage 4E same-request re-invocation authority.
+Stage 4D retains dynamic `HOW`-selection responsibility, but its implementation
+is deferred. Current Compass still does not automatically materialize every
+agent action as a receipt or implement the general action policy, universal
+strategy selection, autonomous workflow recovery, or Stage 5 external-action
+safety described conceptually in this case study.
 
 For a café, the candidate may be a purchase, staffing decision, schedule change, or supplier commitment.
 

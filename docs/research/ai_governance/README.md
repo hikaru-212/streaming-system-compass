@@ -10,6 +10,9 @@ They preserve ideas that may be useful for future system design, especially arou
 
 * source-grounded generation
 * semantic admission
+* delegation of authority-resolved versus judgment-required questions
+* probabilistic influence over evidence, tools, preconditions, and workflow paths
+* end-to-end determinism under probabilistic composition
 * AI-generated summaries
 * runtime verification
 * agentic state mutation
@@ -28,6 +31,7 @@ These notes intentionally stay at the level of conceptual research rather than f
 
 ## Notes
 
+* [Probabilistic Agency Inside Deterministic Business Workflows](./probabilistic_agency_inside_deterministic_business_workflows.md) — public research / problem-boundary note about Delegation, Influence, and Semantic Admission without defining one universal runtime protocol
 * [From Generated Language to Source-Grounded Semantic Admission](./from_generated_language_to_source_grounded_semantic_admission.md)
 * [Admitted Overviews, Cache Freshness, and Event-Driven Invalidation](./admitted_overview_cache_and_event_driven_invalidation.md)
 * [Multi-pass Suspicion Reasoning](./multi_pass_suspicion_reasoning.md)
@@ -41,12 +45,24 @@ The research notes in this folder explore adjacent governance problems where the
 ```text
 generated output
 → candidate semantic artifact
-→ source-grounded or review-based validation
-→ semantic outcome
-→ admit / retry / block / review
+→ source-grounded or review-based evaluation
+→ semantic evidence / governed result
+→ consequence-specific authority or human judgment where applicable
+→ controlled consequence
 ```
 
-The shared idea is that generated artifacts should not automatically become trusted system truth.
+The shared idea is that generated artifacts should not automatically become
+trusted system truth, and that semantic evidence or interpretation is not
+itself authority or execution. This is a conceptual relationship, not a claim
+that every path must traverse every step.
+
+```text
+semantic evidence / interpretation
+!=
+authority
+!=
+execution
+```
 
 However, these research notes are intentionally separate from the main implementation roadmap. They exist to preserve architecture reasoning, not to expand the current project scope.
 

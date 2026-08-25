@@ -32,6 +32,7 @@ It now also serves as the reference frame for an executable baseline covering:
 - [Stage 4B.5 Order Correctness Contract V0](implementation_notes/stage_4b_5/README.md) as a completed 18-rule contract with exactly six FullProof `TRANSITION_TRUTH` rules currently covered by typed runtime producers
 - [Stage 4C Runtime Decision Authority](implementation_notes/stage_4c/README.md) as a completed generic immutable contract and first Layer-1 PostgreSQL / Order write-side profile, with no automatic caller wiring
 - [Stage 4E Same-Request Re-Invocation Authority](implementation_notes/stage_4e/README.md) as complete and closed bounded authority for at most one fresh public-writer invocation under exactly two reviewed evidence profiles
+- [ADR 0029 — Stage 4C+ Exists at the Automation Boundary](adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md) as the accepted completed-Stage-4 synthesis separating evidence, proposals, consequence authority, and execution
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -61,6 +62,7 @@ The repository currently has an implemented baseline for:
 - Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral; ADR 0021 now classifies projection snapshots as optional for the current Order workload
 - Stage 4A `SemanticOutcome` and Stage 4B `DecisionReceipt` mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
 - Stage 4C generic immutable `RuntimeDecision` and the first reviewed Layer-1 PostgreSQL / Order write-side evaluator
+- Stage 4E bounded same-request re-invocation authority under exactly two reviewed completed-invocation evidence profiles
 
 The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **Stage 3.5C — Durable Read-Side Baseline**, **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**, and **Stage 3.5E — Durable History and Permission Hardening**.
 
@@ -72,13 +74,21 @@ Stage 4B.2 is complete and closed. Its final completion authority is the
 Stage 4B.5 is complete and closed. Its implementation index and closeout status
 are in [Stage 4B.5 — Order Correctness Contract v0](implementation_notes/stage_4b_5/).
 
-The current Stage 4 foundation position is:
+The bounded Stage 4 baseline is complete. Its current responsibility position
+is:
 
 - Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
 - Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 - Stage 4C — Runtime Decision Authority — complete / closed
 - Stage 4D — Strategy Selection Authority — responsibility retained; implementation deferred under ADR 0028
 - Stage 4E — Same-Request Re-Invocation Authority — complete / closed through PR6
+
+[ADR 0029](adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md)
+records the resulting automation boundary: Stage 4B and earlier may stop at
+evidence and understanding when humans retain downstream authority, while
+machine-controlled consequences require explicit authority separate from
+proposals and execution. This is not one mandatory Stage 4C → Stage 4D → Stage
+4E pipeline.
 
 Stage 4B.3 PR1 and PR2 remain historical/reference investigation. The canonical
 [ADR 0026 closeout](adr/0026_projection_trust_continuation_is_not_currently_justified.md)
@@ -183,6 +193,12 @@ If you want the shortest entry point into the AI governance framing of Compass, 
 
 If you want exploratory AI governance research notes that are not implementation commitments, see [Research Notes](research/README.md).
 
+For the current public agent-era problem boundaries, read
+[Probabilistic Agency Inside Deterministic Business Workflows](research/ai_governance/probabilistic_agency_inside_deterministic_business_workflows.md)
+for Delegation and Influence, then
+[Consensus Is Not Semantic Authority](semantic_admission/consensus_is_not_semantic_authority_rate_limiter.md)
+for the collective-selection versus Semantic Admission case.
+
 If you want non-authoritative records of how repository assumptions, missing
 premises, or responsibility boundaries were derived, see
 [Reasoning Notes](reasoning_notes/README.md).
@@ -220,11 +236,12 @@ Recommended reading order for the core system:
 20. [Stage 4C Closeout](implementation_notes/stage_4c/stage_4c_closeout.md)
 21. [Stage 4E — Same-Request Re-Invocation Authority](implementation_notes/stage_4e/README.md)
 22. [Stage 4E Closeout](implementation_notes/stage_4e/stage_4e_closeout.md)
-23. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
-24. [Boundary Notes](boundary_notes/README.md)
-25. [Development Setup](development/README.md)
-26. [Reasoning Notes](reasoning_notes/README.md)
-27. [Postmortems](postmortems/README.md)
+23. [ADR 0029 — Stage 4C+ Exists at the Automation Boundary](adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md)
+24. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
+25. [Boundary Notes](boundary_notes/README.md)
+26. [Development Setup](development/README.md)
+27. [Reasoning Notes](reasoning_notes/README.md)
+28. [Postmortems](postmortems/README.md)
 
 This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, stage / PR implementation details, module-boundary notes, local development setup, and finally postmortems.
 
@@ -283,8 +300,8 @@ docs/
 ├── development/            # Local development setup and environment notes
 ├── domain/                 # Versioned domain specifications and domain decision notes
 ├── roadmap/                # Implementation sequencing and evolution plans
-├── semantic_admission/     # AI governance entry point for candidate actions and accepted facts
-├── research/               # Exploratory research notes and architecture observations
+├── semantic_admission/     # Candidate/admission, authority, and collective-selection cases
+├── research/               # Exploratory AI-governance and architecture problem boundaries
 ├── reasoning_notes/        # Non-authoritative derivation and inference records
 ├── test_specs/             # Non-authoritative proof-obligation candidates
 └── postmortems/            # Concrete engineering episodes and preventive discoveries
@@ -453,6 +470,7 @@ Use these documents when you want to understand:
 - why agent-generated actions need admission before mutation
 - how action paths can be semantically unsafe even when the final state looks correct
 - why technical concurrency control is not enough for semantic conflicts
+- why collective selection does not establish semantic authority
 - how bad accepted state can become future context for downstream systems and agents
 
 These documents provide the shortest path into the AI governance framing behind Compass.
@@ -468,6 +486,8 @@ Exploratory research notes and architecture observations.
 Use these documents when you want to understand:
 
 - external AI governance cases that may contain reusable architecture lessons
+- delegation and influence boundaries for probabilistic agency
+- end-to-end determinism under probabilistic workflow composition
 - source-grounded generation and semantic admission ideas
 - future runtime governance possibilities
 - cost, latency, cache, and verification trade-offs

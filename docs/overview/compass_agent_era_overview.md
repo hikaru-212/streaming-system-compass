@@ -8,6 +8,11 @@
 
 ## Current Implementation Orientation
 
+The bounded Stage 4 baseline is complete. Stage 4A–4B.5 supplies the semantic
+and evidence foundation; Stage 4C and Stage 4E are complete in their specific
+authority scopes; Stage 4D retains dynamic `HOW`-selection responsibility with
+implementation deferred.
+
 - Stage 4A is complete: bounded technical runtime evidence maps to typed
   `SemanticOutcome`.
 - Stage 4B is complete: `DecisionReceipt` contracts and mappings, tri-state
@@ -43,10 +48,13 @@ See the [Stage 4B closeout](../implementation_notes/stage_4b/stage_4b_closeout.m
 for the completed receipt baseline and the
 [Stage 4B.1 closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
 for the completed trace boundary. See
-[ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
+[ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md),
 the [Stage 4C implementation notes](../implementation_notes/stage_4c/), and the
 [Stage 4E closeout](../implementation_notes/stage_4e/stage_4e_closeout.md) for
-the current responsibility boundaries.
+the current responsibility boundaries. See
+[ADR 0029 — Stage 4C+ Exists at the Automation Boundary](../adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md)
+for why evidence and understanding remain distinct from machine consequence
+authority and execution.
 
 ## The Problem
 
@@ -68,6 +76,29 @@ But none of these facts proves:
 
 That is the gap Compass is designed to address.
 
+## Delegation and Influence Come Before Admission
+
+Not every candidate comes from AI, and Semantic Admission does not govern every
+AI decision. When probabilistic agency participates, two earlier questions may
+apply:
+
+```text
+Delegation Boundary
+→ Should AI participate in this decision at all?
+
+Influence Boundary
+→ What sources, evidence, tools, paths, preconditions,
+  or candidate construction may AI affect?
+
+resulting candidate
+→ Semantic Admission where the candidate seeks trusted status
+```
+
+These are separate public responsibility questions, not one implemented agent
+protocol. See
+[Probabilistic Agency Inside Deterministic Business Workflows](../research/ai_governance/probabilistic_agency_inside_deterministic_business_workflows.md)
+for the research boundary.
+
 ## Agent Output Is a Candidate, Not Authority
 
 A model response is not system truth.
@@ -76,7 +107,7 @@ A proposed tool call is not system truth.
 
 A generated event is not system truth.
 
-A multi-agent consensus is not system truth.
+A collectively selected result is not system truth.
 
 Each is only a **candidate action**: a proposal that may or may not deserve authority over durable state.
 
@@ -161,8 +192,9 @@ Compass instead recognizes that the same technical result may mean very differen
 - request identity conflicted;
 - operator review required.
 
-The target architecture separates live decision evidence from downstream
-responsibilities. The model below is not the current end-to-end implementation:
+The completed architecture separates live decision evidence from downstream
+responsibilities. The model below is a non-linear responsibility map, not one
+mandatory end-to-end pipeline:
 
 ```text
 live SemanticOutcome
@@ -170,14 +202,31 @@ live SemanticOutcome
 → Runtime Decision Authority
 
 authorized current response
-→ Strategy Selection Authority
-→ execution
+→ caller-owned handling or controlled execution where applicable
+
+if an already-authorized operation has multiple eligible HOW paths
+→ Stage 4D Strategy Selection Authority
+→ controlled execution
 
 another attempt considered
 → Stage 4E Same-Request Re-Invocation Authority
+→ authorized one-shot owner
 → at most one fresh invocation with the same complete RequestSignature
-→ Stage 4D Strategy Selection Authority only if multiple eligible paths exist
-→ execution
+→ caller-owned result handling
+```
+
+```text
+evidence
+!=
+proposal
+!=
+authority
+!=
+execution
+
+authorization
+!=
+execution
 ```
 
 The normal current-response path does not require Stage 4E authority. Durable
@@ -248,7 +297,7 @@ Evaluation improves the agent over time.
 
 Admission protects the system at the moment where a candidate is about to become accepted truth.
 
-## Multi-Agent Consensus Is Not Truth
+## Collective Selection Is Not Semantic Authority
 
 Multiple agents can agree and still be wrong.
 
@@ -256,13 +305,24 @@ Agreement may only mean that several probabilistic systems shared the same flawe
 
 A workflow can also launder authority: one agent without direct mutation permission may persuade another authorized agent to perform the action.
 
-Compass does not treat consensus, orchestration, or delegation as proof of truth.
+Compass does not treat collective selection, orchestration, or delegation as
+proof of truth. This is not a claim that multi-agent voting is equivalent to
+classical distributed consensus or that consensus algorithms are intended to
+establish business truth.
 
-Every state-changing action must still cross the relevant admission boundary.
+A state-changing candidate governed by Semantic Admission must still cross the
+relevant admission boundary.
+
+The distributed rate-limiter case in
+[Consensus Is Not Semantic Authority](../semantic_admission/consensus_is_not_semantic_authority_rate_limiter.md)
+shows why operationally reasonable agreement still produces only a candidate
+for independent Semantic Admission.
 
 ## The Compass Position
 
-Compass is a runtime semantic admission protocol for agentic state mutation.
+Compass is a correctness and governance reference system with an implemented
+write-side Semantic Admission specialization and bounded Stage 4 authority
+foundations.
 
 It preserves agent autonomy in proposing, reasoning, planning, and coordinating, while keeping authority over durable reality behind explicit, reviewable, and enforceable boundaries.
 
@@ -276,7 +336,7 @@ It separates:
 - strategy from action;
 - derived state from accepted history;
 - replay from retry permission;
-- consensus from truth.
+- collective selection from semantic authority.
 
 Compass does not assume agents are malicious.
 

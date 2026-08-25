@@ -55,8 +55,17 @@ SemanticOutcome and DecisionReceipt
   neither is Runtime Decision Authority
 
 Stage 4C Runtime Decision Authority
-→ separate evolving responsibility;
+→ completed / closed bounded current-response authority;
   this note does not implement or replace it
+
+Stage 4D Strategy Selection Authority
+→ responsibility retained;
+  implementation deferred under ADR 0028
+
+Stage 4E Same-Request Re-Invocation Authority
+→ completed / closed bounded authority for at most one fresh invocation
+  under the reviewed evidence profiles;
+  not generic retry governance
 
 AI-mediated source reconstruction and claim admission
 → emerging conceptual and research direction;
@@ -69,17 +78,33 @@ Production claim-admission runtime
 Document-truth reconstruction is an experimental research direction and is not
 part of the current `main` implementation baseline.
 
-The implemented Stage 4 responsibilities remain separate:
+The completed Stage 4 responsibilities remain separate and non-linear:
 
 ```text
 technical evidence
 → SemanticOutcome
+
+SemanticOutcome
 → optional selected DecisionReceipt evidence
-→ separate Runtime Decision Authority
-→ separate strategy selection
-→ separate retry / cross-attempt authorization when applicable
-→ separate execution
+
+applicable live evidence
+→ Stage 4C current-response authority
+
+eligible completed-invocation evidence
+→ Stage 4E same-request re-invocation authority
+
+Stage 4D
+→ HOW selection only when an already-authorized operation
+  has multiple eligible strategies
+
+authorization
+!=
+execution
 ```
+
+[ADR 0029](../adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md)
+owns the broader automation-boundary decision. This bridge does not turn the
+responsibilities into one mandatory runtime pipeline.
 
 `SemanticOutcome` is a typed semantic interpretation of technical evidence. It
 is not admission, authorization, policy, or an execution command.

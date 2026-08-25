@@ -30,6 +30,29 @@ The effect-side path is substantially grounded in implemented Compass behavior.
 The claim-side path remains primarily conceptual and research-oriented; this
 broader framing does not claim that production claim admission already exists.
 
+Not every candidate comes from AI, and Semantic Admission does not govern every
+AI decision. When probabilistic agency does participate, two earlier governance
+questions may apply before a candidate reaches admission:
+
+```text
+delegation
+→ should AI participate in this decision?
+
+influence
+→ what may AI affect, select, construct, route, or activate?
+
+candidate
+→ proposed action, event, claim, or other artifact
+
+semantic admission
+→ may the candidate receive trusted status appropriate to its type?
+```
+
+Delegation and Influence are adjacent upstream problem boundaries, not new
+names for Semantic Admission and not one implemented universal evaluator. See
+[Probabilistic Agency Inside Deterministic Business Workflows](../research/ai_governance/probabilistic_agency_inside_deterministic_business_workflows.md)
+for the research framing.
+
 ---
 
 ## Disclosure Scope
@@ -343,7 +366,9 @@ bad or stale claim
 
 Representative documents include:
 
-- [Consensus Is Not Semantic Authority](./consensus_is_not_semantic_authority.md)
+- [Consensus Is Not Semantic Authority](./consensus_is_not_semantic_authority_rate_limiter.md)
+  — uses a distributed rate-limiter remediation to show why legitimate
+  collective selection still produces only a candidate for admission
 - [Shared Context Is Not Shared Contract](./shared_context_is_not_shared_contract.md)
 - [When Bad State Becomes Future Context](./bad_state_as_future_context.md)
 - [Agent Pipelines as a Stochastic Process](./agent_pipelines_as_stochastic_process.md)
@@ -428,9 +453,9 @@ Start with:
    maturity.
 8. [semantic_concurrency.md](./semantic_concurrency.md)
    — state-evolution and temporal correctness after authoritative state changes.
-9. [Consensus Is Not Semantic Authority](./consensus_is_not_semantic_authority.md)
-   — shows why multi-agent agreement can select a candidate without granting it
-   effect or claim authority.
+9. [Consensus Is Not Semantic Authority](./consensus_is_not_semantic_authority_rate_limiter.md)
+   — shows why collective selection can produce a candidate without granting
+   it effect or claim authority.
 10. [bad_state_as_future_context.md](./bad_state_as_future_context.md)
 11. [Agent Pipelines as a Stochastic Process](./agent_pipelines_as_stochastic_process.md)
 12. [agent_action_as_hypothesis.md](./agent_action_as_hypothesis.md)
@@ -455,6 +480,9 @@ authority matrices, policy engines, schemas, or runtime commitments.
 - [Model Autonomy Is Not Business Authority](model_autonomy_vs_business_authority.public.md)
   — separates model-generated proposals, tool capability, institutional
   authority, progressive autonomy, and admitted business action.
+- [Consensus Is Not Semantic Authority](consensus_is_not_semantic_authority_rate_limiter.md)
+  — shows why distributed agents may make a reasonable collective operational
+  selection that still violates an authoritative business contract.
 
 ---
 
@@ -475,7 +503,9 @@ The glossary is grouped into five areas:
    Defines shared context, shared semantic contracts, semantic escalation, commit-time truth, intent drift, and workflow-level correctness.
 
 5. **CQRS for AI Governance & Cross-Cutting Principles**
-   Defines conceptual vocabulary supporting effect-side versus claim-side governance, collective selection, and cross-boundary principles without creating runtime contracts.
+   Defines conceptual vocabulary supporting effect-side versus claim-side
+   governance, Delegation and Influence boundaries, collective selection, and
+   cross-boundary principles without creating runtime contracts.
 
 ---
 
@@ -509,6 +539,15 @@ candidate output / action
 This path is a concrete specialization within the broader Semantic Admission
 taxonomy, not the whole taxonomy.
 
+The completed Stage 4 architecture adds separately owned current-response and
+bounded same-request re-invocation authority without turning Semantic Admission
+into one mandatory Stage 4 pipeline. For autonomous downstream consequences,
+[ADR 0029 — Stage 4C+ Exists at the Automation Boundary](../adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md)
+explains when later consequence-specific authority must become explicit.
+Semantic Admission may itself govern a state-changing candidate's transition
+into authoritative state; admission remains distinct from execution, and later
+consequence-specific authority applies only where the consequence requires it.
+
 The current maturity boundary is:
 
 ```text
@@ -539,7 +578,10 @@ See:
 
 - [`../research/ai_governance/`](../research/ai_governance/)
 
-The research notes include adjacent ideas such as source-grounded generation, overview cache admission, and multi-pass answer review.
+The research notes include adjacent ideas such as
+[probabilistic agency inside deterministic workflows](../research/ai_governance/probabilistic_agency_inside_deterministic_business_workflows.md),
+source-grounded generation, overview cache admission, and multi-pass answer
+review.
 
 Those notes are related to semantic admission, but they are intentionally separated from this public conceptual entry point.
 

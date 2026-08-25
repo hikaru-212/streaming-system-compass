@@ -11,9 +11,13 @@ Public concept note.
 This note defines a semantic boundary for agentic commerce workflows. It is not an implementation specification.
 
 > **Current relationship:** The commerce workflow below is illustrative, not a
-> currently implemented Compass workflow. Stage 4B provides a durable
-> `DecisionReceipt` foundation, but automatic receipt materialization,
-> complete agent-action admission, and runtime policy remain future work.
+> currently implemented Compass workflow. Stage 4B provides the durable
+> `DecisionReceipt` foundation; bounded Stage 4C current-response authority and
+> Stage 4E same-request re-invocation authority are complete and closed. Stage
+> 4D retains dynamic `HOW`-selection responsibility with implementation
+> deferred. Automatic receipt materialization, general agent-action policy,
+> autonomous workflow recovery, and Stage 5 external-action safety remain
+> unimplemented.
 
 ---
 
