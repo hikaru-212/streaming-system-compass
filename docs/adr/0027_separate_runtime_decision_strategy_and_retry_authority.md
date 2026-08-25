@@ -21,14 +21,17 @@ Subsequent implementation and boundary status:
   and first Layer-1 PostgreSQL / Order profile.
 - [ADR 0028](0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
   retains Stage 4D responsibility while deferring dynamic selection.
-- [Stage 4E PR0](../implementation_notes/stage_4e/README.md) narrows the first
-  formal profile to one additional invocation of the same complete
-  `RequestSignature`, initially from preparation `LOCK_TIMEOUT` evidence.
+- [Stage 4E](../implementation_notes/stage_4e/README.md) is complete and closed
+  as bounded same-request re-invocation authority. Its exactly two reviewed
+  production-positive profiles are early preparation `LOCK_TIMEOUT` and
+  coherent append version advance. The one-shot owner retains the complete
+  `RequestSignature` and spends issued authority before fresh invocation entry.
 
 The broader retry-classification, timing, budget, candidate, intent, and
 lineage examples below preserve the responsibility-separation context accepted
-by this ADR. They are not accepted fields or responsibilities of the first
-formal Stage 4E production slice.
+by this ADR. They are not accepted fields or responsibilities of the closed
+Stage 4E production boundary. See the
+[Stage 4E closeout](../implementation_notes/stage_4e/stage_4e_closeout.md).
 
 ---
 
