@@ -4,11 +4,23 @@
 
 ## Status
 
+```text
+Stage 4E
+= SAME-REQUEST RE-INVOCATION AUTHORITY
+= COMPLETE / CLOSED
+```
+
 PR0 architecture boundary established. PR1 contract and evaluator implemented.
-PR2 invocation owner and one-shot lifecycle implemented.
-PR3 live-owner Stage 4C current-response delivery implemented.
-PR4 append version-mismatch evidence refinement implemented.
-PR5 narrow append version-advance authority profile implemented.
+PR2 invocation owner and one-shot lifecycle implemented. Experiment 1
+characterized successive fresh-invocation information value. PR3 live-owner
+Stage 4C current-response delivery implemented. Experiment 2 characterized
+fresh observation after append version mismatch. PR4 append version-mismatch
+evidence refinement implemented. PR5 narrow append version-advance authority
+profile implemented. PR6 records documentation closeout and responsibility
+freeze.
+
+The final completion authority is the
+[Stage 4E closeout](stage_4e_closeout.md).
 
 PR1 implements the immutable authorization/no-authority contracts and first
 source-specific evaluator. PR2 implements live PostgreSQL A1 custody, explicit
@@ -33,11 +45,9 @@ Stage 4D
 
 Stage 4E
 = Same-Request Re-Invocation Authority
-= PR1 contract and first evaluator implemented
-= PR2 invocation owner and one-shot consumption implemented
-= PR3 current-response delivery capability implemented in the same owner
-= PR4 source-specific append version-mismatch evidence implemented
-= PR5 coherent append version advance added as a second positive profile
+= COMPLETE / CLOSED
+= two reviewed source-specific positive profiles
+= one owner-retained one-shot additional-invocation lifecycle
 ```
 
 ## First Formal Responsibility
@@ -370,6 +380,31 @@ A2 to current domain rejection. Neither outcome is predicted by issuance.
 Stage 4C remains unchanged and may still refuse the A1 current response while
 Stage 4E independently issues this one-shot another-invocation authority.
 
+### PostgreSQL Topology Characterization
+
+Topology influences which physical evidence is likely to arise, but topology
+identity is not evaluator input:
+
+```text
+PRE_TRANSACTION + optimistic append admission
+→ naturally exposed to append version advance
+
+cooperating IN_TRANSACTION + pessimistic writers
+→ normally serialize at prepare_stream()
+→ contention normally appears as preparation LOCK_TIMEOUT
+
+IN_TRANSACTION + pessimistic A
++ non-cooperating PRE_TRANSACTION + optimistic B
+→ B does not honor A's advisory-lock protocol
+→ B may advance accepted history
+→ A may later observe append version mismatch
+```
+
+The mixed-topology characterization does not claim that ordinary cooperating
+pessimistic writers normally produce append-time `STALE_WRITE`. Stage 4E
+consequence evaluation consumes the reviewed evidence shape, not a topology
+label.
+
 ## Evidence Deliberately Not Required
 
 | Existing evidence | Required? | Reason |
@@ -563,7 +598,9 @@ own concrete evidence before promotion.
 
 ## PR Direction
 
-The bounded PR plan is maintained in [PR Breakdown](pr_breakdown.md).
+The completed PR plan is maintained in [PR Breakdown](pr_breakdown.md), and the
+final responsibility freeze is recorded in the
+[Stage 4E closeout](stage_4e_closeout.md).
 
 PR1 establishes the immutable formal contracts and source-specific preparation
 `LOCK_TIMEOUT` evaluator. PR2 implements invocation ownership, synchronized
@@ -578,4 +615,6 @@ the characterized append current-version inequality through the real
 PostgreSQL write-side result. PR5 adds its separately reviewed, coherent
 forward-version profile to the evaluator and reuses the existing authority and
 unchanged owner lifecycle. It adds no generic stale authorization, automatic
-A2 execution, or outcome prediction.
+A2 execution, or outcome prediction. PR6 closes the stage through documentation
+reconciliation and returns the closed stage to Stage 4 integration without
+changing runtime behavior.

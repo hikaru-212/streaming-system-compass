@@ -2,6 +2,19 @@
 
 [← Back to Stage 4E](README.md)
 
+## Stage Status
+
+```text
+Stage 4E
+= COMPLETE / CLOSED
+
+PR0–PR6
+= complete
+```
+
+The final completion authority is the
+[Stage 4E closeout](stage_4e_closeout.md).
+
 ## Purpose
 
 This plan keeps the first formal Stage 4E delivery bounded to same-request
@@ -422,6 +435,52 @@ resolves as `REPLAY`; schedule B raises the current
 No owner, public contract, producer, Stage 4A, Stage 4C, Stage 4D, schema,
 migration, or Stage 4B.5 protected replay artifact changes.
 
+## PR6 — Closeout and Responsibility Freeze
+
+### Status
+
+Implemented as documentation-only Stage 4E closeout.
+
+### Responsibility
+
+PR6:
+
+- marks Stage 4E `COMPLETE / CLOSED`;
+- records the PR0–PR6 chronology and the two experiment positions;
+- freezes the two reviewed source-specific positive profiles;
+- records the PR4 evidence / PR5 authority separation;
+- preserves complete `RequestSignature` custody and the one-shot owner
+  lifecycle;
+- records the PostgreSQL mixed-topology advisory-lock boundary without making
+  topology identity an evaluator input;
+- reconciles current roadmaps, indexes, architecture, boundary, navigation,
+  and public-orientation material;
+- preserves Stage 4D implementation deferral;
+- records the transition path back to the Stage 4 integration branch; and
+- records ADR 0029 and the autonomous-governance experiment as post-Stage-4
+  work only after the updated Stage 4 baseline reaches `main`.
+
+PR6 changes no production code, tests, migrations, dependencies, or runtime
+behavior.
+
+### Responsibility Freeze
+
+```text
+Stage 4E
+= Same-Request Re-Invocation Authority
+!= generic retry framework
+
+issued authority
+!= reusable retry budget
+
+fresh invocation
+!= resume old attempt
+```
+
+No automatic A3, scheduler, backoff/jitter, retry budget, `AttemptLog`, recovery
+planner, AI planner, or restart-recovery implementation enters the closed
+stage.
+
 ## Later Work
 
 Later work remains provisional and evidence-gated.
@@ -435,6 +494,12 @@ Stage 4D may re-enter only under the condition in
 
 PR2 through PR5 are the bounded downstream responsibilities above. No
 additional Stage 4E PR is planned merely to hold generic retry concerns.
+
+After PR6 merges, the Stage 4E stage branch returns to
+`feat/stage4-runtime-retry-governance` for final Stage 4 integration validation.
+Only after that integration branch reaches `main` may a separate clean
+documentation branch introduce ADR 0029 before the autonomous-governance
+experiment. PR6 does not create or promote ADR 0029.
 
 ## PR0 Promotion Table
 

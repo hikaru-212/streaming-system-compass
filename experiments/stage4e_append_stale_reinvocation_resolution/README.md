@@ -45,6 +45,42 @@ success, and it does not authorize candidate reuse, validation reuse, append
 retry, domain acceptance, or accepted-history mutation. Stage 4C remains
 unchanged and independently owns the current A1 response.
 
+## PR5 Mixed-Topology Addendum
+
+PR5 also characterizes a third deterministic PostgreSQL schedule without
+changing the production theorem. The topology distinction is:
+
+```text
+PRE_TRANSACTION + optimistic concurrency
+→ naturally exposed to append version advance
+
+cooperating IN_TRANSACTION + pessimistic writers
+→ normally serialize at prepare_stream()
+→ contention normally appears as LOCK_TIMEOUT
+
+IN_TRANSACTION + pessimistic A
++ non-cooperating PRE_TRANSACTION + optimistic B
+→ B does not honor A's advisory-lock protocol
+→ B may advance accepted history
+→ A may later observe append version mismatch
+```
+
+The mixed schedule seeds CREATE, admits pessimistic A's PAY under its advisory
+lock, and then invokes optimistic B's competing PAY on a separate connection
+immediately before A's real append. Because B does not participate in A's
+advisory-lock protocol, B commits accepted sequence 2. A then observes expected
+version 1 versus current version 2, rolls back without an accepted A effect,
+and supplies the same coherent typed evidence shape to the production Stage 4E
+evaluator. The evaluator issues one `ReinvocationAuthorization` retaining A's
+complete `RequestSignature`.
+
+This does not claim that ordinary cooperating pessimistic writers normally
+produce append-time `STALE_WRITE`; they normally contend earlier at
+`prepare_stream()`. Topology influences which physical evidence is likely to
+arise, but Stage 4E consequence evaluation consumes the reviewed evidence
+shape, not a topology label. The schedule is evidence for the existing PR5
+profile, not a third production authority profile.
+
 ## Physical Model
 
 Both schedules use `PostgresTransactionalWriteSide` configured with

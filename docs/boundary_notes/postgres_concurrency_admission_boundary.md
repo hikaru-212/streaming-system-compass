@@ -187,6 +187,50 @@ Any later consequence-bearing use requires a separately reviewed Stage 4E
 authority change. This boundary defines no retry classification, execution,
 budget, backoff, scheduler, or additional invocation authority.
 
+### Current Stage 4E PR5 / PR6 Authority Addendum
+
+PR5 supplied that separate consequence-bearing review without changing
+admission ownership. PR4 typed evidence is still not authority by itself. The
+Stage 4E evaluator, outside the admission boundary, may issue one-shot
+`ReinvocationAuthorization` only for a coherent completed write-side result
+that includes all of the reviewed forward-version conditions:
+
+```text
+append STALE_WRITE
++ AppendVersionMismatchEvidence(observed_current_version > expected_current_version)
++ validation ALLOW
++ matching validation / admission candidate identity
++ authoritative idempotency MISS with no retained record
++ no accepted A1 effect
+→ Stage 4E evaluator may issue one-shot authority
+```
+
+All other evidence shapes remain non-authorizing unless separately reviewed.
+Admission continues to report physical evidence; it does not decide another-
+invocation authority or perform execution.
+
+PostgreSQL topology influences which evidence is likely to arise:
+
+```text
+PRE_TRANSACTION + optimistic concurrency
+→ naturally exposed to append version advance
+
+cooperating IN_TRANSACTION + pessimistic writers
+→ normally serialize at prepare_stream()
+→ contention normally appears as LOCK_TIMEOUT
+
+IN_TRANSACTION + pessimistic A
++ non-cooperating PRE_TRANSACTION + optimistic B
+→ B does not honor A's advisory-lock protocol
+→ B may advance accepted history
+→ A may later observe append version mismatch
+```
+
+The Stage 4E evaluator consumes the reviewed evidence shape, not a topology
+label. Ordinary cooperating pessimistic writers are not characterized as
+normally producing append-time `STALE_WRITE`. Stage 4E is complete and closed;
+see the [closeout](../implementation_notes/stage_4e/stage_4e_closeout.md).
+
 ---
 
 ## Why Stable Admission Results Matter

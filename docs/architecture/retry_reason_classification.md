@@ -12,12 +12,14 @@ for **Streaming System + Compass**.
 It is not an implementation contract or ADR. Current responsibility separation
 comes from
 [ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md),
-while the accepted first formal Stage 4E boundary is
+while the closed Stage 4E boundary is
 [Same-Request Re-Invocation Authority](../implementation_notes/stage_4e/README.md).
-That first slice is limited to at most one additional public-writer invocation
-of the same complete `RequestSignature`, initially from preparation
-`LOCK_TIMEOUT` evidence. The broader taxonomy below is unaccepted
-historical/future candidate material, not current Stage 4E scope.
+Current production Stage 4E is limited to at most one fresh public-writer
+invocation with the owner-retained same complete `RequestSignature` under
+exactly two reviewed profiles: early preparation `LOCK_TIMEOUT`, and coherent
+append-time `STALE_WRITE` with typed forward version-mismatch evidence. The
+broader taxonomy below is unaccepted historical/future candidate material, not
+current Stage 4E scope.
 
 ---
 
@@ -38,8 +40,8 @@ These cases may require different current-response decisions and different
 attempt-authorization decisions. Those are separate authorities.
 
 The goal is to preserve this distinction as research input for future
-evidence-gated governance without projecting it into the first formal Stage 4E
-profile.
+evidence-gated governance without projecting it into the closed Stage 4E
+responsibility.
 
 ---
 
@@ -517,9 +519,9 @@ old receipt must not become permanent retry or action authorization.
 It should not directly execute the final control action.
 
 Stage 4C may map a current semantic observation to a generic current response.
-The first formal Stage 4E profile separately evaluates whether preparation
-`LOCK_TIMEOUT` evidence authorizes exactly one additional invocation of the
-same complete `RequestSignature`.
+Stage 4E separately evaluates whether either reviewed completed-invocation
+evidence profile authorizes at most one fresh invocation with the owner-
+retained same complete `RequestSignature`.
 
 Example mappings:
 
@@ -534,10 +536,15 @@ preparation LOCK_TIMEOUT
 → Stage 4C refuses the unsupported current-response tuple
 → Stage 4E may independently authorize one same-request public-writer entry
 
+coherent append-time STALE_WRITE
++ typed AppendVersionMismatchEvidence with observed > expected
++ validation ALLOW + candidate identity coherence + no accepted A1 effect
+→ Stage 4E may independently authorize one same-request public-writer entry
+
 reload/revalidation, infrastructure timing, rebuild prerequisites,
 semantic drift, and agent-intent drift
 → historical/future candidate concerns
-→ no first-profile Stage 4E authority or denial is accepted
+→ no additional Stage 4E authority profile is accepted
 ```
 
 These are responsibility examples, not frozen action names or an approved
@@ -564,7 +571,7 @@ This note does not implement:
 
 - Stage 4C current-response authority
 - Stage 4D strategy selection
-- Stage 4E attempt authorization or retry execution
+- the closed Stage 4E authority contract, its expansion, or retry execution
 - separate durable `SemanticOutcome` record
 - durable request-attempt schema
 - agent protocol
@@ -598,13 +605,13 @@ Strategy Selection Authority inside an already-permitted action —
 RESPONSIBILITY RETAINED / IMPLEMENTATION DEFERRED.
 
 Stage 4E:
-Same-Request Re-Invocation Authority — first formal profile limited to one
-additional same-complete-request public-writer invocation from preparation
-LOCK_TIMEOUT evidence; production contract not yet implemented.
+Same-Request Re-Invocation Authority — COMPLETE / CLOSED. Exactly two reviewed
+profiles may authorize at most one fresh same-complete-request public-writer
+invocation through the one-shot owner.
 
 Future candidates:
 classification, safety, reload, revalidation, timing, limits, budget,
-candidate constraints, intent, and lineage — not accepted first-slice Stage 4E
+candidate constraints, intent, and lineage — not accepted closed Stage 4E
 responsibilities.
 
 Stage 5:

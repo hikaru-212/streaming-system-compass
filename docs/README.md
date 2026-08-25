@@ -31,7 +31,7 @@ It now also serves as the reference frame for an executable baseline covering:
 - [Stage 4B.3 closeout](implementation_notes/stage_4b_3/README.md) as a completed evidence-first necessity review closed as not currently justified, without a continuation mechanism
 - [Stage 4B.5 Order Correctness Contract V0](implementation_notes/stage_4b_5/README.md) as a completed 18-rule contract with exactly six FullProof `TRANSITION_TRUTH` rules currently covered by typed runtime producers
 - [Stage 4C Runtime Decision Authority](implementation_notes/stage_4c/README.md) as a completed generic immutable contract and first Layer-1 PostgreSQL / Order write-side profile, with no automatic caller wiring
-- [Stage 4E Same-Request Re-Invocation Authority](implementation_notes/stage_4e/README.md) as the PR0 architecture boundary for one additional same-complete-request public-writer invocation, with production implementation still deferred
+- [Stage 4E Same-Request Re-Invocation Authority](implementation_notes/stage_4e/README.md) as complete and closed bounded authority for at most one fresh public-writer invocation under exactly two reviewed evidence profiles
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -78,7 +78,7 @@ The current Stage 4 foundation position is:
 - Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 - Stage 4C — Runtime Decision Authority — complete / closed
 - Stage 4D — Strategy Selection Authority — responsibility retained; implementation deferred under ADR 0028
-- Stage 4E — Same-Request Re-Invocation Authority — PR0 boundary established; production not implemented
+- Stage 4E — Same-Request Re-Invocation Authority — complete / closed through PR6
 
 Stage 4B.3 PR1 and PR2 remain historical/reference investigation. The canonical
 [ADR 0026 closeout](adr/0026_projection_trust_continuation_is_not_currently_justified.md)
@@ -103,11 +103,13 @@ deferred under
 [ADR 0028](adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
 because current strategy composition is static and no authorized operation has
 multiple dynamically eligible strategies or reviewed selection rules. Stage 4E
-PR0 accepts preparation `LOCK_TIMEOUT` as the first formal positive profile for
-one additional invocation of the same complete `RequestSignature`. The source
-audit and bounded next responsibility are in the
-[Stage 4E implementation notes](implementation_notes/stage_4e/README.md); no
-production Stage 4E behavior is implemented by PR0.
+is complete and closed with exactly two production-positive authority profiles:
+the early preparation `LOCK_TIMEOUT` profile established in PR1 and the narrow
+coherent append-version-advance profile completed in PR5. Both authorize at
+most one fresh invocation through the one-shot owner; neither creates a generic
+retry framework, scheduler, budget, or execution policy. See the
+[Stage 4E implementation notes](implementation_notes/stage_4e/README.md) and
+[Stage 4E closeout](implementation_notes/stage_4e/stage_4e_closeout.md).
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
 Stage 4B preserves selected evidence through explicit mapping, serialization,
@@ -217,11 +219,12 @@ Recommended reading order for the core system:
 19. [Stage 4C — Runtime Decision Authority](implementation_notes/stage_4c/README.md)
 20. [Stage 4C Closeout](implementation_notes/stage_4c/stage_4c_closeout.md)
 21. [Stage 4E — Same-Request Re-Invocation Authority](implementation_notes/stage_4e/README.md)
-22. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
-23. [Boundary Notes](boundary_notes/README.md)
-24. [Development Setup](development/README.md)
-25. [Reasoning Notes](reasoning_notes/README.md)
-26. [Postmortems](postmortems/README.md)
+22. [Stage 4E Closeout](implementation_notes/stage_4e/stage_4e_closeout.md)
+23. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
+24. [Boundary Notes](boundary_notes/README.md)
+25. [Development Setup](development/README.md)
+26. [Reasoning Notes](reasoning_notes/README.md)
+27. [Postmortems](postmortems/README.md)
 
 This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, stage / PR implementation details, module-boundary notes, local development setup, and finally postmortems.
 
@@ -256,7 +259,7 @@ top-level system structure
   closed as not currently justified after evidence-first investigation
 → completed separately owned Order Correctness Contract V0
 → completed Stage 4C current-response Runtime Decision Authority
-→ Stage 4E PR0 Same-Request Re-Invocation Authority boundary
+→ completed Stage 4E Same-Request Re-Invocation Authority
 → deferred Stage 4D Strategy Selection only when an authorized operation has multiple eligible execution paths
 → action safety
 → boundary clarification

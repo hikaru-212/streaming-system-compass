@@ -26,10 +26,14 @@
 - Stage 4B.3 is complete and closed as not currently justified. PR1/PR2 remain
   investigation/reference evidence, ADR 0026 owns re-entry, and no Projection
   Trust Continuation mechanism was implemented.
-- Stage 4C is now at a docs-first boundary: current-response Runtime Decision
-  Authority is separate from Stage 4D strategy selection, Stage 4E retry/attempt
-  authorization, and external execution. No production implementation is
-  claimed.
+- Stage 4C Runtime Decision Authority is complete and closed with a generic
+  contract and first Layer-1 PostgreSQL / Order profile.
+- Stage 4D Strategy Selection Authority retains responsibility while
+  implementation remains deferred under ADR 0028.
+- Stage 4E Same-Request Re-Invocation Authority is complete and closed. Exactly
+  two reviewed completed-invocation evidence profiles may authorize at most one
+  fresh public-writer invocation through a one-shot owner with the same complete
+  `RequestSignature`. This is not generic retry governance or execution.
 - The first decision-governance direction is live/in-memory first.
   `SemanticOutcome` plus terminally applicable exact rule refinement is the
   primary live decision evidence; `DecisionReceipt` remains durable governance evidence
@@ -40,8 +44,9 @@ for the completed receipt baseline and the
 [Stage 4B.1 closeout](../implementation_notes/stage_4b_1/stage_4b_1_closeout.md)
 for the completed trace boundary. See
 [ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
-and the [Stage 4C docs-first entry](../implementation_notes/stage_4c/) for the
-accepted next-phase responsibility boundary.
+the [Stage 4C implementation notes](../implementation_notes/stage_4c/), and the
+[Stage 4E closeout](../implementation_notes/stage_4e/stage_4e_closeout.md) for
+the current responsibility boundaries.
 
 ## The Problem
 
@@ -169,13 +174,14 @@ authorized current response
 → execution
 
 another attempt considered
-→ Retry / Attempt Authorization
-→ Strategy Selection Authority for the authorized attempt
+→ Stage 4E Same-Request Re-Invocation Authority
+→ at most one fresh invocation with the same complete RequestSignature
+→ Stage 4D Strategy Selection Authority only if multiple eligible paths exist
 → execution
 ```
 
-The normal current-response path does not require Retry / Attempt
-Authorization. Durable `DecisionReceipt` evidence may support later consumers,
+The normal current-response path does not require Stage 4E authority. Durable
+`DecisionReceipt` evidence may support later consumers,
 but receipt persistence is not a prerequisite for live Runtime Decision
 Authority.
 

@@ -154,10 +154,15 @@ Stage 4B.5
 = Order Correctness Contract v0
 
 Stage 4C
-= current next implementation stage under the docs-first Runtime Decision Authority boundary
+= Runtime Decision Authority — complete / closed
 
-Stage 4D / Stage 4E
-= future Strategy Selection Authority and Retry / Attempt Authorization
+Stage 4D
+= Strategy Selection Authority — responsibility retained / implementation deferred
+
+Stage 4E
+= Same-Request Re-Invocation Authority — complete / closed
+= two reviewed production-positive profiles; one-shot owner custody
+= not generic retry governance or execution
 
 Stage 5 Action Safety
 = future

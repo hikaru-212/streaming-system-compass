@@ -62,16 +62,18 @@ This is the shortest complete conceptual arc: **problem → executable authority
 | 18 | [ADR 0026 — Projection Trust Continuation Is Not Currently Justified](../adr/0026_projection_trust_continuation_is_not_currently_justified.md) | Accepted closeout decision | Understand why Stage 4B.3 closed after PR1/PR2 investigation without implementing a continuation mechanism and which evidence would justify re-entry. |
 | 19 | [Why Stage 4B.5 Exists](../implementation_notes/stage_4b_5/why_stage_4b_5_exists.md) | Completed stage rationale | Follow coarse semantic rejection into 18 stable rules, exactly six FullProof `TRANSITION_TRUTH` producer-covered rules, same-invocation propagation, terminal refinement, and the separate retry-authorization boundary. |
 | 20 | [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md) | Accepted responsibility boundary | Separate Stage 4C current-response authority, Stage 4D strategy selection, Stage 4E attempt authorization, and execution. |
-| 21 | [Stage 4C — Runtime Decision Authority](../implementation_notes/stage_4c/) | Docs-first stage entry | Review the live/in-memory-first evidence posture, DecisionReceipt durability distinction, non-goals, unresolved questions, and production-entry criteria. |
+| 21 | [Stage 4C — Runtime Decision Authority](../implementation_notes/stage_4c/) | Completed stage index | Review the generic current-response authority, first Layer-1 profile, and closeout. |
+| 22 | [Stage 4E — Same-Request Re-Invocation Authority](../implementation_notes/stage_4e/) | Completed stage index | Review the two bounded positive profiles, evidence/authority separation, and one-shot owner lifecycle. |
+| 23 | [Stage 4E Closeout](../implementation_notes/stage_4e/stage_4e_closeout.md) | Stage closeout | Confirm the final responsibility freeze, PostgreSQL characterization, non-goals, and Stage 4 integration transition. |
 
 Stage 4B, Stage 4B.1, Stage 4B.2, and Stage 4B.5 are complete. Stage 4B.3 is
 complete and closed as not currently justified: PR1/PR2 remain reference
 evidence, ADR 0026 owns re-entry, and no continuation mechanism was implemented.
 Mapping does not automatically materialize or persist a receipt, measurement
 evidence does not create production policy, and Stage 4B.5 exact rule evidence
-does not authorize retry. ADR 0027 now defines the docs-first Stage 4C–4E
-authority boundary; no production policy, strategy, retry authorization, or
-execution is claimed.
+does not authorize retry. ADR 0027 defines the separated Stage 4C–4E authority
+boundary. Stage 4C and bounded Stage 4E are complete and closed; Stage 4D
+implementation and external execution remain separate and deferred.
 
 ## 6. Choose by Professional Background
 
@@ -126,7 +128,7 @@ Completion below means the repository's bounded baseline, not production complet
 
 | Area | Current maturity | Important limitation |
 |---|---|---|
-| Write-side durable baseline | Completed | Not complete distributed production hardening or later Retry / Attempt Authorization. |
+| Write-side durable baseline | Completed | Not complete distributed production hardening; the separately implemented Stage 4E boundary is narrow, not generic retry governance. |
 | Read-side durable baseline | Completed | Exact-next per-order progress owns current completeness; multi-worker coordination and a global committed watermark remain deferred. |
 | Snapshot Trust bounded baseline | Completed reference infrastructure | Optional for the current Order workload; aggregate snapshots, broader reusable eligibility, and further expansion require concrete consumer or workload evidence. |
 | Durable permission baseline | Completed | Not complete IAM, business authorization, or emergency repair governance. |
@@ -134,7 +136,10 @@ Completion below means the repository's bounded baseline, not production complet
 | Stage 4B `DecisionReceipt` | Completed | Generic and producer mapping, tri-state flags, strict serializer v1, storage-neutral contracts, and explicit caller-owned PostgreSQL persistence exist; automatic materialization does not. |
 | Stage 4B.1 `DiagnosticTrace` / `ResolutionTrace` | Completed | Producer-specific contracts exist and PostgreSQL write-side tracing is integrated; snapshot runtime integration, projection-worker tracing, persistence, and a generic abstraction remain deferred. |
 | Stage 4B.2 measurement / cost evidence | Completed | Producer-specific measurement and bounded Level-B/Level-C evidence exist; they remain distinct from Stage 4B.1 execution topology and later policy. |
-| Runtime Decision Authority / strategy / retry-attempt authorization / action execution | Stage 4C docs-first; later responsibilities future | No production Stage 4C authority is claimed; Stage 4D and conditional Stage 4E remain future and must not be projected backward into current runtime behavior. |
+| Stage 4C Runtime Decision Authority | Completed / closed | Generic contract plus one Layer-1 PostgreSQL / Order profile; not strategy or execution. |
+| Stage 4D Strategy Selection Authority | Responsibility retained / implementation deferred | No dynamic selector is justified while strategy composition remains static. |
+| Stage 4E Same-Request Re-Invocation Authority | Completed / closed | Exactly two reviewed profiles; at most one fresh invocation through a one-shot owner; not generic retry governance. |
+| Action execution | Future / separately owned | Authority does not itself execute an action or invocation. |
 
 ## 8. What Not to Assume
 
