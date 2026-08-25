@@ -157,6 +157,7 @@ a public case study explains how people reasoned about its example.
 | [Retry Amplification, Local Correctness, and Semantic Diagnosis](retry_amplification_local_correctness_and_semantic_diagnosis.md) | Retry Amplification / Governance Boundaries | Separates observed client behavior from a plausible amplification model, then derives why failure evidence, diagnosis, retry authorization, and execution need distinct owners. |
 | [Conversation-Local History Retrieval and Progress Boundaries](conversation_local_history_retrieval_and_progress_reasoning.md) | Partitioned History / Progress Semantics | Transfers conversation-local observations into non-authoritative reasoning about local progress, ordering versus continuity, cursor semantics, request amplification, and diagnosis without claiming vendor-internal architecture. |
 | [Same Terms, Different Physical Models](same_terms_different_physical_models.md) | Concurrency Semantics / Observation Models | Derives why identical terms such as `STALE_WRITE` and `LOCK_TIMEOUT` can support different conclusions when actors, observation points, causal assumptions, or inference targets differ. |
+| [Invocation Completion Is Not Workflow Completion](invocation_completion_is_not_workflow_completion.md) | Autonomous Workflow / Re-Observation / Authority | Derives why invocation completion is not workflow completion, why observation supersession differs from its detection boundary, and why fresh information value does not authorize another invocation. |
 
 ---
 
