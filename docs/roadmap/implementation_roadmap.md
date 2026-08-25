@@ -9,8 +9,8 @@ This roadmap describes the intended implementation order of the project.
 It is not merely a list of desired features.  
 It is a sequencing guide for building the system without losing semantic clarity.
 
-This version reflects the project position after the Stage 4E PR4
-append-version-mismatch evidence-refinement closeout:
+This version reflects the project position after the Stage 4E PR5 narrow
+append-version-advance authority closeout:
 
 - Stage 3.5B durable write-side implementation details have been moved to implementation notes.
 - Stage 3.5C durable read-side implementation details have been moved to implementation notes.
@@ -33,11 +33,10 @@ append-version-mismatch evidence-refinement closeout:
   completed compatibility review and documentation reconciliation.
 - Stage 4D retains a valid Strategy Selection Authority responsibility under
   ADR 0028, but its implementation is deferred.
-- Stage 4E PR1–PR4 implement the first Same-Request Re-Invocation Authority
-  slice: preparation `LOCK_TIMEOUT` is the only positive profile, ownership and
-  one-shot consumption are live, Stage 4C delivery is integrated, and one
-  append version-mismatch source now has typed physical evidence that remains
-  non-authorizing.
+- Stage 4E PR1–PR5 implement the first Same-Request Re-Invocation Authority
+  slice: preparation `LOCK_TIMEOUT` and coherent append version advance are two
+  explicit source-specific positive profiles; ownership and one-shot
+  consumption are live, and Stage 4C delivery remains independently integrated.
 - Stage 5 Action Safety and later production hardening remain future work.
 
 ---
@@ -107,10 +106,10 @@ The current and later responsibilities are:
   Stage 4C production code is currently justified
 - Stage 4D Strategy Selection Authority retains responsibility for dynamic
   `HOW` selection, but implementation is deferred
-- Stage 4E Same-Request Re-Invocation Authority has implemented PR1–PR4. Its
-  only positive profile remains preparation `LOCK_TIMEOUT`; characterized
-  append version-mismatch evidence still returns no authority and participates
-  only as input to any separately reviewed PR5 question
+- Stage 4E Same-Request Re-Invocation Authority has implemented PR1–PR5. Its
+  positive profiles are preparation `LOCK_TIMEOUT` and the narrow coherent
+  append version advance; coarse `STALE_WRITE` and reverse version mismatch
+  remain non-authorizing
 - Stage 5 dual-dimension governance demo / Action Safety is future
 - Stage 5+ production and agent-facing hardening
 
@@ -684,7 +683,7 @@ Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 Stage 4C — Runtime Decision Authority — complete / closed
 Stage 4C.5 — Compatibility / documentation closeout — complete
 Stage 4D — Strategy Selection Authority — responsibility retained / implementation deferred under ADR 0028
-Stage 4E — Same-Request Re-Invocation Authority — PR1–PR4 implemented / append mismatch remains non-authorizing
+Stage 4E — Same-Request Re-Invocation Authority — PR1–PR5 implemented / two source-specific positive profiles
 ```
 
 This inventory preserves stage ownership and delivery history. It is not a
@@ -701,10 +700,11 @@ PR1 established the source-grounded entry boundary; PR2 delivered the generic
 contract and first Layer-1 PostgreSQL / Order profile; Stage 4C.5 confirmed
 compatibility through the shared producer-neutral `SemanticOutcome` structure
 and closed the stage. Stage 4D retains its responsibility but is deferred under
-ADR 0028. Stage 4E PR1–PR4 implement the first formal responsibility,
+ADR 0028. Stage 4E PR1–PR5 implement the first formal responsibility,
 preparation-time positive profile, live one-shot ownership, Stage 4C delivery,
-and source-specific append version-mismatch evidence. PR5 remains a separate
-consequence-bearing review; PR4 does not authorize that source.
+source-specific append version-mismatch evidence, and the narrow coherent
+forward-version consequence. PR5 does not authorize generic `STALE_WRITE` or
+predict a fresh invocation's business outcome.
 
 ---
 
@@ -1143,9 +1143,8 @@ creating the underlying authority.
 
 ### Status
 
-PR1–PR4 implemented. Preparation `LOCK_TIMEOUT` remains the only positive
-authority profile. Append version-mismatch evidence is implemented but remains
-non-authorizing.
+PR1–PR5 implemented. Preparation `LOCK_TIMEOUT` and coherent append version
+advance are explicit, independently reviewed positive authority profiles.
 
 ### Goal
 
@@ -1226,12 +1225,12 @@ in the
 The formal transition does not promote the experimental
 `PublicWriterInvocationObservation`, candidate monkeypatch, observation
 wrappers, exact Python writer identity, mutable observation-owned lifecycle,
-one-shot consumer, or `STALE_WRITE` authorization profile.
+one-shot consumer, or generic `STALE_WRITE` authorization profile.
 
 PR1 implements the immutable authority contract and first evaluator; PR2 owns
 one-shot live issuance and consumption; PR3 integrates current-response
 delivery in the invocation owner. PR4 adds a narrower physical distinction
-without adding authority:
+without adding authority at its closeout:
 
 ```text
 PostgresEventStore append current-version inequality
@@ -1240,13 +1239,39 @@ PostgresEventStore append current-version inequality
 → NoReinvocationAuthority
 ```
 
+PR5 adds one consequence for the exact coherent forward-version shape:
+
+```text
+trusted completed A1 result
++ ADMISSION_REJECTED and no accepted A1 event
++ A1-carried idempotency MISS with no record
++ stream ADMITTED for RequestSignature.order_id
++ validation ALLOW
++ append STALE_WRITE with no accepted_event_id
++ typed AppendVersionMismatchEvidence where observed > expected
++ matching validation/admission candidate identity
+→ authority for one fresh full invocation
+```
+
+This theorem does not claim that `PostgresWriteSideResult` independently proves
+all four request fields or that evidence dataclasses alone prove complete
+provenance. Same-request identity is preserved by the existing invocation
+owner's custody of the complete `RequestSignature` across A1 evaluation and A2
+dispatch. The owner still spends authority before A2 entry and permits no
+replacement A2 request arguments.
+
+The consequence is information value only: A2 may re-observe current
+authoritative state through the normal write-side path. It does not authorize
+candidate or validation reuse, append retry, success, replay, domain acceptance,
+or any accepted-history mutation. The existing PostgreSQL schedules establish
+that fresh A2 may resolve as `REPLAY` or current domain rejection.
+
 Generic `STALE_WRITE` remains coarse. Candidate continuity mismatch, generic
 `StaleWriteError`, `AppendConflictError`, recognized stream-position
 `UniqueViolation`, and manual/coarse `STALE_WRITE` do not receive this evidence.
-Stage 4A and Stage 4C behavior remain unchanged. PR5 may separately review
-whether exact characterized evidence plus additional invariants can justify
-one fresh same-complete-request invocation; this roadmap does not pre-answer
-that question.
+Stage 4A and Stage 4C behavior remain unchanged. A Stage 4C current-response
+refusal and a Stage 4E one-shot authorization for the same A1 remain valid
+independent consequences.
 
 The first formal Stage 4E slice does not yet claim ownership of:
 

@@ -337,10 +337,9 @@ in PR1. PR4 adds no generic stale authorization, retry taxonomy, execution,
 loop, A3, budget, backoff, scheduler, persistence, Stage 4A interpretation, or
 Stage 4C behavior.
 
-### PR5 Handoff
+### PR5 Handoff at PR4 Closeout
 
-PR5 is not implemented here. A separately reviewed PR5 may evaluate only this
-open question:
+PR5 was not implemented by PR4. Its handoff was limited to this open question:
 
 > Given a completed prior invocation with exact characterized append
 > version-mismatch evidence, under what additional invariants—if any—may
@@ -348,19 +347,93 @@ open question:
 
 No possible additional invariant is an established PR4 rule.
 
+## PR5 — Append Version-Advance Re-Invocation Authority
+
+### Status
+
+Implemented in Stage 4E PR5.
+
+### Responsibility
+
+PR5 adds a second explicit, source-specific positive predicate to the existing
+evaluator. It leaves the PR1 preparation `LOCK_TIMEOUT` predicate unchanged and
+does not introduce a generic supersession or retry abstraction.
+
+The precise theorem is:
+
+> A completed trusted write-side result showing a coherent append version
+> advance, with no accepted A1 effect, may issue authority for exactly one
+> fresh invocation of the invocation owner's retained complete
+> `RequestSignature`.
+
+Eligibility requires all of:
+
+```text
+outcome = ADMISSION_REJECTED
+accepted_event = None
+idempotency = MISS with no A1-carried record
+stream admission = ADMITTED for RequestSignature.order_id
+validation action = ALLOW
+append admission = STALE_WRITE with no accepted_event_id
+append evidence = AppendVersionMismatchEvidence
+observed_current_version > expected_current_version
+append candidate_event_id = validation candidate_event_id
+```
+
+The forward inequality is consequence-specific. PR4 retains physical
+`observed != expected` evidence, while PR5 refuses a contract-valid
+`observed < expected` shape. Coarse `STALE_WRITE` without the typed evidence
+also remains non-authorizing.
+
+This is not a self-contained serialized proof protocol. PR5 relies on the exact
+trusted producer result, source-specific evidence, the structural checks above,
+and known write-side control flow. The result does not reconstruct every
+request field or independently prove that the supplied signature belongs to
+A1. Same-request identity comes from the unchanged invocation owner: it retains
+the complete signature, dispatches A1 from it, evaluates the exact A1 result
+with it, accepts no replacement A2 arguments, and dispatches A2 from it.
+
+### Consequence Boundary
+
+The existing `ReinvocationAuthorization` represents permission to re-enter the
+full normal invocation boundary once and observe current authoritative state.
+It does not authorize reuse of A1's candidate or validation, retry of A1's
+append, acceptance, replay, success, or any other business outcome. A fresh A2
+still follows normal idempotency, history reconstruction, domain reasoning,
+validation, stream admission, append, and commit as applicable.
+
+The unchanged owner continues to own cached evaluation, `AVAILABLE → SPENT`
+before A2 entry, same retained signature and writer composition, spent state
+after an A2 exception, and no automatic A3. Stage 4C remains independent and
+unchanged: the same A1 may receive a typed current-response refusal and a
+separate Stage 4E authorization.
+
+### Production and Executable Scope
+
+PR5 changes only the Stage 4E evaluator in production. Focused unit coverage
+characterizes the exact positive shape, forward inequality, candidate and
+order continuity, no-A1-effect fields, A1-carried idempotency shape, malformed
+nested structures, PR1 preservation, and unrelated negative profiles. The two
+existing PostgreSQL schedules now apply the production evaluator to their real
+A1 results before preserving their existing fresh outcomes: schedule A
+resolves as `REPLAY`; schedule B raises the current
+`ValueError("Order is already paid")` domain rejection.
+
+No owner, public contract, producer, Stage 4A, Stage 4C, Stage 4D, schema,
+migration, or Stage 4B.5 protected replay artifact changes.
+
 ## Later Work
 
 Later work remains provisional and evidence-gated.
 
 Generic `STALE_WRITE` authorization remains outside the accepted boundary.
-Only the characterized append version mismatch now has production-owned typed
-source evidence, and that evidence remains non-authorizing pending the separate
-PR5 question above.
+Only the coherent forward-version profile over the characterized evidence has
+been accepted in PR5; the technical verdict by itself remains non-authorizing.
 
 Stage 4D may re-enter only under the condition in
 [ADR 0028](../../adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md).
 
-PR2 through PR4 are the bounded downstream responsibilities above. No
+PR2 through PR5 are the bounded downstream responsibilities above. No
 additional Stage 4E PR is planned merely to hold generic retry concerns.
 
 ## PR0 Promotion Table
@@ -370,7 +443,7 @@ additional Stage 4E PR is planned merely to hold generic retry concerns.
 | Complete `RequestSignature` defines same request | Accepted requirement | Preserve all four fields. |
 | Same `request_id` alone is insufficient | Accepted requirement | Refuse request-ID-only authorization. |
 | Preparation `LOCK_TIMEOUT` | Accepted first profile | Consume producer-owned preparation evidence. |
-| Append current-version mismatch | Typed physical evidence implemented in PR4 | Remains non-authorizing pending separate PR5 review. |
+| Coherent append current-version advance | Accepted second profile in PR5 | Typed PR4 evidence plus exact completed-result coherence may issue one-shot authority. |
 | Generic `STALE_WRITE` | Not accepted as a positive profile | Other physical stale sources remain coarse. |
 | Stage 4C / 4E independence | Accepted architecture result | Do not require a Stage 4C decision. |
 | One-shot / consume before entry | Accepted safety requirement | Atomic lifecycle guards A2 writer entry. |
