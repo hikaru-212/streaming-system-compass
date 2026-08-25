@@ -2,11 +2,11 @@
 
 **Semantic Governance for Event-Driven & AI Agent Systems**
 
-> A system is not correct because it works.
+> A system is not correct because it works.<br>
 > A system is correct because it preserves truth under failure.
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://python.org)
-[![Status](https://img.shields.io/badge/Status-Active%20Research-orange.svg)](#current-status)
+[![Status](https://img.shields.io/badge/Status-Active%20Research-orange.svg)](#status)
 [![Docs](https://img.shields.io/badge/Docs-Architecture%20%2B%20ADRs-informational.svg)](docs/README.md)
 
 ---
@@ -15,80 +15,80 @@
 
 A database can tell you a write committed.
 
-Concurrency control can tell you the write was still admissible.
+Concurrency control can tell you whether a write was still admissible.
 
-Idempotency can tell you the request was already seen.
+Idempotency can tell you whether a request was already processed.
 
 None of them, by themselves, answer the harder question:
 
-> **Should this action ever have become an accepted fact?**
+> **Should this action ever have been allowed to become an accepted fact?**
 
 Compass draws a hard line:
 
 ```text
-Candidate Action  ≠  Accepted Fact
+Candidate Action
+!=
+Accepted Fact
 ```
 
-An action only becomes system truth after its semantic claims and admission conditions are validated against authoritative history.
+An action may be syntactically valid, technically executable, authorized to call a tool, or selected by multiple agents.
 
-This boundary already matters in concurrent event-driven systems.
+That still does not make it business truth.
 
-It becomes critical once automated actors — including AI agents — can change real state.
+Compass makes the boundary between **attempted action**, **evidence**, **authority**, and **accepted truth** explicit.
 
 ---
 
 ## What Compass is
 
-Compass is a production-inspired correctness and governance system built around one question:
+Compass is a production-inspired correctness and governance reference implementation built around one question:
 
-> **What must be true before an attempted action is allowed to become an accepted fact?**
+> **What must be true before an attempted action is allowed to become trusted system truth?**
 
-The current implementation provides:
+The executable foundation includes:
 
-* **accepted-history-first correctness**
-* semantic validation before acceptance
-* explicit separation of semantic validation, concurrency admission, and idempotency
-* PostgreSQL-backed durable write-side execution
-* durable projection and replay validation
-* runtime semantic interpretation through `SemanticOutcome`
-* structured governance evidence through `DecisionReceipt`
-* a machine-readable Order Correctness Contract
-* a generic immutable `RuntimeDecision` contract and first reviewed Layer-1
-  PostgreSQL / Order write-side evaluation profile
+- accepted-history-first write semantics;
+- semantic validation before acceptance;
+- explicit separation of semantic validation, concurrency admission, and idempotency;
+- PostgreSQL-backed durable write-side execution;
+- durable projection and replay validation;
+- `SemanticOutcome` for runtime semantic interpretation;
+- `DecisionReceipt` for structured governance evidence;
+- an Order Correctness Contract with stable rule identities;
+- current-response authority over reviewed runtime evidence;
+- bounded same-request re-invocation authority from reviewed prior-invocation evidence.
 
-Producer-specific execution traces and bounded measurement evidence support this foundation without acting as general tracing or measurement platforms.
+Compass is **not** a CRUD demo, an ETL pipeline, or an agent framework.
 
-Compass is not a CRUD demo, an ETL pipeline, or an agent framework.
-
-It is a reference system for reasoning about **semantic correctness under concurrency, retry, replay, partial failure, and increasingly automated execution**.
+It is infrastructure for systems where technical success is not enough to establish semantic authority.
 
 ---
 
 ## The core boundary
 
 ```text
-Command / Target Automated Action
-                  ↓
-           Candidate Action
-                  ↓
-     Write-Side Correctness Boundary
-                  ↓
-          Typed Producer Result
-             ↙           ↘
-      accepted             typed non-accepted
-          ↓                     ↓
-   Accepted History       Semantic Observation
+Command / Automated Action
+            ↓
+      Candidate Action
+            ↓
+ Write-Side Correctness Boundary
+            ↓
+     Typed Producer Result
+        ↙           ↘
+   accepted      non-accepted
+      ↓               ↓
+Accepted History   Semantic Evidence
 ```
 
-These responsibilities are deliberately separate.
+These responsibilities remain separate:
 
-* **Semantic validation** asks whether the proposed transition tells the truth.
-* **Concurrency admission** asks whether it may still become the next accepted fact.
-* **Idempotency** asks whether this external intent has already been processed.
+- **Semantic validation** asks whether the proposed transition tells the truth.
+- **Concurrency admission** asks whether it may still become the next accepted fact.
+- **Idempotency** asks whether this external intent has already been processed.
 
 Passing one does not imply passing the others.
 
-That separation is one of the core architectural constraints of Compass.
+> **Derived state is useful. Accepted history is authoritative.**
 
 ---
 
@@ -96,52 +96,52 @@ That separation is one of the core architectural constraints of Compass.
 
 ```mermaid
 flowchart TD
-    A[Command / Target Automated Action] --> B[Candidate Event]
+    A["Command / Automated Action"] --> B["Candidate Action"]
+    B --> C["Write-Side Correctness Boundary"]
 
-    B --> C[Write-Side Correctness Boundary]
+    C --> V["Semantic Validation"]
+    C --> Q["Concurrency Admission"]
+    C --> I["Idempotency"]
 
-    C --> C1[Semantic Validation]
-    C --> C2[Concurrency Admission]
-    C --> C3[Idempotency]
+    V --> P["Typed Producer Result"]
+    Q --> P
+    I --> P
 
-    C1 --> D{Write-Side Result}
-    C2 --> D
-    C3 --> D
+    P -- "accepted" --> H[("Accepted History<br/>business authority")]
+    P -. "explicit mapping" .-> S["SemanticOutcome<br/>semantic interpretation"]
 
-    D -- Accepted --> AR[Accepted Business Result]
-    D -- Non-Accepted --> R[Rejected / Conflict / Blocked Result]
+    H --> R["Projection / Replay"]
+    R --> O["Read-Side / Runtime Observation"]
+    O -. "explicit mapping where applicable" .-> S
 
-    AR --> E[(Accepted Event History)]
-    AR -. live accepted observation .-> S[SemanticOutcome]
+    S -. "structured evidence mapping" .-> D["DecisionReceipt<br/>governance evidence"]
 
-    R -. explicit semantic mapping .-> S
+    S --> C4["Current-Response Authority"]
+    P -. "eligible completed invocation evidence" .-> E4["Same-Request<br/>Re-Invocation Authority"]
 
-    S -. explicit evidence mapping .-> J[DecisionReceipt]
-    J -. optional caller-owned persistence .-> K[(decision_receipts)]
-
-    E -. downstream derived view .-> P[Projection / Read-Side]
+    C4 -. "authorized consequence" .-> X["Controlled Execution Boundary"]
+    E4 -. "at most one fresh invocation" .-> X
 ```
 
-> **Accepted history is authoritative. Live observations and derived state are evidence about that authority — not replacements for it.**
+The diagram is a responsibility map, not one mandatory runtime pipeline.
 
-An accepted result has two distinct lifecycles:
+In particular:
 
 ```text
-Accepted Business Result
-├── durable business authority → Accepted Event History
-└── live semantic evidence      → SemanticOutcome
+evidence
+!=
+authority
+
+current-response authority
+!=
+another-invocation authority
+
+authorization
+!=
+execution
 ```
 
-The live path does not need to re-read accepted history before producing semantic evidence. If an immediate receipt is missing, a future reconciliation path may reconstruct a narrower canonical `DecisionReceipt` from accepted history, but that is a separate and currently deferred recovery path.
-
-A non-accepted result belongs to a different world. It creates no new accepted fact, but a rejected, conflicting, or blocked attempt may still carry semantic meaning and can therefore be mapped into `SemanticOutcome`.
-
-Both accepted and non-accepted observations can reach `SemanticOutcome` because it is a shared **semantic interpretation boundary**, not a shared source of authority.
-
-`DecisionReceipt` is structured governance evidence. It is neither accepted-history authority nor a mandatory next step for every `SemanticOutcome`; automatic production materialization remains deferred.
-
-Projection and read-side state remain downstream derived views of accepted history. They are useful, but they do not become authoritative merely because they were derived from authoritative events.
-
+Dynamic strategy selection remains a separate responsibility and is deliberately deferred until one authorized operation has multiple genuinely eligible execution paths.
 
 ---
 
@@ -151,154 +151,106 @@ AI agents do not invent a new correctness problem.
 
 They make an existing one harder to ignore.
 
-An automated action may:
+An automated actor may:
 
-* execute against stale context
-* race another actor on the same aggregate
-* retry after the world has changed
-* reach the same technical endpoint through a different intent
-* succeed technically while remaining semantically invalid
+- execute against stale context;
+- race another actor on the same aggregate;
+- choose a workflow path that changes which facts become reachable;
+- generate a technically valid but semantically inadmissible candidate;
+- agree with other agents on a remediation that still violates authoritative policy;
+- influence the premises of a deterministic business rule without directly mutating the final state.
 
 A successful tool call is not the same thing as a valid business fact.
 
-Compass is **not an agent framework**.
+A useful agent-era model is:
 
-Its role sits lower in the stack:
+```text
+Authoritative Facts / Deterministic Rules
+                ↓
+        Should AI participate?
+                ↓
+       Delegation Boundary
+                ↓
+       What may AI influence?
+                ↓
+        Candidate Action
+                ↓
+        Semantic Admission
+                ↓
+     Accepted / Trusted Outcome
+                ↓
+ Consequence-Specific Authority
+                ↓
+       Controlled Execution
+```
 
-> establish the correctness and evidence boundaries that automated actions must pass before they are trusted as system truth.
+Two rules follow:
 
-Agent-facing action governance is the architectural target for this foundation, not a claim that an end-to-end agent runtime or tool interface is implemented today.
+> **Do not probabilize what the authoritative system already knows how to decide deterministically.**
 
----
-
-## What exists today
-
-### Stable foundation
-
-| Public architectural capability              | Status                                                                 |
-| -------------------------------------------- | ---------------------------------------------------------------------- |
-| Transactional semantic core                  | ✅ Complete                                                             |
-| Accepted-history-first write model           | ✅ Complete                                                             |
-| PostgreSQL accepted event history            | ✅ Complete                                                             |
-| Durable idempotency                          | ✅ Complete                                                             |
-| Concurrency-safe write admission             | ✅ Complete                                                             |
-| Durable projection and replay validation     | ✅ Complete                                                             |
-| `SemanticOutcome` interpretation             | ✅ Complete                                                             |
-| `DecisionReceipt` evidence foundation        | ✅ Complete — explicit components; automatic materialization deferred   |
-| Order Correctness Contract v0                | ✅ Complete                                                             |
-| Stage 4C — Runtime Decision Authority        | ✅ Complete / closed — generic contract + first Layer-1 profile          |
-| Stage 4E — Same-Request Re-Invocation Authority | ✅ Complete / closed — two reviewed evidence profiles; one-shot owner |
-
-Producer-specific execution traces and bounded PostgreSQL measurement evidence support this foundation. The existing permission work is a bounded database-role and accepted-history mutation-hardening baseline, not general IAM or business authorization.
-
-### Current direction
-
-| Responsibility                                  | Status                                                                     |
-| ----------------------------------------------- | -------------------------------------------------------------------------- |
-| Stage 4D — Strategy Selection Authority         | Responsibility retained; implementation deferred                          |
-| Stage 5 — Action Safety                         | Future                                                                     |
-
-Stage 4C is complete and closed. PR1 established the source-grounded
-implementation-entry boundary; PR2 delivered the generic immutable
-`RuntimeDecision` contract and first Layer-1 PostgreSQL / Order write-side
-profile; Stage 4C.5 completed compatibility review and documentation closeout.
-No additional Stage 4C production code is currently justified.
-
-Stage 4E is complete and closed as bounded same-request re-invocation
-authority. Reviewed evidence from one completed invocation may authorize at
-most one fresh public-writer invocation with the owner-retained same complete
-`RequestSignature`. The production boundary has exactly two positive profiles:
-early preparation `LOCK_TIMEOUT` with authoritative idempotency miss and no
-accepted A1 effect, and coherent append-version-advance `STALE_WRITE` with
-typed version-mismatch evidence, validation `ALLOW`, candidate coherence, and
-no accepted A1 effect. This is not generic retry governance.
-
-Detailed stage histories, ADRs, experiments, PR records, and closeouts live under [`docs/`](docs/).
+> **Agreement does not create semantic authority.**
 
 ---
 
 ## From evidence to authority
 
-Compass keeps semantic interpretation, durable evidence, current-response authority, strategy, retry authorization, and execution separate:
+The completed Stage 4 architecture separates understanding from consequence authority.
 
 ```text
-typed producer or read-side observation
-                 ↓ explicit mapping
-          SemanticOutcome
-            ↙            ↘
-live current evidence     DecisionReceipt
-+ applicable exact rule        ↓ optional explicit persistence
-refinement                durable governance evidence
+technical evidence
         ↓
-Stage 4C — Runtime Decision Authority
+semantic interpretation
         ↓
-permitted / required / denied
+structured evidence
+        ↓
+consequence-specific authority
+        ↓
+controlled execution
 ```
 
-The receipt branch and live-decision branch are independent. Not every outcome is automatically persisted, and a live Stage 4C decision does not require receipt persistence first.
+For a human-operated system, the evidence boundary may be enough.
 
-The responsibility vocabulary is precise:
-
-* `SemanticOutcome` is live semantic interpretation of bounded technical evidence.
-* `DecisionReceipt` is structured governance evidence that may be persisted explicitly.
-* **Runtime Decision Authority** decides the generic current response within its approved boundary. It does not select strategy, authorize another attempt, or execute an action.
-* **Strategy Selection Authority** selects `HOW` inside prior authorization only when multiple eligible strategies exist. Its responsibility is retained and implementation is deferred.
-* **Same-Request Re-Invocation Authority** decides whether reviewed completed-invocation evidence authorizes at most one fresh public-writer invocation with the same complete `RequestSignature`. Stage 4E implements only its two reviewed positive profiles; it is not a generic retry framework or reusable retry budget.
-* execution remains separate from evidence, authorization, and strategy selection.
-
-These responsibilities are non-linear. For one completed result:
+Once downstream consequences move into an autonomous runtime, workflow engine, recovery controller, or AI agent, the previously implicit human authority must become explicit.
 
 ```text
-current evidence
-→ Stage 4C current-response decision or refusal
-→ caller handling
+Stage 4B and earlier
+= evidence / understanding system
+
+Stage 4C+
+= explicit machine consequence-authority boundary
 ```
 
-When another same-request invocation is considered:
-
-```text
-eligible prior-invocation evidence
-→ Stage 4E authorization or refusal
-
-if another invocation is authorized:
-→ Stage 4D selects HOW only if multiple eligible strategies exist
-→ execution
-→ fresh result
-→ Stage 4C handling when applicable
-```
-
-Stage 4C refusal is neither Stage 4E authorization nor Stage 4E refusal.
-`C → D → E` is not a mandatory runtime pipeline.
+See [ADR 0029 — Stage 4C+ Exists at the Automation Boundary](docs/adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md).
 
 ---
 
-## A small example
+## What exists today
 
-Two actors attempt to update the same order.
+The core correctness and authority foundation is executable:
 
-Both requests may be syntactically valid.
+- accepted-history-first transactional writes;
+- durable PostgreSQL event history and idempotency;
+- supported optimistic and pessimistic concurrency-admission paths;
+- semantic validation before accepted append;
+- durable projections and replay validation;
+- runtime `SemanticOutcome` interpretation;
+- `DecisionReceipt` evidence components and persistence boundaries;
+- producer-specific traces and bounded measurement evidence;
+- the Order Correctness Contract;
+- current-response authority;
+- bounded same-request re-invocation authority.
 
-Both may represent individually reasonable actions.
+The project does **not** currently claim:
 
-One may even be based on a state that was correct only moments earlier.
+- a general autonomous recovery loop;
+- a production AI-agent runtime;
+- dynamic runtime strategy selection;
+- retry-until-success behavior;
+- automatic A3 or general attempt scheduling;
+- universal action authorization;
+- Stage 5 external-effect safety.
 
-Compass treats neither as truth merely because it exists.
-
-```text
-Actor A ──→ Candidate A
-                    \
-                     → semantic + concurrency admission
-                    /
-Actor B ──→ Candidate B
-
-                     ↓
-
-             Accepted History
-```
-
-Only admitted facts enter authoritative history.
-
-Everything downstream reasons from what was actually accepted — not what was merely attempted.
+Detailed stage and PR history lives under [`docs/`](docs/).
 
 ---
 
@@ -308,50 +260,29 @@ Everything downstream reasons from what was actually accepted — not what was m
 
 A proposed action does not become truth merely because it can be executed or persisted.
 
-### Accepted history is authoritative
+### Technical capability ≠ business authority
 
-Derived state may be reconstructed, cached, snapshotted, or validated.
+Tool permission, database access, successful execution, or workflow reachability does not establish semantic permission for the resulting business effect.
 
-It does not replace accepted history.
+### Agreement ≠ semantic authority
 
-### Correctness boundaries stay orthogonal
+Voting, quorum, ranking, or multi-agent selection may choose a candidate.
 
-Semantic validity, concurrency safety, idempotency, persistence, runtime interpretation, and retry / attempt authorization solve different problems.
+They do not independently prove that the candidate may become trusted truth.
 
-### Evidence before strategy
+### Evidence ≠ authority
 
-Runtime decisions should be grounded in structured evidence rather than inferred from a generic success/failure flag.
+Structured evidence can explain what happened.
 
-### Illegal semantic combinations should be difficult to represent
+It does not authorize its own consequence.
 
-Finite correctness vocabularies are modeled as constrained relations rather than arbitrary combinations of individually valid values.
+### Authority ≠ execution
 
-A model should not merely describe valid states.
+An authorized consequence still requires a controlled execution boundary.
 
-Where practical, its supported construction path should make invalid states unrepresentable.
+### Fresh invocation ≠ resume old work
 
-### Documentation preserves architecture memory
-
-ADRs, boundary notes, postmortems, implementation records, and executable tests preserve not only what exists, but why the boundaries exist.
-
----
-
-## Project structure
-
-```text
-streaming-system-compass/
-├── src/
-│   ├── core/           # Transactional domain core
-│   ├── pipeline/       # Write-side and projection orchestration
-│   ├── storage/        # Persistence boundaries
-│   ├── compass/        # Semantic validation and governance
-│   └── bootstrap/      # Runtime composition
-├── chaos_engine/       # Failure-scenario documentation and placeholder infrastructure
-├── experiments/        # Isolated mechanism experiments and demos
-├── docs/               # Architecture, ADRs, boundaries, roadmaps, postmortems
-└── tests/              # Unit, integration, replay, and semantic tests
-    └── adversarial/    # Executable adversarial correctness tests
-```
+Re-observation must not silently reuse stale candidate, validation, or append state.
 
 ---
 
@@ -366,26 +297,20 @@ python3.12 -m venv .venv
 ./.venv/bin/python -m pytest tests/unit -v
 ```
 
-The command above runs the database-independent unit suite. The full test suite is PostgreSQL-backed and requires:
+The unit command above is database-independent.
 
-* a full Git clone with complete repository history
-* PostgreSQL 16
-* a dedicated test database
-* `TEST_DATABASE_URL` pointing to that test database
-* all repository migrations applied in order
-
-After that setup, run:
+The full suite requires PostgreSQL 16, a dedicated test database, `TEST_DATABASE_URL`, and repository migrations:
 
 ```bash
-./.venv/bin/python -m pytest -v --durations=10
+./.venv/bin/python -m pytest tests -v --durations=10
 ```
 
-CI uses Python 3.12, a PostgreSQL 16 service, the migrated test database, and coverage enforcement. Database fixtures may destructively reset test tables, so do not point `TEST_DATABASE_URL` at a development or production database.
+Database fixtures may destructively reset test tables. Do not point `TEST_DATABASE_URL` at a development or production database.
 
 See:
 
-* [Development Setup](docs/development/README.md)
-* [Local PostgreSQL Setup](docs/development/postgres_local_setup.md)
+- [Development Setup](docs/development/README.md)
+- [Local PostgreSQL Setup](docs/development/postgres_local_setup.md)
 
 ---
 
@@ -395,35 +320,40 @@ This README is a map, not the full architecture record.
 
 Start here:
 
-* [Compass Reading Path](docs/navigation/COMPASS_READING_PATH.md) — route by purpose and depth
-* [Compass in the Agent Era](docs/overview/compass_agent_era_overview.md) — public orientation and current/future boundary
-* [Documentation Index](docs/README.md) — architecture, ADRs, implementation records, postmortems, and reasoning notes
+- [Compass Reading Path](docs/navigation/COMPASS_READING_PATH.md) — choose a route by purpose and depth
+- [Compass in the Agent Era](docs/overview/compass_agent_era_overview.md) — public orientation
+- [Semantic Admission](docs/semantic_admission/README.md) — candidate, authority, admission, and agent-era case studies
+- [Documentation Index](docs/README.md) — architecture, ADRs, boundaries, implementation records, research, postmortems, and reasoning notes
 
-For the current decision-governance boundary:
+Agent-era follow-up reading:
 
-* [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](docs/adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
-* [Stage 4C — Live Decision Governance](docs/implementation_notes/stage_4c/README.md)
-* [Stage 4C Closeout](docs/implementation_notes/stage_4c/stage_4c_closeout.md)
+- [Consensus Is Not Semantic Authority](docs/semantic_admission/consensus_is_not_semantic_authority_rate_limiter.md)
+- [Probabilistic Agency Inside Deterministic Business Workflows](docs/research/ai_governance/probabilistic_agency_inside_deterministic_business_workflows.md)
+- [Invocation Completion Is Not Workflow Completion](docs/reasoning_notes/invocation_completion_is_not_workflow_completion.md)
 
-Deep documents preserve architecture history and implementation chronology; the reading path indicates which sources are current authority and which are historical context.
+Important current decisions:
+
+- [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](docs/adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
+- [ADR 0028 — Defer Dynamic Strategy Selection Until Multiple Eligible Execution Paths Exist](docs/adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
+- [ADR 0029 — Stage 4C+ Exists at the Automation Boundary](docs/adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md)
 
 Project participation:
 
-* [Contributing](CONTRIBUTING.md) — environment, test workflows, change boundaries, and pull requests
-* [Security Policy](SECURITY.md) — security-sensitive scope and responsible reporting guidance
+- [Contributing](CONTRIBUTING.md)
+- [Security Policy](SECURITY.md)
 
 ---
 
 ## Who this is for
 
-Compass may be useful if you are thinking about:
+Compass may be useful if you care about:
 
-* event-sourced or event-driven correctness under concurrency
-* semantic validation beyond schema validation
-* durable governance evidence for audit and recovery
-* replay and derived-state trust
-* retry / attempt authorization
-* automated or AI-driven systems that can change authoritative state
+- event-driven correctness under concurrency;
+- semantic validation beyond schema checks;
+- accepted-history and derived-state boundaries;
+- runtime evidence and consequence-specific authority;
+- automated systems that can change authoritative state;
+- AI-agent workflows where tool capability, agreement, or planning must not silently become business authority.
 
 If you only need a simple CRUD service or a lightweight agent prototype, this project is intentionally over-engineered for that problem.
 
@@ -435,44 +365,15 @@ that is the problem Compass is built to explore.
 
 ---
 
-## Philosophy
+## Status
 
-> **Clarify the boundary before scaling the implementation.**
+Active research and reference implementation.
 
-Compass treats unclear ownership and mixed responsibilities as correctness risks.
+The core correctness, semantic-evidence, current-response-authority, and bounded same-request re-invocation foundations are executable today.
 
-At every layer, it tries to keep one distinction explicit:
+Current follow-up work focuses on the public agent-era governance model and on testing whether the existing evidence and authority primitives can compose into a controlled autonomous recovery loop.
 
-```text
-What happened?
-≠
-What does it mean?
-≠
-What should the system do next?
-```
-
----
-
-## Current status
-
-Compass is an active personal design-research and reference implementation.
-
-The project has completed the durable correctness, semantic-evidence,
-Order correctness-contract, and Stage 4C Runtime Decision Authority foundations.
-
-```text
-Stage 4C — complete / closed
-Stage 4D — responsibility retained; implementation deferred
-Stage 4E — Same-Request Re-Invocation Authority — complete / closed
-Stage 5  — future action-safety / dual-dimension governance
-```
-
-Detailed stage history, architecture decisions, experiments, and closeouts live
-under [`docs/`](docs/).
-
-The goal is not to claim production readiness early.
-It is to make the correctness boundary explicit before broader automation
-depends on it.
+Stage 5 action safety for externally meaningful effects remains future work.
 
 ---
 
@@ -490,13 +391,13 @@ Licensed under CC BY 4.0.
 Original source: https://github.com/hikaru-212/streaming-system-compass
 ```
 
-The exact content-role boundary, including executable experiments, Markdown examples, and recorded benchmark evidence, is documented in [LICENSE-CONTENT.md](LICENSE-CONTENT.md).
+The exact content-role boundary is documented in [LICENSE-CONTENT.md](LICENSE-CONTENT.md).
 
 See:
 
-* [LICENSE](LICENSE)
-* [NOTICE.md](NOTICE.md)
-* [LICENSE-CONTENT.md](LICENSE-CONTENT.md)
+- [LICENSE](LICENSE)
+- [NOTICE.md](NOTICE.md)
+- [LICENSE-CONTENT.md](LICENSE-CONTENT.md)
 
 ---
 
