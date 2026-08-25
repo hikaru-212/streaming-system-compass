@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 
-from src.pipeline.transactional.admission import AdmissionVerdict
+from src.pipeline.transactional.admission import (
+    AdmissionVerdict,
+    AppendVersionMismatchEvidence,
+)
 from src.pipeline.transactional.postgres_admission import (
     PostgresOptimisticAdmissionGate,
     PostgresPessimisticAdmissionGate,
@@ -8,6 +11,7 @@ from src.pipeline.transactional.postgres_admission import (
 )
 from src.storage.errors import (
     AppendConflictError,
+    AppendVersionMismatchError,
     StaleWriteError,
     StorageInfrastructureError,
 )
@@ -80,6 +84,31 @@ def test_postgres_optimistic_admit_appends_candidate_event():
     ]
 
 
+def test_postgres_optimistic_admit_retains_append_version_mismatch_evidence():
+    gate = PostgresOptimisticAdmissionGate(
+        FakeEventStore(
+            exc=AppendVersionMismatchError(
+                expected_current_version=1,
+                observed_current_version=2,
+            )
+        )
+    )
+    candidate_event = FakeEvent()
+
+    result = gate.append_if_admitted(candidate_event, expected_current_version=1)
+
+    assert result.verdict == AdmissionVerdict.STALE_WRITE
+    assert result.admitted is False
+    assert result.candidate_event_id == candidate_event.event_id
+    assert result.accepted_event_id is None
+    assert result.append_version_mismatch_evidence == (
+        AppendVersionMismatchEvidence(
+            expected_current_version=1,
+            observed_current_version=2,
+        )
+    )
+
+
 def test_postgres_optimistic_admit_translates_value_error_to_stale_write():
     gate = PostgresOptimisticAdmissionGate(
         FakeEventStore(exc=ValueError("version conflict"))
@@ -92,6 +121,7 @@ def test_postgres_optimistic_admit_translates_value_error_to_stale_write():
     assert result.admitted is False
     assert result.candidate_event_id == candidate_event.event_id
     assert result.accepted_event_id is None
+    assert result.append_version_mismatch_evidence is None
     assert "version conflict" in result.reason
 
 
@@ -107,6 +137,7 @@ def test_postgres_optimistic_admit_translates_stale_write_error_to_stale_write()
     assert result.admitted is False
     assert result.candidate_event_id == candidate_event.event_id
     assert result.accepted_event_id is None
+    assert result.append_version_mismatch_evidence is None
     assert "stale writer" in result.reason
 
 
@@ -122,6 +153,7 @@ def test_postgres_optimistic_admit_translates_append_conflict_to_stale_write():
     assert result.admitted is False
     assert result.candidate_event_id == candidate_event.event_id
     assert result.accepted_event_id is None
+    assert result.append_version_mismatch_evidence is None
     assert "stream position occupied" in result.reason
 
 

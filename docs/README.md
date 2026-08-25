@@ -31,6 +31,7 @@ It now also serves as the reference frame for an executable baseline covering:
 - [Stage 4B.3 closeout](implementation_notes/stage_4b_3/README.md) as a completed evidence-first necessity review closed as not currently justified, without a continuation mechanism
 - [Stage 4B.5 Order Correctness Contract V0](implementation_notes/stage_4b_5/README.md) as a completed 18-rule contract with exactly six FullProof `TRANSITION_TRUTH` rules currently covered by typed runtime producers
 - [Stage 4C Runtime Decision Authority](implementation_notes/stage_4c/README.md) as a completed generic immutable contract and first Layer-1 PostgreSQL / Order write-side profile, with no automatic caller wiring
+- [Stage 4E Same-Request Re-Invocation Authority](implementation_notes/stage_4e/README.md) as complete and closed bounded authority for at most one fresh public-writer invocation under exactly two reviewed evidence profiles
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -76,15 +77,15 @@ The current Stage 4 foundation position is:
 - Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
 - Stage 4B.5 — Order Correctness Contract v0 — complete / closed
 - Stage 4C — Runtime Decision Authority — complete / closed
-- Stage 4D — Strategy Selection Authority — responsibility retained; implementation deferred
-- Stage 4E — Retry / Attempt Authorization — next formal implementation direction; not implemented
+- Stage 4D — Strategy Selection Authority — responsibility retained; implementation deferred under ADR 0028
+- Stage 4E — Same-Request Re-Invocation Authority — complete / closed through PR6
 
 Stage 4B.3 PR1 and PR2 remain historical/reference investigation. The canonical
 [ADR 0026 closeout](adr/0026_projection_trust_continuation_is_not_currently_justified.md)
 records why PR3+ do not proceed. Stage 4B.5 completed in a separately owned
 parallel development stream; it is technically independent from and was not
 moved under the closed Stage 4B.3 stage. It does not implement the later
-Retry / Attempt Authorization boundary.
+Stage 4E another-invocation authority boundary.
 
 [ADR 0027](adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
 separates current-response authority, strategy selection, another-invocation
@@ -98,11 +99,17 @@ deferred consumer. See the [Stage 4C implementation index](implementation_notes/
 and [closeout](implementation_notes/stage_4c/stage_4c_closeout.md).
 
 Stage 4D remains a valid `HOW`-selection responsibility, but implementation is
-deferred because current strategy composition is static and no authorized
-operation has multiple dynamically eligible strategies or reviewed selection
-rules. Stage 4E is the next formal implementation direction; preparation
-`LOCK_TIMEOUT` is the most portable candidate for a narrow first same-request
-re-invocation profile. No Stage 4E behavior is implemented by the closeout.
+deferred under
+[ADR 0028](adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
+because current strategy composition is static and no authorized operation has
+multiple dynamically eligible strategies or reviewed selection rules. Stage 4E
+is complete and closed with exactly two production-positive authority profiles:
+the early preparation `LOCK_TIMEOUT` profile established in PR1 and the narrow
+coherent append-version-advance profile completed in PR5. Both authorize at
+most one fresh invocation through the one-shot owner; neither creates a generic
+retry framework, scheduler, budget, or execution policy. See the
+[Stage 4E implementation notes](implementation_notes/stage_4e/README.md) and
+[Stage 4E closeout](implementation_notes/stage_4e/stage_4e_closeout.md).
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
 Stage 4B preserves selected evidence through explicit mapping, serialization,
@@ -207,14 +214,17 @@ Recommended reading order for the core system:
 14. [Implementation Roadmap](roadmap/implementation_roadmap.md)
 15. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
 16. [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
-17. [Implementation Notes](implementation_notes/README.md)
-18. [Stage 4C — Runtime Decision Authority](implementation_notes/stage_4c/README.md)
-19. [Stage 4C Closeout](implementation_notes/stage_4c/stage_4c_closeout.md)
-20. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
-21. [Boundary Notes](boundary_notes/README.md)
-22. [Development Setup](development/README.md)
-23. [Reasoning Notes](reasoning_notes/README.md)
-24. [Postmortems](postmortems/README.md)
+17. [ADR 0028 — Defer Dynamic Strategy Selection Until Multiple Eligible Execution Paths Exist](adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
+18. [Implementation Notes](implementation_notes/README.md)
+19. [Stage 4C — Runtime Decision Authority](implementation_notes/stage_4c/README.md)
+20. [Stage 4C Closeout](implementation_notes/stage_4c/stage_4c_closeout.md)
+21. [Stage 4E — Same-Request Re-Invocation Authority](implementation_notes/stage_4e/README.md)
+22. [Stage 4E Closeout](implementation_notes/stage_4e/stage_4e_closeout.md)
+23. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
+24. [Boundary Notes](boundary_notes/README.md)
+25. [Development Setup](development/README.md)
+26. [Reasoning Notes](reasoning_notes/README.md)
+27. [Postmortems](postmortems/README.md)
 
 This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, stage / PR implementation details, module-boundary notes, local development setup, and finally postmortems.
 
@@ -249,7 +259,7 @@ top-level system structure
   closed as not currently justified after evidence-first investigation
 → completed separately owned Order Correctness Contract V0
 → completed Stage 4C current-response Runtime Decision Authority
-→ next formal Stage 4E Retry / Attempt Authorization when another same-request invocation is considered
+→ completed Stage 4E Same-Request Re-Invocation Authority
 → deferred Stage 4D Strategy Selection only when an authorized operation has multiple eligible execution paths
 → action safety
 → boundary clarification

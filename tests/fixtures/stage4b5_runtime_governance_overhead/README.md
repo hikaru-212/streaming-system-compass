@@ -18,7 +18,15 @@ and PostgreSQL write-side behavior. It does not load current validator, runtime,
 or write-side modules into the A process, create a Git worktree, parse YAML, or
 change historical production semantics.
 
-The manifest also freezes the complete set of `src/` paths allowed to differ
-between the historical commit and the current B/C source. Canonical preflight
-fails if another production path changes, forcing a new transitive-import audit
-before A can be treated as credible again.
+`provenance.json` also retains the complete audit-time set of `src/` paths that
+differed between historical A and the B/C source used by the original review.
+Its `allowed_current_source_differences` field is immutable historical metadata,
+not an ongoing allowlist for later production evolution.
+
+`replay_review.json` is a separate current-replay review artifact. It binds one
+reviewed replay status to exact SHA-256 identities for every protected current
+transitive dependency. The current status is `REFUSED`: Stage 4E PR4 changed
+that protected surface and no performance-equivalence review has been
+performed. Matching those exact identities makes the refusal expected; any
+later committed or working-tree protected byte change fails closed until a new
+explicit review. Historical provenance and recorded evidence remain unchanged.

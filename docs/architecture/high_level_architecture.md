@@ -8,17 +8,18 @@ This document describes the top-level structure of the Streaming System + Compas
 
 The goal is not to explain every implementation detail, but to define the major layers of the system and how they relate to one another.
 
-> **Current implementation checkpoint after Stage 4C PR0:** The repository has
+> **Current implementation checkpoint after Stage 4E PR6:** The repository has
 > durable PostgreSQL write-side and read-side baselines, exact-next per-order
 > projection progress under ADR 0020, completed bounded trace and measurement
 > evidence, `SemanticOutcome`, a `DecisionReceipt` serialization and persistence
 > foundation, and the completed Order Correctness Contract v0. Projection
 > snapshots remain optional derived reference infrastructure for the current
-> Order workload. Receipt materialization is not automatic. Stage 4C PR0
-> completed documentation and responsibility alignment; production Runtime
-> Decision Authority is next but not yet frozen or implemented. Stage 4D
-> Strategy Selection Authority and Stage 4E Retry / Attempt Authorization are
-> future responsibilities.
+> Order workload. Receipt materialization is not automatic. Stage 4C Runtime
+> Decision Authority is complete and closed. Stage 4E Same-Request
+> Re-Invocation Authority is complete and closed with two reviewed positive
+> evidence profiles, one-shot owner custody, and no generic retry framework.
+> Stage 4D Strategy Selection Authority retains responsibility while
+> implementation remains deferred.
 
 ---
 
@@ -129,9 +130,11 @@ At the current baseline, write-side transition truth remains the enforcement
 layer. Stage 4A and Stage 4B implement semantic-outcome and receipt-evidence
 contracts for bounded write-side, read-side, and snapshot producers. Stage
 4B.1, Stage 4B.2, and Stage 4B.5 add bounded trace, measurement, and exact-rule
-evidence. Stage 4C production Runtime Decision Authority is next; Stage 4D
-strategy selection, conditional Stage 4E retry / attempt authorization, and
-action execution remain later, separately owned responsibilities.
+evidence. Stage 4C production Runtime Decision Authority is complete and
+closed. Stage 4E bounded Same-Request Re-Invocation Authority is also complete
+and closed; it may authorize at most one fresh invocation under exactly two
+reviewed evidence profiles. Stage 4D strategy selection remains deferred, and
+action execution remains a separately owned responsibility.
 
 ---
 

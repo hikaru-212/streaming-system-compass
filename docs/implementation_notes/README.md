@@ -21,12 +21,14 @@ For project-wide sequencing, see:
 - [Stage 4B.3 — Projection Trust Boundary and Continuation Closeout](./stage_4b_3/)
 - [Stage 4B.5 — Order Correctness Contract v0](./stage_4b_5/)
 - [Stage 4C — Runtime Decision Authority — complete / closed](./stage_4c/)
+- [Stage 4E — Same-Request Re-Invocation Authority — complete / closed](./stage_4e/)
+- [Stage 4E closeout](./stage_4e/stage_4e_closeout.md)
 
 ## Current Position
 
 Stage 4A, Stage 4B PR1–PR7, Stage 4B.1 PR1–PR7, Stage 4B.2 PR1–PR8,
-Stage 4B.5 through PR8, and Stage 4C are complete. Stage 4B.2, Stage 4B.5,
-and Stage 4C are closed.
+Stage 4B.5 through PR8, Stage 4C, and Stage 4E through PR6 are complete.
+Stage 4B.2, Stage 4B.5, Stage 4C, and Stage 4E are closed.
 
 Stage 4 Interlude PR0 — test helper consolidation before Stage 4B — is complete.
 
@@ -48,6 +50,12 @@ Stage 4C
 = PR1 source-grounded implementation-entry boundary
 = PR2 generic RuntimeDecision + first Layer-1 PostgreSQL / Order profile
 = Stage 4C.5 compatibility / documentation closeout
+
+Stage 4E
+= Same-Request Re-Invocation Authority — COMPLETE / CLOSED
+= exactly two reviewed production-positive authority profiles
+= one-shot owner custody and AVAILABLE → SPENT lifecycle
+= PR6 documentation closeout / responsibility freeze
 ```
 
 Stage 4B.3 PR1 responsibility-boundary work and PR2 executable mechanics
@@ -88,7 +96,7 @@ Stage 4B.5 — Order Correctness Contract v0 — COMPLETE / CLOSED
 Stage 4C   — Runtime Decision Authority — COMPLETE / CLOSED
 Stage 4C.5 — Compatibility / documentation closeout — COMPLETE
 Stage 4D   — Strategy Selection Authority — RESPONSIBILITY RETAINED / IMPLEMENTATION DEFERRED
-Stage 4E   — Retry / Attempt Authorization — NEXT FORMAL IMPLEMENTATION DIRECTION
+Stage 4E   — Same-Request Re-Invocation Authority — COMPLETE / CLOSED
 ```
 
 Stage 4C is complete and closed under
@@ -103,10 +111,18 @@ Stage 4D retains the valid responsibility for dynamic `HOW` selection, but its
 implementation is deferred because current strategy composition is static, no
 authorized operation has multiple dynamically eligible strategies, no reviewed
 selection rule exists, and a selector would not change observable behavior.
-Stage 4E is the next formal implementation direction. Its first formal slice
-should be narrower than the experiment, with preparation `LOCK_TIMEOUT` as the
-most portable initial same-request re-invocation candidate. Stage 4E remains
-unimplemented here.
+This disposition is recorded in
+[ADR 0028](../adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md).
+
+Stage 4E is complete and closed under its
+[implementation index](stage_4e/README.md) and
+[closeout](stage_4e/stage_4e_closeout.md). It implements exactly two reviewed
+positive profiles: early preparation `LOCK_TIMEOUT`, and coherent append-time
+`STALE_WRITE` with typed forward version-mismatch evidence. Eligible evidence
+may issue at most one authority for a fresh public-writer invocation with the
+owner-retained same complete `RequestSignature`; authority is not execution or
+a reusable retry budget. Everything else remains non-authorizing unless
+separately reviewed.
 
 ## Boundary
 

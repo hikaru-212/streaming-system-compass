@@ -12,14 +12,15 @@ Use roadmap documents to understand:
 * what depends on what
 * which features are intentionally deferred
 * how the project moves from durable truth toward runtime governance
-* how the project completed Stage 4B.2 measurement, closed Stage 4B.3 after an evidence-first necessity review, completed the separately owned Stage 4B.5 correctness-contract work, and closed Stage 4C Runtime Decision Authority
+* how the project completed Stage 4B.2 measurement, closed Stage 4B.3 after an evidence-first necessity review, completed the separately owned Stage 4B.5 correctness-contract work, and closed Stage 4C Runtime Decision Authority and Stage 4E Same-Request Re-Invocation Authority
 
 ---
 
 ## Completed Baseline
 
 The project has completed the Stage 4 foundation / evidence baseline through
-Stage 4B.5 and Stage 4C Runtime Decision Authority:
+Stage 4B.5, and has also closed the implemented Stage 4C and Stage 4E authority
+boundaries:
 
 * Stage 1 — Transactional Semantic Core
 * Stage 2 — Compass Layer 1 Write-side Validation
@@ -36,6 +37,7 @@ Stage 4B.5 and Stage 4C Runtime Decision Authority:
 * Stage 4B.3 — Projection Trust Boundary and Continuation — closed as not currently justified
 * Stage 4B.5 — Order Correctness Contract V0
 * Stage 4C — Runtime Decision Authority — complete / closed
+* Stage 4E — Same-Request Re-Invocation Authority — complete / closed
 
 Detailed sequencing remains in [Implementation Roadmap](implementation_roadmap.md).
 
@@ -52,6 +54,7 @@ Completed implementation details from Stage 3.5B onward are preserved in [Implem
 * [Stage 4B.3 Closeout Notes](../implementation_notes/stage_4b_3/)
 * [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
 * [Stage 4C Implementation Notes and Closeout](../implementation_notes/stage_4c/)
+* [Stage 4E Implementation Notes and Closeout](../implementation_notes/stage_4e/)
 
 Stage 4B PR1–PR7 completed the DecisionReceipt boundary, contract, generic and
 producer mapping, strict serializer, storage-neutral persistence contracts,
@@ -71,6 +74,11 @@ refinement, YAML projection, overhead characterization, and closeout. Stage 4C
 then delivered the PR1 source-grounded entry boundary, PR2 generic immutable
 `RuntimeDecision` plus first Layer-1 PostgreSQL / Order evaluation profile, and
 the Stage 4C.5 compatibility / documentation closeout.
+Stage 4E then completed PR0–PR6: the responsibility boundary, the preparation
+`LOCK_TIMEOUT` authority profile, one-shot invocation-owner custody, independent
+Stage 4C current-response delivery, typed append-version-mismatch evidence, the
+narrow coherent append-version-advance authority profile, and documentation
+closeout / responsibility freeze.
 
 Completed work is recorded in the
 [Stage 4B.3 implementation notes](../implementation_notes/stage_4b_3/) and
@@ -124,6 +132,11 @@ Stage 4C
 = PR1 SOURCE-GROUNDED ENTRY BOUNDARY
 = PR2 GENERIC CONTRACT + FIRST LAYER-1 PROFILE
 = STAGE 4C.5 COMPATIBILITY / DOCUMENTATION CLOSEOUT
+
+Stage 4E
+= SAME-REQUEST RE-INVOCATION AUTHORITY / COMPLETE / CLOSED
+= TWO REVIEWED PRODUCTION-POSITIVE AUTHORITY PROFILES
+= ONE-SHOT OWNER / PR6 RESPONSIBILITY FREEZE
 ```
 
 Stage 4B.3 produced a closeout decision, not a Projection Trust Continuation
@@ -170,10 +183,10 @@ semantic truth
 → Runtime Decision Authority — complete / closed
 
 retained responsibility
-→ Strategy Selection Authority — implementation deferred
+→ Strategy Selection Authority — implementation deferred under ADR 0028
 
-next formal implementation direction
-→ Retry / Attempt Authorization
+separate bounded responsibility
+→ Same-Request Re-Invocation Authority — complete / closed
 
 → action safety demo
 → later production and agent-facing hardening
@@ -238,13 +251,17 @@ not require identical evidence, decision policy, or caller behavior.
 `DecisionReceipt` remains durable governance evidence but is not required for
 the live Stage 4C path. Restart recovery remains a distinct deferred consumer.
 
-Stage 4D responsibility remains valid, but implementation is deferred because
-strategy composition is currently static, no authorized operation has multiple
-dynamically eligible strategies, no reviewed selection rule exists, and a
-selector would not change observable behavior. Stage 4E is the next formal
-implementation direction. Preparation `LOCK_TIMEOUT` is the most portable
-candidate for a narrow first same-request re-invocation profile; Stage 4E is not
-implemented by the Stage 4C closeout.
+Stage 4D responsibility remains valid, but implementation is deferred under
+[ADR 0028](../adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
+because strategy composition is currently static, no authorized operation has
+multiple dynamically eligible strategies, no reviewed selection rule exists,
+and a selector would not change observable behavior. Stage 4E is complete and
+closed as bounded
+[Same-Request Re-Invocation Authority](../implementation_notes/stage_4e/README.md).
+Exactly two reviewed evidence shapes authorize at most one fresh invocation:
+the early preparation `LOCK_TIMEOUT` profile and the coherent append-version-
+advance profile. See the
+[Stage 4E closeout](../implementation_notes/stage_4e/stage_4e_closeout.md).
 
 Stage 4 does not yet claim to implement production benchmarking, full observability, full authorization, general policy authoring, agent workflow orchestration, or final action safety.
 
@@ -264,8 +281,8 @@ Stage 4 proceeds through:
 * Stage 4B.5 — Order Correctness Contract v0 — complete / closed / independently delivered
 * Stage 4C — Runtime Decision Authority — complete / closed
 * Stage 4C.5 — compatibility / documentation closeout — complete
-* Stage 4D — Strategy Selection Authority inside prior authorization — responsibility retained / implementation deferred
-* Stage 4E — Retry / Attempt Authorization — next formal implementation direction / not implemented
+* Stage 4D — Strategy Selection Authority inside prior authorization — responsibility retained / implementation deferred under ADR 0028
+* Stage 4E — Same-Request Re-Invocation Authority — complete / closed through PR6
 
 The detailed implementation of each step belongs in stage-specific implementation notes and PRs, not in this roadmap index.
 
