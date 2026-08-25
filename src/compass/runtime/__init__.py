@@ -23,10 +23,22 @@ from src.compass.runtime.json_types import (
     ensure_json_object,
     ensure_json_value,
 )
+from src.compass.runtime.postgres_write_side_reinvocation_authority import (
+    PostgresWriteSideReinvocationAuthorityEvaluation,
+    evaluate_postgres_write_side_reinvocation_authority,
+)
 from src.compass.runtime.read_side_outcome_mapping import (
     map_projection_snapshot_assisted_resolution_result_to_semantic_outcome,
     map_projection_snapshot_replay_validation_result_to_semantic_outcome,
     map_replay_validation_result_to_semantic_outcome,
+)
+from src.compass.runtime.reinvocation_authority import (
+    NoReinvocationAuthority,
+    ReinvocationAuthorization,
+)
+from src.compass.runtime.runtime_decision import (
+    RuntimeDecision,
+    RuntimeDecisionResponse,
 )
 from src.compass.runtime.semantic_outcome import (
     SemanticBoundary,
@@ -50,6 +62,11 @@ from src.compass.runtime.write_side_rule_feedback import (
     PostgresWriteSideSemanticRuleFeedback,
     map_postgres_write_side_result_to_semantic_rule_feedback,
 )
+from src.compass.runtime.write_side_runtime_decision import (
+    PostgresWriteSideRuntimeDecisionEvaluation,
+    PostgresWriteSideRuntimeDecisionRefused,
+    evaluate_postgres_write_side_runtime_decision,
+)
 
 __all__ = [
     "DecisionReceipt", "DecisionReceiptActor", "DecisionReceiptAdmissionEvidence",
@@ -59,7 +76,13 @@ __all__ = [
     "DecisionReceiptIdentitySource", "DecisionReceiptSubject",
     "DecisionReceiptSubjectType", "EventAdmissionDisposition",
     "JsonObject", "JsonScalar", "JsonValue", "MAX_JSON_DEPTH",
-    "PostgresWriteSideSemanticRuleFeedback", "RuntimeTechnicalStatusMapping",
+    "NoReinvocationAuthority",
+    "PostgresWriteSideReinvocationAuthorityEvaluation",
+    "PostgresWriteSideRuntimeDecisionEvaluation",
+    "PostgresWriteSideRuntimeDecisionRefused",
+    "PostgresWriteSideSemanticRuleFeedback", "ReinvocationAuthorization",
+    "RuntimeDecision",
+    "RuntimeDecisionResponse", "RuntimeTechnicalStatusMapping",
     "SemanticBoundary", "SemanticOutcome",
     "SemanticOutcomeCategory", "SemanticOutcomeCode", "SemanticReversibility",
     "SemanticRiskLevel", "SemanticSeverity", "ensure_json_object",
@@ -68,6 +91,8 @@ __all__ = [
     "map_projection_snapshot_assisted_resolution_result_to_semantic_outcome",
     "map_projection_snapshot_replay_validation_result_to_semantic_outcome",
     "map_replay_validation_result_to_semantic_outcome", "map_runtime_technical_status",
+    "evaluate_postgres_write_side_runtime_decision",
+    "evaluate_postgres_write_side_reinvocation_authority",
     "map_semantic_outcome_to_decision_receipt",
     "map_write_side_admission_status_to_semantic_outcome",
     "supported_runtime_technical_statuses",

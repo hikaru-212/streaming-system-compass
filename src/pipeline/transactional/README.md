@@ -50,6 +50,7 @@ This module is responsible for:
 - transactional write-side commit / rollback boundary
 - validation placement strategy
 - optimistic / pessimistic PostgreSQL admission strategy integration
+- live PostgreSQL invocation ownership and guarded one-shot A2 entry
 
 ---
 
@@ -213,6 +214,27 @@ PostgresOptimisticAdmissionGate
 `IN_TRANSACTION` remains available through explicit configuration.
 The default `PRE_TRANSACTION` path remains guarded by an authoritative
 in-transaction idempotency re-check and append-time admission.
+
+---
+
+### `postgres_write_side_invocation_owner.py`
+
+Defines the live PostgreSQL owner for one complete `RequestSignature` and one
+already-configured `PostgresTransactionalWriteSide`.
+
+The owner invokes A1 itself, retains its exact normal result for Stage 4E, and
+publishes the latest normal A1/A2 result as the sole current-response source.
+Explicit Stage 4C evaluation retains one stable outcome identity and one cached
+decided or refused delivery for that source. The same owner-scoped lifecycle
+lock independently protects the Stage 4E cache/spent state and atomically
+invalidates current-response state before at most one A2 public-writer entry.
+Normal A2 completion publishes a fresh current-response lifecycle. The lock is
+not held during writer execution, and both invocations dispatch the same
+retained request fields through the same retained writer and composition.
+
+It does not define Stage 4E eligibility, new Stage 4C policy, application-level
+delivery enforcement, strategy selection, attempt history, generic retry
+infrastructure, scheduling, durable lifecycle identity, or A3.
 
 ---
 
@@ -399,9 +421,13 @@ selectable placement.
 Stage 3.5B PR4 — Transactional Semantic Write-Side Boundary ✅
 Stage 3.5B PR5 — PostgreSQL Concurrency Admission Boundary ✅
 Stage 3.5B PR6 — Validation Placement Strategy Boundary / Stage 4 Prelude ✅
+Stage 4E PR2 — Invocation Owner and One-Shot A2 Lifecycle ✅
+Stage 4E PR3 — Live Owner Current-Response Delivery Capability ✅
 ```
 
-This module is not part of the current Stage 3.5C PR4 implementation, but documenting it now helps complete the `src/pipeline/` documentation boundary while PR4 adds the read-side projection README.
+The invocation owner now exposes explicit Stage 4C delivery at the live
+producer-result boundary while preserving the independent one-shot Stage 4E
+lifecycle. No application/bootstrap consumer currently enforces that delivery.
 
 ---
 
@@ -409,9 +435,10 @@ This module is not part of the current Stage 3.5C PR4 implementation, but docume
 
 The transactional pipeline currently does not implement:
 
-- Stage 4 `SemanticOutcome`
-- runtime decision policy
+- application-level RuntimeDecision consumption or enforcement
 - retry orchestration
+- attempt history
+- A3 or successive re-invocation support
 - durable admission audit table
 - durable validation attempt table
 - full production locking framework

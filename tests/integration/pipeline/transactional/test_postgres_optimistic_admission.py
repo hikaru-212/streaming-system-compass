@@ -1,6 +1,11 @@
+from dataclasses import replace
+
 import pytest
 
-from src.pipeline.transactional.admission import AdmissionVerdict
+from src.pipeline.transactional.admission import (
+    AdmissionVerdict,
+    AppendVersionMismatchEvidence,
+)
 from src.pipeline.transactional.postgres_admission import (
     PostgresOptimisticAdmissionGate,
 )
@@ -64,7 +69,43 @@ def test_postgres_optimistic_gate_rejects_stale_expected_version(
     assert result.admitted is False
     assert result.candidate_event_id == stale_candidate.event_id
     assert result.accepted_event_id is None
+    assert result.append_version_mismatch_evidence == (
+        AppendVersionMismatchEvidence(
+            expected_current_version=0,
+            observed_current_version=1,
+        )
+    )
 
+    assert count_rows(db_connection, "order_events") == 1
+
+
+def test_postgres_optimistic_gate_keeps_candidate_continuity_stale_coarse(
+    db_connection,
+):
+    event_store = PostgresEventStore(db_connection)
+    gate = PostgresOptimisticAdmissionGate(event_store)
+
+    created_event = make_created_event(order_id="order-admission-1")
+    event_store.append(created_event, expected_current_version=0)
+    db_connection.commit()
+
+    candidate_event = make_paid_event(
+        previous_event=created_event,
+        request_id="pay-request-001",
+    )
+    broken_candidate = replace(candidate_event, sequence=1)
+
+    result = gate.append_if_admitted(
+        broken_candidate,
+        expected_current_version=1,
+    )
+
+    assert result.verdict == AdmissionVerdict.STALE_WRITE
+    assert result.admitted is False
+    assert result.candidate_event_id == broken_candidate.event_id
+    assert result.accepted_event_id is None
+    assert result.append_version_mismatch_evidence is None
+    assert "Append-time continuity broken" in result.reason
     assert count_rows(db_connection, "order_events") == 1
 
 
@@ -96,6 +137,12 @@ def test_postgres_optimistic_gate_rejects_stale_writer_after_competing_append(
     assert stale_result.verdict == AdmissionVerdict.STALE_WRITE
     assert stale_result.admitted is False
     assert stale_result.accepted_event_id is None
+    assert stale_result.append_version_mismatch_evidence == (
+        AppendVersionMismatchEvidence(
+            expected_current_version=1,
+            observed_current_version=2,
+        )
+    )
 
     loaded_events = event_store.load("order-admission-1")
 

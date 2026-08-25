@@ -24,6 +24,42 @@ class AdmissionVerdict(Enum):
 
 
 @dataclass(frozen=True)
+class AppendVersionMismatchEvidence:
+    """Retain one append-time expected/current version inequality.
+
+    Args:
+        expected_current_version: Version supplied to append admission.
+        observed_current_version: Authoritative version observed by storage.
+
+    This record contains only physical append evidence. It does not identify a
+    stream, classify retryability or recovery, interpret semantic meaning, or
+    authorize another invocation or any execution.
+
+    Raises:
+        TypeError: If either version is not an exact integer.
+        ValueError: If either version is negative or the versions are equal.
+    """
+
+    expected_current_version: int
+    observed_current_version: int
+
+    def __post_init__(self) -> None:
+        if type(self.expected_current_version) is not int:
+            raise TypeError("expected_current_version must be int")
+        if type(self.observed_current_version) is not int:
+            raise TypeError("observed_current_version must be int")
+        if self.expected_current_version < 0:
+            raise ValueError("expected_current_version must be non-negative")
+        if self.observed_current_version < 0:
+            raise ValueError("observed_current_version must be non-negative")
+        if self.expected_current_version == self.observed_current_version:
+            raise ValueError(
+                "expected_current_version and observed_current_version "
+                "must differ"
+            )
+
+
+@dataclass(frozen=True)
 class StreamAdmissionResult:
     """
     Stream-level preparation evidence from ConcurrencyGate.prepare_stream(...).
@@ -55,19 +91,61 @@ class StreamAdmissionResult:
 
 @dataclass(frozen=True)
 class AdmissionResult:
-    """
-    Result of the append-time persistence admission boundary.
+    """Result of the append-time persistence admission boundary.
+
+    Args:
+        verdict: Existing append-admission technical outcome.
+        reason: Human-readable diagnostic description.
+        candidate_event_id: Identity of the candidate presented for append.
+        accepted_event_id: Accepted identity when append admission succeeded.
+        append_version_mismatch_evidence: Optional physical version inequality
+            retained only for its characterized append source.
 
     AdmissionResult answers whether a candidate event was allowed to occupy the
-    next accepted-history position.
+    next accepted-history position. Version-mismatch evidence is ordinary
+    retained structure and participates in equality, hashing, and
+    representation. Those structural operations do not define semantic
+    equivalence or re-invocation authority.
 
     It is intentionally not a Stage 4 SemanticOutcome.
+
+    Raises:
+        TypeError: If non-``None`` version evidence has the wrong type.
+        ValueError: If version evidence accompanies a non-stale verdict, an
+            accepted event, or no candidate identity.
     """
 
     verdict: AdmissionVerdict
     reason: str
     candidate_event_id: str
     accepted_event_id: str | None = None
+    append_version_mismatch_evidence: (
+        AppendVersionMismatchEvidence | None
+    ) = None
+
+    def __post_init__(self) -> None:
+        """Validate coherence only when version-mismatch evidence is present."""
+
+        evidence = self.append_version_mismatch_evidence
+        if evidence is None:
+            return
+        if not isinstance(evidence, AppendVersionMismatchEvidence):
+            raise TypeError(
+                "append_version_mismatch_evidence must be "
+                "AppendVersionMismatchEvidence or None"
+            )
+        if self.verdict is not AdmissionVerdict.STALE_WRITE:
+            raise ValueError(
+                "append_version_mismatch_evidence requires STALE_WRITE verdict"
+            )
+        if self.accepted_event_id is not None:
+            raise ValueError(
+                "append_version_mismatch_evidence requires no accepted_event_id"
+            )
+        if self.candidate_event_id is None:
+            raise ValueError(
+                "append_version_mismatch_evidence requires candidate_event_id"
+            )
 
     @property
     def admitted(self) -> bool:

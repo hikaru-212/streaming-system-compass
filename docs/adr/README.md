@@ -47,6 +47,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0025 | [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) | Accepted | Preserves PR6 as complete comparison evidence while assigning causal decomposition to a separate post-PR6 supplemental investigation. |
 | 0026 | [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) | Accepted | Closes Stage 4B.3 after source-grounded necessity review because the current exact-next projection runtime already owns normal materialization correctness and no concrete consumer requires incremental qualification. |
 | 0027 | [Separate Runtime Decision, Strategy, and Retry Authority](0027_separate_runtime_decision_strategy_and_retry_authority.md) | Accepted | Separates Stage 4C current-response authority, Stage 4D strategy selection, Stage 4E attempt authorization, and later execution while preserving a live/in-memory-first evidence posture. |
+| 0028 | [Defer Dynamic Strategy Selection Until Multiple Eligible Execution Paths Exist](0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md) | Accepted | Retains Stage 4D as the owner of dynamic `HOW` selection while deferring implementation until one authorized operation has multiple eligible strategies, reviewed selection evidence, and observable value. |
 
 ---
 
@@ -90,6 +91,7 @@ Recommended order:
 26. [PR6 Comparison Requires Separate Explanatory Characterization](0025_pr6_comparison_requires_separate_explanatory_characterization.md) — explains why the unexpected PR6 latency ordering is preserved as comparison evidence and investigated through a separate bounded explanatory supplement instead of being promoted directly into an architecture conclusion.
 27. [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) — explains why accepted-history authority, exact-next per-order progress, canonical reduction, atomic state/progress persistence, permissions, and replay/rebuild already form the required current projection correctness model without another trust-continuation layer.
 28. [Separate Runtime Decision, Strategy, and Retry Authority](0027_separate_runtime_decision_strategy_and_retry_authority.md) — explains why current-response authority, strategy selection, another-attempt authorization, and execution remain separate, and why the first live decision path does not require durable receipt persistence.
+29. [Defer Dynamic Strategy Selection Until Multiple Eligible Execution Paths Exist](0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md) — explains why Stage 4D remains valid while current static execution composition does not justify a dynamic selector, and why Stage 4E must preserve rather than silently replace `HOW`.
 
 ---
 
@@ -176,6 +178,13 @@ actual execution. It also records live in-memory governance as the first design
 center without reducing `DecisionReceipt`'s durable evidence role or treating
 durable evidence as permanent authorization.
 
+ADR 0028 retains Stage 4D's dynamic `HOW`-selection responsibility while
+deferring its implementation. Current write-side composition is static, no
+already-authorized operation has multiple dynamically eligible strategies, and
+no reviewed runtime selection rule would change observable behavior. The ADR
+also records that Stage 4E must preserve an A1-owned composition instead of
+becoming an implicit selector.
+
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
 ---
@@ -256,6 +265,7 @@ Recommended pattern:
 0025_pr6_comparison_requires_separate_explanatory_characterization.md
 0026_projection_trust_continuation_is_not_currently_justified.md
 0027_separate_runtime_decision_strategy_and_retry_authority.md
+0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md
 ```
 
 Evolution or supporting notes may be kept as separate files:

@@ -18,7 +18,11 @@ from src.compass.transition.types import (
     ValidationVerdict,
 )
 from src.core.order.enums import CommandType
-from src.pipeline.transactional.admission import AdmissionVerdict
+from src.pipeline.transactional.admission import (
+    AdmissionResult,
+    AdmissionVerdict,
+    AppendVersionMismatchEvidence,
+)
 from src.pipeline.transactional.postgres_admission import (
     PostgresOptimisticAdmissionGate,
     PostgresPessimisticAdmissionGate,
@@ -59,6 +63,7 @@ class _CheckpointRecorder:
         before_pessimistic_append=None,
     ) -> None:
         self.events: list[str] = []
+        self.append_admission_results: list[AdmissionResult] = []
         self.enabled = True
         self._idempotency_labels = iter(idempotency_labels)
         self._history_labels = iter(history_labels)
@@ -154,6 +159,8 @@ class _CheckpointRecorder:
                 candidate_event,
                 expected_current_version,
             )
+            if self.enabled:
+                self.append_admission_results.append(result)
             self.record("append_admission_returned")
             return result
 
@@ -174,6 +181,8 @@ class _CheckpointRecorder:
                 candidate_event,
                 expected_current_version,
             )
+            if self.enabled:
+                self.append_admission_results.append(result)
             self.record("append_admission_returned")
             return result
 
@@ -771,13 +780,22 @@ def test_pre_occ_conflict_stops_after_one_append_without_reload_or_retry(
     assert len(concurrent_results) == 1
     assert concurrent_results[0].outcome == PostgresWriteSideOutcome.ACCEPTED
     assert result.outcome == PostgresWriteSideOutcome.ADMISSION_REJECTED
+    assert result.accepted_event is None
     assert result.idempotency_decision.verdict == IdempotencyVerdict.MISS
     assert result.stream_admission_result is not None
     assert result.stream_admission_result.verdict == AdmissionVerdict.ADMITTED
     assert result.validation_decision is not None
     assert result.validation_decision.action == EnforcementAction.ALLOW
     assert result.admission_result is not None
+    assert recorder.append_admission_results == [result.admission_result]
+    assert result.admission_result is recorder.append_admission_results[0]
     assert result.admission_result.verdict == AdmissionVerdict.STALE_WRITE
+    assert result.admission_result.append_version_mismatch_evidence == (
+        AppendVersionMismatchEvidence(
+            expected_current_version=0,
+            observed_current_version=1,
+        )
+    )
     assert count_rows(db_connection, "order_events") == 1
     assert count_rows(db_connection, "idempotency_records") == 1
 
@@ -1163,6 +1181,11 @@ def test_uncommitted_stream_position_commit_makes_waiting_writer_stale(
         assert (
             observed_contender.admission_result.verdict
             == AdmissionVerdict.STALE_WRITE
+        )
+        assert (
+            observed_contender.admission_result
+            .append_version_mismatch_evidence
+            is None
         )
 
         db_connection.rollback()

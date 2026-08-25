@@ -7,6 +7,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from src.core.order.events import OrderEvent
+from src.storage.errors import AppendVersionMismatchError
 from src.storage.order_event_hydration import (
     ORDER_EVENT_SELECT_COLUMNS,
     row_to_order_event,
@@ -47,9 +48,9 @@ class PostgresEventStore:
         current_version_in_store = self._current_version(candidate_event.order_id)
 
         if current_version_in_store != expected_current_version:
-            raise ValueError(
-                f"Version conflict: store_version={current_version_in_store}, "
-                f"expected_version={expected_current_version}"
+            raise AppendVersionMismatchError(
+                expected_current_version=expected_current_version,
+                observed_current_version=current_version_in_store,
             )
 
         expected_new_sequence = expected_current_version + 1

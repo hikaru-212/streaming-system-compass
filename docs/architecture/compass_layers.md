@@ -11,11 +11,12 @@ This document describes the layered role of Compass in the project.
 > maps selected evidence into strict, optionally persisted `DecisionReceipt`
 > records. Stage 4B.1 and Stage 4B.2 completed bounded producer-specific trace
 > and measurement evidence, and Stage 4B.5 completed the Order Correctness
-> Contract v0. Stage 4C PR0 defines the docs-first Runtime Decision Authority
-> boundary; production Stage 4C is next, while Stage 4D Strategy Selection
-> Authority and conditional Stage 4E Retry / Attempt Authorization remain
-> future. These governance responsibilities consume semantic evidence
-> downstream; they are not a new Compass validation layer.
+> Contract v0. Stage 4C Runtime Decision Authority and Stage 4E Same-Request
+> Re-Invocation Authority are complete and closed. Stage 4E implements exactly
+> two reviewed authority profiles and one-shot owner custody; it is not generic
+> retry governance. Stage 4D Strategy Selection Authority remains deferred.
+> These governance responsibilities consume semantic evidence downstream; they
+> are not a new Compass validation layer.
 
 Compass is not treated as a single undifferentiated validator.  
 Instead, it grows through multiple semantic layers, each validating a different aspect of system correctness.
@@ -114,13 +115,17 @@ adapters. ADR 0027 assigns separate downstream responsibilities:
 - Stage 4C Runtime Decision Authority authorizes the generic current response;
 - Stage 4D Strategy Selection Authority chooses an eligible execution path
   inside prior authorization;
-- Stage 4E Retry / Attempt Authorization decides whether another attempt is
-  allowed and under what constraints; and
+- Stage 4E Same-Request Re-Invocation Authority decides whether one of its two
+  reviewed completed-invocation evidence profiles authorizes at most one fresh
+  invocation with the owner-retained same complete `RequestSignature`; and
 - execution remains separate from all three.
 
 ### Typical Location
-No production Stage 4C–4E implementation location is frozen. Stage 4C remains
-docs-first after PR0.
+
+The implemented current-response and bounded re-invocation authority contracts
+and evaluators live under `src/compass/runtime/`. The one-shot Stage 4E owner
+lives at `src/pipeline/transactional/postgres_write_side_invocation_owner.py`.
+Stage 4D has no production selector because its implementation is deferred.
 
 ### Meaning
 This is downstream consumption of semantic evidence, not “Layer 3” validation.

@@ -110,9 +110,6 @@ _A_CURRENT_TRANSITIVE_DEPENDENCIES = (
 _A_CURRENT_TRANSITIVE_DEPENDENCY_MODULES = frozenset(
     module_name for module_name, _ in _A_CURRENT_TRANSITIVE_DEPENDENCIES
 )
-_A_CURRENT_TRANSITIVE_DEPENDENCY_PATHS = frozenset(
-    source_path for _, source_path in _A_CURRENT_TRANSITIVE_DEPENDENCIES
-)
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 A_SOURCE_PROVENANCE_PATH = (
@@ -121,6 +118,16 @@ A_SOURCE_PROVENANCE_PATH = (
     / "fixtures"
     / "stage4b5_runtime_governance_overhead"
     / "provenance.json"
+)
+A_REPLAY_REVIEW_PATH = (
+    REPOSITORY_ROOT
+    / "tests"
+    / "fixtures"
+    / "stage4b5_runtime_governance_overhead"
+    / "replay_review.json"
+)
+_A_HISTORICAL_SOURCE_DIFFERENCES_SHA256 = (
+    "16a3050e5738a0d18911c61786dfd03f0dc25ec3fd2080a7e0061e7885347ee7"
 )
 
 
@@ -137,6 +144,31 @@ class Surface(Enum):
     A = "A"
     B = "B"
     C = "C"
+
+
+class AReplayStatus(Enum):
+    """Availability of historical A against one reviewed current source state."""
+
+    COMPATIBLE = "COMPATIBLE"
+    REFUSED = "REFUSED"
+
+
+@dataclass(frozen=True)
+class AReplayCompatibility:
+    """Retain one exact-state review result for historical A replay.
+
+    This result describes only whether the hybrid historical-A loader may use
+    the reviewed current transitive dependency bytes. It is not benchmark
+    evidence, a performance conclusion, or runtime-governance authority.
+    """
+
+    status: AReplayStatus
+    reason: str
+    reviewed_current_source_commit: str
+
+
+class AReplayReviewError(ValueError):
+    """Raised when current protected source differs from its reviewed state."""
 
 
 class Command(Enum):
@@ -327,10 +359,19 @@ def _git(*args: str, binary: bool = False) -> str | bytes:
     return completed.stdout if binary else completed.stdout.strip()
 
 
-def load_and_verify_a_source_provenance() -> dict[str, Any]:
-    """Verify A's pinned blobs and unchanged current dependency surface."""
+def load_and_verify_historical_a_source_provenance() -> dict[str, Any]:
+    """Verify immutable historical A provenance independently of replay.
+
+    This verification owns the audit-time fixture, pinned commit, protected
+    historical module order, Git blob identities, and byte digests. Current
+    transitive dependency compatibility is deliberately evaluated elsewhere so
+    later production evolution cannot make recorded historical truth appear
+    corrupt.
+    """
 
     document = json.loads(A_SOURCE_PROVENANCE_PATH.read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise ValueError("A source provenance must be a JSON object")
     if document.get("schema") != "stage4b5-runtime-governance-a-source-provenance":
         raise ValueError("unexpected A source provenance schema")
     if document.get("schema_version") != 1:
@@ -346,35 +387,30 @@ def load_and_verify_a_source_provenance() -> dict[str, Any]:
     modules = document.get("modules")
     if not isinstance(modules, list) or not modules:
         raise ValueError("A source provenance must name at least one module")
+    if not all(isinstance(entry, dict) for entry in modules):
+        raise ValueError("A source module provenance must be a JSON object")
     if tuple(entry.get("module") for entry in modules) != HISTORICAL_MODULE_ORDER:
         raise ValueError("A source modules must retain the audited dependency order")
     allowed_differences = document.get("allowed_current_source_differences")
     if not isinstance(allowed_differences, list) or not allowed_differences:
         raise ValueError("A source provenance must freeze current source differences")
+    historical_differences = json.dumps(
+        allowed_differences,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    if (
+        hashlib.sha256(historical_differences).hexdigest()
+        != _A_HISTORICAL_SOURCE_DIFFERENCES_SHA256
+    ):
+        raise ValueError("A source provenance audit-time differences changed")
 
-    # The fixture retains the audit-time repository diff as historical
-    # provenance. Future unrelated src/ evolution is not an A dependency;
-    # only drift inside the explicit current transitive surface is relevant.
-    source_diff = _git(
-        "diff",
-        "--name-only",
-        f"{HISTORICAL_SOURCE_COMMIT}..HEAD",
-        "--",
-        "src",
-    )
-    assert isinstance(source_diff, str)
-    actual_differences = set(source_diff.splitlines())
-    relevant_differences = sorted(
-        actual_differences.intersection(
-            _A_CURRENT_TRANSITIVE_DEPENDENCY_PATHS
-        )
-    )
-    if relevant_differences:
-        raise ValueError(
-            "current A transitive dependencies drifted: "
-            + ", ".join(relevant_differences)
-        )
     for entry in modules:
+        if not all(
+            isinstance(entry.get(field), str)
+            for field in ("module", "path", "git_blob", "sha256")
+        ):
+            raise ValueError("A source module provenance fields must be strings")
         expected_blob = entry["git_blob"]
         actual_blob = _git(
             "rev-parse",
@@ -388,6 +424,149 @@ def load_and_verify_a_source_provenance() -> dict[str, Any]:
     return document
 
 
+def load_and_verify_a_source_provenance() -> dict[str, Any]:
+    """Return verified historical A provenance without evaluating replay."""
+
+    return load_and_verify_historical_a_source_provenance()
+
+
+def _load_and_verify_a_replay_review() -> dict[str, Any]:
+    """Load the additive exact-state review for current historical-A replay."""
+
+    document = json.loads(A_REPLAY_REVIEW_PATH.read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise AReplayReviewError("A replay review must be a JSON object")
+    if document.get("schema") != "stage4b5-runtime-governance-a-replay-review":
+        raise AReplayReviewError("unexpected A replay review schema")
+    if document.get("schema_version") != 1:
+        raise AReplayReviewError("unexpected A replay review version")
+    if document.get("historical_a_source_commit") != HISTORICAL_SOURCE_COMMIT:
+        raise AReplayReviewError(
+            "A replay review does not match the historical A source commit"
+        )
+
+    reviewed_current_source_commit = document.get("reviewed_current_source_commit")
+    if not isinstance(reviewed_current_source_commit, str):
+        raise AReplayReviewError(
+            "A replay review must identify its reviewed current source commit"
+        )
+    resolved_review_commit = _git(
+        "rev-parse",
+        f"{reviewed_current_source_commit}^{{commit}}",
+    )
+    if resolved_review_commit != reviewed_current_source_commit:
+        raise AReplayReviewError(
+            "A replay review commit did not resolve to its recorded identity"
+        )
+
+    try:
+        status = AReplayStatus(document.get("replay_status"))
+    except ValueError as exc:
+        raise AReplayReviewError("unexpected A replay review status") from exc
+    reason = document.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        raise AReplayReviewError("A replay review must include a reason")
+
+    dependencies = document.get("protected_current_dependencies")
+    if not isinstance(dependencies, list):
+        raise AReplayReviewError(
+            "A replay review must identify protected current dependencies"
+        )
+    reviewed_order = tuple(
+        (entry.get("module"), entry.get("path"))
+        for entry in dependencies
+        if isinstance(entry, dict)
+    )
+    if reviewed_order != _A_CURRENT_TRANSITIVE_DEPENDENCIES:
+        raise AReplayReviewError(
+            "A replay review must retain the protected dependency order"
+        )
+    for entry in dependencies:
+        digest = entry.get("sha256")
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise AReplayReviewError(
+                "A replay review dependency SHA-256 identities are invalid"
+            )
+        reviewed_source = _git(
+            "show",
+            f"{reviewed_current_source_commit}:{entry['path']}",
+            binary=True,
+        )
+        assert isinstance(reviewed_source, bytes)
+        if hashlib.sha256(reviewed_source).hexdigest() != digest:
+            raise AReplayReviewError(
+                "A replay review dependency identity does not match its "
+                f"reviewed commit: {entry['path']}"
+            )
+
+    # Parsing the status here prevents a syntactically valid but unsupported
+    # status from being treated as a generic replay refusal.
+    assert status in {AReplayStatus.COMPATIBLE, AReplayStatus.REFUSED}
+    return document
+
+
+def _read_head_protected_source(source_path: str) -> bytes:
+    """Return the exact committed bytes for one protected current dependency."""
+
+    source = _git("show", f"HEAD:{source_path}", binary=True)
+    assert isinstance(source, bytes)
+    return source
+
+
+def _read_working_tree_protected_source(source_path: str) -> bytes:
+    """Return the exact bytes that a current historical-A worker would import."""
+
+    return (REPOSITORY_ROOT / source_path).read_bytes()
+
+
+def evaluate_a_current_replay_compatibility() -> AReplayCompatibility:
+    """Evaluate current historical-A replay against one exact reviewed state.
+
+    Both committed ``HEAD`` bytes and working-tree bytes must match the review
+    artifact. Matching a reviewed ``REFUSED`` state returns that status. Any
+    mismatch is unreviewed protected dependency drift and raises instead of
+    silently becoming another refusal.
+    """
+
+    document = _load_and_verify_a_replay_review()
+    committed_drift: list[str] = []
+    working_tree_drift: list[str] = []
+    for entry in document["protected_current_dependencies"]:
+        source_path = entry["path"]
+        expected_digest = entry["sha256"]
+        committed_digest = hashlib.sha256(
+            _read_head_protected_source(source_path)
+        ).hexdigest()
+        working_tree_digest = hashlib.sha256(
+            _read_working_tree_protected_source(source_path)
+        ).hexdigest()
+        if committed_digest != expected_digest:
+            committed_drift.append(source_path)
+        if working_tree_digest != expected_digest:
+            working_tree_drift.append(source_path)
+
+    if committed_drift or working_tree_drift:
+        details: list[str] = []
+        if committed_drift:
+            details.append("HEAD=" + ", ".join(committed_drift))
+        if working_tree_drift:
+            details.append("working-tree=" + ", ".join(working_tree_drift))
+        raise AReplayReviewError(
+            "unreviewed current A protected dependency drift: "
+            + "; ".join(details)
+        )
+
+    return AReplayCompatibility(
+        status=AReplayStatus(document["replay_status"]),
+        reason=document["reason"],
+        reviewed_current_source_commit=document["reviewed_current_source_commit"],
+    )
+
+
 def install_verified_historical_modules() -> dict[str, Any]:
     """Install A's verified modules under canonical names in a fresh process.
 
@@ -398,7 +577,12 @@ def install_verified_historical_modules() -> dict[str, Any]:
     versions of those modules from coexisting with A.
     """
 
-    document = load_and_verify_a_source_provenance()
+    document = load_and_verify_historical_a_source_provenance()
+    replay = evaluate_a_current_replay_compatibility()
+    if replay.status is not AReplayStatus.COMPATIBLE:
+        raise AReplayReviewError(
+            f"historical A replay status {replay.status.value}: {replay.reason}"
+        )
     entries = document["modules"]
     module_names = {entry["module"] for entry in entries}
 
@@ -1163,7 +1347,11 @@ def scenario_by_name(layer: Layer, name: str) -> Scenario:
 
 
 __all__ = (
+    "A_REPLAY_REVIEW_PATH",
     "A_SOURCE_PROVENANCE_PATH",
+    "AReplayCompatibility",
+    "AReplayReviewError",
+    "AReplayStatus",
     "BOOTSTRAP_REPETITIONS",
     "BatchComparison",
     "BatchSummary",
@@ -1194,10 +1382,12 @@ __all__ = (
     "current_source_identity",
     "distribution_summary",
     "environment_facts",
+    "evaluate_a_current_replay_compatibility",
     "expected_sample_count",
     "fixed_surface_permutations",
     "install_verified_historical_modules",
     "load_and_verify_a_source_provenance",
+    "load_and_verify_historical_a_source_provenance",
     "nearest_rank",
     "scenario_by_name",
     "validate_recorded_population",

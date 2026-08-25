@@ -4,17 +4,22 @@
 
 ## Status
 
-Current classification reference with historical Stage 4 planning material.
+Historical and future-candidate classification reference.
 
 This document preserves useful retry taxonomy and intent-consistency reasoning
 for **Streaming System + Compass**.
 
-It is not an implementation contract or ADR. Current authority comes from
-[ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md):
-Stage 4C owns generic current-response decisions, Stage 4D owns strategy inside
-prior authorization, and Stage 4E owns another-attempt authorization and its
-constraints. Candidate vocabulary below remains subject to source-grounded
-Stage 4E design.
+It is not an implementation contract or ADR. Current responsibility separation
+comes from
+[ADR 0027](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md),
+while the closed Stage 4E boundary is
+[Same-Request Re-Invocation Authority](../implementation_notes/stage_4e/README.md).
+Current production Stage 4E is limited to at most one fresh public-writer
+invocation with the owner-retained same complete `RequestSignature` under
+exactly two reviewed profiles: early preparation `LOCK_TIMEOUT`, and coherent
+append-time `STALE_WRITE` with typed forward version-mismatch evidence. The
+broader taxonomy below is unaccepted historical/future candidate material, not
+current Stage 4E scope.
 
 ---
 
@@ -34,9 +39,9 @@ A retry-like situation may mean very different things:
 These cases may require different current-response decisions and different
 attempt-authorization decisions. Those are separate authorities.
 
-The goal is to preserve this distinction after the completed `SemanticOutcome`
-and evidence foundation and before Stage 4E introduces retry/attempt
-authorization.
+The goal is to preserve this distinction as research input for future
+evidence-gated governance without projecting it into the closed Stage 4E
+responsibility.
 
 ---
 
@@ -134,22 +139,23 @@ This handles writer competition over the same aggregate stream.
 
 Compass Layer 1 validates candidate event truth before accepted-history mutation.
 
-Later Compass Layer 2 will validate whether derived runtime state remains faithful to accepted history.
+Compass Layer 2 read-side consistency validation already evaluates whether derived runtime state remains faithful to accepted history.
 
 ### 4.4 Current SemanticOutcome and Later Attempt Governance
 
 Stage 4A already turns bounded producer evidence into machine-readable
 `SemanticOutcome` values. `SemanticOutcome` does not authorize another attempt.
 
-Retry-relevant semantic evidence may inform later Stage 4E classification, but
-the classification and authorization boundary must remain separate from the
-outcome contract.
+Retry-relevant semantic evidence may inform a later separately accepted
+classification responsibility, but classification and authorization must
+remain separate from the outcome contract.
 
 ---
 
-## 5. Classification Dimensions
+## 5. Historical / Future Candidate Classification Dimensions
 
-Stage 4E should classify retry-like situations using at least three dimensions.
+Earlier planning proposed at least three dimensions. PR0 does not accept these
+dimensions as fields or responsibilities of the first formal Stage 4E slice.
 
 ### 5.1 retry_class
 
@@ -169,9 +175,10 @@ UNKNOWN
 
 ### 5.2 retry_safety
 
-`retry_safety` describes what Stage 4E may authorize or require for another
-attempt. It is not Stage 4C current-response authority, and the candidate values
-below are classification vocabulary rather than executable actions.
+`retry_safety` historically described what a future attempt-governance policy
+might authorize or require. It is not Stage 4C current-response authority, and
+the candidate values below are neither executable actions nor accepted Stage
+4E fields.
 
 Candidate values:
 
@@ -385,8 +392,9 @@ treat it as derived-state correction
 Stage 4C may map the current observation to REBUILD, QUARANTINE, or ESCALATE
 ```
 
-If another attempt is later considered, Stage 4E must authorize it separately
-and define any rebuild or revalidation prerequisite.
+If another attempt is later considered, it requires separately reviewed
+authority. This historical example does not establish a rebuild or
+revalidation profile.
 
 ---
 
@@ -441,7 +449,8 @@ class SemanticOutcome:
     message: str
 ```
 
-Future Stage 4E classification may consume source-legitimate values such as:
+Future evidence-gated classification might consume source-legitimate values
+such as:
 
 ```text
 retry_observed
@@ -486,7 +495,7 @@ separate `SemanticOutcome` persistence would require new evidence, a concrete
 consumer, and explicit architectural reconsideration of that boundary.
 
 `request_attempts` remains only a historical/future candidate for a concrete
-Stage 4E cross-attempt or restart-recovery consumer. This note does not approve
+future cross-attempt or restart-recovery consumer. This note does not approve
 that table or introduce an `AttemptLog` schema.
 
 ```text
@@ -494,7 +503,7 @@ historical candidate
 != accepted schema
 
 restart recovery
-!= live Retry / Attempt Authorization
+!= live first-formal-profile Stage 4E authority
 ```
 
 Restart recovery, durable attempt evidence, and cross-runtime continuation
@@ -510,8 +519,9 @@ old receipt must not become permanent retry or action authorization.
 It should not directly execute the final control action.
 
 Stage 4C may map a current semantic observation to a generic current response.
-Stage 4E separately decides whether another attempt is authorized and under
-which constraints.
+Stage 4E separately evaluates whether either reviewed completed-invocation
+evidence profile authorizes at most one fresh invocation with the owner-
+retained same complete `RequestSignature`.
 
 Example mappings:
 
@@ -522,21 +532,19 @@ IDEMPOTENT_REPLAY
 SEMANTIC_CONFLICT
 → Stage 4C may BLOCK
 
-CONCURRENCY_RETRY
-→ Stage 4C decides the current response
-→ Stage 4E may separately authorize another attempt with reload/revalidation constraints
+preparation LOCK_TIMEOUT
+→ Stage 4C refuses the unsupported current-response tuple
+→ Stage 4E may independently authorize one same-request public-writer entry
 
-INFRASTRUCTURE_RETRY
-→ Stage 4C may ESCALATE the current condition
-→ Stage 4E may separately authorize another attempt with backoff/timing constraints
+coherent append-time STALE_WRITE
++ typed AppendVersionMismatchEvidence with observed > expected
++ validation ALLOW + candidate identity coherence + no accepted A1 effect
+→ Stage 4E may independently authorize one same-request public-writer entry
 
-REBUILD_REQUIRED
-→ Stage 4C may permit or require REBUILD or QUARANTINE
-→ Stage 4E governs any later attempt after that response
-
-SEMANTIC_DRIFT / AGENT_INTENT_DRIFT
-→ Stage 4C may BLOCK or ESCALATE
-→ Stage 4E may deny another attempt
+reload/revalidation, infrastructure timing, rebuild prerequisites,
+semantic drift, and agent-intent drift
+→ historical/future candidate concerns
+→ no additional Stage 4E authority profile is accepted
 ```
 
 These are responsibility examples, not frozen action names or an approved
@@ -547,12 +555,12 @@ and retry authorization is not retry execution.
 
 ## 10. What This Note Owns
 
-This note owns:
+This note preserves:
 
 - retry-like situation classification
 - intent consistency vocabulary
 - separation between idempotency memory and attempt evidence
-- candidate evidence vocabulary for later Stage 4E design
+- candidate evidence vocabulary for separately justified future design
 - future bridge to agent intent drift
 
 ---
@@ -563,7 +571,7 @@ This note does not implement:
 
 - Stage 4C current-response authority
 - Stage 4D strategy selection
-- Stage 4E attempt authorization or retry execution
+- the closed Stage 4E authority contract, its expansion, or retry execution
 - separate durable `SemanticOutcome` record
 - durable request-attempt schema
 - agent protocol
@@ -590,27 +598,40 @@ Stage 4A:
 SemanticOutcome — COMPLETE / CLOSED.
 
 Stage 4C:
-Runtime Decision Authority for the generic current response.
+Runtime Decision Authority for the generic current response — COMPLETE / CLOSED.
 
 Stage 4D:
-Strategy Selection Authority inside an already-permitted action.
+Strategy Selection Authority inside an already-permitted action —
+RESPONSIBILITY RETAINED / IMPLEMENTATION DEFERRED.
 
 Stage 4E:
-Retry / Attempt Authorization, including classification, safety, reload,
-revalidation, timing, limits, budget, candidate constraints, intent, and lineage.
+Same-Request Re-Invocation Authority — COMPLETE / CLOSED. Exactly two reviewed
+profiles may authorize at most one fresh same-complete-request public-writer
+invocation through the one-shot owner.
+
+Future candidates:
+classification, safety, reload, revalidation, timing, limits, budget,
+candidate constraints, intent, and lineage — not accepted closed Stage 4E
+responsibilities.
 
 Stage 5:
 Extend intent consistency and retry classification toward agent-facing governance.
 ```
 
-For a later authorized attempt, the conceptual handoff may be:
+The responsibilities are independent rather than a mandatory pipeline:
 
 ```text
-current execution evidence
-→ Stage 4C current-response decision
-→ Stage 4E attempt authorization and constraints
-→ Stage 4D strategy selection for the authorized attempt
+current evidence
+→ Stage 4C decision or refusal
+→ caller handling
+
+separately, when another same-request invocation is considered
+→ Stage 4E authorization or refusal
+
+if authorized and multiple eligible strategies exist
+→ Stage 4D strategy selection
 → execution
+→ fresh result
 ```
 
 Normal executions that do not consider another attempt do not need to pass
@@ -631,8 +652,9 @@ The system must distinguish whether a retry:
 - requires derived-state rebuild
 - or indicates semantic / agent intent drift
 
-This distinction is required before Compass can safely authorize another
-attempt.
+This distinction remains useful before any broader future attempt-governance
+policy is accepted. It is not a prerequisite for the narrow first formal Stage
+4E `LOCK_TIMEOUT` profile.
 
 The core boundary is:
 
@@ -647,6 +669,6 @@ DecisionReceipt
 = current durable governance evidence
 
 request_attempts
-= historical candidate only for a concrete Stage 4E cross-attempt or
+= historical candidate only for a concrete future cross-attempt or
   restart-recovery consumer; no schema is approved here
 ```

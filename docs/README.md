@@ -30,6 +30,8 @@ It now also serves as the reference frame for an executable baseline covering:
 - [Stage 4B.2 Measurement Evidence](implementation_notes/stage_4b_2/README.md) as a completed producer-measurement and bounded empirical cost-evidence stage
 - [Stage 4B.3 closeout](implementation_notes/stage_4b_3/README.md) as a completed evidence-first necessity review closed as not currently justified, without a continuation mechanism
 - [Stage 4B.5 Order Correctness Contract V0](implementation_notes/stage_4b_5/README.md) as a completed 18-rule contract with exactly six FullProof `TRANSITION_TRUTH` rules currently covered by typed runtime producers
+- [Stage 4C Runtime Decision Authority](implementation_notes/stage_4c/README.md) as a completed generic immutable contract and first Layer-1 PostgreSQL / Order write-side profile, with no automatic caller wiring
+- [Stage 4E Same-Request Re-Invocation Authority](implementation_notes/stage_4e/README.md) as complete and closed bounded authority for at most one fresh public-writer invocation under exactly two reviewed evidence profiles
 - local PostgreSQL development setup for durable write-side, read-side, snapshot, and permission-boundary work
 - executable failure-path tests for selected invariants and adversarial cases
 
@@ -58,6 +60,7 @@ The repository currently has an implemented baseline for:
 - Stage 3.5C durable read-side baseline, including durable order-event vocabulary hardening, read-side schema, `PostgresProjectionStore`, historical checkpoint infrastructure, ADR 0020 per-order progress repair, and durable replay / rebuild validation
 - Stage 3.5D snapshot trust contract / replay-efficiency baseline, including projection snapshot schema, `PostgresProjectionSnapshotStore`, projection snapshot-assisted replay validation, projection snapshot-assisted state resolution, and aggregate snapshot trust deferral; ADR 0021 now classifies projection snapshots as optional for the current Order workload
 - Stage 4A `SemanticOutcome` and Stage 4B `DecisionReceipt` mapping, strict serialization, storage-neutral persistence contracts, and PostgreSQL persistence
+- Stage 4C generic immutable `RuntimeDecision` and the first reviewed Layer-1 PostgreSQL / Order write-side evaluator
 
 The repository has completed **Stage 3.5B — Durable Write-Side Baseline**, **Stage 3.5C — Durable Read-Side Baseline**, **Stage 3.5D — Snapshot Trust Contract / Replay Efficiency**, and **Stage 3.5E — Durable History and Permission Hardening**.
 
@@ -73,25 +76,40 @@ The current Stage 4 foundation position is:
 
 - Stage 4B.3 — Projection Trust Boundary and Continuation — complete / closed as not currently justified
 - Stage 4B.5 — Order Correctness Contract v0 — complete / closed
-- Stage 4C — Runtime Decision Authority — docs-first entry; no production implementation claimed
-- Stage 4D — Strategy Selection Authority — future
-- Stage 4E — Retry / Attempt Authorization — future
+- Stage 4C — Runtime Decision Authority — complete / closed
+- Stage 4D — Strategy Selection Authority — responsibility retained; implementation deferred under ADR 0028
+- Stage 4E — Same-Request Re-Invocation Authority — complete / closed through PR6
 
 Stage 4B.3 PR1 and PR2 remain historical/reference investigation. The canonical
 [ADR 0026 closeout](adr/0026_projection_trust_continuation_is_not_currently_justified.md)
 records why PR3+ do not proceed. Stage 4B.5 completed in a separately owned
 parallel development stream; it is technically independent from and was not
 moved under the closed Stage 4B.3 stage. It does not implement the later
-Retry / Attempt Authorization boundary.
+Stage 4E another-invocation authority boundary.
 
 [ADR 0027](adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
-now separates current-response authority, strategy selection, another-attempt
-authorization, and execution. The first decision-governance delivery is
-live/in-memory first: `SemanticOutcome` plus terminally applicable exact rule
-refinement is the primary live decision evidence. `DecisionReceipt` remains durable
-governance evidence but is not required for the first live hot path. Restart
-recovery remains a distinct deferred consumer. See the
-[Stage 4C docs-first entry](implementation_notes/stage_4c/README.md).
+separates current-response authority, strategy selection, another-invocation
+authorization, and execution. Stage 4C PR1 established the source-grounded
+entry boundary; PR2 delivered the generic immutable `RuntimeDecision` and the
+first Layer-1 PostgreSQL / Order profile; Stage 4C.5 confirmed compatibility
+through the shared producer-neutral `SemanticOutcome` structure and closed the
+stage. `DecisionReceipt` remains durable governance evidence but is not
+required for the live Stage 4C path. Restart recovery remains a distinct
+deferred consumer. See the [Stage 4C implementation index](implementation_notes/stage_4c/README.md)
+and [closeout](implementation_notes/stage_4c/stage_4c_closeout.md).
+
+Stage 4D remains a valid `HOW`-selection responsibility, but implementation is
+deferred under
+[ADR 0028](adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
+because current strategy composition is static and no authorized operation has
+multiple dynamically eligible strategies or reviewed selection rules. Stage 4E
+is complete and closed with exactly two production-positive authority profiles:
+the early preparation `LOCK_TIMEOUT` profile established in PR1 and the narrow
+coherent append-version-advance profile completed in PR5. Both authorize at
+most one fresh invocation through the one-shot owner; neither creates a generic
+retry framework, scheduler, budget, or execution policy. See the
+[Stage 4E implementation notes](implementation_notes/stage_4e/README.md) and
+[Stage 4E closeout](implementation_notes/stage_4e/stage_4e_closeout.md).
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
 Stage 4B preserves selected evidence through explicit mapping, serialization,
@@ -196,13 +214,17 @@ Recommended reading order for the core system:
 14. [Implementation Roadmap](roadmap/implementation_roadmap.md)
 15. [Compass Runtime Roadmap](roadmap/compass_runtime_roadmap.md)
 16. [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](adr/0027_separate_runtime_decision_strategy_and_retry_authority.md)
-17. [Implementation Notes](implementation_notes/README.md)
-18. [Stage 4C — Runtime Decision Authority](implementation_notes/stage_4c/README.md)
-19. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
-20. [Boundary Notes](boundary_notes/README.md)
-21. [Development Setup](development/README.md)
-22. [Reasoning Notes](reasoning_notes/README.md)
-23. [Postmortems](postmortems/README.md)
+17. [ADR 0028 — Defer Dynamic Strategy Selection Until Multiple Eligible Execution Paths Exist](adr/0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md)
+18. [Implementation Notes](implementation_notes/README.md)
+19. [Stage 4C — Runtime Decision Authority](implementation_notes/stage_4c/README.md)
+20. [Stage 4C Closeout](implementation_notes/stage_4c/stage_4c_closeout.md)
+21. [Stage 4E — Same-Request Re-Invocation Authority](implementation_notes/stage_4e/README.md)
+22. [Stage 4E Closeout](implementation_notes/stage_4e/stage_4e_closeout.md)
+23. [Stage 4B Closeout](implementation_notes/stage_4b/stage_4b_closeout.md)
+24. [Boundary Notes](boundary_notes/README.md)
+25. [Development Setup](development/README.md)
+26. [Reasoning Notes](reasoning_notes/README.md)
+27. [Postmortems](postmortems/README.md)
 
 This order starts from the system-level architecture, then moves into the working methodology behind the repository, the transactional write-side baseline, domain semantics, architecture decisions, Compass validation design, projection runtime evolution, implementation sequencing, stage / PR implementation details, module-boundary notes, local development setup, and finally postmortems.
 
@@ -236,9 +258,9 @@ top-level system structure
 → Stage 4B.3 Projection Trust Boundary and Continuation
   closed as not currently justified after evidence-first investigation
 → completed separately owned Order Correctness Contract V0
-→ Stage 4C current-response Runtime Decision Authority
-→ Stage 4D Strategy Selection inside prior authorization
-→ Stage 4E Retry / Attempt Authorization when another attempt is considered
+→ completed Stage 4C current-response Runtime Decision Authority
+→ completed Stage 4E Same-Request Re-Invocation Authority
+→ deferred Stage 4D Strategy Selection only when an authorized operation has multiple eligible execution paths
 → action safety
 → boundary clarification
 → reasoning derivations

@@ -22,13 +22,14 @@ Pure naming preference, style cleanup, or already-completed implementation work 
 
 Completed Stage 3.5B, Stage 3.5C, Stage 3.5D, and Stage 3.5E work should be recorded in roadmaps, ADRs, postmortems, implementation notes, or PR history instead of staying here as deferred work.
 
-Current foundation status after Stage 4B.5 closeout:
+Current Stage 4 status after the Stage 4E PR6 closeout:
 
 ```text
 Stage 4B.3 — Projection Trust Boundary and Continuation — COMPLETE / CLOSED AS NOT CURRENTLY JUSTIFIED
 Stage 4B.5 — Order Correctness Contract V0 — COMPLETE / CLOSED
-Stage 4C — Runtime Decision Authority — DOCS-FIRST ENTRY
-Stage 4D / 4E — strategy and attempt governance — FUTURE
+Stage 4C — Runtime Decision Authority — COMPLETE / CLOSED
+Stage 4D — Strategy Selection Authority — RESPONSIBILITY RETAINED / IMPLEMENTATION DEFERRED
+Stage 4E — Same-Request Re-Invocation Authority — COMPLETE / CLOSED
 ```
 
 Stage 4B.3 PR1/PR2 remain investigation and reference evidence; ADR 0026 owns
@@ -48,6 +49,8 @@ Completed implementation details now live under:
 - [Stage 4B.1 Implementation Notes](../implementation_notes/stage_4b_1/)
 - [Stage 4B.2 Implementation Notes](../implementation_notes/stage_4b_2/)
 - [Stage 4B.5 Implementation Notes](../implementation_notes/stage_4b_5/)
+- [Stage 4C Implementation Notes](../implementation_notes/stage_4c/)
+- [Stage 4E Implementation Notes](../implementation_notes/stage_4e/)
 
 This backlog should now be used only for concerns intentionally deferred beyond the completed durable write-side, durable read-side, read-side snapshot trust, durable permission, Stage 4A SemanticOutcome, and Stage 4B DecisionReceipt baselines.
 
@@ -59,13 +62,13 @@ This backlog should now be used only for concerns intentionally deferred beyond 
 Completed Stage 4B.1 / trace design
 → implemented work belongs in Stage 4B.1 notes, not this backlog
 
-Stage 4E / retry classification
-→ another-attempt authorization follows ADR 0027; durable attempt evidence and
-  restart recovery wait for a concrete consumer, while the first live path does
-  not require DecisionReceipt persistence
+Stage 4E / Same-Request Re-Invocation Authority
+→ closed with exactly two reviewed evidence profiles and one-shot owner
+  custody; broad retry classification, durable attempt evidence, and restart
+  recovery remain unaccepted future candidates
 
 Completed Stage 4B.5 / Order correctness contract
-→ machine-readable correctness evidence is implemented; Stage 4C current-response authority and Stage 4E retry authorization remain separate
+→ machine-readable correctness evidence is implemented; Stage 4C current-response authority and Stage 4E another-invocation authority remain separate
 
 Stage 4 / connection-pool hardening
 → should wait until structured error modeling, connection lifecycle policy, or pooled database connections exist
@@ -169,9 +172,12 @@ After durable replay / rebuild validation exists and before any multi-worker or 
 > **Current qualification:** Stage 4B.5 completed the narrower identity-driven
 > Order correctness contract and exact FullProof rule-evidence path. It did not
 > implement recovery hints, retry policy, or the speculative policy schema
-> below. Generic current-response authority belongs to Stage 4C; another-attempt
-> authorization, reload, backoff, limits, budget, and lineage belong to Stage
-> 4E. These concerns must not be retroactively attributed to Stage 4B.5.
+> below. Generic current-response authority belongs to Stage 4C. The closed
+> Stage 4E responsibility owns at most one fresh same-request
+> invocation under its preparation `LOCK_TIMEOUT` or coherent append-version-
+> advance profile; reload policy, backoff, limits, budget, and lineage are
+> unaccepted future candidates. None may be retroactively attributed to Stage
+> 4B.5.
 
 ### Current Decision
 
@@ -182,9 +188,10 @@ The current position is:
 
 - minimal actor / permission, `SemanticOutcome`, receipt, trace, measurement,
   and Order correctness foundations are complete
-- Stage 4C production Runtime Decision Authority is next
-- Stage 4D Strategy Selection Authority is future
-- Stage 4E Retry / Attempt Authorization is future
+- Stage 4C Runtime Decision Authority is complete / closed
+- Stage 4D Strategy Selection Authority is retained / implementation deferred
+- Stage 4E Same-Request Re-Invocation Authority is complete / closed with
+  exactly two reviewed production-positive profiles
 - Stage 5 Action Safety is future
 
 A concrete future consumer may justify a small domain-specific policy artifact
@@ -256,9 +263,10 @@ recovery_strategies:
 
 Under ADR 0027, `BLOCK`, replay, rebuild, quarantine, and escalation may express
 Stage 4C generic current responses. `retryable`, `max_attempts`, reload
-requirements, retry timing, and other cross-attempt constraints belong
-exclusively to Stage 4E. Stage 4D may choose how an already-authorized response
-or attempt is performed; it cannot create action authority.
+requirements, retry timing, and other broad cross-attempt constraints remain
+unaccepted future candidates outside the closed Stage 4E responsibility. Stage
+4D may choose how an already-authorized response or attempt is performed; it
+cannot create action authority.
 
 The earlier sketch also proposed extending `SemanticOutcome` with optional
 policy linkage:
@@ -281,8 +289,8 @@ intent_consistency
 ```
 
 The implemented Stage 4A `SemanticOutcome` contract remains authoritative. Any
-future attempt-specific fields require separate Stage 4E justification and must
-not turn semantic observation into retry authorization.
+future attempt-specific fields require separate evidence and acceptance and
+must not turn semantic observation into retry authorization.
 
 ### Architectural Consequence
 
@@ -318,7 +326,7 @@ requires a distinct versioned artifact:
 
 ```text
 Stage 4C — Runtime Decision Authority
-Stage 4E — Retry / Attempt Authorization
+future evidence-gated governance beyond the closed Stage 4E responsibility
 ```
 
 This remaining recovery-policy work must not be treated as completed
@@ -344,8 +352,8 @@ This future item should not become:
 The intended role is narrower:
 
 ```text
-provide stable rule evidence for Stage 4C current-response decisions and later
-Stage 4E attempt governance without collapsing their authority
+provide stable rule evidence for Stage 4C current-response decisions and any
+separately reviewed future governance without collapsing authority boundaries
 ```
 
 ---
@@ -760,8 +768,9 @@ less duplicated setup
 
 Class-based grouping remains deferred test-maintainability work. Completed
 Stage 4B.1, Stage 4B.2, and Stage 4B.5 already establish the current trace,
-measurement, and exact-rule evidence surfaces. Stage 4C, Stage 4D, and Stage 4E
-may still reshape downstream governance-test organization.
+measurement, and exact-rule evidence surfaces. Stage 4C and Stage 4E are now
+closed; deferred Stage 4D or later governance may still create concrete
+downstream test-organization pressure.
 
 ### Why Not Now
 
@@ -784,7 +793,7 @@ The project should not reorganize tests around classes merely for aesthetic grou
 
 ### Future Work
 
-As production Stage 4C, Stage 4D, and Stage 4E boundaries become concrete,
+If deferred Stage 4D or later production-governance boundaries become concrete,
 revisit class-based organization when a specific high-density test surface has
 stable semantic responsibilities and a real maintainability need.
 
@@ -853,8 +862,8 @@ Later evaluation / post-Stage-4 governance test organization
 Revisit after at least one of the following is true:
 
 ```text
-a completed Stage 4B.x evidence surface or a later Stage 4C, Stage 4D, or
-Stage 4E governance surface develops concrete maintainability pressure
+a completed Stage 4B.x, Stage 4C, or Stage 4E surface, or a later Stage 4D
+governance surface, develops concrete maintainability pressure
 public-release test readability review begins
 ```
 
@@ -974,10 +983,10 @@ During structured outcome / runtime evidence design.
 
 Do not treat retry as a single generic category.
 
-Stage 4E Retry / Attempt Authorization owns the decision about whether another
-attempt is allowed. It may consume eligible `SemanticOutcome` and
-request-attempt evidence, but those inputs do not authorize an attempt by
-themselves.
+The closed Stage 4E responsibility owns only whether either of its two reviewed
+evidence profiles authorizes at most one fresh public-writer invocation with
+the owner-retained same complete `RequestSignature`. The broad taxonomy below
+does not own or imply authority.
 
 ### Why Not Now
 
@@ -992,13 +1001,14 @@ The completed baselines already distinguish:
 - snapshot-assisted replay mismatch
 - snapshot trust failure
 
-`SemanticOutcome` is complete for its bounded producer families. Unified
-request-attempt evidence and production Stage 4E authorization remain future.
+`SemanticOutcome` is complete for its bounded producer families. Stage 4E is
+complete and closed; unified request-attempt evidence and broader
+classification remain unaccepted future candidates outside it.
 
 ### Future Work
 
-The following historical candidate distinctions remain useful input to a
-future Stage 4E design:
+The following historical candidate distinctions remain useful input to
+separately justified future governance:
 
 ```text
 same request_id + same semantic_fingerprint
@@ -1037,13 +1047,13 @@ semantic_fingerprint
 ### Current Classification
 
 ```text
-Stage 4E / Retry / Attempt Authorization — future
+Historical / future candidate taxonomy — not accepted closed Stage 4E scope
 ```
 
 ### Suggested Timing
 
-When a concrete Stage 4E consumer and request-attempt evidence boundary are
-approved.
+When a concrete consumer, evidence boundary, and reviewed authority rule beyond
+the closed Stage 4E responsibility are approved.
 
 ---
 
@@ -1150,7 +1160,8 @@ permission bypass attempts during active workflows
 
 Those scenarios should be revisited after Stage 4 establishes structured
 semantic outcomes, applicable durable evidence, Runtime Decision Authority,
-Strategy Selection Authority, and conditional Retry / Attempt Authorization.
+deferred Strategy Selection Authority, and bounded Same-Request Re-Invocation
+Authority where applicable.
 
 The reason is sequencing: chaos tests are most useful after the system can
 classify what happened, preserve durable evidence when required, authorize a
