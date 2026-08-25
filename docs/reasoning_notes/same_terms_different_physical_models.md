@@ -1,7 +1,7 @@
 # Same Terms, Different Physical Models
 
-> **Status:** Public reasoning note.  
-> This note explains a reasoning boundary discovered while discussing `STALE_WRITE` and `LOCK_TIMEOUT`.  
+> **Status:** Public reasoning note.
+> This note explains a reasoning boundary discovered while discussing `STALE_WRITE` and `LOCK_TIMEOUT`.
 > It is **not** a production contract for PostgreSQL concurrency, retry authorization, or reconciliation policy.
 
 *How the same technical vocabulary can hide different assumptions about actors, state, and time.*

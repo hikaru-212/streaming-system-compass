@@ -165,4 +165,3 @@ def test_generic_module_has_no_profile_specific_runtime_dependencies() -> None:
         not in runtime_decision_module.__dict__
     )
     assert "OrderRuleViolationEvidence" not in runtime_decision_module.__dict__
-
