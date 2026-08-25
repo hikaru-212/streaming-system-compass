@@ -48,6 +48,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0026 | [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) | Accepted | Closes Stage 4B.3 after source-grounded necessity review because the current exact-next projection runtime already owns normal materialization correctness and no concrete consumer requires incremental qualification. |
 | 0027 | [Separate Runtime Decision, Strategy, and Retry Authority](0027_separate_runtime_decision_strategy_and_retry_authority.md) | Accepted | Separates Stage 4C current-response authority, Stage 4D strategy selection, Stage 4E attempt authorization, and later execution while preserving a live/in-memory-first evidence posture. |
 | 0028 | [Defer Dynamic Strategy Selection Until Multiple Eligible Execution Paths Exist](0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md) | Accepted | Retains Stage 4D as the owner of dynamic `HOW` selection while deferring implementation until one authorized operation has multiple eligible strategies, reviewed selection evidence, and observable value. |
+| 0029 | [Stage 4C+ Exists at the Automation Boundary](0029_stage_4c_plus_exists_at_the_automation_boundary.md) | Accepted | Records why Stage 4B can be a sufficient evidence boundary for human-operated systems, while Stage 4C+ becomes necessary when machine-controlled consequences require explicit authority separate from proposals and execution. |
 
 ---
 
@@ -92,6 +93,7 @@ Recommended order:
 27. [Projection Trust Continuation Is Not Currently Justified](0026_projection_trust_continuation_is_not_currently_justified.md) — explains why accepted-history authority, exact-next per-order progress, canonical reduction, atomic state/progress persistence, permissions, and replay/rebuild already form the required current projection correctness model without another trust-continuation layer.
 28. [Separate Runtime Decision, Strategy, and Retry Authority](0027_separate_runtime_decision_strategy_and_retry_authority.md) — explains why current-response authority, strategy selection, another-attempt authorization, and execution remain separate, and why the first live decision path does not require durable receipt persistence.
 29. [Defer Dynamic Strategy Selection Until Multiple Eligible Execution Paths Exist](0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md) — explains why Stage 4D remains valid while current static execution composition does not justify a dynamic selector, and why Stage 4E must preserve rather than silently replace `HOW`.
+30. [Stage 4C+ Exists at the Automation Boundary](0029_stage_4c_plus_exists_at_the_automation_boundary.md) — explains why Stage 4B can remain the endpoint for human-operated evidence systems, while autonomous runtimes require explicit consequence authority that remains separate from planner proposals and execution.
 
 ---
 
@@ -185,6 +187,14 @@ no reviewed runtime selection rule would change observable behavior. The ADR
 also records that Stage 4E must preserve an A1-owned composition instead of
 becoming an implicit selector.
 
+ADR 0029 records the automation boundary exposed by the completed Stage 4 architecture.
+Stage 4B and earlier may be sufficient when humans retain downstream operational authority.
+When autonomous runtimes, workflow engines, recovery controllers, or AI agents can cause
+consequences, Stage 4C+ makes that authority explicit and preserves
+`evidence != proposal != authority != execution`. It also records that invocation completion
+does not by itself prove workflow completion and that future autonomous recovery composition
+must remain evidence-gated before becoming new production machinery.
+
 The ADR 0002 evolution note is not a standalone decision. It is a supporting trace for understanding how ADR 0002 was refined.
 
 ---
@@ -266,6 +276,7 @@ Recommended pattern:
 0026_projection_trust_continuation_is_not_currently_justified.md
 0027_separate_runtime_decision_strategy_and_retry_authority.md
 0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md
+0029_stage_4c_plus_exists_at_the_automation_boundary.md
 ```
 
 Evolution or supporting notes may be kept as separate files:
