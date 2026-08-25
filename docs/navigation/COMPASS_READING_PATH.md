@@ -8,7 +8,7 @@ Compass places semantic validation and concurrency admission between a proposal 
 
 The surrounding artifacts have narrower responsibilities. Accepted history preserves admitted facts. Projection state is derived read state. Per-order projection progress records current completeness; `global_position` remains lineage and scheduling evidence. A snapshot is derived fast-path evidence. An idempotency record preserves a request-to-accepted-result relation. `SemanticOutcome` interprets bounded technical evidence. `DecisionReceipt` preserves selected governance evidence through explicit mapping, serialization, and caller-owned persistence boundaries. Producer-specific `DiagnosticTrace` / `ResolutionTrace` contracts preserve bounded one-execution topology without becoming primary results, receipts, retry authority, or measurement evidence.
 
-These artifacts must not impersonate one another. In particular, semantic meaning is not yet policy, retry permission, strategy, or executable action.
+These artifacts must not impersonate one another. In particular, semantic meaning is not policy, retry permission, strategy, or executable action.
 
 ## 2. Choose One Orientation Document
 
@@ -36,7 +36,7 @@ This is the shortest complete conceptual arc: **problem → executable authority
 | 2 | [Transactional Core](../architecture/transactional_core.md) | How does the current candidate-event implementation separate domain decision, semantic validation, concurrency admission, and accepted append? | Durable implementation detail and later governance. |
 | 3 | [ADR 0008 — Candidate/Accepted Identity](../adr/0008_pre_allocated_event_identity_and_candidate_accepted_boundary.md) | Why does identifier existence not establish accepted authority? | Cross-attempt candidate identity policy. |
 | 4 | [Runtime SemanticOutcome Boundary](../boundary_notes/runtime_semantic_outcome_boundary.md) | How does bounded evidence acquire semantic meaning without becoming action? | Runtime decision, strategy, retry / attempt authorization, receipt materialization, and execution. |
-| 5 | [ADR 0027 — Separate Runtime Decision, Strategy, and Retry Authority](../adr/0027_separate_runtime_decision_strategy_and_retry_authority.md) | How do current-response authority, strategy selection, conditional another-attempt authorization, and execution remain separate? | Concrete Stage 4C–4E production implementations. |
+| 5 | [ADR 0029 — Stage 4C+ Exists at the Automation Boundary](../adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md) | Why can human-operated systems stop at evidence while autonomous consequences require explicit authority distinct from proposals and execution? | A complete autonomous recovery loop, dynamic Stage 4D selection, and Stage 5 external-effect safety. |
 
 ## 5. Deep Architecture Path
 
@@ -65,15 +65,18 @@ This is the shortest complete conceptual arc: **problem → executable authority
 | 21 | [Stage 4C — Runtime Decision Authority](../implementation_notes/stage_4c/) | Completed stage index | Review the generic current-response authority, first Layer-1 profile, and closeout. |
 | 22 | [Stage 4E — Same-Request Re-Invocation Authority](../implementation_notes/stage_4e/) | Completed stage index | Review the two bounded positive profiles, evidence/authority separation, and one-shot owner lifecycle. |
 | 23 | [Stage 4E Closeout](../implementation_notes/stage_4e/stage_4e_closeout.md) | Stage closeout | Confirm the final responsibility freeze, PostgreSQL characterization, non-goals, and Stage 4 integration transition. |
+| 24 | [ADR 0029 — Stage 4C+ Exists at the Automation Boundary](../adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md) | Accepted Stage 4 synthesis | Place the completed evidence and authority foundations at the automation boundary while preserving proposal, authority, and execution as separate responsibilities. |
 
 Stage 4B, Stage 4B.1, Stage 4B.2, and Stage 4B.5 are complete. Stage 4B.3 is
 complete and closed as not currently justified: PR1/PR2 remain reference
 evidence, ADR 0026 owns re-entry, and no continuation mechanism was implemented.
 Mapping does not automatically materialize or persist a receipt, measurement
 evidence does not create production policy, and Stage 4B.5 exact rule evidence
-does not authorize retry. ADR 0027 defines the separated Stage 4C–4E authority
-boundary. Stage 4C and bounded Stage 4E are complete and closed; Stage 4D
-implementation and external execution remain separate and deferred.
+does not authorize retry. ADR 0027 defines the separated Stage 4C–4E
+responsibilities, and ADR 0029 records the automation boundary exposed by the
+completed Stage 4 baseline. Stage 4C and bounded Stage 4E are complete and
+closed; Stage 4D implementation and external execution remain separate and
+deferred.
 
 ## 6. Choose by Professional Background
 
@@ -81,11 +84,14 @@ implementation and external execution remain separate and deferred.
 
 | Order | Document | Why read it |
 |---:|---|---|
-| 1 | [Semantic Admission manifesto](../semantic_admission/manifesto.md) | Learn why execution permission is not admission authority. |
-| 2 | [Shared Workflow Is Not Shared Authority](../semantic_admission/shared_workflow_is_not_shared_authority.md) | See how authority can be laundered through cooperating agents. |
-| 3 | [Action Path Admission](../semantic_admission/action_path_admission.md) | Learn why a correct-looking final state does not prove an admissible path. |
-| 4 | [Model Autonomy Is Not Business Authority](../semantic_admission/model_autonomy_vs_business_authority.public.md) | Connect model autonomy, institutional responsibility, and progressive authority. |
-| 5 | [Runtime SemanticOutcome Boundary](../boundary_notes/runtime_semantic_outcome_boundary.md) | Separate semantic interpretation from executable governance. |
+| 1 | [Probabilistic Agency Inside Deterministic Business Workflows](../research/ai_governance/probabilistic_agency_inside_deterministic_business_workflows.md) | Start with the Delegation and Influence questions: whether AI should participate and what premises, evidence, tools, or paths it may affect. |
+| 2 | [Semantic Admission manifesto](../semantic_admission/manifesto.md) | Learn why execution permission is not admission authority once a candidate exists. |
+| 3 | [Consensus Is Not Semantic Authority](../semantic_admission/consensus_is_not_semantic_authority_rate_limiter.md) | See why heterogeneous agents may reasonably select a remediation candidate without creating semantic authority. |
+| 4 | [Shared Workflow Is Not Shared Authority](../semantic_admission/shared_workflow_is_not_shared_authority.md) | See how authority can be laundered through cooperating agents and reachable workflow paths. |
+| 5 | [Action Path Admission](../semantic_admission/action_path_admission.md) | Learn why a correct-looking final state does not prove an admissible path. |
+| 6 | [Model Autonomy Is Not Business Authority](../semantic_admission/model_autonomy_vs_business_authority.public.md) | Connect model autonomy, institutional responsibility, and progressive authority. |
+| 7 | [Runtime SemanticOutcome Boundary](../boundary_notes/runtime_semantic_outcome_boundary.md) | Separate semantic interpretation from executable governance. |
+| 8 | [ADR 0029 — Stage 4C+ Exists at the Automation Boundary](../adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md) | Finish with consequence-specific machine authority, non-linear Stage 4 responsibilities, and the separation of authorization from execution. |
 
 ### Backend / transactional systems
 
@@ -126,6 +132,9 @@ implementation and external execution remain separate and deferred.
 
 Completion below means the repository's bounded baseline, not production completeness.
 
+The Stage 4 baseline is complete: Stage 4C and bounded Stage 4E are closed,
+while Stage 4D retains responsibility with implementation deferred.
+
 | Area | Current maturity | Important limitation |
 |---|---|---|
 | Write-side durable baseline | Completed | Not complete distributed production hardening; the separately implemented Stage 4E boundary is narrow, not generic retry governance. |
@@ -151,7 +160,7 @@ Completion below means the repository's bounded baseline, not production complet
 - Idempotent replay is not general retry permission.
 - `SemanticOutcome.ok` is not executable authorization.
 - `DecisionReceipt` is not `DiagnosticTrace`, `AttemptLog`, policy, or action.
-- Multi-agent consensus is not truth.
+- Collective selection or agreement is not semantic authority.
 
 ## 9. Detailed Topic Indexes
 

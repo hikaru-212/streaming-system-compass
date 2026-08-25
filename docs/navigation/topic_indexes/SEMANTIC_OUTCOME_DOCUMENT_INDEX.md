@@ -169,6 +169,7 @@ semantic classifications, not executable commands.
 | [Runtime SemanticOutcome boundary](../../boundary_notes/runtime_semantic_outcome_boundary.md) | Boundary note | Start here | Defines meaning and decision as separate responsibilities. | Stage 4A boundary. |
 | [PR1 SemanticOutcome implementation boundary](../../implementation_notes/stage_4a/semantic_outcome_boundary.md) | Design/implementation note | Core | Shows how one semantic meaning may support several later decisions. | PR1 conceptual boundary. |
 | [SemanticOutcome result contract](../../implementation_notes/stage_4a/semantic_outcome_result_contract.md) | Implementation boundary | Core | Makes severity, risk, and reversibility policy inputs rather than action fields. | Implemented PR2 contract. |
+| [ADR 0029 — Stage 4C+ Exists at the Automation Boundary](../../adr/0029_stage_4c_plus_exists_at_the_automation_boundary.md) | Accepted ADR | Core | Places semantic meaning and evidence before consequence-specific machine authority while preserving proposal, authority, and execution as distinct responsibilities. | Current completed-Stage-4 automation-boundary decision; not a mandatory linear pipeline. |
 | [From Exception Strings to Governable Outcomes](../../reasoning_notes/from_exception_strings_to_governable_outcomes.md) | Reasoning note | Historical/supporting | Explains the derivation from outcomes toward later control. | Reasoning record is not the current decision-policy contract. |
 
 ## SemanticOutcome versus Strategy and Fallback
@@ -215,7 +216,7 @@ Stage 4D and action execution remain unimplemented.
 | [SemanticOutcome to DecisionReceipt](../../implementation_notes/stage_4b/semantic_outcome_to_decision_receipt.md) | Implementation boundary | Core | Defines explicit generic construction without producer execution or persistence. | Completed Stage 4B mapping. |
 | [DecisionReceipt Durable Persistence](../../implementation_notes/stage_4b/decision_receipt_persistence.md) | Implementation boundary | Deep dive | Defines strict serialization, persistence envelopes, and caller-owned PostgreSQL persistence. | No automatic materialization or transaction completion. |
 | [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Core | Records final Stage 4B completion and the Stage 4B.1 transition. | Current completion authority. |
-| [Stage 4B.1 Closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Core | Separates primary Result, `SemanticOutcome`, `DecisionReceipt`, and producer-specific trace responsibilities. | Defers `SemanticOutcome + Trace` composition to a concrete Stage 4C consumer review. |
+| [Stage 4B.1 Closeout](../../implementation_notes/stage_4b_1/stage_4b_1_closeout.md) | Stage closeout | Core | Separates primary Result, `SemanticOutcome`, `DecisionReceipt`, and producer-specific trace responsibilities. | At that closeout it deferred composition to consumer review; completed Stage 4C did not adopt general trace composition or new cross-process provenance. |
 
 ## Mapping Stability and Extension Boundaries
 
@@ -281,9 +282,10 @@ changing those Stage 4B non-goals.
 
 - Domain rejection has no separate explicit Stage 4A mapping in the reviewed batch.
 - The strict serializer v1 remains separate from semantic meaning and does not create an indefinite external API compatibility promise.
-- Same-execution provenance beyond the trusted producer construction path is
-  deferred to a concrete Stage 4C consumer review; no execution or attempt
-  identity is frozen by Stage 4B.1.
+- Completed Stage 4C review did not adopt general `SemanticOutcome + Trace`
+  composition, cross-process provenance, or a new execution identity. Stronger
+  provenance remains evidence-gated on a concrete consumer; Stage 4E owns only
+  its bounded attempt-identity and same-request authority concerns.
 - Idempotency conflict may later require more precise intent/fingerprint vocabulary.
 - Mapping versioning, deprecation, and backward-compatibility rules remain undefined.
 - Unsupported dependency/adapter failures require boundary-specific mapping decisions.
