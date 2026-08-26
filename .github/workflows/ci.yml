@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - "feat/stage**"
+      - "feature/**"
   push:
     branches:
       - main
