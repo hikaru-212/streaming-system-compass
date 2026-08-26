@@ -38,6 +38,7 @@ These notes should not be read as:
 ## Sections
 
 * [AI Governance Research](./ai_governance/README.md)
+* [Semantic Models](./semantic_models/README.md) — candidate semantic compression and implementation-independence research models.
 
 ## Relationship to the Main Project
 

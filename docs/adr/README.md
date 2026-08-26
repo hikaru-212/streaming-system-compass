@@ -49,6 +49,7 @@ They are not general notes or tutorials. Each ADR should answer:
 | 0027 | [Separate Runtime Decision, Strategy, and Retry Authority](0027_separate_runtime_decision_strategy_and_retry_authority.md) | Accepted | Separates Stage 4C current-response authority, Stage 4D strategy selection, Stage 4E attempt authorization, and later execution while preserving a live/in-memory-first evidence posture. |
 | 0028 | [Defer Dynamic Strategy Selection Until Multiple Eligible Execution Paths Exist](0028_defer_dynamic_strategy_selection_until_multiple_eligible_execution_paths_exist.md) | Accepted | Retains Stage 4D as the owner of dynamic `HOW` selection while deferring implementation until one authorized operation has multiple eligible strategies, reviewed selection evidence, and observable value. |
 | 0029 | [Stage 4C+ Exists at the Automation Boundary](0029_stage_4c_plus_exists_at_the_automation_boundary.md) | Accepted | Records why Stage 4B can be a sufficient evidence boundary for human-operated systems, while Stage 4C+ becomes necessary when machine-controlled consequences require explicit authority separate from proposals and execution. |
+| 0030 | [Preserve the Legacy `STALE_WRITE` Carrier and Normalize at the Semantic Abstraction Boundary](0030_preserve_legacy_stale_write_carrier_and_normalize_at_the_semantic_abstraction_boundary.md) | Accepted | Preserves the historical `STALE_WRITE` implementation carrier, normalizes meaning at the abstraction boundary, and requires consequence-driven re-entry before a production refactor. |
 
 ---
 
