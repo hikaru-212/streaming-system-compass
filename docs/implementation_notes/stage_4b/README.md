@@ -48,11 +48,16 @@ trace-stage authority and Stage 4B.2 handoff.
 A separate post-Stage 4B PostgreSQL follow-up first characterized one
 transaction-local cleanup mechanism for live-but-idle DecisionReceipt owners and
 then produced the implemented, tested, and merged
-`PostgresDecisionReceiptTransactionOwner`. The component owns one separate
-governance transaction for an already-complete receipt. Automatic callers,
-production timeout calibration, connection-pool integration, and runtime policy
-remain unimplemented. See
-[DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md).
+`PostgresDecisionReceiptTransactionOwner`. A later PR1–PR3 increment now composes
+stable live materialization, commit-aware separate persistence, canonical
+completed-invocation custody, fail-closed eligibility, and a PostgreSQL runtime
+builder. Receipt composition remains explicit: `invoke_initial()` does not
+persist a receipt, and callers enter receipt work through the retained handle's
+`compose_receipt()` method. Production timeout calibration, connection-pool
+integration, background persistence, and runtime policy remain unimplemented.
+See [DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md)
+and the
+[DecisionReceipt Runtime Composition Closeout](decision_receipt_runtime_composition_closeout.md).
 
 This follow-up does not reopen Stage 4B or the completed Stage 4B.1 boundary.
 
@@ -411,6 +416,23 @@ This is the serialization and durable-storage foundation. It does not
 automatically invoke PR4/PR5 producers, persist mapper outputs, schedule
 materialization, scan accepted history, or reconcile missing receipts.
 
+The later runtime-composition increment does not change those original Stage 4B
+responsibilities. It adds an explicit canonical PostgreSQL application path:
+
+```text
+normal PostgresWriteSideResult
+→ retained completed-invocation handle
+→ explicit compose_receipt()
+→ PR1 materialization
+→ PR2 separate commit-aware persistence
+```
+
+That increment includes `PostgresWriteSideDecisionReceiptRuntimeOwner`, the
+injected `build_postgres_write_side_decision_receipt_runtime(...)` composition
+root, fail-closed persistence eligibility, and guarded real PostgreSQL
+integration coverage. It does not add implicit persistence during business
+invocation, reconciliation, or background scheduling.
+
 The completed closeout transition is:
 
 ```text
@@ -448,10 +470,13 @@ This evidence later grounded the implemented
 transaction-locally, owns commit or rollback, and closes or discards its
 dedicated connection.
 
-The component is not an automatic production caller. No production timeout
-duration or configuration owner, connection-pool integration, automatic
-semantic mapping or materialization, retry authorization, migration, or schema
-change is introduced by the owner.
+The transaction owner is not itself an application caller. The later
+`PostgresWriteSideDecisionReceiptRuntimeOwner` is now the explicit application
+composition owner and invokes the transaction owner only after a retained
+completed handle explicitly enters `compose_receipt()`. No production timeout
+duration or external configuration owner, connection-pool integration,
+background materialization, retry authorization, migration, or schema change is
+introduced by that composition.
 
 The implementation guide is:
 
@@ -537,7 +562,7 @@ Runtime Decision Authority
 Strategy Selection Authority
 Retry / Attempt Authorization
 ActionSafetyGate
-automatic receipt materialization
+implicit or background receipt materialization
 accepted-history reconciliation
 transactional outbox
 operator review execution
@@ -550,8 +575,10 @@ LLM token accounting
 model routing policy
 ```
 
-PR6 provides persistence infrastructure only. Runtime materialization and
-reconciliation remain deferred.
+PR6 provides persistence infrastructure only. The later PR1–PR3 increment now
+provides explicit live runtime materialization and persistence composition.
+Accepted-history reconciliation, process-crash recovery, and background
+materialization remain deferred.
 
 ---
 
@@ -653,4 +680,5 @@ deferred semantic-precision issues.
 - [PR6 DecisionReceipt Persistence Design](pr6_decision_receipt_persistence_design.md)
 - [DecisionReceipt Durable Persistence](decision_receipt_persistence.md)
 - [DecisionReceipt Transaction-Owner Liveness Hardening](decision_receipt_owner_liveness_runtime_hardening.md)
+- [DecisionReceipt Runtime Composition Closeout](decision_receipt_runtime_composition_closeout.md)
 - [Deferred Hardening — Projection Without Accepted-History Authority](deferred_backlog_projection_without_accepted_history.md)

@@ -20,7 +20,10 @@ repository-supported runtime owner-liveness implementation
 production timeout value
 = not selected
 
-automatic production materialization caller
+explicit application materialization caller
+= implemented through PostgresWriteSideDecisionReceiptRuntimeOwner
+
+implicit / background materialization caller
 = not implemented
 ```
 
@@ -38,7 +41,9 @@ Current source is
 an already-complete receipt, acquires a dedicated connection, applies the
 required transaction-local timeout, owns commit or rollback, and closes or
 discards the connection. It does not construct receipts, select a production
-timeout, or provide an automatic materialization caller.
+timeout, or provide an implicit materialization caller. A later PR1–PR3
+composition increment now supplies the explicit application caller around it;
+the historical transaction-owner design below remains unchanged.
 
 ---
 
@@ -857,7 +862,7 @@ split is preserved:
 |---|---|---|
 | `src/storage/postgres_decision_receipt_transaction_owner.py` | Approved dedicated receipt governance-transaction owner | Implemented |
 | `src/storage/postgres_connection.py` | Existing generic low-level connection helper | No first-version change required |
-| Existing runtime/bootstrap call site | Use supported transaction owner | Deferred; no caller selected |
+| Existing runtime/bootstrap call site | Use supported transaction owner | Implemented by `build_postgres_write_side_decision_receipt_runtime(...)` and `PostgresWriteSideDecisionReceiptRuntimeOwner` |
 | `tests/unit/storage/test_postgres_decision_receipt_transaction_owner.py` | Lifecycle and failure-contract unit tests | Implemented |
 | `tests/integration/storage/test_postgres_decision_receipt_store.py` | Physical PostgreSQL evidence | Already extended |
 | `tests/integration/storage/test_postgres_decision_receipt_transaction_owner_integration.py` | Commit, rollback, timeout, discard, and commit ambiguity | Implemented |
@@ -1140,13 +1145,17 @@ accepted business transaction
 receipt governance transaction
 ```
 
-Until production orchestration exists, the correct repository statement is:
+The later runtime-composition increment now establishes this current repository
+statement:
 
 ```text
 transaction-local owner cleanup mechanism characterized
 → implemented dedicated transaction owner
 
 implemented dedicated transaction owner
+→ explicit completed-handle compose_receipt() application path
+
+implemented dedicated transaction owner
 ≠
-automatic receipt materialization or calibrated production policy
+implicit/background receipt materialization or calibrated production policy
 ```

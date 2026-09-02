@@ -123,9 +123,14 @@ retry framework, scheduler, budget, or execution policy. See the
 
 Stage 4A completes the first Compass Layer 2 semantic interpretation boundary.
 Stage 4B preserves selected evidence through explicit mapping, serialization,
-and persistence boundaries without automatic materialization or reconciliation.
-See the [Stage 4B implementation index](implementation_notes/stage_4b/README.md)
-and [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md).
+and persistence boundaries. A later PR1–PR3 increment now provides explicit
+live PostgreSQL materialization and persistence composition through a retained
+completed-invocation handle; business invocation still does not implicitly
+persist a receipt, and reconciliation remains deferred. See the
+[Stage 4B implementation index](implementation_notes/stage_4b/README.md), the
+historical [Stage 4B closeout](implementation_notes/stage_4b/stage_4b_closeout.md),
+and the current
+[DecisionReceipt runtime-composition closeout](implementation_notes/stage_4b/decision_receipt_runtime_composition_closeout.md).
 
 ---
 
@@ -161,11 +166,16 @@ The historical design chronology remains in the
 [DecisionReceipt Transaction-Owner Liveness Hardening implementation note](implementation_notes/stage_4b/decision_receipt_owner_liveness_runtime_hardening.md).
 
 The component owns one already-complete receipt's separate governance
-transaction. Production timeout calibration and configuration ownership,
-automatic materialization, runtime bootstrap wiring, connection-pool
-integration, and reconciliation remain unimplemented. The owner does not reopen
-Stage 4B contracts or authorize retry. See also the non-authoritative derivation
-in
+transaction. An injected PostgreSQL DecisionReceipt composition root now builds
+the real transactional writer, receipt transaction owner, and canonical runtime
+owner for a caller-supplied request signature, business connection, validation
+runtime, receipt connection factory, and timeout. It does not read environment
+configuration, open the business connection, invoke a command, or compose a
+receipt automatically. Production timeout calibration and external
+configuration ownership, connection-pool integration, background
+materialization, and reconciliation remain unimplemented. The owner does not
+reopen Stage 4B contracts or authorize retry. See also the non-authoritative
+derivation in
 [From Statement Success to Owner-Liveness](reasoning_notes/from_statement_success_to_owner_liveness.md).
 
 This abnormal-path transaction-liveness question remains separate from
