@@ -1,9 +1,20 @@
 # PostgreSQL Write-Side Result to DecisionReceipt: End-to-End Flow
 
-This guide follows the current production code and directly related tests, connecting Stage 3.5B, Stage 4A, and Stage 4B PR4. It is a reading guide and does not replace the invariants defined by the types themselves.
+This guide follows the current production code and directly related tests,
+connecting Stage 3.5B, Stage 4A, the Stage 4B PR4 mapper, and the later PR1–PR3
+DecisionReceipt runtime-composition increment. It is a reading guide and does
+not replace the invariants defined by the types themselves.
 
 
-Primary sources: `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide`, `src/compass/transition/runtime.py::ValidationRuntime`, `src/compass/runtime/write_side_outcome_mapping.py::map_postgres_write_side_result_to_semantic_outcome`, `src/compass/runtime/write_side_decision_receipt_mapping.py::map_postgres_write_side_result_to_decision_receipt`, and `src/compass/runtime/write_side_rule_feedback.py::map_postgres_write_side_result_to_semantic_rule_feedback`.
+Primary sources include
+`src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide`,
+`src/compass/transition/runtime.py::ValidationRuntime`,
+`src/compass/runtime/write_side_outcome_mapping.py::map_postgres_write_side_result_to_semantic_outcome`,
+`src/compass/runtime/write_side_decision_receipt_mapping.py::map_postgres_write_side_result_to_decision_receipt`,
+`src/compass/runtime/write_side_rule_feedback.py::map_postgres_write_side_result_to_semantic_rule_feedback`,
+the three
+`postgres_write_side_decision_receipt_*_owner.py` composition modules, and
+`src/bootstrap/build_postgres_write_side_decision_receipt_runtime.py`.
 
 ## How to read this guide
 
@@ -54,6 +65,30 @@ explicit PR7 semantic-rule-feedback mapper
 ```
 
 `PostgresTransactionalWriteSide` executes a command, may read and write PostgreSQL, and uses `PostgresWriteSideResult` to represent a normally completed lifecycle outcome. Stage 4A interprets that result as a semantic tuple. Stage 4B PR4 selects only completed typed evidence and assembles an in-memory `DecisionReceipt`; it does not execute another write, commit, rollback, or retry. Serializer v1, PostgreSQL receipt persistence, and a dedicated receipt transaction owner now exist as separately invoked capabilities; no normal write command automatically materializes a receipt. Sources: `src/pipeline/transactional/postgres_write_side.py::PostgresTransactionalWriteSide._execute_command`, `src/compass/runtime/write_side_decision_receipt_mapping.py::map_postgres_write_side_result_to_decision_receipt`, `src/compass/runtime/decision_receipt_serialization.py::serialize_decision_receipt`, `src/storage/postgres_decision_receipt_transaction_owner.py::PostgresDecisionReceiptTransactionOwner`.
+
+The repository now also provides a canonical explicit PostgreSQL application
+path:
+
+```text
+RequestSignature
+→ build_postgres_write_side_decision_receipt_runtime(...)
+→ PostgresWriteSideDecisionReceiptRuntimeOwner
+→ invoke_initial()
+→ normal PostgresWriteSideResult
+→ PostgresWriteSideDecisionReceiptCompletedInvocation
+→ explicit compose_receipt()
+→ PR1 materialization owner
+→ PR2 persistence-composition owner
+→ PostgresDecisionReceiptTransactionOwner
+→ separate governance transaction
+```
+
+The raw `PostgresTransactionalWriteSide` contract is unchanged: it returns only
+the business result. `invoke_initial()` also does not persist a receipt. The
+completed handle begins receipt work only when `compose_receipt()` is explicitly
+called. Explicit runtime composition therefore exists without implicit or
+background receipt persistence. See the
+[DecisionReceipt Runtime Composition Closeout](decision_receipt_runtime_composition_closeout.md).
 
 `StreamAdmissionResult` is the stream-preparation evidence produced by `ConcurrencyGate.prepare_stream(...)`. Its position relative to history loading, candidate construction, and validation depends on orchestration placement. `AdmissionResult` is the candidate-level append boundary. Neither is synonymous with transaction commit or accepted-history membership. The actual insert occurs when a gate calls `PostgresEventStore.append(...)`; transaction completion is controlled by `PostgresWriteSideUnitOfWork.__exit__`. Sources: `src/pipeline/transactional/admission.py::StreamAdmissionResult`, `src/pipeline/transactional/admission.py::AdmissionResult`, `src/pipeline/transactional/postgres_admission.py::_append_with_translation`, `src/pipeline/transactional/postgres_unit_of_work.py::PostgresWriteSideUnitOfWork.__exit__`.
 
@@ -257,11 +292,12 @@ map_postgres_write_side_result_to_decision_receipt(
 
 All three parameters are keyword-only. The adapter does not accept an arbitrary prebuilt `SemanticOutcome` and exposes no metadata/context/evidence/policy/retry/persistence parameters. Source: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_public_wrapper_signature_is_exact_and_keyword_only`.
 
-The adapter is implemented, but no production command path currently invokes
-it. Its composition is covered by mapper unit tests. Durable receipt
-serialization and PostgreSQL persistence are implemented through separate
-explicit boundaries; automatic mapper-to-store materialization remains outside
-this command path.
+The adapter remains a pure mapping boundary, but the canonical PostgreSQL
+runtime now reaches it through the retained PR1 materialization owner after a
+normal business result exists. Callers of the canonical runtime do not rebuild
+PR1 or PR2 owners from a raw result; they retain the completed-invocation handle
+and explicitly call `compose_receipt()`. The mapper itself still performs no
+serialization, persistence, policy, or retry action.
 
 Actual call order and the question answered by each step:
 
@@ -338,17 +374,30 @@ The sequence is `RequestSignature` → `MISS` → admitted `StreamAdmissionResul
 
 Stage 4A uses `CONCURRENT_STATE_STALENESS` to build a concurrency-uncertain semantic tuple. PR4 builds candidate identity, a `CANDIDATE_EVENT` subject, `CANDIDATE_EVENT_IDENTITY` correlation, `APPEND_CONCURRENCY_CONFLICT`, `retry_candidate=NOT_EVALUATED`, and summary phase `APPEND_ADMISSION` with `append_admission_verdict=STALE_WRITE`. The typed verdict remains available for a later authorized evaluator; PR4 does not evaluate or authorize retry. Source: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_append_rejection_maps_fate_and_leaves_flags_not_evaluated`.
 
+Materializability does not establish persistence eligibility. The current PR3
+runtime fails closed for every append-time rejection profile, including this
+`STALE_WRITE` shape. It does not call PR2 persistence for that completion.
+Under ADR 0030, the coarse verdict is not independently sufficient proof of
+concurrency, retryability, or re-invocation authority.
+
 ## 10. Boundaries and non-goals
 
-The current write-command and mapping flow:
+The raw write-command and mapping boundaries:
 
-- Does not automatically serialize or persist `DecisionReceipt`. The mapper returns a frozen in-memory contract. Strict serializer v1, the PostgreSQL store, and `PostgresDecisionReceiptTransactionOwner` exist, but a caller must explicitly construct and invoke those separate boundaries; normal write commands do not materialize receipts. Sources: `src/compass/runtime/decision_receipt_serialization.py::serialize_decision_receipt`, `src/storage/postgres_decision_receipt_store.py::PostgresDecisionReceiptStore`, `src/storage/postgres_decision_receipt_transaction_owner.py::PostgresDecisionReceiptTransactionOwner`.
+- Do not automatically serialize or persist `DecisionReceipt`. The mapper
+  returns a frozen in-memory contract, and the raw writer returns a
+  `PostgresWriteSideResult`. The canonical runtime now retains the exact PR1/PR2
+  graph and exposes explicit `compose_receipt()`; it does not persist during
+  `invoke_initial()`.
 - Does not automatically invoke PR7 semantic rule feedback. Callers explicitly compose it from one `PostgresWriteSideResult`. Preserved validation observation is exposed as terminal refinement only for `VALIDATION_BLOCKED`; other terminal outcomes use `rule_refinement=None`.
 - Does not evaluate, execute, or authorize retry. `retry_candidate` remains `NOT_EVALUATED`; typed retry-relevant verdicts remain in the evidence summary for later authorized evaluators. Sources: `docs/adr/0018_producer_receipt_adapters_preserve_evidence_but_do_not_evaluate_governance_flags.md`, `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_every_supported_result_shape_leaves_flags_not_evaluated`.
 - Does not provide ambiguous-commit reconciliation. `COMMIT_OUTCOME_UNRESOLVED` exists in the contract, but the current write-side adapter does not produce it. The current implementation also does not guarantee a subsequent rollback after commit failure. Source: `tests/unit/compass/runtime/test_write_side_decision_receipt_mapping.py::test_supported_write_side_results_do_not_map_to_commit_outcome_unresolved`.
 - Does not include distributed routing, rate limiting, or hot-partition governance; the public wrapper has no corresponding input or side effect.
 - Does not provide field-level identity provenance; `identity_source` describes the source of the primary correlation block.
 
-The focused PR4 tests are mapper-composition unit tests. They are not real
-PostgreSQL command-path integration tests and are not receipt-persistence
-tests.
+The focused PR4 tests remain mapper-composition unit tests rather than
+receipt-persistence tests. Separate guarded real PostgreSQL PR3 integration
+coverage exercises the canonical runtime, real business state, a distinct
+receipt connection, and authoritative `decision_receipts` rows for reviewed
+scenarios. That coverage is not a claim of global exactly-once behavior,
+restart recovery, or arbitrary technical-failure persistence safety.

@@ -30,6 +30,23 @@ The following remain deferred:
 - transactional outbox;
 - publication workflow.
 
+A later PR1–PR3 runtime-composition increment implements explicit live
+PostgreSQL receipt composition without changing this accepted decision:
+
+- `PostgresWriteSideDecisionReceiptRuntimeOwner` binds one normally completed
+  invocation to one retained live materialization/persistence graph;
+- callers explicitly enter receipt work through the completed handle's
+  `compose_receipt()` method;
+- business and receipt transactions remain separate;
+- accepted-history scanning and missing-receipt reconciliation remain deferred;
+  and
+- technical, append-time, infrastructure, and unreviewed profiles remain
+  fail-closed unless their reason/evidence contracts are separately approved for
+  durable persistence.
+
+This status update does not make receipt persistence implicit in business
+invocation and does not alter the historical context or decision below.
+
 ---
 
 ## Context

@@ -210,6 +210,7 @@ Stage 4A maps bounded write-side admission evidence into typed `SemanticOutcome`
 | [Write-side DecisionReceipt Mapping](../../implementation_notes/stage_4b/write_side_decision_receipt_mapping.md) | Implementation boundary | Core | Defines completed producer-specific receipt construction and admission-fate evidence. | Stage 4B complete; mapping performs no persistence. |
 | [DecisionReceipt Durable Persistence](../../implementation_notes/stage_4b/decision_receipt_persistence.md) | Implementation boundary | Deep dive | Defines strict serialization, storage-neutral envelopes, and caller-owned PostgreSQL transaction completion. | Explicit operation; no command-path auto-wiring. |
 | [Stage 4B Closeout](../../implementation_notes/stage_4b/stage_4b_closeout.md) | Stage closeout | Core | Confirms the completed receipt baseline and deferred runtime governance. | `DiagnosticTrace` / `ResolutionTrace`, policy, retry, strategy, and action remain later work. |
+| [DecisionReceipt Runtime Composition Closeout](../../implementation_notes/stage_4b/decision_receipt_runtime_composition_closeout.md) | Post-stage runtime closeout | Core | Records the explicit PostgreSQL invocation-to-receipt path, fail-closed persistence eligibility, owner-local completed-handle custody, and separate receipt transaction. | Current PR1–PR3 runtime composition; no implicit persistence, reconciliation, or global exactly-once claim. |
 
 ## Implementation History and Planning-era Material
 

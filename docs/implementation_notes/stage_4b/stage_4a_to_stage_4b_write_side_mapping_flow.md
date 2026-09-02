@@ -54,10 +54,13 @@ PostgresWriteSideResult
 → DecisionReceipt
 ```
 
-PR4 implements the producer-specific mapping adapter. No production command
-path currently invokes it. Strict DecisionReceipt serialization and PostgreSQL
-persistence exist through separate explicit boundaries, but automatic
-materialization from a normal write command remains outside PR4.
+PR4 implements the producer-specific mapping adapter. The raw mapping functions
+remain pure boundaries, but the canonical PostgreSQL runtime now reaches them
+through retained PR1–PR3 composition after a normal write result exists. The
+raw `PostgresTransactionalWriteSide` still returns only that business result,
+and receipt work begins only when the completed-invocation handle explicitly
+enters `compose_receipt()`. Automatic materialization during a normal write
+command remains outside PR4.
 
 Stage 4B.5 adds a separate refinement composition without changing ownership
 of the Stage 4A tuple or the DecisionReceipt path:
