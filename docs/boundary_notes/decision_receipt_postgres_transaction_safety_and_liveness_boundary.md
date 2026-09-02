@@ -25,7 +25,10 @@ Level 1 owner-liveness mechanism
 production transaction-owner component
 = implemented, tested, and merged
 
-automatic production materialization runtime
+explicit production materialization runtime
+= implemented through PostgresWriteSideDecisionReceiptRuntimeOwner
+
+implicit / background receipt persistence
 = not implemented
 
 production timeout value
@@ -85,9 +88,11 @@ mechanism for a live-but-idle owner: a transaction-local
 transaction, and release a uniqueness-conflicting contender. This evidence
 did not itself implement a production owner-liveness runtime or timeout value.
 The approved first-version contract recorded below is now implemented by
-`PostgresDecisionReceiptTransactionOwner`. The component does not establish an
-automatic production caller, a calibrated production timeout, bounded contender
-wait, bounded statement execution, connection-pool cleanup, or deadlock retry.
+`PostgresDecisionReceiptTransactionOwner`. A later application composition owner
+now invokes it through an explicit completed-handle `compose_receipt()` path.
+Neither component establishes implicit or background invocation, a calibrated
+production timeout, bounded contender wait, bounded statement execution,
+connection-pool cleanup, or deadlock retry.
 
 The governing rule is:
 
@@ -375,7 +380,9 @@ The Level 1 experiment verifies that one transaction-local timeout can resolve
 one tested live-but-idle owner schedule. The implemented transaction owner now
 applies that mechanism for each explicitly invoked receipt governance
 transaction. This does not create automatic production materialization or a
-general runtime guarantee. The mechanism does not bound connection acquisition,
+general runtime guarantee. A later explicit runtime composition now invokes this
+owner only after `compose_receipt()` is called on a normal completed handle. The
+mechanism does not bound connection acquisition,
 actively executing statements, total transaction wall-clock duration,
 contender lock wait, commit invocation or response, deadlock resolution, or the
 complete transaction lifecycle. The owner still owns that complete lifecycle
@@ -418,9 +425,10 @@ The mechanisms below separate possible future waiter protections from the
 implemented first-version owner boundary. No waiter timeout is selected,
 configured, or guaranteed by the repository's production `DecisionReceipt`
 persistence scope. Transaction-local `idle_in_transaction_session_timeout` is
-the implemented owner mechanism, but no automatic production caller,
-configuration wiring, or calibrated duration is implemented. The Level 1 test
-configuration remains experiment evidence only.
+the implemented owner mechanism. An explicit application runtime and injected
+timeout seam now exist, but implicit/background invocation, external
+configuration ownership, and a calibrated production duration do not. The Level
+1 test configuration remains experiment evidence only.
 
 ### `lock_timeout`
 
@@ -565,10 +573,11 @@ establish repository-supported runtime policy or a production operational
 guarantee.
 
 The repository now implements that bounded component contract in
-`src/storage/postgres_decision_receipt_transaction_owner.py`, with focused unit,
-PostgreSQL integration, and test-only write-side composition evidence. Those
-tests establish the transaction-owner component; they do not implement an
-automatic production materialization caller.
+`src/storage/postgres_decision_receipt_transaction_owner.py`, with focused unit
+and PostgreSQL integration evidence. The later PR1–PR3 increment adds an
+explicit application materialization caller and guarded real PostgreSQL runtime
+composition coverage. It still does not make receipt persistence implicit in a
+business invocation.
 
 ADR 0019 already defines the split target materialization model:
 
@@ -1021,7 +1030,10 @@ experimentally verified transaction-local cleanup
 does not create production runtime policy
 
 implemented production transaction-owner component
-does not prove automatic production materialization or calibrated runtime policy
+does not by itself prove application composition or calibrated runtime policy
+
+explicit application runtime composition
+does not imply background persistence or calibrated runtime policy
 ```
 
 A trustworthy transaction design must assign separate owners to:

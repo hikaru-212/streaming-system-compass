@@ -67,6 +67,28 @@ evidence; receipt need is consumer-specific rather than categorical.
 A receipt provides durable, reviewable evidence for later governance consumers.
 It does not execute or authorize them.
 
+The contract's durable role must not collapse live materialization and proven
+transaction durability:
+
+```text
+materialized DecisionReceipt
+!= proven durable receipt row
+```
+
+A materialized receipt is a stable governance-evidence value. Proven durability
+requires commit-aware receipt-transaction evidence such as `COMMITTED`.
+`NOT_COMMITTED` and `UNKNOWN` retain their distinct transaction meanings.
+
+Likewise:
+
+```text
+DecisionReceipt existence
+!= business success
+!= accepted business fact
+!= retry authority
+!= execution authority
+```
+
 ---
 
 ## What DecisionReceipt Is
@@ -403,8 +425,16 @@ UUID object
 → string identifier
 
 Exception object
-→ exception_type / exception_message
+→ only an explicitly reviewed stable category or code
 ```
+
+Arbitrary exception messages are not automatically receipt-safe. Raw database
+exception text, SQL details, constraint diagnostics, stack traces, and other
+unstable technical reason text remain operational or diagnostic evidence. The
+current write-side runtime retains only the bounded live category
+`UNEXPECTED_COMPOSITION_EXCEPTION` for an unexpected receipt-composition
+exception; it does not retain the raw exception object or text as durable
+receipt evidence.
 
 Receipt evidence is recursively frozen after validation.
 
@@ -636,6 +666,110 @@ The foundation is explicitly invoked by callers. Stage 4B does not
 automatically materialize mapper outputs, scan accepted history, reconcile
 missing receipts, publish receipts through an outbox, or own a publication
 cursor.
+
+### Current explicit PostgreSQL runtime composition
+
+A later PR1–PR3 runtime-composition increment now provides the canonical
+explicit write-side path:
+
+```text
+PostgresWriteSideResult
+→ one retained completed-invocation handle
+→ explicit compose_receipt()
+→ PR1 materialization
+→ PR2 commit-aware persistence composition
+→ separate PostgreSQL governance transaction
+```
+
+`invoke_initial()` completes the business invocation and publishes the handle;
+it does not implicitly persist a receipt. Receipt work begins only after a
+normal business result exists and only when `compose_receipt()` is called.
+
+The runtime delivery preserves three independent meanings:
+
+```text
+business result
+!= receipt materialization
+!= receipt persistence
+```
+
+Therefore:
+
+```text
+ACCEPTED + receipt NOT_COMMITTED
+→ business remains ACCEPTED
+
+ACCEPTED + receipt UNKNOWN
+→ business remains ACCEPTED
+
+VALIDATION_BLOCKED + receipt COMMITTED
+→ no accepted business effect was created
+```
+
+The business and receipt transactions are separate. Receipt failure does not
+roll back or rewrite completed business truth, and the architecture does not
+claim a distributed atomic transaction.
+
+### Fail-closed persistence eligibility
+
+Receipt materializability does not imply automatic durable-persistence
+eligibility:
+
+```text
+materializable
+!= persistence-eligible
+```
+
+The current reviewed positive profiles are `ACCEPTED`, `REPLAY`, `CONFLICT`,
+`VALIDATION_BLOCKED`, and preparation-phase `LOCK_TIMEOUT`. The last profile is
+selected from typed lifecycle position, not reason text. Every unmatched or
+unreviewed profile fails closed. Current append-time rejection and
+infrastructure profiles remain persistence-ineligible.
+
+```text
+PERSISTENCE_INELIGIBLE
+= persistence deliberately not reached
+
+NOT_COMMITTED
+= persistence attempted and known not committed
+
+UNKNOWN
+= persistence attempted but durability unresolved
+```
+
+An append-time `STALE_WRITE` receipt shape may be materializable, but current
+PR3 eligibility does not permit its automatic durable persistence. Under ADR
+0030, the coarse verdict alone is not proof of concurrency, retryability, or
+re-invocation authority.
+
+### Canonical live custody and later authority boundaries
+
+For each normal completion, the runtime owner retains one canonical owner-local
+live PR1/PR2 graph and one cached terminal runtime delivery. This guarantee
+applies only to the canonical application path. It is not global exactly-once,
+process-independent uniqueness, durable receipt identity, or durable attempt
+identity.
+
+A1 and a Stage 4E-authorized A2 retain distinct bounded completed-invocation
+handles, PR1/PR2 graphs, receipt identities, and receipt-path outcome identities
+while sharing the same `RequestSignature`. A1 remains accessible after A2 moves
+the invocation owner's current-response state. No `AttemptLog`, unbounded
+attempt collection, or A3 is introduced.
+
+Receipt composition does not invoke Stage 4C or allocate its lazy identity;
+receipt-path `outcome_id` need not equal Stage 4C's identity. Receipt persistence
+also does not create Stage 4E authority. Stage 4E remains the independent
+boundary for one reviewed same-request A2.
+
+An unexpected receipt-composition exception becomes the bounded live status
+`UNEXPECTED_COMPOSITION_EXCEPTION`. The exact business result remains available,
+the completed handle becomes terminal for receipt composition, and later access
+does not automatically re-enter PR2. This is not a general operational
+diagnostic framework.
+
+See the
+[DecisionReceipt Runtime Composition Closeout](../implementation_notes/stage_4b/decision_receipt_runtime_composition_closeout.md)
+for the current source and test map.
 
 ---
 
