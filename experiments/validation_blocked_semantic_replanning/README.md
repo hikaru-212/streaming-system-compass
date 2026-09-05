@@ -4,19 +4,19 @@
 
 ```text
 Status:
-Commit 2 / documentation boundary refinement
+Commit 4 / Level 1 executable closeout
 
 Documentation boundary:
-SELECTED / refinement pending review
+SELECTED / reviewed
 
 Model-level implementation scope:
-APPROVED IN PRINCIPLE upon review of this refinement
+LEVEL 1 COMPLETE
 
 Governed fixture implementation:
-NEXT CANDIDATE RESPONSIBILITY
+ESTABLISHED IN COMMIT 3
 
 Semantic-replanning planner:
-GATED ON FIXTURE EVIDENCE SUFFICIENCY
+IMPLEMENTED / A, B, C1, C2 EXECUTED
 
 Production integration:
 NOT AUTHORIZED
@@ -30,11 +30,15 @@ preserved the reviewed source audit at
 `c5b8aec573dedc38f7e4b46b88f521bd03044f2e`. Its PR0 boundary required a genuine
 production FullProof validation block and left implementation unauthorized.
 
-The reviewed design decision now selects a separate, experiment-owned bounded
-operational/configuration proposal model. This refinement records that scope;
-it implements nothing. Fixture implementation is the next candidate
-responsibility after documentation review. Planner work remains gated on the
-fixture, and production integration remains unauthorized.
+Commit 2, `6d20709`, selected the separate experiment-owned bounded
+operational/configuration proposal model. Commit 3, `a335e1a`, established the
+governed fixture in [model.py](model.py), independently of a planner.
+
+The current Commit 4 work implements the pure planner and executes both revised
+proposal outcomes through that unchanged fixture. The focused suite passed
+before this closeout update. Level 1 is complete within the trusted in-process
+model; production integration remains unauthorized. Commit 4 implements and
+witnesses deterministic semantic replanning.
 
 The original production finding remains valid:
 
@@ -56,10 +60,10 @@ fixture to alter Order or impersonate its production result types.
 > remains only a proposal and must undergo full governance again as a new
 > request?
 
-### Level 1 — selected next experiment
+### Level 1 — executed experiment-owned model
 
-The selected proof level is an **experiment-owned governed semantic-replanning
-model**. Its target architecture is not current executable behavior:
+The executed proof level is an **experiment-owned governed semantic-replanning
+model**. The focused witnesses establish this model path:
 
 ```text
 Request R1
@@ -78,7 +82,12 @@ Request R1
 
 ALLOW is a decision, not an accepted effect. The fixture's deterministic state
 owner must separately complete the accepted-state transition. Planning owns
-neither submission nor that transition.
+neither submission nor that transition. Within this trusted in-process
+experiment, a deterministic proposal-producing actor consumes bounded evidence
+from an observed governed rejection to formulate a different intent. The
+revised proposal remains non-authoritative and independently passes through
+the same fixture submission boundary. A valid revision is accepted, while an
+invalid revision is rejected again without changing accepted state.
 
 ### Level 2 — stronger production integration, still gated
 
@@ -222,16 +231,87 @@ from candidate construction, submission authority, and accepted history.
 The revised intent must undergo the applicable governance path again: the
 fixture path for Level 1, and a separately reviewed production path for Level 2.
 
-## Experiment ownership and fixture requirements
+## Implemented planner and source custody
 
-The first implementation is an experiment-owned model, not a production
-configuration subsystem. It may locally own:
+[planner.py](planner.py) defines only the closed `RateBudgetRepairPolicy` enum
+and pure `plan_rate_budget_repair()` function, with local input checks. The
+function accepts:
 
-- a bounded proposal type and proposal/request correlation;
-- authoritative fixture state and its deterministic constraint;
-- a fixture validator;
-- typed rejection evidence; and
-- an accepted-state transition owned separately from proposal generation.
+```text
+exact live BlockedSubmission
++ caller-retained exact original RateBudgetProposal
++ caller-owned new_request_id
++ explicit RateBudgetRepairPolicy
+→ new RateBudgetProposal
+```
+
+The existing immutable `RateBudgetProposal` is sufficient. No `RepairProposal`
+wrapper is needed because test composition retains the source result, original
+proposal, and selected policy; no other consumer needs bundled correlation.
+The output contains only request ID, action, target, and proposed rate. It
+carries no verdict, evidence, accepted state, authority, owner, or callback.
+
+The function requires exact supported input types, including an actual
+`BlockedSubmission` type rather than raw rejection evidence. It requires
+`blocked_submission.decision.proposal is original_proposal`, checks that the
+rejected rate exceeds the retained maximum, and refuses the original request
+ID or an unchanged semantic rate. Normal proposal construction checks nonblank
+IDs and preserves spelling. It performs no validation, submission, or writes.
+
+These checks freeze a trusted live composition, not authenticated provenance.
+Both `BlockedSubmission` and `RateBudgetRejectionEvidence` are publicly
+constructible. Exact types, source object correlation, and coherent operands
+cannot prove that a fixture actually produced an arbitrary supplied carrier.
+Trusted composition supplies the observed result; there is no signing,
+capability token, provenance registry, durable lineage, or global ID memory.
+
+### Two explicit proposal policies
+
+| Policy | Transformation | Rejected 300 against maximum 120 |
+|---|---|---|
+| `USE_OBSERVED_MAXIMUM` | Use the exact retained `contract.maximum_rate`. | Propose 120. |
+| `REDUCE_OBSERVED_RATE_BY_ONE_THIRD` | Compute `(2 * rejected_rate.value) // 3` in exact integer units. | Propose 200, without clamping to the maximum. |
+
+The reduction policy's name describes its transformation, not its correctness.
+It intentionally can produce another inadmissible proposal. Neither policy
+calls the validator or decides ALLOW/BLOCK for its output.
+
+```text
+maximum = 120
+= validation evidence
+
+choose 120
+= planner policy
+
+same semantic rejection evidence
+→ reduction policy proposes 200
+→ explicit fresh submission
+→ governance BLOCKs again
+```
+
+The cosmetic-repair guard remains explicit. There is no reachable unchanged
+rate under coherent current inputs: the maximum is strictly smaller than the
+rejected rate, and `floor(2*r/3) < r` for the positive rejected integer `r`.
+No synthetic policy was introduced merely to exercise that guard.
+
+No Executor is needed. Tests explicitly call the planner and then, separately,
+`fixture.submit(revised_proposal)`. The unchanged fixture owns fresh validation
+and the accepted-state transition; the planner receives neither that owner nor
+any execution callback.
+
+## Established experiment ownership and fixture evidence
+
+The implementation is an experiment-owned model, not a production configuration
+subsystem. Commit 3 established these local responsibilities:
+
+- `RateBudgetProposal` for bounded intent and complete fixture request identity;
+- `RateBudgetContract` and `AcceptedRateBudgetState` for independent authority
+  and an immutable state observation;
+- pure `validate_rate_budget()` for the inclusive maximum check;
+- `RateBudgetValidationAllowed` or `RateBudgetRejectionEvidence` retaining exact
+  proposal and contract inputs; and
+- `GovernedRateBudgetFixture.submit()` for fresh validation and an accepted-state
+  transition, returning `AcceptedSubmission` or `BlockedSubmission`.
 
 Model responsibilities belong under `experiments/`, with model tests under
 `tests/experiments/`. No production promotion or production consumer is
@@ -248,21 +328,21 @@ semantic BLOCK. Construction must not silently clamp the proposed value or
 replace it with an admissible one. This is a new fixture proposal/admission
 distinction, not permission to move or remove existing Order domain checks.
 
-### Typed evidence requirements for the fixture
+### Typed evidence established by the fixture
 
-The following are **fixture design requirements**, not already-existing
-production contracts or a finalized type/API design:
+The original fixture design requirements are now supplied by these
+**experiment-local contracts**, not production evidence types:
 
-| Evidence responsibility | Required meaning |
+| Evidence responsibility | Current fixture source |
 |---|---|
-| Validation verdict | What the actual fixture validation established. |
-| Enforcement action | Whether the evaluated proposal may proceed toward an accepted effect. |
-| Proposal correlation | Which live request/proposal was evaluated. |
-| Rule identity | Which deterministic constraint failed. |
-| Contract identity/version | Which independently owned contract edition governed evaluation. |
-| Target/context identity | Which target and authoritative observation were used. |
-| Typed proposed value | The evaluated semantic value, with explicit units/canonical meaning. |
-| Typed permitted constraint | The failed bound or required property, not a repair command. |
+| Validation verdict | Rejection property `verdict = FAILED`. |
+| Enforcement action | Rejection property `enforcement_action = BLOCK`. |
+| Proposal correlation | Exact `decision.proposal`, retaining the original request ID and intent. |
+| Rule identity | Fixed `RATE_BUDGET_WITHIN_MAXIMUM` rejection property. |
+| Contract identity/version | Exact `decision.contract`, including its supplied identity and positive edition number. |
+| Target/context identity | Proposal/contract target and exact live contract custody; no state revision or durable context identity. |
+| Typed proposed value | `proposal.proposed_rate`, a nonnegative exact integer in abstract fixture units/sec. |
+| Typed permitted constraint | `contract.maximum_rate`, in the same canonical quantity type. |
 
 Preserve three separate inputs:
 
@@ -277,11 +357,12 @@ the failed comparison, such as `proposed = 300` and `maximum = 120`. Planner
 policy determines whether and what to propose next. The evidence does not
 mean `repair instruction = set exactly 120`.
 
-The future planner may consume exact live fixture rejection evidence and
-caller-retained original intent. It must not parse human-readable reasons or
-silently promote open metadata to machine policy. A revised request receives
-fresh validation against independently obtained context; old rejection
-evidence cannot authorize its acceptance.
+The planner consumes exact live fixture rejection evidence and caller-retained
+original intent. These fixture carriers have no reason or open metadata field
+to parse into policy. A revised request receives fresh validation against the
+fixture owner's retained contract; old rejection evidence cannot authorize its
+acceptance. The fixture has no contract replacement, concurrency, or durable
+history responsibility.
 
 ## Separation from Load / Capacity Protection
 
@@ -591,9 +672,11 @@ predecessor proof, candidate event ID, and timestamps are not request fields.
 Changing only those candidate fields does not establish changed business
 intent. A fresh request ID alone also does not prove a semantic correction.
 
-The experiment requires a fresh `request_id` for revised intent. Its complete
-fixture request identity must cover the permitted action, target, and canonical
-proposed value. The exact fixture type remains Commit 3 design work.
+The experiment requires a fresh `request_id` for revised intent.
+`RateBudgetProposal` retains that ID, the permitted action, target, and canonical
+proposed rate. The planner checks difference from R1's ID only; the caller owns
+global freshness. It generates no UUID, clock value, counter, or prior-ID store.
+A revised request also changes the rate while preserving action and target.
 
 Existing public CREATE/PAY operations construct Order signatures from their
 arguments. That does not make `RequestSignature` a configuration contract.
@@ -624,8 +707,8 @@ failed validation
 
 Fresh request identity for semantic repair is an intended semantic ownership
 rule for this experiment, not a universal behavior already enforced after
-every failed invocation by the database. This refinement does not change
-idempotency or claim that the fixture already has a request-memory contract.
+every failed invocation by the database. This experiment does not change
+idempotency, and the fixture explicitly has no request-memory contract.
 Durable `derived_from` lineage is not required for Level 1.
 
 ## Stage 4E separation
@@ -659,9 +742,8 @@ failure evidence
 != authority to submit arbitrary work
 ```
 
-The experiment driver will own its explicitly bounded submission behavior,
-subject to the staged implementation gates. Level 1 uses the fixture submission
-boundary without Stage 4E artifacts. The proposal grants neither
+Test composition owns the explicitly bounded submissions. Level 1 uses the
+fixture submission boundary without Stage 4E artifacts. The proposal grants neither
 submission authority nor acceptance. Existing Stage 4C current-response
 authority also does not authorize repair or another attempt; its
 [profile boundary](../../src/compass/runtime/write_side_runtime_decision.py)
@@ -680,7 +762,7 @@ DecisionReceipt
 = durable semantic aftermath / later recovery evidence
 ```
 
-The first model should consume live fixture rejection evidence directly.
+The model consumes live fixture rejection evidence directly.
 `DecisionReceipt` is not a required first-version dependency. Making it
 mandatory would introduce an unnecessary persistence/recovery dependency.
 
@@ -713,7 +795,7 @@ Independent Stage 4E evaluation and owner-local one-shot capability determine
 whether that proposal can execute. Its PostgreSQL positive witness reaches
 authoritative REPLAY, rather than changing intent and validating a repair.
 
-This experiment would add a different question:
+This experiment demonstrates a different model-level consequence:
 
 ```text
 semantic failure
@@ -727,30 +809,30 @@ composition, and proposal/authority/execution separation. Do not reuse or
 generalize the previous same-request proposal and executor contracts.
 
 No current production consumer was identified that needs to consume or persist
-a `RepairProposal`. Conditional implementation should default to an
-experiment-local type. Existing Order request/result types are not generic
-configuration contracts. A production planner contract is not currently
-justified.
+a `RepairProposal`. Commit 4 returns the existing experiment-local
+`RateBudgetProposal` directly. Existing Order request/result types are not
+generic configuration contracts. A production planner contract is not justified.
 
-## Level 1 desired witnesses — planner composition remains gated
+## Level 1 executed witnesses
 
-These are intended Commit 4 model observations, not completed results. Commit
-3 must first establish the fixture's genuine validation and accepted-state
-boundary without a planner. None of these model witnesses claims current
-production FullProof or PostgreSQL integration.
+The focused [replanning tests](../../tests/experiments/validation_blocked_semantic_replanning/test_replanning.py)
+execute A/B/C1/C2 through the unchanged Commit 3 fixture. The parameterized
+`test_a_b_and_independent_regoverned_revision` starts from a new baseline for
+each C1/C2 case. None claims production FullProof or PostgreSQL integration.
 
 ### Witness A — original intent fails closed
 
 ```text
-R1
+R1 = fixture-request-001, proposed rate 300
 → structurally valid proposal A
 → actual fixture semantic validation BLOCK
-→ zero accepted-state effect
+→ exact initial accepted-state object retained at 100
 ```
 
-The fixture must evaluate the proposed value against independently owned
-authority. A structural/domain exception or a preselected fabricated BLOCK
-does not establish this witness.
+The real fixture compares 300 against the independently supplied maximum 120.
+The result retains exact R1 and contract objects, `FAILED`, `BLOCK`, and
+`RATE_BUDGET_WITHIN_MAXIMUM`. No synthetic decision or context corruption is
+used for this witness.
 
 ### Witness B — evidence informs a proposal
 
@@ -765,41 +847,100 @@ Planning performs no writes. The proposal does not change accepted state,
 invoke submission, or authorize execution. Required machine inputs must have
 explicit source ownership rather than being reconstructed from diagnostics.
 
+Both policy cases assert a new immutable proposal, changed ID/rate, unchanged
+action/target, and unchanged original proposal, evidence, contract, and accepted
+state. Transparent submission and validation observers remain at one call each
+through planning.
+
 ### Witness C1 — correct repair is re-governed
 
 ```text
-R2
+USE_OBSERVED_MAXIMUM → R2 = fixture-request-002, proposed rate 120
 → fresh request identity
 → meaningfully changed operational/configuration intent
 → normal fixture submission boundary
 → fresh semantic validation ALLOW
 → deterministic accepted-state transition
-→ accepted fixture effect
+→ accepted fixture rate 120
 ```
 
-The witness must actually reach fresh validation. Reusing an earlier decision
-or accepted result is insufficient. Acceptance remains a result of the full
-fixture governance and state-transition path, not planner output.
+The explicit second submission creates a fresh `RateBudgetValidationAllowed`
+bound to R2 and the owner's contract by identity. The installed state is exactly
+the state returned by `AcceptedSubmission`; it changes only after validation.
 
 ### Witness C2 — incorrect repair is blocked again
 
 Starting from an independent equivalent baseline:
 
 ```text
-R3
+REDUCE_OBSERVED_RATE_BY_ONE_THIRD → R3 = fixture-request-003, proposed rate 200
 → fresh request identity
 → incorrect semantic repair
 → structurally valid proposal
 → normal fixture submission boundary
 → fresh semantic validation BLOCK
-→ zero accepted-state effect
+→ exact initial accepted-state object retained at 100
 ```
 
 C1 and C2 are separate witnesses. They are not a retry-until-correct loop.
 A negative repair that raises before fixture semantic validation does not
 satisfy C2. C1 and C2 use equivalent authoritative state and contract baselines;
 C2 must not depend on C1 having changed the configuration.
-The paired witnesses must preserve `agent correction != semantic truth`.
+The new rejection is distinct from R1's evidence and retains R3 and the contract
+by identity, with typed operands 200 and 120. The paired witnesses establish
+`agent correction != semantic truth` within this model.
+
+### Same evidence, different policy
+
+`test_same_live_evidence_supports_different_proposal_policies` supplies the same
+exact live blocked result and retained R1 to both policies, with distinct new
+IDs. It observes proposed rates 120 and 200 without any additional validation,
+submission, or accepted-state mutation. Together with C1/C2 this establishes
+`validation evidence != repair policy`; governance evaluates each revised
+intent independently.
+
+### Operand, identity, and refusal evidence
+
+The focused tests also establish:
+
+- real rejection of 150 under maximum 80 leads the maximum policy to propose
+  80, retaining caller-supplied ID spelling;
+- exact integer reduction for non-divisible and large rates, including a
+  canonical zero output without adding a positive-rate constraint;
+- TypeError for accepted results, standalone ALLOW, raw rejection evidence,
+  exception objects, arbitrary objects/dataclasses, unsupported subclasses,
+  and malformed top-level policy/identity/proposal types;
+- ValueError for value-equal reconstructed original proposals, reused or blank
+  request IDs, and type-correct but incoherent manually constructed rejections;
+- output contains only the four existing proposal fields and remains immutable.
+
+Manually constructed incoherent carriers appear only in negative coherence
+tests. They do not establish an observed governed rejection or authenticate
+any coherent manually constructed carrier.
+
+### Executed validation and proof limits
+
+From the repository root, using the verified repository-local interpreter:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 \
+./.venv/bin/python -m pytest \
+-p no:cacheprovider \
+tests/experiments/validation_blocked_semantic_replanning \
+-q
+```
+
+Result: **52 passed in 0.06s**. This includes the unchanged
+[Commit 3 fixture tests](../../tests/experiments/validation_blocked_semantic_replanning/test_fixture.py)
+and Commit 4 replanning witnesses. Test-local observers delegate to the real
+submission and validation functions: each branch records one call for R1,
+zero during planning, and one fresh call for the explicit revised submission.
+
+No unrestricted integration suite, Docker, PostgreSQL, migration, or dependency
+operation was run for this closeout. There is no claim of automatic Agent
+repair, optimal configuration, authenticated/durable provenance, globally
+unique request identity, production/PostgreSQL semantic replanning, LLM safety,
+a real rate limiter, eventual correction, or retry semantics.
 
 ## Level 2 production witnesses — retained stronger proof obligation
 
@@ -843,38 +984,33 @@ FullProof `VALIDATION_BLOCKED` would invalidate a Level 2 claim.
 Fault injection can establish a narrower propagation or robustness claim. It
 must remain labeled as such and must not stand in for the research question.
 
-## Staged implementation gates
+## Level 1 gate closeout and retained production gate
 
-### Level 1 fixture gate
+### Level 1 fixture gate — established by Commit 3
 
-The human has selected the experiment-owned operational/configuration model.
-Its implementation scope is approved in principle upon review of this
-documentation refinement. The present task authorizes only this README edit.
+Commit 3 established the permitted action/target, exact integer fixture units,
+independent maximum constraint, immutable proposal/state/evidence, and sole
+submission-state owner. Its tests establish structurally valid input reaching
+both semantic ALLOW and semantic BLOCK. Commit 4 leaves the fixture and those
+tests unchanged; the focused run confirms their continued behavior.
 
-Commit 3 is the next candidate code responsibility. Its bounded design must
-make the permitted proposal action/value, target, units, authoritative fixture
-state, independently owned constraint, and state-transition ownership
-explicit. Ordinary structurally valid fixture input must be able to reach
-both semantic ALLOW and semantic BLOCK without weakening Order or injecting a
-validation outcome. No planner is needed to establish that boundary.
+### Level 1 planner gate — witnessed by Commit 4
 
-### Level 1 planner gate
+The reviewed Commit 4 design followed the fixture. Executable evidence now
+satisfies the bounded planner gate:
 
-Commit 4 follows only after the governed fixture is proven and review confirms:
-
-1. The blocked condition concerns a meaningfully revisable operational intent.
+1. The blocked rate is revised from 300 to 120 or 200, changing actual intent.
 2. Exact live typed evidence and retained request identity supply sufficient
    bounded machine input, without reason parsing or metadata-based policy.
-3. Planning can remain free of writes and submission authority.
+3. Planning performs no writes, submission, or validation.
 4. A revised intent receives fresh request identity and the full fixture
    governance path, including fresh validation.
-5. Both valid and invalid repair proposals honestly reach semantic validation
-   from independent equivalent baselines.
+5. Valid and invalid revisions reach semantic validation from independent
+   equivalent baselines, producing acceptance and another block respectively.
 
 ```text
-selected model scope
-!= established fixture
-!= planner implementation authorization
+LEVEL 1 COMPLETE
+!= production integration authorization
 ```
 
 ### Level 2 production gate
@@ -885,7 +1021,7 @@ sufficient bounded machine-readable evidence, no text parsing, a fresh request
 through normal governance, and honest positive/negative validation witnesses.
 Its rule was `PR0 merge != authorization to implement PR1`.
 
-This refinement selects Level 1 separately; it does not declare that original
+Level 1 closeout remains separate; it does not declare that original
 production gate satisfied. Production integration remains NOT AUTHORIZED.
 Reopening it requires a real production consumer and separately reviewed
 proposal surface, semantic validator/evidence, state/effect owner, and real
@@ -907,49 +1043,37 @@ Documentation-only PR0 established the source audit, partial production
 evidence sufficiency, reachability limitation, and original implementation
 gate. It did not implement a planner or production witness.
 
-### Commit 2 — current documentation refinement
+### Commit 2 — complete
 
-`docs: select experiment-owned Agent proposal boundary`.
+`docs: select experiment-owned Agent proposal boundary` (`6d20709`).
 
-Confined to this README. Record the selected Level 1 boundary, freeze Order,
-preserve Level 2 limits, and place fixture establishment before planner work.
-Exit requires review of this refinement. Validation is complete diff and link
-inspection, whitespace checking, and verification that only this README
-changed with nothing staged. This task stops before commit or implementation.
+This documentation-only refinement selected Level 1, froze Order, preserved
+Level 2 limits, and placed fixture establishment before planner work.
 
-### Commit 3 — next, conditional on review
+### Commit 3 — complete
 
-`experiment: establish governed operational configuration fixture`.
+`experiment: establish governed operational configuration fixture` (`a335e1a`).
 
-Establish the experiment-local bounded proposal surface, current authoritative
-configuration, authoritative constraint, proposal identity/value, deterministic
-validation, typed violation evidence, and governed accepted-state effect.
-Exact type and method names are not fixed by this documentation.
+Established [model.py](model.py) and its fixture tests without a planner.
+Semantic ALLOW can precede the exact governed state transition; semantic BLOCK
+retains exact typed evidence with zero accepted-state change. This remains an
+in-memory model without production integration or request memory.
 
-Entry requires review of Commit 2 and the fixture gate. Model tests must show
-structurally valid proposals reaching both semantic ALLOW and semantic BLOCK,
-exact evidence for the failed comparison, zero accepted-state effect on BLOCK,
-and accepted-state change only through the allowing governance path. The
-proposer must not control the constraint or bypass the state owner.
-
-Exit requires the fixture and evidence boundary to be demonstrated before a
-planner is added. No planner, production domain, persistence, schema change,
-real traffic controller, or PostgreSQL witness belongs in this responsibility.
-
-### Commit 4 — later, gated on fixture evidence
+### Commit 4 — Level 1 executable closeout
 
 `experiment: demonstrate deterministic semantic replanning`.
 
-Add the experiment-local repair proposal and deterministic planner only after
-Commit 3 satisfies the planner gate. Compose A, B, C1, and C2 together, proving
-no writes during planning, exact live evidence custody, fresh identity,
-meaningful intent change, fresh validation, and independent valid/invalid
-repair branches. The bad repair must fail in fixture semantic validation.
+Added [planner.py](planner.py) and
+[test_replanning.py](../../tests/experiments/validation_blocked_semantic_replanning/test_replanning.py),
+then updated this README after the focused witnesses passed. The existing
+proposal type carries the revised intent; no wrapper or executor was added.
+A/B/C1/C2 establish no planning writes, exact live custody, changed intent and
+request identity, fresh validation, and independent valid/invalid revisions.
 
-Exit requires the paired witnesses and an explicit model-level closeout:
+The paired witnesses support only the model-level closeout:
 `agent correction != semantic truth` and `validation evidence != repair policy`.
 No production planner contract, retry loop, or automatic promotion to Level 2
-follows. No extra numbered commit is needed merely for symmetry.
+follows. No extra numbered closeout commit is needed merely for symmetry.
 
 If a real production consumer later justifies Level 2, its production
 responsibility must receive separate review and may require a separate
@@ -987,10 +1111,9 @@ The first version does not introduce:
 The selected fixture constraint is explicitly experiment-owned. It is not a
 new production business rule or an amendment to Order correctness.
 
-This documentation refinement changes no production source, tests, migrations,
-dependencies, environment configuration, Stage 4E, DecisionReceipt,
-SemanticOutcome, Stage 4C, Order
-aggregate, correctness contract, FullProof validator, validation evidence
-types, RequestSignature, idempotency behavior, previous experiments, roadmap,
-or ADR files. It implements no planner, proposal, executor, PostgreSQL witness,
-candidate API, semantic rule, evidence type, or typed operand structure.
+Commit 4 changes only the new experiment-local planner, its new test module,
+and this README closeout. It changes no Commit 3 model or fixture test,
+production source, migrations, dependencies, environment configuration,
+Stage 4E, DecisionReceipt, SemanticOutcome, Stage 4C, Order aggregate,
+correctness contract, FullProof validator, production validation evidence,
+RequestSignature, idempotency behavior, previous experiment, roadmap, or ADR.
