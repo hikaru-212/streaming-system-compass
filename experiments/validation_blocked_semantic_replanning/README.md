@@ -4,18 +4,39 @@
 
 ```text
 Status:
-PR0 / architecture boundary
+Commit 2 / documentation boundary refinement
 
-Implementation:
-NOT YET AUTHORIZED
+Documentation boundary:
+SELECTED / refinement pending review
 
-Feasibility:
+Model-level implementation scope:
+APPROVED IN PRINCIPLE upon review of this refinement
+
+Governed fixture implementation:
+NEXT CANDIDATE RESPONSIBILITY
+
+Semantic-replanning planner:
+GATED ON FIXTURE EVIDENCE SUFFICIENCY
+
+Production integration:
+NOT AUTHORIZED
+
+Existing Order VALIDATION_BLOCKED evidence feasibility:
 PARTIALLY SUFFICIENT
 ```
 
-This document preserves the reviewed read-only source audit at commit
-`c5b8aec573dedc38f7e4b46b88f521bd03044f2e`. PR0 defines the research boundary;
-it does not make the experiment executable or authorize later implementation.
+Commit 1, `0fe0cd5` (`docs: define semantic replanning experiment boundary`),
+preserved the reviewed source audit at
+`c5b8aec573dedc38f7e4b46b88f521bd03044f2e`. Its PR0 boundary required a genuine
+production FullProof validation block and left implementation unauthorized.
+
+The reviewed design decision now selects a separate, experiment-owned bounded
+operational/configuration proposal model. This refinement records that scope;
+it implements nothing. Fixture implementation is the next candidate
+responsibility after documentation review. Planner work remains gated on the
+fixture, and production integration remains unauthorized.
+
+The original production finding remains valid:
 
 > No currently inspected ordinary public-writer input establishes the desired
 > changed-intent `VALIDATION_BLOCKED → semantic replanning` scenario.
@@ -23,38 +44,157 @@ it does not make the experiment executable or authorize later implementation.
 Current production retains exact typed rule identity for a genuine FullProof
 validation block. It does not yet establish the complete machine input or a
 legitimate ordinary production scenario needed for the intended changed-intent
-repair witness. Evidence sufficiency and production-path reachability are
-separate questions. Adding evidence alone would not resolve reachability.
+production repair witness. Evidence sufficiency and production-path
+reachability are separate questions. Adding evidence alone would not resolve
+reachability. This finding does not require the selected experiment-owned
+fixture to alter Order or impersonate its production result types.
 
 ## Research question and target architecture
 
 > Can a semantic validation failure provide bounded evidence that helps a
-> planner construct a different business intent, while the repaired intent
-> remains only a proposal and must re-enter the full Compass governance path
-> as a new request?
+> planner construct a meaningfully different intent, while the revised intent
+> remains only a proposal and must undergo full governance again as a new
+> request?
 
-The following is a **target architecture**, not current executable behavior:
+### Level 1 — selected next experiment
+
+The selected proof level is an **experiment-owned governed semantic-replanning
+model**. Its target architecture is not current executable behavior:
 
 ```text
 Request R1
-→ Candidate A
-→ VALIDATION_BLOCKED
+→ structurally valid operational/configuration proposal A
+→ fixture semantic validation BLOCK
 → bounded typed failure evidence
 → deterministic planner
-→ RepairProposal
+→ repair proposal
 → new intent
 → Request R2
-→ new RequestSignature
-→ normal public writer
-→ fresh candidate
-→ semantic validation again
+→ fresh complete fixture request identity
+→ normal fixture submission boundary
+→ fresh semantic validation
 → ALLOW or BLOCK
 ```
 
-`RepairProposal` names a conditional experiment-local responsibility here. No
-planner, proposal type, executor, or PostgreSQL witness is implemented by PR0.
-An ALLOW decision would still require normal append admission and successful
-transaction completion before an accepted effect could be claimed.
+ALLOW is a decision, not an accepted effect. The fixture's deterministic state
+owner must separately complete the accepted-state transition. Planning owns
+neither submission nor that transition.
+
+### Level 2 — stronger production integration, still gated
+
+The original PR0 target was:
+
+```text
+PostgresTransactionalWriteSide
+→ candidate
+→ genuine FullProof VALIDATION_BLOCKED
+→ exact live PostgresWriteSideResult
+→ bounded evidence / repair proposal
+→ new intent / new RequestSignature
+→ normal production writer and fresh validation
+→ ALLOW or BLOCK
+```
+
+This production-oriented target and its reachability limits are retained as
+audit history, not selected Level 1 work. A future production integration
+requires a real production consumer, a production-owned proposal surface,
+production semantic validator, production state/effect owner, and real
+PostgreSQL integration. No such configuration consumer is established here.
+A new producer would need its own reviewed semantics; it must not claim to be
+the existing Order FullProof path merely by reusing result vocabulary.
+
+```text
+Level 1 success
+!= production semantic-replanning support
+```
+
+The experiment name retains the broader research question. Level 1 results
+must be identified as model-level semantic rejection, not current production
+`VALIDATION_BLOCKED`. The production audit below remains evidence about the
+existing Order system, not the fixture's implementation contract.
+
+## Completed Order boundary — preserved unchanged
+
+```text
+Existing Order domain
+= completed deterministic business domain
+= not modified for this experiment
+
+Agent semantic-replanning experiment
+= separate experiment-owned governed proposal model
+```
+
+The current Order domain exposes deterministic CREATE/PAY commands with
+aggregate-owned candidate construction. This experiment does not alter that
+completed responsibility. Many business-invalid inputs are already resolved
+before FullProof validation; the existing FullProof rules largely protect
+transition/proof consistency against accepted history.
+
+The experiment must not weaken `OrderAggregate` checks, add an artificial
+Order policy or amount ceiling, expose arbitrary `OrderEvent` construction,
+allow Agent control over sequence/proof/version fields, or reinterpret domain
+exceptions as `VALIDATION_BLOCKED`. These ownership boundaries remain intact.
+
+## Selected Agent-era setting
+
+The proposal-producing actor may be probabilistic or autonomous. Its question
+is distinct from deterministic governance:
+
+```text
+Agent / planner:
+What operational change should I propose?
+
+Deterministic governance:
+May this proposed effect become authoritative?
+```
+
+Operational observations may leave several choices plausible. An authoritative
+constraint limits admissibility without necessarily determining the optimal
+configuration. Agent participation is meaningful where that judgment remains
+unresolved; it should not recompute an answer deterministic authority already
+uniquely supplies.
+
+The repository's
+[probabilistic-agency research](../../docs/research/ai_governance/probabilistic_agency_inside_deterministic_business_workflows.md)
+distinguishes:
+
+```text
+Delegation
+!= Influence
+!= Semantic Admission
+```
+
+For this model, delegation concerns choosing an operational proposal;
+influence is restricted to the permitted action/value and bounded target;
+semantic admission remains independently deterministic. The
+[operational rate-budget case study](../../docs/semantic_admission/consensus_is_not_semantic_authority_rate_limiter.md)
+provides conceptual motivation. Neither research note establishes a current
+production configuration contract or requires multi-agent consensus.
+
+The following numbers and rate-budget example describe an **experiment
+model, not existing production behavior**:
+
+```text
+current configuration = 100
+independently owned authoritative maximum = 120
+
+Agent proposes 300
+→ semantic BLOCK
+→ bounded rejection evidence
+→ deterministic planner proposes 120
+→ fresh governance
+→ ALLOW
+
+independent equivalent baseline:
+planner proposes 200
+→ fresh governance
+→ BLOCK again
+```
+
+The maximum does not instruct the planner to choose exactly 120. Selecting
+that value is a bounded planner policy; other admissible values may represent
+different operational tradeoffs. A deterministic stand-in can test governance
+separation without proving Agent reasoning quality or optimal configuration.
 
 ## Core semantic boundary
 
@@ -67,14 +207,100 @@ failure evidence
 
 agent correction
 != semantic truth
+
+proposal
+!= authority
+!= accepted truth
+
+validation evidence
+!= repair policy
 ```
 
 A planner may use eligible failure evidence to construct another proposal.
 The planner must not authorize acceptance. A proposal must remain separate
 from candidate construction, submission authority, and accepted history.
-The repaired intent must undergo normal production governance again.
+The revised intent must undergo the applicable governance path again: the
+fixture path for Level 1, and a separately reviewed production path for Level 2.
 
-## Current production path and reachability
+## Experiment ownership and fixture requirements
+
+The first implementation is an experiment-owned model, not a production
+configuration subsystem. It may locally own:
+
+- a bounded proposal type and proposal/request correlation;
+- authoritative fixture state and its deterministic constraint;
+- a fixture validator;
+- typed rejection evidence; and
+- an accepted-state transition owned separately from proposal generation.
+
+Model responsibilities belong under `experiments/`, with model tests under
+`tests/experiments/`. No production promotion or production consumer is
+currently justified. PostgreSQL integration tests are not a Level 1 delivery.
+
+The proposer may choose a requested value within the permitted proposal
+surface. It does not own the authoritative limit, contract edition, accepted
+state, internal event identity, sequence, predecessor proof, or database
+version. The system must obtain authoritative context independently of the
+proposal; a proposer-supplied limit cannot authorize that same proposal.
+
+A structurally valid proposal must be able to reach either semantic ALLOW or
+semantic BLOCK. Construction must not silently clamp the proposed value or
+replace it with an admissible one. This is a new fixture proposal/admission
+distinction, not permission to move or remove existing Order domain checks.
+
+### Typed evidence requirements for the fixture
+
+The following are **fixture design requirements**, not already-existing
+production contracts or a finalized type/API design:
+
+| Evidence responsibility | Required meaning |
+|---|---|
+| Validation verdict | What the actual fixture validation established. |
+| Enforcement action | Whether the evaluated proposal may proceed toward an accepted effect. |
+| Proposal correlation | Which live request/proposal was evaluated. |
+| Rule identity | Which deterministic constraint failed. |
+| Contract identity/version | Which independently owned contract edition governed evaluation. |
+| Target/context identity | Which target and authoritative observation were used. |
+| Typed proposed value | The evaluated semantic value, with explicit units/canonical meaning. |
+| Typed permitted constraint | The failed bound or required property, not a repair command. |
+
+Preserve three separate inputs:
+
+```text
+operational observations
+!= validation evidence
+!= planner policy
+```
+
+Operational observations may inform preference. Validation evidence reports
+the failed comparison, such as `proposed = 300` and `maximum = 120`. Planner
+policy determines whether and what to propose next. The evidence does not
+mean `repair instruction = set exactly 120`.
+
+The future planner may consume exact live fixture rejection evidence and
+caller-retained original intent. It must not parse human-readable reasons or
+silently promote open metadata to machine policy. A revised request receives
+fresh validation against independently obtained context; old rejection
+evidence cannot authorize its acceptance.
+
+## Separation from Load / Capacity Protection
+
+```text
+Load / Capacity Protection
+= whether the system can safely accept more work
+
+Operational Configuration Governance
+= whether an Agent-proposed configuration change is semantically authorized
+```
+
+A rate-budget example can appear in both discussions without merging their
+responsibilities. Level 1 neither runs a traffic controller nor implements a
+real rate limiter. Resource headroom is not authority to exceed a contractual
+limit, and overload is not itself proof of semantic invalidity. The existing
+[capacity-pressure boundary](../../docs/roadmap/deferred_architecture_backlog.md#capacity-pressure-evidence-checkpoint)
+likewise separates capacity controls from semantic correctness.
+
+## Preserved production audit — Order path and reachability
 
 The public operations are
 `PostgresTransactionalWriteSide.create_order()` and `.pay_order()` in
@@ -161,7 +387,7 @@ Concurrent history advancement after the writer's observation is checked at
 append admission; it does not automatically turn that internally coherent
 candidate/context pair into a FullProof validation block.
 
-## Failure ownership
+## Preserved production audit — failure ownership
 
 | Failure family | Current surface |
 |---|---|
@@ -175,13 +401,14 @@ The admission vocabulary and PostgreSQL translations are defined in
 [`postgres_admission.py`](../../src/pipeline/transactional/postgres_admission.py).
 There is no universal failure envelope that makes these families equivalent.
 
-This experiment targets only a genuine FullProof semantic validation block.
-A domain exception must not be substituted without explicitly changing the
-research question in a later reviewed decision. The completed
+Original PR0 targeted only a genuine FullProof semantic validation block.
+The selected Level 1 now targets genuine fixture semantic validation, not
+domain-exception replanning. Domain rejection must not be relabeled as either
+fixture semantic BLOCK or production `VALIDATION_BLOCKED`. The completed
 [Stage 4B.5 boundary](../../docs/implementation_notes/stage_4b_5/README.md)
 already distinguishes these enforcement owners.
 
-## Evidence boundary
+## Preserved production audit — evidence boundary
 
 ### Stable typed evidence
 
@@ -237,7 +464,7 @@ not deeply immutable.
 The evidence carrier is optional across the broader writer compatibility
 surface. Legacy `decide()`-only runtimes and non-FullProof validators do not
 provide this exact rule observation. A coarse `VALIDATION_BLOCKED` outcome
-alone therefore does not establish the evidence required by this experiment.
+alone therefore does not establish the original production repair input.
 
 ### Available but not an accepted repair contract
 
@@ -271,7 +498,7 @@ fields, through the decision carrier. The absent candidate, context, history,
 and request signature are not fields discarded from `ValidationResult`; they
 were not captured there in the first place.
 
-A future live experiment may combine:
+A future eligible live production consumer may combine:
 
 ```text
 exact PostgresWriteSideResult
@@ -295,7 +522,7 @@ and raises if it is absent. The coarse semantic mapper can still accept a
 legacy evidence-less block. Refinement does not infer a rule from reason,
 metadata, or semantic outcome code, and does not authorize repair or execution.
 
-## Existing FullProof rule assessment
+## Preserved production audit — FullProof rule assessment
 
 [`FullProofValidator`](../../src/compass/transition/validators.py) reports the
 first observed failure from these six supported identities. The rule names
@@ -318,8 +545,9 @@ validator can reject candidate X
 ordinary production command path can legitimately produce candidate X
 ```
 
-No qualifying first rule is selected by PR0. Sequence mismatch is a small
-validator-level demonstration, but it does not establish the requested
+No qualifying Order rule was selected by PR0, and the scope refinement does
+not select one. Sequence mismatch is a small validator-level demonstration,
+but it does not establish the original
 changed-intent public-writer scenario. PAY amount equality is a genuine
 business constraint, but its current rejection belongs to the domain path.
 
@@ -340,9 +568,10 @@ maximum allowed = 120
 → VALIDATION_BLOCKED
 ```
 
-This is not current repository behavior. It must not supply the planned
-implementation scenario. A conceptual example outside current source cannot
-justify inventing a business rule solely for this experiment.
+This is not current Order behavior. It must not supply an Order implementation
+scenario or justify inventing an Order rule. The separately selected
+configuration fixture uses an explicitly experiment-owned constraint; it does
+not claim that this amount rule exists in production.
 
 ## New intent and request identity
 
@@ -352,19 +581,25 @@ Re-observation recovery
 
 Semantic replanning
 → new semantic intent
-→ new RequestSignature
+→ new complete request identity
 ```
 
-The complete
+For existing Order requests, complete identity is represented by
 [`RequestSignature`](../../src/storage/idempotency_store.py)
-contains `request_id`, `command_type`, `order_id`, and `amount`. Sequence,
+and contains `request_id`, `command_type`, `order_id`, and `amount`. Sequence,
 predecessor proof, candidate event ID, and timestamps are not request fields.
 Changing only those candidate fields does not establish changed business
 intent. A fresh request ID alone also does not prove a semantic correction.
 
-The experiment requires a fresh `request_id` for repaired intent. Existing
-public CREATE/PAY operations already construct a signature from the new
-arguments; no production signature change is currently justified.
+The experiment requires a fresh `request_id` for revised intent. Its complete
+fixture request identity must cover the permitted action, target, and canonical
+proposed value. The exact fixture type remains Commit 3 design work.
+
+Existing public CREATE/PAY operations construct Order signatures from their
+arguments. That does not make `RequestSignature` a configuration contract.
+Level 1 must not disguise configuration values as Order amounts or extend the
+production signature to fit the fixture. No production signature change is
+justified.
 
 [`PostgresIdempotencyStore`](../../src/storage/postgres_idempotency_store.py)
 looks up `request_id` and compares a versioned fingerprint of command type,
@@ -389,14 +624,15 @@ failed validation
 
 Fresh request identity for semantic repair is an intended semantic ownership
 rule for this experiment, not a universal behavior already enforced after
-every failed invocation by the database. PR0 does not change idempotency.
-Durable `derived_from` lineage is not required for the first live experiment.
+every failed invocation by the database. This refinement does not change
+idempotency or claim that the fixture already has a request-memory contract.
+Durable `derived_from` lineage is not required for Level 1.
 
 ## Stage 4E separation
 
 ```text
 Stage 4E
-= another invocation of the SAME complete request
+= same complete request re-observation authority
 
 Semantic replanning
 = submission of a DIFFERENT intent as a new request
@@ -424,7 +660,8 @@ failure evidence
 ```
 
 The experiment driver will own its explicitly bounded submission behavior,
-subject to the implementation entry gate. The proposal grants neither
+subject to the staged implementation gates. Level 1 uses the fixture submission
+boundary without Stage 4E artifacts. The proposal grants neither
 submission authority nor acceptance. Existing Stage 4C current-response
 authority also does not authorize repair or another attempt; its
 [profile boundary](../../src/compass/runtime/write_side_runtime_decision.py)
@@ -436,11 +673,14 @@ remains unchanged.
 PostgresWriteSideResult
 = live execution result
 
+Level 1 fixture rejection
+= live model result / immediate planner input
+
 DecisionReceipt
 = durable semantic aftermath / later recovery evidence
 ```
 
-The first experiment should consume live result evidence directly.
+The first model should consume live fixture rejection evidence directly.
 `DecisionReceipt` is not a required first-version dependency. Making it
 mandatory would introduce an unnecessary persistence/recovery dependency.
 
@@ -488,37 +728,41 @@ generalize the previous same-request proposal and executor contracts.
 
 No current production consumer was identified that needs to consume or persist
 a `RepairProposal`. Conditional implementation should default to an
-experiment-local type, using existing request and result contracts where
-appropriate. A production planner contract is not currently justified.
+experiment-local type. Existing Order request/result types are not generic
+configuration contracts. A production planner contract is not currently
+justified.
 
-## Desired witnesses — gated
+## Level 1 desired witnesses — planner composition remains gated
 
-All four witnesses remain gated until a legitimate production scenario is
-approved. These are intended observations, not completed results.
+These are intended Commit 4 model observations, not completed results. Commit
+3 must first establish the fixture's genuine validation and accepted-state
+boundary without a planner. None of these model witnesses claims current
+production FullProof or PostgreSQL integration.
 
 ### Witness A — original intent fails closed
 
 ```text
 R1
-→ genuine FullProof VALIDATION_BLOCKED
-→ no accepted event
-→ no idempotency record for R1
+→ structurally valid proposal A
+→ actual fixture semantic validation BLOCK
+→ zero accepted-state effect
 ```
 
-The failure must come from the real semantic validation boundary. A domain
-exception, fabricated runtime block, or append conflict is not this witness.
+The fixture must evaluate the proposed value against independently owned
+authority. A structural/domain exception or a preselected fabricated BLOCK
+does not establish this witness.
 
 ### Witness B — evidence informs a proposal
 
 ```text
-exact live R1 result
+exact live R1 fixture rejection
 + bounded typed failure evidence
 + caller-retained R1 identity
 → deterministic repair proposal R2
 ```
 
-Planning performs no writes. The proposal does not create an accepted event,
-invoke a writer, or authorize submission. Required machine inputs must have
+Planning performs no writes. The proposal does not change accepted state,
+invoke submission, or authorize execution. Required machine inputs must have
 explicit source ownership rather than being reconstructed from diagnostics.
 
 ### Witness C1 — correct repair is re-governed
@@ -526,16 +770,16 @@ explicit source ownership rather than being reconstructed from diagnostics.
 ```text
 R2
 → fresh request identity
-→ meaningfully changed intent
-→ normal public writer
-→ fresh candidate and FullProof validation
-→ PASSED / ALLOW
-→ normal append admission and successful commit
-→ accepted effect
+→ meaningfully changed operational/configuration intent
+→ normal fixture submission boundary
+→ fresh semantic validation ALLOW
+→ deterministic accepted-state transition
+→ accepted fixture effect
 ```
 
-The witness must not terminate through prior-request replay or validation OFF.
-Acceptance must remain a result of full normal governance, not planner output.
+The witness must actually reach fresh validation. Reusing an earlier decision
+or accepted result is insufficient. Acceptance remains a result of the full
+fixture governance and state-transition path, not planner output.
 
 ### Witness C2 — incorrect repair is blocked again
 
@@ -545,116 +789,184 @@ Starting from an independent equivalent baseline:
 R3
 → fresh request identity
 → incorrect semantic repair
-→ normal public writer
-→ fresh candidate and FullProof validation
-→ FAILED / BLOCK
-→ VALIDATION_BLOCKED
-→ no accepted effect
+→ structurally valid proposal
+→ normal fixture submission boundary
+→ fresh semantic validation BLOCK
+→ zero accepted-state effect
 ```
 
 C1 and C2 are separate witnesses. They are not a retry-until-correct loop.
-A negative repair that raises before FullProof validation does not satisfy C2.
+A negative repair that raises before fixture semantic validation does not
+satisfy C2. C1 and C2 use equivalent authoritative state and contract baselines;
+C2 must not depend on C1 having changed the configuration.
 The paired witnesses must preserve `agent correction != semantic truth`.
+
+## Level 2 production witnesses — retained stronger proof obligation
+
+The original production witnesses remain unproven:
+
+| Witness | Original PR0 production obligation |
+|---|---|
+| A | An ordinary public-writer request reaches genuine FullProof `VALIDATION_BLOCKED`, with no accepted event or idempotency record for that request. |
+| B | Exact live `PostgresWriteSideResult`, bounded typed evidence, and caller-retained identity inform a proposal without writes. |
+| C1 | Meaningfully changed intent and fresh request identity enter the normal production writer, receive fresh validation ALLOW, pass append admission, and commit an accepted effect. |
+| C2 | An independent equivalent baseline receives an invalid revised intent with fresh identity; it reaches genuine semantic BLOCK and produces no accepted effect. |
+
+Level 1 cannot discharge these obligations. A future non-Order production
+consumer would require an explicitly reviewed update identifying its actual
+proposal, validator, result, and effect owners. It must not reuse the name
+FullProof for a different producer, fabricate `PostgresWriteSideResult`, or
+modify completed Order responsibilities to satisfy the old example.
 
 ## Falsification and invalid shortcuts
 
-The intended experiment is not proven if:
+Neither proof level is established by:
 
-- the original failure is only a domain exception;
-- BLOCK is synthetically fabricated by an alternate test runtime;
-- validation context is manually corrupted while claiming normal production behavior;
-- repair values are parsed from `reason`;
-- open metadata is silently promoted to stable machine policy;
-- only sequence, proof, or candidate ID changes while changed business intent is claimed;
-- the planner writes directly;
-- the repaired request bypasses the normal public writer;
-- the repaired request bypasses validation;
-- Stage 4E is used to mutate the request;
-- direct event-store append replaces normal governance;
-- only the successful repair is shown; or
-- the invalid repair fails before FullProof validation.
+- substituting a structural/domain exception for semantic rejection;
+- fabricating BLOCK instead of evaluating the proposal against the constraint;
+- corrupting context while claiming independently obtained authority;
+- parsing repair values from `reason`;
+- silently promoting open metadata to stable machine policy;
+- changing only sequence, proof, or candidate ID while claiming changed intent;
+- letting the planner write directly;
+- bypassing the applicable normal submission or semantic validation boundary;
+- using Stage 4E to mutate a request;
+- replacing governed acceptance with a direct state write or event-store append;
+- showing only the successful repair; or
+- using an invalid repair that fails before semantic validation.
+
+An experiment-owned validator genuinely evaluating its declared fixture
+constraint is a Level 1 producer. It is not an alternate test runtime allowed
+to fabricate an existing production block. Relabeling its result as current
+FullProof `VALIDATION_BLOCKED` would invalidate a Level 2 claim.
 
 Fault injection can establish a narrower propagation or robustness claim. It
 must remain labeled as such and must not stand in for the research question.
 
-## Implementation entry gate
+## Staged implementation gates
 
-PR1 is not automatically authorized when PR0 merges. Implementation may proceed
-only after review establishes:
+### Level 1 fixture gate
 
-1. A legitimate ordinary production input/path that reaches genuine FullProof
-   `VALIDATION_BLOCKED`.
-2. The failed condition represents a semantic property relevant to a
-   meaningfully changed intent.
-3. Sufficient bounded machine-readable evidence exists, or a separately
-   reviewed evidence responsibility is justified.
-4. The planner does not require parsing human-readable text.
-5. Repaired intent can be submitted as a new request through normal governance.
-6. Both successful and invalid repair witnesses can reach semantic validation
-   honestly.
+The human has selected the experiment-owned operational/configuration model.
+Its implementation scope is approved in principle upon review of this
+documentation refinement. The present task authorizes only this README edit.
 
-```text
-PR0 merge
-!= authorization to implement PR1
-```
+Commit 3 is the next candidate code responsibility. Its bounded design must
+make the permitted proposal action/value, target, units, authoritative fixture
+state, independently owned constraint, and state-transition ownership
+explicit. Ordinary structurally valid fixture input must be able to reach
+both semantic ALLOW and semantic BLOCK without weakening Order or injecting a
+validation outcome. No planner is needed to establish that boundary.
 
-Until this gate is satisfied, implementation remains unauthorized. Missing
-operands do not authorize a new evidence type, and an unreachable candidate
-does not authorize a new candidate API or business rule. No production change
-set is selected by PR0.
+### Level 1 planner gate
 
-## Conditional PR plan
+Commit 4 follows only after the governed fixture is proven and review confirms:
 
-### PR0 — Architecture Boundary
-
-Documentation only, confined to this README. Preserve current evidence,
-reachability limits, responsibility separation, witnesses, and the entry gate.
-Validation consists of source/link review, complete diff inspection, whitespace
-checking, and verification of the single-file change boundary.
-
-Status after merge:
+1. The blocked condition concerns a meaningfully revisable operational intent.
+2. Exact live typed evidence and retained request identity supply sufficient
+   bounded machine input, without reason parsing or metadata-based policy.
+3. Planning can remain free of writes and submission authority.
+4. A revised intent receives fresh request identity and the full fixture
+   governance path, including fresh validation.
+5. Both valid and invalid repair proposals honestly reach semantic validation
+   from independent equivalent baselines.
 
 ```text
-research boundary defined
-implementation gated
+selected model scope
+!= established fixture
+!= planner implementation authorization
 ```
 
-### PR1 — Conditional Deterministic Repair Model
+### Level 2 production gate
 
-Entry requires PR0 acceptance, satisfaction of the implementation entry gate,
-and explicit authorization for this implementation scope.
+The original PR0 gate required a legitimate ordinary production path reaching
+genuine FullProof `VALIDATION_BLOCKED`, a meaningfully repairable condition,
+sufficient bounded machine-readable evidence, no text parsing, a fresh request
+through normal governance, and honest positive/negative validation witnesses.
+Its rule was `PR0 merge != authorization to implement PR1`.
 
-Possible scope is an experiment-local `RepairProposal`, one deterministic
-planner, and unit tests. Planning performs no writes. There is no production
-planner contract, authority artifact, executor lifecycle, or recovery loop.
+This refinement selects Level 1 separately; it does not declare that original
+production gate satisfied. Production integration remains NOT AUTHORIZED.
+Reopening it requires a real production consumer and separately reviewed
+proposal surface, semantic validator/evidence, state/effect owner, and real
+PostgreSQL integration. Any change from the original FullProof-specific proof
+must be explicit. Research motivation and Level 1 success alone do not justify
+production promotion, a generic candidate API, or changes to Order.
 
-Unit tests would cover the approved evidence source and transformation, exact
-live source custody, unsupported/missing evidence handling, independence from
-reason text, fresh request identity, meaningful intent change, and absence of
-planning side effects. Exit requires that bounded model and its tests to be
-reviewed and complete; it does not establish the PostgreSQL witnesses.
+## Commit sequence on the existing experiment branch
 
-### PR2 — Conditional PostgreSQL Witness and Closeout
+The experiment continues on `experiment/validation-blocked-semantic-replanning`
+with multiple commits. Numbered PR0/PR1 child branches are not required. This
+sequence refines the original PR0/PR1/PR2 plan preserved in Commit 1.
 
-Entry requires the approved PR1 model, explicit implementation authorization,
-and authorization for the bounded test-database operations.
+### Commit 1 — complete
 
-Positive and negative semantic-repair witnesses belong together. PR2 must
-prove A, B, C1, and C2 through real normal governance, including fresh semantic
-validation, accepted-history/idempotency observations, and no writes during
-planning. Closeout must distinguish observed results from remaining limits.
+`docs: define semantic replanning experiment boundary` (`0fe0cd5`).
 
-Do not create PR3 only for symmetry. If a genuine production evidence
-responsibility is necessary before PR1, it must be reviewed as its own
-prerequisite responsibility rather than inserted incidentally into planner
-work. PR0 neither approves that responsibility nor expands an existing
-production owner to absorb it.
+Documentation-only PR0 established the source audit, partial production
+evidence sufficiency, reachability limitation, and original implementation
+gate. It did not implement a planner or production witness.
+
+### Commit 2 — current documentation refinement
+
+`docs: select experiment-owned Agent proposal boundary`.
+
+Confined to this README. Record the selected Level 1 boundary, freeze Order,
+preserve Level 2 limits, and place fixture establishment before planner work.
+Exit requires review of this refinement. Validation is complete diff and link
+inspection, whitespace checking, and verification that only this README
+changed with nothing staged. This task stops before commit or implementation.
+
+### Commit 3 — next, conditional on review
+
+`experiment: establish governed operational configuration fixture`.
+
+Establish the experiment-local bounded proposal surface, current authoritative
+configuration, authoritative constraint, proposal identity/value, deterministic
+validation, typed violation evidence, and governed accepted-state effect.
+Exact type and method names are not fixed by this documentation.
+
+Entry requires review of Commit 2 and the fixture gate. Model tests must show
+structurally valid proposals reaching both semantic ALLOW and semantic BLOCK,
+exact evidence for the failed comparison, zero accepted-state effect on BLOCK,
+and accepted-state change only through the allowing governance path. The
+proposer must not control the constraint or bypass the state owner.
+
+Exit requires the fixture and evidence boundary to be demonstrated before a
+planner is added. No planner, production domain, persistence, schema change,
+real traffic controller, or PostgreSQL witness belongs in this responsibility.
+
+### Commit 4 — later, gated on fixture evidence
+
+`experiment: demonstrate deterministic semantic replanning`.
+
+Add the experiment-local repair proposal and deterministic planner only after
+Commit 3 satisfies the planner gate. Compose A, B, C1, and C2 together, proving
+no writes during planning, exact live evidence custody, fresh identity,
+meaningful intent change, fresh validation, and independent valid/invalid
+repair branches. The bad repair must fail in fixture semantic validation.
+
+Exit requires the paired witnesses and an explicit model-level closeout:
+`agent correction != semantic truth` and `validation evidence != repair policy`.
+No production planner contract, retry loop, or automatic promotion to Level 2
+follows. No extra numbered commit is needed merely for symmetry.
+
+If a real production consumer later justifies Level 2, its production
+responsibility must receive separate review and may require a separate
+production branch/PR. It must not be inserted incidentally into this experiment.
 
 ## Explicit non-goals
 
 The first version does not introduce:
 
 - LLM;
+- modifications to the completed Order domain, its checks, or correctness rules;
+- an artificial Order policy or fake amount ceiling;
+- Agent control over sequence, proof, internal event identity, or version fields;
+- a production configuration subsystem or new production domain;
+- a real traffic controller or real rate limiter;
+- a multi-agent consensus implementation;
+- a generic candidate-submission API;
 - DecisionReceipt dependency;
 - restart recovery;
 - multi-attempt loop;
@@ -666,13 +978,18 @@ The first version does not introduce:
 - workflow engine;
 - generic recovery policy;
 - Stage 4D selector;
+- Stage 4E changes or reuse of same-request authority for changed intent;
 - new Quotient Model version;
 - generic autonomous agent framework;
-- new business rule invented solely for the experiment; or
+- new production business rule invented solely for the experiment; or
 - production `RepairProposal` without a production consumer.
 
-PR0 changes no production source, tests, migrations, dependencies, environment
-configuration, Stage 4E, DecisionReceipt, SemanticOutcome, Stage 4C, Order
+The selected fixture constraint is explicitly experiment-owned. It is not a
+new production business rule or an amendment to Order correctness.
+
+This documentation refinement changes no production source, tests, migrations,
+dependencies, environment configuration, Stage 4E, DecisionReceipt,
+SemanticOutcome, Stage 4C, Order
 aggregate, correctness contract, FullProof validator, validation evidence
 types, RequestSignature, idempotency behavior, previous experiments, roadmap,
 or ADR files. It implements no planner, proposal, executor, PostgreSQL witness,
