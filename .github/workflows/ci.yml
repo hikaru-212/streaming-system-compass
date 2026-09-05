@@ -4,12 +4,14 @@ on:
   pull_request:
     branches:
       - main
-      - "feat/stage**"
+      - "feat/**"
       - "feature/**"
   push:
     branches:
       - main
-      - "feat/stage**"
+      - "feat/**"
+      - "feature/**"
+      - "experiment/**"
 
 jobs:
   test:
