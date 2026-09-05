@@ -27,7 +27,7 @@ commitment to implement a production limiter.
 | PR | Responsibility | Status |
 |---|---|---|
 | PR0 | Research / responsibility boundary | COMPLETE |
-| PR1 | Unprotected load characterization | NOT STARTED |
+| PR1 | Unprotected load characterization | ACTIVE |
 | PR2 | Capacity / degradation interpretation | NOT STARTED |
 | PR3 | First bounded in-flight capacity mechanism | CONDITIONAL |
 | PR4 | Protected vs unprotected characterization | CONDITIONAL |
@@ -124,8 +124,12 @@ to PR0. PR1 does not begin as part of PR0 finalization.
 ### Status
 
 ```text
-NOT STARTED
+ACTIVE
 ```
+
+The [PR1 characterization method](pr1_unprotected_characterization_method.md)
+owns the experiment method. Experiment implementation and live execution have
+not begun as part of this documentation step.
 
 ### Goal and Responsibility
 

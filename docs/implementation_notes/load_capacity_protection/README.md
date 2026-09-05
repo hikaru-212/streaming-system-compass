@@ -16,7 +16,7 @@ Stage 4E Re-invocation Authority.
 
 ```text
 PR0 — responsibility / research boundary — COMPLETE
-PR1 — NOT STARTED
+PR1 — ACTIVE
 ```
 
 PR0 is documentation-only work. Later PRs remain subject to evidence and
@@ -42,6 +42,7 @@ establish a production capacity limit or reopen that completed stage.
 |---|---|
 | [PR Breakdown](pr_breakdown.md) | Delivery sequence, PR-level responsibilities, branch recommendations, and documentation placement. |
 | [PR0 Research and Responsibility Boundary](pr0_research_and_responsibility_boundary.md) | Source-grounded capacity responsibility, inherited evidence, observation gaps, first experiment question, and non-goals. |
+| [PR1 Unprotected Characterization Method](pr1_unprotected_characterization_method.md) | Fixed-work experiment method, outer evidence, validity requirements, and separate live-run approval gate. |
 
 ## Important Boundary
 
