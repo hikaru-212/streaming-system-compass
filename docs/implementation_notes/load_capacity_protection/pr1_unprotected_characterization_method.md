@@ -4,20 +4,22 @@
 
 ```text
 PR0 — COMPLETE
-PR1 — ACTIVE / METHOD DOCUMENTATION
+PR1 — COMPLETE / EVIDENCE COLLECTION CLOSED
+PR2 — NOT STARTED
 
 Experiment implementation and live characterization
-= NOT STARTED
+= COMPLETE (accepted exploratory and refinement runs)
 
 Capacity mechanism and numerical policy
 = NOT SELECTED
 ```
 
 This document records the method accepted for PR1 following the read-only audit
-of repository source at `0bb379a`. It defines requirements for future
-experiment implementation and evidence, not experimental results or permission
-to execute a database workload. Future execution must retain its own source
-and environment provenance.
+of repository source at `0bb379a`. Its method requirements are retained; the
+[PR1 characterization report](pr1_unprotected_characterization_report.md)
+records the completed runs, actual parameters, source/environment provenance,
+results, and limitations. PR1 evidence collection is closed. This method does
+not authorize further database workloads or begin PR2.
 
 ## 1. Purpose
 
@@ -692,7 +694,7 @@ The experiment-owned implementation now includes
 [`runner.py`](../../../experiments/load_capacity_protection/runner.py) and
 [`evidence.py`](../../../experiments/load_capacity_protection/evidence.py).
 Production modules, Stage 4B.2 code/evidence, and shared integration fixtures
-remain unchanged. PR1 remains ACTIVE; these entry points do not authorize a live run.
+remain unchanged. PR1 is COMPLETE; these entry points do not authorize another live run.
 
 The runner requires an explicit `LoadRunPlan`: fixed K, ordered concurrency
 levels, warmup and recorded repetition counts, ordering seed, canonical amount,

@@ -27,7 +27,7 @@ commitment to implement a production limiter.
 | PR | Responsibility | Status |
 |---|---|---|
 | PR0 | Research / responsibility boundary | COMPLETE |
-| PR1 | Unprotected load characterization | ACTIVE |
+| PR1 | Unprotected load characterization | COMPLETE |
 | PR2 | Capacity / degradation interpretation | NOT STARTED |
 | PR3 | First bounded in-flight capacity mechanism | CONDITIONAL |
 | PR4 | Protected vs unprotected characterization | CONDITIONAL |
@@ -124,12 +124,14 @@ to PR0. PR1 does not begin as part of PR0 finalization.
 ### Status
 
 ```text
-ACTIVE
+COMPLETE
 ```
 
 The [PR1 characterization method](pr1_unprotected_characterization_method.md)
-owns the experiment method. Experiment implementation and live execution have
-not begun as part of this documentation step.
+owns the experiment method. The
+[PR1 characterization report](pr1_unprotected_characterization_report.md)
+records the accepted exploratory/refinement evidence and closeout. PR1 evidence
+collection is closed; PR2 interpretation remains NOT STARTED.
 
 ### Goal and Responsibility
 
@@ -149,9 +151,10 @@ actual overlap must be observed
 ```
 
 PR1 owns an explicit experiment method and an experiment-owned outer execution
-ledger covering offered, dispatched, pending, entered, completed, refused, and
-failed-before-entry observations. It must retain overload failures as evidence
-while distinguishing them from fixture, correctness, and harness defects.
+ledger covering planned/offered work, dispatched/pending work, writer-entered
+work, terminal/failure observations, and residual/incomplete work. A capacity
+refusal mechanism is absent. It must retain overload failures as evidence while
+distinguishing them from fixture, correctness, and harness defects.
 The detailed observation requirements remain in the PR0 boundary document.
 
 ### Scope and Non-Goals
