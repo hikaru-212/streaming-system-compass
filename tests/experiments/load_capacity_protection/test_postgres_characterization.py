@@ -1,13 +1,17 @@
 """Causal schedules for the experiment harness; no database or real-time claims."""
 
-from dataclasses import fields
+from dataclasses import fields, replace
 from decimal import Decimal
 from pathlib import Path
 from threading import Barrier, Event, Lock, current_thread
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
+from psycopg.pq import TransactionStatus
 
 from experiments.load_capacity_protection import postgres_characterization as harness
+from experiments.load_capacity_protection.postgres_runtime import PostgresLoadLane
 from experiments.load_capacity_protection.model import (
     LoadAcknowledgement,
     LoadCellIdentity,
@@ -20,6 +24,11 @@ from experiments.load_capacity_protection.model import (
 from src.core.order.enums import CommandType, EventType, OrderStatus
 from src.core.order.events import OrderEvent
 from src.core.order.proofs import Proof
+from src.compass.transition.types import ValidationMode
+from src.compass.transition.validators import FullProofValidator
+from src.pipeline.transactional.postgres_admission import PostgresOptimisticAdmissionGate
+from src.pipeline.transactional.postgres_unit_of_work import PostgresWriteSideUnitOfWork
+from src.pipeline.transactional.postgres_write_side_config import ValidationPlacement
 from src.pipeline.transactional.postgres_write_side import (
     PostgresWriteSideOutcome,
     PostgresWriteSideResult,
@@ -416,3 +425,86 @@ def test_invalid_workload_and_lane_ownership_are_rejected_before_execution():
     with pytest.raises(ValueError, match="distinct resource owners"):
         harness.run_characterization(identity(2), workload(1), (lane.__call__, lane.__call__))
     assert lane.calls == []
+
+
+@pytest.fixture
+def unconnected_lane_resource():
+    # A property-only stand-in: any SQL or lifecycle operation fails this unit test.
+    return SimpleNamespace(
+        autocommit=False, closed=False,
+        info=SimpleNamespace(transaction_status=TransactionStatus.IDLE),
+        cursor=Mock(side_effect=AssertionError("unit test must not execute SQL")),
+        close=Mock(side_effect=AssertionError("resource cleanup belongs to caller")),
+        commit=Mock(side_effect=AssertionError("unit test must not commit")),
+        rollback=Mock(side_effect=AssertionError("unit test must not roll back")),
+    )
+
+
+def test_postgres_lane_constructs_explicit_current_composition_without_io(unconnected_lane_resource):
+    lane = PostgresLoadLane(0, unconnected_lane_resource)
+    other = PostgresLoadLane(1, unconnected_lane_resource)
+    assert lane.lane_id == 0
+    assert lane.connection is unconnected_lane_resource
+    assert lane.writer is not other.writer
+    assert lane.validation_runtime is not other.validation_runtime
+    assert lane.config.validation_mode is ValidationMode.STRICT
+    assert lane.config.validation_placement is ValidationPlacement.PRE_TRANSACTION
+    assert lane.validation_runtime.mode is ValidationMode.STRICT
+    validator = lane.validation_runtime.dispatcher.strict_validator
+    assert type(validator) is FullProofValidator
+    assert lane.validation_runtime.dispatcher.select(None, ValidationMode.STRICT) is validator
+    # Inspect actual constructor wiring, not only experiment metadata.
+    assert lane.writer._connection is lane.connection
+    assert lane.writer._config is lane.config
+    assert lane.writer._validation_runtime is lane.validation_runtime
+    uow = PostgresWriteSideUnitOfWork(lane.connection)
+    gate = lane.writer._admission_gate_factory(uow)
+    assert type(gate) is PostgresOptimisticAdmissionGate
+    assert gate.event_store is uow.event_store
+    assert gate.event_store.connection is lane.connection
+    unconnected_lane_resource.cursor.assert_not_called()
+    unconnected_lane_resource.close.assert_not_called()
+
+
+def test_postgres_lane_forwards_exact_signature_and_delivery_on_retained_writer(
+    unconnected_lane_resource, monkeypatch,
+):
+    lane = PostgresLoadLane(0, unconnected_lane_resource)
+    retained_writer = lane.writer
+    item = workload(1)[0]
+    delivery = PostgresWriteSideMeasurementDelivery(
+        result_for(item), PostgresWriteSideMeasurementAvailability.UNAVAILABLE, None,
+    )
+    measured_create = Mock(return_value=delivery)
+    monkeypatch.setattr(retained_writer, "create_order_with_measurement", measured_create)
+    for item in workload(2):
+        assert lane(item) is delivery
+        forwarded = measured_create.call_args.kwargs
+        assert forwarded["request_id"] is item.signature.request_id
+        assert forwarded["order_id"] is item.signature.order_id
+        assert forwarded["amount"] is item.signature.amount
+        assert lane.writer is retained_writer
+    assert measured_create.call_count == 2
+    pay = replace(item, signature=replace(item.signature, command_type=CommandType.PAY))
+    with pytest.raises(ValueError, match="only CREATE"):
+        lane(pay)
+    assert measured_create.call_count == 2
+    error = FakeWriterFailure()
+    measured_create.side_effect = error
+    with pytest.raises(FakeWriterFailure) as raised:
+        lane(item)
+    assert raised.value is error
+    for operation in ("cursor", "close", "commit", "rollback"):
+        getattr(unconnected_lane_resource, operation).assert_not_called()
+
+
+@pytest.mark.parametrize("state", ["closed", "autocommit", "transaction"])
+def test_postgres_lane_rejects_unready_resource_without_changing_it(unconnected_lane_resource, state):
+    if state == "transaction":
+        unconnected_lane_resource.info.transaction_status = TransactionStatus.INTRANS
+    else:
+        setattr(unconnected_lane_resource, state, True)
+    with pytest.raises(ValueError):
+        PostgresLoadLane(0, unconnected_lane_resource)
+    for operation in ("cursor", "close", "commit", "rollback"):
+        getattr(unconnected_lane_resource, operation).assert_not_called()
