@@ -59,15 +59,32 @@ are not fields of this recorded provenance; this report does not infer them.
 | Exploratory | `experiments/load_capacity_protection/evidence/pr1-exploratory-20260906T041421533734Z-0a68333f8630/` | 36 | 277,951,460 | 265M |
 | Refinement | `experiments/load_capacity_protection/evidence/pr1-refinement-20260906T042421699478Z-0a68333f8630/` | 30 | 231,490,047 | 221M |
 
-These 66 files remain untracked generated experiment evidence, totaling
+These 66 files remain ignored generated experiment evidence, totaling
 509,441,507 file bytes. The paths identify their current worktree locations;
 availability in a fresh checkout requires a separately reviewed archival
 decision. The compact tables and provenance here do not replace the raw
 observations.
 
-A separate 66-entry filename/byte-count/SHA-256 inventory is proposed for
-archival review. No inventory or archive is created by this closeout, and no
-cryptographic authenticity claim is made by structural readback validation.
+### Evidence publication model
+
+```text
+this report
+→ compact 55-recorded-repetition CSV
+→ evidence manifest
+→ separately published raw ZIP archives
+```
+
+The repository tracks the
+[recorded-repetition CSV](../../../experiments/load_capacity_protection/results/pr1_recorded_repetitions.csv)
+and its [evidence manifest](../../../experiments/load_capacity_protection/results/pr1_evidence_manifest.json).
+The CSV contains one raw-derived summary row for each recorded repetition;
+warmups are excluded. The manifest identifies both source runs, the CSV, and
+the intended archive filenames, byte sizes, and SHA-256 hashes.
+
+The manifest identities and hashes define the exact raw archive publication
+artifacts. Those ZIP archives are not claimed to be publicly available. Their
+publication is a separate repository-release action, and reviewers need the
+matching published archives for complete raw-evidence readback.
 
 ## 3. Experimental Method
 

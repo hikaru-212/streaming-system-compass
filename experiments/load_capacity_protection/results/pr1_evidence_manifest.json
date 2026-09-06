@@ -1,0 +1,90 @@
+{
+  "compact_csv": {
+    "byte_size": 13415,
+    "columns": [
+      "experiment_phase",
+      "run_id",
+      "source_commit",
+      "configured_concurrency",
+      "repetition",
+      "K",
+      "acknowledged_accepted_count",
+      "acknowledged_accepted_throughput_per_second",
+      "writer_call_p50_ms",
+      "writer_call_p95_ms",
+      "scheduling_wait_p50_ms",
+      "business_uow_p50_ms",
+      "append_admission_p50_ms",
+      "commit_finalization_p50_ms",
+      "validation_runtime_p50_us",
+      "observed_max_writer_call_overlap",
+      "problems_count",
+      "incomplete",
+      "cleanup_completed"
+    ],
+    "ordering": "run phase, declared concurrency order, repetition ascending",
+    "percentile_estimator": "Hyndman-Fan type 7 linear interpolation within each 512-request repetition",
+    "recorded_row_count": 55,
+    "repository_path": "experiments/load_capacity_protection/results/pr1_recorded_repetitions.csv",
+    "sha256": "d9550a199d01d38c4c27c5052bc777eb9fbae90a61c302b45963dfa63cfd4721",
+    "warmups_included": false
+  },
+  "experiment_method_identity": "pr1-unprotected-finite-load-v1",
+  "manifest_version": 1,
+  "pr1_evidence_schema_version": 1,
+  "raw_archive_publication_status": "not_published; separate repository-release action required",
+  "runs": [
+    {
+      "K": 512,
+      "archive": {
+        "byte_size": 6065972,
+        "filename": "pr1-exploratory-20260906T041421533734Z-0a68333f8630.zip",
+        "sha256": "f981d96f4c390b2661f2e8a71e513517d27c4c15bf5b92a5aacf12149955834a"
+      },
+      "configured_concurrency_levels": [
+        1,
+        8,
+        2,
+        16,
+        4,
+        32
+      ],
+      "phase": "exploratory",
+      "raw_evidence_generated_path": "experiments/load_capacity_protection/evidence/pr1-exploratory-20260906T041421533734Z-0a68333f8630/",
+      "raw_file_bytes": 277951460,
+      "raw_json_file_count": 36,
+      "recorded_acknowledged_accepted_requests": 15360,
+      "recorded_cell_count": 30,
+      "run_id": "pr1-exploratory-20260906T041421533734Z-0a68333f8630",
+      "total_acknowledged_accepted_requests": 18432,
+      "warmup_acknowledged_accepted_requests": 3072,
+      "warmup_cell_count": 6
+    },
+    {
+      "K": 512,
+      "archive": {
+        "byte_size": 5088900,
+        "filename": "pr1-refinement-20260906T042421699478Z-0a68333f8630.zip",
+        "sha256": "9f685f281df5ab52d49dbe1b227510ea941dff2d33a525f3c6c43438fa9f7722"
+      },
+      "configured_concurrency_levels": [
+        12,
+        8,
+        16,
+        10,
+        14
+      ],
+      "phase": "refinement",
+      "raw_evidence_generated_path": "experiments/load_capacity_protection/evidence/pr1-refinement-20260906T042421699478Z-0a68333f8630/",
+      "raw_file_bytes": 231490047,
+      "raw_json_file_count": 30,
+      "recorded_acknowledged_accepted_requests": 12800,
+      "recorded_cell_count": 25,
+      "run_id": "pr1-refinement-20260906T042421699478Z-0a68333f8630",
+      "total_acknowledged_accepted_requests": 15360,
+      "warmup_acknowledged_accepted_requests": 2560,
+      "warmup_cell_count": 5
+    }
+  ],
+  "source_commit": "0a68333f86307e96a42e736254b8e047a7284f5a"
+}
