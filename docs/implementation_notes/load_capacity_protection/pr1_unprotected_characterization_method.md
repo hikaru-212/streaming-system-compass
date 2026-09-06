@@ -688,11 +688,47 @@ tests/experiments/load_capacity_protection/
 tests/integration/experiments/load_capacity_protection/
 ```
 
-These are future PR1 experiment and test locations, not directories created by
-this step. Exact implementation files, data contracts, and execution entry
-points remain for the next approved scope. No production module changes are
-expected. Existing Stage 4B.2 code/evidence and shared integration fixtures
-remain unchanged.
+The experiment-owned implementation now includes
+[`runner.py`](../../../experiments/load_capacity_protection/runner.py) and
+[`evidence.py`](../../../experiments/load_capacity_protection/evidence.py).
+Production modules, Stage 4B.2 code/evidence, and shared integration fixtures
+remain unchanged. PR1 remains ACTIVE; these entry points do not authorize a live run.
+
+The runner requires an explicit `LoadRunPlan`: fixed K, ordered concurrency
+levels, warmup and recorded repetition counts, ordering seed, canonical amount,
+test database name, connection budget, one declared control connection,
+connection timeout, stop policy, and cleanup policy. The implemented stop policy
+stops claims and waits for quiescence without a hard deadline. Warmups are
+separately labeled diagnostic cells. Per-cell identities include run, level,
+cohort, repetition, and workload index; the explicit seed selects the same index
+permutation for each cell. Declared peak connections are max(N) plus one.
+
+The separately callable cleanup deletes only exact declared request/order pairs
+from `idempotency_records`, then `order_events`, and verifies their absence.
+Every cell first refuses pre-existing identities. Cleanup is used only after a
+fully accepted, durably verified cell; incomplete, failed, or unverified cells
+retain their rows and stop the remaining plan. No TRUNCATE, CASCADE, or sequence
+reset occurs. This preserves equivalent logical state for this workload while
+leaving global-position allocation, caches, and physical database effects visible.
+The exact live cleanup scope and exclusive execution conditions still require
+approval under Section 26.
+
+Evidence schema version `1`, method version `pr1-unprotected-finite-load-v1`,
+preserves raw timestamps, identities, acknowledgement, outcome/admission/validation
+verdicts, event links, phase states and values, safe failures, durable readback,
+residual work, and provenance. Readback produces immutable experiment facts,
+not reconstructed production result objects. Reason strings, arbitrary validator
+metadata, governance carriers, and live resources are excluded. Unsupported
+versions, unknown types/fields, and inconsistent accounting summaries are rejected.
+Optional provenance remains explicitly absent; local Git qualification covers
+tracked changes and explicitly leaves untracked files uninspected.
+
+Cells are delivered to an explicit evidence sink after resource closure and
+before proceeding to another cell. File output uses exclusive creation and
+never overwrites existing evidence. A sink failure retains raw cells in the
+raised experiment exception. Descriptive helpers expose sample counts, raw
+latency samples, acknowledged accepted throughput for completed finite cells,
+and interval-based overlap. They do not calculate percentiles or capacity policy.
 
 ## 26. Live-Run Gate
 
