@@ -18,13 +18,16 @@ Stage 4E Re-invocation Authority.
 PR0 — responsibility / research boundary — COMPLETE
 PR1 — COMPLETE / EVIDENCE COLLECTION CLOSED
 PR2 — capacity / degradation / operating-headroom interpretation — COMPLETE
-PR3 — NOT STARTED
+PR3 — bounded in-flight writer admission — COMPLETE
+PR4 — NOT STARTED
 ```
 
 PR2 selects N=8 as a candidate protected experimental point and bounded
 in-flight writer admission as the first mechanism class to evaluate. This is
-workstream interpretation, not a production capacity limit or implementation.
-PR3 requires separate review and authorization under the PR2 entry criteria.
+workstream interpretation, not a production capacity limit. PR3 implements
+opt-in, explicitly shared, process-local fail-fast admission with no numerical
+default. PR4 must adapt refusal/entry accounting before protected experiments;
+no protected load comparison has run.
 
 ## Research Direction
 
@@ -49,6 +52,7 @@ establish a production capacity limit or reopen that completed stage.
 | [PR1 Unprotected Characterization Method](pr1_unprotected_characterization_method.md) | Fixed-work experiment method, outer evidence, validity requirements, and separate live-run approval gate. |
 | [PR1 Unprotected Characterization Report](pr1_unprotected_characterization_report.md) | Accepted exploratory/refinement evidence, descriptive results, limitations, and PR1 closeout; no capacity policy selected. |
 | [PR2 Capacity Interpretation and Operating Headroom](pr2_capacity_interpretation.md) | Verified N=8 vs N=10 comparison, experimental headroom selection, capacity responsibility, PR3 entry criteria, and PR4 validation contract. |
+| [PR3 Bounded In-Flight PostgreSQL Writer Admission](pr3_bounded_inflight_admission.md) | Source-grounded placement/ownership audit, fail-fast configuration and lifecycle, A2 coverage, deterministic characterization, and PR4 observation handoff. |
 
 ## Important Boundary
 
@@ -60,5 +64,5 @@ Capacity Admission
 
 Capacity admission asks whether work may consume the specified backend capacity
 now. It does not establish business truth, concurrency correctness, or
-retry/replanning authority. The terminology is conceptual at PR0, not a new
-production type.
+retry/replanning authority. PR0 introduced the conceptual boundary; PR3's
+capacity-specific refusal remains separate from production semantic results.
