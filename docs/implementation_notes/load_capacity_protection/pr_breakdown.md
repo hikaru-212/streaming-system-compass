@@ -30,7 +30,7 @@ commitment to implement a production limiter.
 | PR1 | Unprotected load characterization | COMPLETE |
 | PR2 | Capacity / degradation / operating-headroom interpretation | COMPLETE |
 | PR3 | First bounded in-flight capacity mechanism | COMPLETE |
-| PR4 | Protected vs unprotected characterization | NOT STARTED |
+| PR4 | Protected vs unprotected characterization | ACTIVE |
 | PR5 | Optional arrival-rate / burst shaping | OPTIONAL / EVIDENCE-GATED |
 
 ## Branch / PR Workflow
@@ -234,7 +234,8 @@ separately evidence-gated. PR3 tests mechanics, not protected load performance.
 ### Status
 
 ```text
-NOT STARTED
+ACTIVE — measurement/comparison machinery ready for human review
+Live evidence collection and interpretation remain pending
 ```
 
 ### Goal and Responsibility
@@ -257,10 +258,12 @@ requires offered execution opportunity above the protected bound, observed
 writer-entry overlap within it, unchanged correctness, complete work accounting,
 and evaluation of throughput, DB-backed latency, and waiting before entry.
 Bounding overlap alone or merely relocating pressure does not establish benefit.
-PR3 exposes the admitted-operation boundary. Before running protected cells,
-PR4 must adapt PR1's outer-call accounting to distinguish pre-entry refusal and
-admitted writer intervals, and review refusal continuation/cleanup conditions.
-The historical scheduler and evidence schema are not already a protected runner.
+PR3 exposes the admitted-operation boundary. The
+[PR4 method](pr4_protected_vs_unprotected_method.md) records the separate PR4
+model and runner: pre-entry refusal versus admitted body, continued claims after
+refusal, verified absence, and accepted-only cleanup. It supports adjacent,
+counterbalanced same-source protected/unprotected cells. Historical PR1 machinery
+remains unchanged. No live protected/unprotected comparison has run.
 
 ### Scope and Non-Goals
 
