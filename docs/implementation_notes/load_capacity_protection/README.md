@@ -17,11 +17,14 @@ Stage 4E Re-invocation Authority.
 ```text
 PR0 — responsibility / research boundary — COMPLETE
 PR1 — COMPLETE / EVIDENCE COLLECTION CLOSED
-PR2 — NOT STARTED
+PR2 — capacity / degradation / operating-headroom interpretation — COMPLETE
+PR3 — NOT STARTED
 ```
 
-PR0 is documentation-only work. Later PRs remain subject to evidence and
-separate review; no production mechanism or numerical limit has been selected.
+PR2 selects N=8 as a candidate protected experimental point and bounded
+in-flight writer admission as the first mechanism class to evaluate. This is
+workstream interpretation, not a production capacity limit or implementation.
+PR3 requires separate review and authorization under the PR2 entry criteria.
 
 ## Research Direction
 
@@ -45,6 +48,7 @@ establish a production capacity limit or reopen that completed stage.
 | [PR0 Research and Responsibility Boundary](pr0_research_and_responsibility_boundary.md) | Source-grounded capacity responsibility, inherited evidence, observation gaps, first experiment question, and non-goals. |
 | [PR1 Unprotected Characterization Method](pr1_unprotected_characterization_method.md) | Fixed-work experiment method, outer evidence, validity requirements, and separate live-run approval gate. |
 | [PR1 Unprotected Characterization Report](pr1_unprotected_characterization_report.md) | Accepted exploratory/refinement evidence, descriptive results, limitations, and PR1 closeout; no capacity policy selected. |
+| [PR2 Capacity Interpretation and Operating Headroom](pr2_capacity_interpretation.md) | Verified N=8 vs N=10 comparison, experimental headroom selection, capacity responsibility, PR3 entry criteria, and PR4 validation contract. |
 
 ## Important Boundary
 

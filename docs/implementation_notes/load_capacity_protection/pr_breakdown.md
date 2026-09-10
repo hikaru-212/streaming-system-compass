@@ -28,8 +28,8 @@ commitment to implement a production limiter.
 |---|---|---|
 | PR0 | Research / responsibility boundary | COMPLETE |
 | PR1 | Unprotected load characterization | COMPLETE |
-| PR2 | Capacity / degradation interpretation | NOT STARTED |
-| PR3 | First bounded in-flight capacity mechanism | CONDITIONAL |
+| PR2 | Capacity / degradation / operating-headroom interpretation | COMPLETE |
+| PR3 | First bounded in-flight capacity mechanism | NOT STARTED |
 | PR4 | Protected vs unprotected characterization | CONDITIONAL |
 | PR5 | Optional arrival-rate / burst shaping | OPTIONAL / EVIDENCE-GATED |
 
@@ -131,7 +131,8 @@ The [PR1 characterization method](pr1_unprotected_characterization_method.md)
 owns the experiment method. The
 [PR1 characterization report](pr1_unprotected_characterization_report.md)
 records the accepted exploratory/refinement evidence and closeout. PR1 evidence
-collection is closed; PR2 interpretation remains NOT STARTED.
+collection is closed; the separate
+[PR2 interpretation](pr2_capacity_interpretation.md) is now COMPLETE.
 
 ### Goal and Responsibility
 
@@ -168,7 +169,41 @@ PR1 does not select a protection limit, introduce a capacity mechanism, integrat
 Stage 4E A2, or promote an experimental result into a production guarantee.
 Its method and database execution require separate review and authorization.
 
-## PR2 — Capacity / Degradation Interpretation
+## PR2 — Capacity / Degradation / Operating-Headroom Interpretation
+
+### Status
+
+```text
+COMPLETE
+```
+
+### Goal and Responsibility
+
+The [PR2 interpretation](pr2_capacity_interpretation.md) verifies PR1's compact
+evidence and separates:
+
+```text
+observed throughput maximum
+!= observed degradation transition
+!= candidate operating region
+!= selected experimental protection point
+!= universal production capacity
+```
+
+It selects N=8 for a first bounded in-flight writer experiment: below the
+descriptive N=10–12 degradation transition, measured in both runs, retaining
+95.83% of N=10 refinement median throughput with lower writer and DB-backed
+elapsed cost. Concurrency-distance headroom is a design choice, not a
+statistically established reserve. PR2 owns the detailed comparison,
+limitations, PR3 entry criteria, and PR4 validation contract.
+
+### Scope and Non-Goals
+
+PR2 owns interpretation and limitations, not protection implementation. Its
+experimental selection is not a production default, an exact knee, or a
+universal capacity constant. PR3 remains NOT STARTED.
+
+## PR3 — First Bounded In-Flight Capacity Mechanism
 
 ### Status
 
@@ -176,45 +211,12 @@ Its method and database execution require separate review and authorization.
 NOT STARTED
 ```
 
-### Goal and Responsibility
-
-Interpret PR1 evidence within its actual workload, environment, topology, and
-measurement boundaries. Valid conclusions may include:
-
-```text
-possible capacity knee established
-```
-
-or:
-
-```text
-no useful knee established in tested range
-```
-
-PR2 must not force a numerical answer. It distinguishes observed degradation,
-possible knee, or saturation evidence from a chosen operating limit and safety
-margin. A negative or inconclusive result may justify additional
-characterization instead of mechanism work.
-
-### Scope and Non-Goals
-
-PR2 owns interpretation and limitations, not protection implementation. It does
-not convert a failure point into an automatic operating policy or claim a
-universal production capacity constant.
-
-## PR3 — First Bounded In-Flight Capacity Mechanism
-
-### Status
-
-```text
-CONDITIONAL
-```
-
 ### Goal and Entry Conditions
 
-Introduce the smallest capacity-protection mechanism only if PR1/PR2 evidence
-justifies it. PR3 requires a fresh source-grounded audit before implementation,
-including the proposed capacity scope, operating objective, headroom,
+PR2 justifies a bounded in-flight writer-admission experiment, subject to its
+[entry criteria](pr2_capacity_interpretation.md#9-pr3-entry-criteria).
+PR3 requires separate authorization and a fresh source-grounded audit before
+implementation, including the proposed capacity scope, operating objective, headroom,
 waiting/refusal semantics, and applicable authority-composition constraints.
 
 ```text
@@ -223,10 +225,11 @@ PR3 is not guaranteed.
 
 ### Scope and Non-Goals
 
-A semaphore, token bucket, queue, or connection pool is an implementation
-possibility, not a current decision. Neither a primitive nor a numerical limit
-is selected by this plan. A future mechanism must preserve concurrency
-correctness, semantic governance, and transaction ownership. Stage 4E A2
+The first candidate class is bounded in-flight writer admission at experimental
+N=8; no implementation primitive or production limit is selected. Rate/burst
+shaping, connection-pool tuning, and external queue policy control different
+variables and remain separately evidence-gated. A future mechanism must preserve
+concurrency correctness, semantic governance, and transaction ownership. Stage 4E A2
 integration is not implicit and must not silently change one-shot authority.
 
 ## PR4 — Protected vs Unprotected Characterization
@@ -250,6 +253,12 @@ bounded protected execution
 Observe accepted throughput, waiting, refusal, latency, failures, and
 correctness. Match workload and relevant environment/topology conditions, and
 make any necessary differences explicit.
+
+The [PR2 validation contract](pr2_capacity_interpretation.md#10-pr4-validation-contract)
+requires offered execution opportunity above the protected bound, observed
+writer-entry overlap within it, unchanged correctness, complete work accounting,
+and evaluation of throughput, DB-backed latency, and waiting before entry.
+Bounding overlap alone or merely relocating pressure does not establish benefit.
 
 ### Scope and Non-Goals
 
