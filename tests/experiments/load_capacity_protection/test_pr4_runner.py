@@ -75,7 +75,7 @@ class FakeFactory:
             capacity_admission = admission
 
             def __call__(self, item):
-                nonlocal active, refused
+                nonlocal refused
                 calls.append(item)
                 if saturation and item.workload_index not in holders:
                     assert held.wait(5)
