@@ -6,7 +6,7 @@
 PR0–PR3 — COMPLETE
 PR4 — COMPLETE / EVIDENCE COLLECTION CLOSED
 PR5 — NOT STARTED
-Raw PR4 archive publication — PENDING; no further experiment authorized
+Raw PR4 archive publication — PUBLISHED; no further experiment authorized
 ```
 
 ## 1. Purpose
@@ -171,8 +171,10 @@ refused to overwrite it; it was reused unchanged after validation. Its 71 entrie
 are one directory entry plus 70 JSON members under the repository-relative raw
 directory prefix. ZIP CRC integrity passed, and every member matched its source
 byte-for-byte, by size and SHA-256. The manifest records the exact staging path,
-archive identity and each raw file hash. **No raw archive publication is claimed**;
-publication of this exact ZIP remains a separate final action.
+archive filename, byte size, SHA-256 identity and each raw file hash. The complete
+raw PR4 evidence archive is publicly available from the
+[PR4 Protected vs Unprotected Characterization Evidence GitHub Release](https://github.com/hikaru-212/streaming-system-compass/releases/tag/load-capacity-pr4-evidence-v1).
+The recorded archive identity corresponds to the published asset.
 
 ## 5. N=8 Protection-Path Overhead
 
@@ -441,7 +443,7 @@ raw readback/cleanup evidence is the basis, not a fresh inspection of live state
 - No hard writer deadline, production failure-rate evidence, native failure or
   ambiguous-commit behavior is established by a clean completed run.
 - Raw files remain ignored generated evidence. The compact package is trackable;
-  exact raw ZIP publication is pending. No PR1 evidence or Release was changed.
+  the exact raw ZIP is publicly available. No PR1 evidence or Release was changed.
 
 ## 14. PR4 Conclusion
 

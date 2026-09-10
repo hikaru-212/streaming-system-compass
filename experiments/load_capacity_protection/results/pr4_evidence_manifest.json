@@ -121,7 +121,7 @@
     "No retry was performed; refusals are terminal logical work observations.",
     "Protected overload cells do not measure sustained throughput under queued demand.",
     "No server-internal CPU, I/O, WAL, lock, GIL or scheduler causality established.",
-    "Archive publication remains a separate final action."
+    "Archive publication completed as a separate final action."
   ],
   "local_provenance": {
     "clock_identity": "time.monotonic_ns",
@@ -164,7 +164,8 @@
     "unprotected",
     "protected"
   ],
-  "raw_archive_publication_status": "not_published",
+  "raw_archive_publication_status": "published",
+  "release_url": "https://github.com/hikaru-212/streaming-system-compass/releases/tag/load-capacity-pr4-evidence-v1",
   "raw_evidence_generated_path": "experiments/load_capacity_protection/evidence/pr4-protected-vs-unprotected-20260910T114905838802Z-e08b79801f9f/",
   "raw_file_bytes": 443193992,
   "raw_files": [
