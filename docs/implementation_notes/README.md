@@ -23,7 +23,7 @@ For project-wide sequencing, see:
 - [Stage 4C — Runtime Decision Authority — complete / closed](./stage_4c/)
 - [Stage 4E — Same-Request Re-Invocation Authority — complete / closed](./stage_4e/)
 - [Stage 4E closeout](./stage_4e/stage_4e_closeout.md)
-- [Load / Capacity Protection](./load_capacity_protection/README.md) — separately owned investigation; PR0 research / boundary, PR1 characterization, and PR2 operating-headroom interpretation complete; PR3 not started.
+- [Load / Capacity Protection](./load_capacity_protection/README.md) — separately owned investigation; PR0–PR3 complete through opt-in bounded in-flight writer admission; PR4 protected/unprotected characterization not started.
 
 ## Current Position
 

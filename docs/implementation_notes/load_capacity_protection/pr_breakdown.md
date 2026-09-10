@@ -29,8 +29,8 @@ commitment to implement a production limiter.
 | PR0 | Research / responsibility boundary | COMPLETE |
 | PR1 | Unprotected load characterization | COMPLETE |
 | PR2 | Capacity / degradation / operating-headroom interpretation | COMPLETE |
-| PR3 | First bounded in-flight capacity mechanism | NOT STARTED |
-| PR4 | Protected vs unprotected characterization | CONDITIONAL |
+| PR3 | First bounded in-flight capacity mechanism | COMPLETE |
+| PR4 | Protected vs unprotected characterization | NOT STARTED |
 | PR5 | Optional arrival-rate / burst shaping | OPTIONAL / EVIDENCE-GATED |
 
 ## Branch / PR Workflow
@@ -201,9 +201,35 @@ limitations, PR3 entry criteria, and PR4 validation contract.
 
 PR2 owns interpretation and limitations, not protection implementation. Its
 experimental selection is not a production default, an exact knee, or a
-universal capacity constant. PR3 remains NOT STARTED.
+universal capacity constant. The separate PR3 implementation is now COMPLETE.
 
 ## PR3 — First Bounded In-Flight Capacity Mechanism
+
+### Status
+
+```text
+COMPLETE
+```
+
+### Goal and Entry Conditions
+
+The [PR3 implementation note](pr3_bounded_inflight_admission.md) records the
+completed placement/ownership audit and implementation under the
+[PR2 entry criteria](pr2_capacity_interpretation.md#9-pr3-entry-criteria).
+One explicitly shared, process-local admission object protects all public
+CREATE/PAY writer variants, including authorized A2. Fail-fast refusal occurs
+before the original body; normal and exceptional exits release capacity.
+
+### Scope and Non-Goals
+
+Configuration is opt-in with an explicit positive bound and no numerical default.
+N=8 remains PR2's first experimental point. The primitive uses nonblocking
+bounded-semaphore acquisition, with no waiting queue or new semantic outcome.
+Stage 4E's existing one-shot spend and exception lifecycle remain unchanged.
+Rate/burst shaping, connection-pool tuning, and external queue policy remain
+separately evidence-gated. PR3 tests mechanics, not protected load performance.
+
+## PR4 — Protected vs Unprotected Characterization
 
 ### Status
 
@@ -211,38 +237,10 @@ universal capacity constant. PR3 remains NOT STARTED.
 NOT STARTED
 ```
 
-### Goal and Entry Conditions
-
-PR2 justifies a bounded in-flight writer-admission experiment, subject to its
-[entry criteria](pr2_capacity_interpretation.md#9-pr3-entry-criteria).
-PR3 requires separate authorization and a fresh source-grounded audit before
-implementation, including the proposed capacity scope, operating objective, headroom,
-waiting/refusal semantics, and applicable authority-composition constraints.
-
-```text
-PR3 is not guaranteed.
-```
-
-### Scope and Non-Goals
-
-The first candidate class is bounded in-flight writer admission at experimental
-N=8; no implementation primitive or production limit is selected. Rate/burst
-shaping, connection-pool tuning, and external queue policy control different
-variables and remain separately evidence-gated. A future mechanism must preserve
-concurrency correctness, semantic governance, and transaction ownership. Stage 4E A2
-integration is not implicit and must not silently change one-shot authority.
-
-## PR4 — Protected vs Unprotected Characterization
-
-### Status
-
-```text
-CONDITIONAL
-```
-
 ### Goal and Responsibility
 
-If a justified mechanism exists, compare equivalent offered work under:
+With PR3's configured mechanism, compare equivalent offered work under a
+separately reviewed and authorized run plan:
 
 ```text
 unprotected execution
@@ -259,6 +257,10 @@ requires offered execution opportunity above the protected bound, observed
 writer-entry overlap within it, unchanged correctness, complete work accounting,
 and evaluation of throughput, DB-backed latency, and waiting before entry.
 Bounding overlap alone or merely relocating pressure does not establish benefit.
+PR3 exposes the admitted-operation boundary. Before running protected cells,
+PR4 must adapt PR1's outer-call accounting to distinguish pre-entry refusal and
+admitted writer intervals, and review refusal continuation/cleanup conditions.
+The historical scheduler and evidence schema are not already a protected runner.
 
 ### Scope and Non-Goals
 
