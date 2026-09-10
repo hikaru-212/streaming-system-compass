@@ -78,13 +78,10 @@ The repository tracks the
 [recorded-repetition CSV](../../../experiments/load_capacity_protection/results/pr1_recorded_repetitions.csv)
 and its [evidence manifest](../../../experiments/load_capacity_protection/results/pr1_evidence_manifest.json).
 The CSV contains one raw-derived summary row for each recorded repetition;
-warmups are excluded. The manifest identifies both source runs, the CSV, and
-the intended archive filenames, byte sizes, and SHA-256 hashes.
-
-The manifest identities and hashes define the exact raw archive publication
-artifacts. Those ZIP archives are not claimed to be publicly available. Their
-publication is a separate repository-release action, and reviewers need the
-matching published archives for complete raw-evidence readback.
+warmups are excluded. The complete raw evidence archives are publicly available
+from the [PR1 Unprotected Load Characterization Evidence GitHub Release](https://github.com/hikaru-212/streaming-system-compass/releases/tag/load-capacity-pr1-evidence-v1).
+The evidence manifest records the exact archive filenames, byte sizes, and
+SHA-256 identities corresponding to the published assets.
 
 ## 3. Experimental Method
 

@@ -32,7 +32,8 @@
   "experiment_method_identity": "pr1-unprotected-finite-load-v1",
   "manifest_version": 1,
   "pr1_evidence_schema_version": 1,
-  "raw_archive_publication_status": "not_published; separate repository-release action required",
+  "raw_archive_publication_status": "published",
+  "release_url": "https://github.com/hikaru-212/streaming-system-compass/releases/tag/load-capacity-pr1-evidence-v1",
   "runs": [
     {
       "K": 512,
