@@ -4,7 +4,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, cast
+from functools import wraps
+from typing import TYPE_CHECKING, Concatenate, Optional, ParamSpec, TypeVar, cast
 
 from psycopg import Connection
 
@@ -32,6 +33,7 @@ from src.pipeline.transactional.postgres_admission import (
 from src.pipeline.transactional.postgres_unit_of_work import (
     PostgresWriteSideUnitOfWork,
 )
+from src.pipeline.transactional.writer_capacity import BoundedWriterAdmission
 from src.pipeline.transactional.postgres_write_side_config import (
     PostgresWriteSideConfig,
     ValidationPlacement,
@@ -63,6 +65,29 @@ if TYPE_CHECKING:
 
 AdmissionGateFactory = Callable[[PostgresWriteSideUnitOfWork], ConcurrencyGate]
 CandidateEventBuilder = Callable[[OrderAggregate], OrderEvent]
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
+
+
+def _capacity_protected(
+    method: Callable[Concatenate[PostgresTransactionalWriteSide, _P], _T],
+) -> Callable[Concatenate[PostgresTransactionalWriteSide, _P], _T]:
+    """Protect a complete public writer body, including final evidence delivery.
+
+    Public variants do not delegate to each other, so each call acquires once.
+    Refusal happens before SQL, trace/measurement construction, or validation.
+    No outcome translation or invocation-lifecycle handling belongs here.
+    """
+    @wraps(method)
+    def invoke(
+        self: PostgresTransactionalWriteSide, *args: _P.args, **kwargs: _P.kwargs,
+    ) -> _T:
+        admission = self._capacity_admission
+        if admission is None:
+            return method(self, *args, **kwargs)
+        return admission.run(lambda: method(self, *args, **kwargs))
+
+    return invoke
 
 
 def _accepted_event_from_replay(
@@ -354,6 +379,13 @@ class PostgresTransactionalWriteSide:
     - PostgresOptimisticAdmissionGate
 
     IN_TRANSACTION remains available through explicit configuration.
+
+    Optional capacity_admission protects every public CREATE/PAY variant before
+    its existing body, through result/trace/measurement delivery or exception.
+    Share one caller-owned object across the intended writer population. None
+    preserves unprotected behavior; saturation raises WriterCapacityRefused
+    without a producer result or authority. Admission never waits for capacity.
+    It does not own connection lifetime, transaction state, or invocation locks.
     """
 
     def __init__(
@@ -362,7 +394,21 @@ class PostgresTransactionalWriteSide:
         validation_runtime: ValidationRuntime,
         admission_gate_factory: AdmissionGateFactory | None = None,
         config: PostgresWriteSideConfig | None = None,
-    ):
+        *,
+        capacity_admission: BoundedWriterAdmission | None = None,
+    ) -> None:
+        """Retain the supplied connection, validation, and optional shared budget.
+
+        Existing admission/config defaults remain unchanged. The capacity object
+        must be BoundedWriterAdmission or None; an invalid object raises TypeError
+        before execution. No connection is opened or transaction begun here.
+        The caller retains exclusive connection use and capacity sharing scope.
+        """
+        if capacity_admission is not None and not isinstance(
+            capacity_admission, BoundedWriterAdmission
+        ):
+            raise TypeError("capacity_admission must be BoundedWriterAdmission or None")
+        self._capacity_admission = capacity_admission
         self._connection = connection
         self._validation_runtime = validation_runtime
         self._admission_gate_factory = (
@@ -1085,6 +1131,7 @@ class PostgresTransactionalWriteSide:
             "PRE_TRANSACTION write-side flow exited without returning a result"
         )
 
+    @_capacity_protected
     def create_order(
         self,
         *,
@@ -1112,6 +1159,7 @@ class PostgresTransactionalWriteSide:
             ),
         )
 
+    @_capacity_protected
     def create_order_with_measurement(
         self,
         *,
@@ -1153,6 +1201,7 @@ class PostgresTransactionalWriteSide:
             ),
         )
 
+    @_capacity_protected
     def create_order_with_trace(
         self,
         *,
@@ -1186,6 +1235,7 @@ class PostgresTransactionalWriteSide:
             ),
         )
 
+    @_capacity_protected
     def create_order_with_trace_and_measurement(
         self,
         *,
@@ -1231,6 +1281,7 @@ class PostgresTransactionalWriteSide:
             trace_collector=trace_collector,
         )
 
+    @_capacity_protected
     def pay_order(
         self,
         *,
@@ -1258,6 +1309,7 @@ class PostgresTransactionalWriteSide:
             ),
         )
 
+    @_capacity_protected
     def pay_order_with_measurement(
         self,
         *,
@@ -1299,6 +1351,7 @@ class PostgresTransactionalWriteSide:
             ),
         )
 
+    @_capacity_protected
     def pay_order_with_trace(
         self,
         *,
@@ -1332,6 +1385,7 @@ class PostgresTransactionalWriteSide:
             ),
         )
 
+    @_capacity_protected
     def pay_order_with_trace_and_measurement(
         self,
         *,

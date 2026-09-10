@@ -15,6 +15,7 @@ from src.pipeline.transactional.postgres_write_side import (
 from src.pipeline.transactional.postgres_write_side_config import (
     PostgresWriteSideConfig,
 )
+from src.pipeline.transactional.writer_capacity import BoundedWriterAdmission
 from src.storage.idempotency_store import RequestSignature
 from src.storage.postgres_decision_receipt_transaction_owner import (
     PostgresDecisionReceiptConnectionFactory,
@@ -39,6 +40,7 @@ def build_postgres_write_side_decision_receipt_runtime(
     receipt_idle_in_transaction_session_timeout_ms: int,
     admission_gate_factory: AdmissionGateFactory | None = None,
     write_side_config: PostgresWriteSideConfig | None = None,
+    capacity_admission: BoundedWriterAdmission | None = None,
 ) -> PostgresWriteSideDecisionReceiptRuntimeOwner:
     """Build one canonical live PostgreSQL invocation-and-receipt runtime.
 
@@ -57,6 +59,11 @@ def build_postgres_write_side_decision_receipt_runtime(
             existing transaction owner.
         admission_gate_factory: Optional existing write-side admission factory.
         write_side_config: Optional existing PostgreSQL writer configuration.
+        capacity_admission: Optional caller-owned process-local writer budget.
+            Pass the same object to every runtime sharing the intended bound.
+            None preserves unprotected execution. This builder creates no gate.
+            Refusal propagates without a completed invocation; existing A1/A2
+            lifecycle consumption is not restored by refusal.
 
     Returns:
         One ``PostgresWriteSideDecisionReceiptRuntimeOwner`` that privately
@@ -93,6 +100,7 @@ def build_postgres_write_side_decision_receipt_runtime(
         validation_runtime=validation_runtime,
         admission_gate_factory=admission_gate_factory,
         config=write_side_config,
+        capacity_admission=capacity_admission,
     )
 
     def acquire_dedicated_receipt_connection() -> Connection[object]:

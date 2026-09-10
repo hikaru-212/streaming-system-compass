@@ -23,6 +23,7 @@ from src.pipeline.transactional.postgres_write_side_config import (
     ValidationPlacement,
 )
 from src.pipeline.transactional.postgres_write_side_measurement import PostgresWriteSideMeasurementDelivery
+from src.pipeline.transactional.writer_capacity import BoundedWriterAdmission
 
 
 def _optimistic_gate(uow: PostgresWriteSideUnitOfWork) -> PostgresOptimisticAdmissionGate:
@@ -43,10 +44,18 @@ closes resources after scheduler quiescence, including on assertion failure.
 Construction rejects closed, autocommit, or non-idle connections without SQL.
 CREATE inputs are forwarded unchanged and the exact measured delivery is
 returned. Other commands are fixture errors; native writer exceptions escape.
+
+An optional capacity_admission is owned by the composing caller and must be the
+same object across all lanes in the protected population. None preserves PR1.
+Refusal propagates distinctly; the frozen PR1 scheduler does not classify it as
+pre-entry refusal. PR4 must adapt observation/accounting before protected runs.
 """
 
     lane_id: int
     connection: Connection = field(repr=False, compare=False)
+    capacity_admission: BoundedWriterAdmission | None = field(
+        default=None, repr=False, compare=False, kw_only=True,
+    )
     config: PostgresWriteSideConfig = field(init=False)
     validation_runtime: ValidationRuntime = field(init=False, repr=False, compare=False)
     writer: PostgresTransactionalWriteSide = field(init=False, repr=False, compare=False)
@@ -77,6 +86,7 @@ returned. Other commands are fixture errors; native writer exceptions escape.
             validation_runtime=runtime,
             admission_gate_factory=_optimistic_gate,
             config=config,
+            capacity_admission=self.capacity_admission,
         ))
 
     def __call__(self, item: LoadWorkItem) -> PostgresWriteSideMeasurementDelivery:
