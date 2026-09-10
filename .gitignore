@@ -9,6 +9,9 @@ __pycache__/
 .coverage
 htmlcov/
 
+# Generated load-characterization evidence
+/experiments/load_capacity_protection/evidence/
+
 # Env
 .env
 .env.*
