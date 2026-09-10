@@ -30,8 +30,8 @@ commitment to implement a production limiter.
 | PR1 | Unprotected load characterization | COMPLETE |
 | PR2 | Capacity / degradation / operating-headroom interpretation | COMPLETE |
 | PR3 | First bounded in-flight capacity mechanism | COMPLETE |
-| PR4 | Protected vs unprotected characterization | NOT STARTED |
-| PR5 | Optional arrival-rate / burst shaping | OPTIONAL / EVIDENCE-GATED |
+| PR4 | Protected vs unprotected characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
+| PR5 | Candidate Retry / Refusal Amplification Characterization | NOT STARTED |
 
 ## Branch / PR Workflow
 
@@ -234,7 +234,9 @@ separately evidence-gated. PR3 tests mechanics, not protected load performance.
 ### Status
 
 ```text
-NOT STARTED
+COMPLETE / EVIDENCE COLLECTION CLOSED
+Closeout package internally checked; ready for human review
+Raw ZIP publication remains pending as a separate final action
 ```
 
 ### Goal and Responsibility
@@ -257,10 +259,21 @@ requires offered execution opportunity above the protected bound, observed
 writer-entry overlap within it, unchanged correctness, complete work accounting,
 and evaluation of throughput, DB-backed latency, and waiting before entry.
 Bounding overlap alone or merely relocating pressure does not establish benefit.
-PR3 exposes the admitted-operation boundary. Before running protected cells,
-PR4 must adapt PR1's outer-call accounting to distinguish pre-entry refusal and
-admitted writer intervals, and review refusal continuation/cleanup conditions.
-The historical scheduler and evidence schema are not already a protected runner.
+PR3 exposes the admitted-operation boundary. The
+[PR4 method](pr4_protected_vs_unprotected_method.md) records the separate PR4
+model and runner: pre-entry refusal versus admitted body, continued claims after
+refusal, verified absence, and accepted-only cleanup. It supports adjacent,
+counterbalanced same-source protected/unprotected cells. Historical PR1 machinery
+remains unchanged. The [PR4 report](pr4_protected_vs_unprotected_report.md)
+closes the accepted 70-cell same-source run, including 60 recorded cells.
+
+The protected writer overlap stayed at eight under observed public overlap above
+eight. UOW/append elapsed amplification fell; commit improved at N=12/16/32 but
+increased at N=10. N=8 showed no material instrumented-path penalty in the central
+metrics. Every recorded protected overload cell accepted eight and refused 504
+of 512 logical items before the first admitted body completed. This establishes
+a working occupancy boundary and scoped local protection, not end-to-end overload
+resolution. There were no retries; pressure displacement is not retry-storm evidence.
 
 ### Scope and Non-Goals
 
@@ -269,25 +282,31 @@ accepted-request latency alone does not establish protection quality when
 waiting, refusal, failure, or correctness evidence is omitted. PR4 does not
 automatically establish a production SLO/SLA.
 
-## PR5 — Optional Arrival-Rate / Burst Shaping
+## PR5 — Candidate Retry / Refusal Amplification Characterization
 
 ### Status
 
 ```text
-OPTIONAL / EVIDENCE-GATED
+NOT STARTED
 ```
 
 ### Goal and Entry Conditions
 
-PR5 exists only if arrival evidence shows that bounded in-flight capacity
-protection alone does not address the relevant arrival problem.
+PR4's observed refusal displacement justifies considering a separately approved
+experiment about caller reactions to refusal:
 
-```text
-PR5 is not guaranteed.
-```
+> Can a protected database remain healthy while retry behavior amplifies attempts
+> and destabilizes the surrounding system?
+
+Candidate comparisons are no retry, immediate retry, fixed backoff, exponential
+backoff, and exponential backoff plus jitter. PR4 did not exercise retries and
+does not establish retry amplification. This candidate is not active work or
+authorization to implement those comparisons.
 
 ### Scope and Non-Goals
 
-Only then should a separate shaping responsibility be evaluated. Do not assume
-a token bucket or any rate limiter is required. This plan selects no arrival
-rate, burst allowance, or shaping algorithm.
+Rate limiting, retry budgets, backoff, jitter and arrival shaping remain future
+mechanisms requiring separate evidence and authorization. No production policy,
+arrival rate, burst allowance or retry algorithm is selected here. A later ADR
+may distinguish resource-occupancy protection from retry/arrival protection after
+PR5 supplies evidence. No final Rate-Limiter ADR is created by PR4 closeout.
