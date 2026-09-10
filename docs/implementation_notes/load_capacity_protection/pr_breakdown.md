@@ -31,7 +31,7 @@ commitment to implement a production limiter.
 | PR2 | Capacity / degradation / operating-headroom interpretation | COMPLETE |
 | PR3 | First bounded in-flight capacity mechanism | COMPLETE |
 | PR4 | Protected vs unprotected characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
-| PR5 | Candidate Retry / Refusal Amplification Characterization | NOT STARTED |
+| PR5 | Retry / Refusal Amplification Characterization | ACTIVE / MACHINERY FOR REVIEW |
 
 ## Branch / PR Workflow
 
@@ -56,10 +56,11 @@ future branch names are:
 | PR2 | `docs/load-capacity-pr2-capacity-interpretation` |
 | PR3 | `feat/load-capacity-pr3-inflight-protection` |
 | PR4 | `experiment/load-capacity-pr4-protected-comparison` |
+| PR5 | `experiment/load-capacity-pr5-retry-amplification` |
 
 These names are recommendations only, not claims that the branches exist.
-PR5 branch planning is deferred until its need is established. This document
-does not create branches or authorize Git mutations, PR creation, or merging.
+PR5 is active on the named experiment branch. This document does not create
+branches or authorize Git mutations, PR creation, or merging.
 
 ## Commit Discipline
 
@@ -236,7 +237,7 @@ separately evidence-gated. PR3 tests mechanics, not protected load performance.
 ```text
 COMPLETE / EVIDENCE COLLECTION CLOSED
 Closeout package internally checked; ready for human review
-Raw ZIP publication remains pending as a separate final action
+Exact PR4 raw evidence archive — PUBLISHED via the GitHub Release referenced by the PR4 report/manifest
 ```
 
 ### Goal and Responsibility
@@ -282,31 +283,43 @@ accepted-request latency alone does not establish protection quality when
 waiting, refusal, failure, or correctness evidence is omitted. PR4 does not
 automatically establish a production SLO/SLA.
 
-## PR5 — Candidate Retry / Refusal Amplification Characterization
+## PR5 — Retry / Refusal Amplification Characterization
 
 ### Status
 
 ```text
-NOT STARTED
+ACTIVE / CHARACTERIZATION MACHINERY FOR HUMAN REVIEW
+Live matrix — NOT SELECTED / NOT RUN
 ```
 
 ### Goal and Entry Conditions
 
-PR4's observed refusal displacement justifies considering a separately approved
-experiment about caller reactions to refusal:
+PR4's observed refusal displacement motivates the separately owned
+[PR5 method](pr5_retry_refusal_amplification_method.md):
 
-> Can a protected database remain healthy while retry behavior amplifies attempts
-> and destabilizes the surrounding system?
+> Can a protected PostgreSQL writer remain within its occupancy bound while
+> caller retry behavior amplifies attempts and pressure outside that region?
 
-Candidate comparisons are no retry, immediate retry, fixed backoff, exponential
-backoff, and exponential backoff plus jitter. PR4 did not exercise retries and
-does not establish retry amplification. This candidate is not active work or
-authorization to implement those comparisons.
+The machinery supports contemporaneous NO_RETRY, IMMEDIATE_RETRY, FIXED_BACKOFF,
+EXPONENTIAL_BACKOFF and EXPONENTIAL_BACKOFF_WITH_JITTER. Stable logical intent is
+separate from attempt identity. Only observed pre-body WriterCapacityRefused
+feeds the experiment-owned bounded policy. Raw trajectories, logical completion,
+amplification, real protected overlap and durable verification remain distinct.
+PR4 did not exercise retries and does not establish retry amplification.
 
 ### Scope and Non-Goals
 
-Rate limiting, retry budgets, backoff, jitter and arrival shaping remain future
-mechanisms requiring separate evidence and authorization. No production policy,
-arrival rate, burst allowance or retry algorithm is selected here. A later ADR
-may distinguish resource-occupancy protection from retry/arrival protection after
-PR5 supplies evidence. No final Rate-Limiter ADR is created by PR4 closeout.
+Retry budgets, backoff and jitter here are experiment stimuli with explicit
+parameters, not production mechanisms or Stage 4E reinvocation authority.
+Production retry, rate limiting and arrival shaping require later evidence and
+authorization. No live K/N, attempt budget, delay/cap/jitter values, warmups or
+recorded repetitions are selected. No live PostgreSQL retry experiment ran.
+
+After PR5 evidence, a later decision/ADR may consider:
+
+```text
+resource-occupancy protection != retry/arrival protection
+```
+
+Only a later explicitly approved PR may implement a justified production
+retry/rate/arrival mechanism. No ADR is created by this PR5 machinery task.

@@ -20,7 +20,7 @@ PR1 — COMPLETE / EVIDENCE COLLECTION CLOSED
 PR2 — capacity / degradation / operating-headroom interpretation — COMPLETE
 PR3 — bounded in-flight writer admission — COMPLETE
 PR4 — COMPLETE / EVIDENCE COLLECTION CLOSED
-PR5 — NOT STARTED / CANDIDATE RETRY-REFUSAL CHARACTERIZATION
+PR5 — ACTIVE / RETRY-REFUSAL CHARACTERIZATION MACHINERY FOR REVIEW
 ```
 
 PR2 selects N=8 as a candidate protected experimental point and bounded
@@ -33,7 +33,15 @@ but every recorded protected overload cell accepted eight and terminally refused
 504 of 512 items before the first admitted body completed. This establishes local
 writer-resource protection, not end-to-end overload resolution or retry-storm
 evidence. The closeout package passed internal checks and is ready for human
-review; publication of the exact raw ZIP remains a separate final action.
+review. The exact PR4 raw evidence archive has been published via the GitHub
+Release referenced by the [PR4 report](pr4_protected_vs_unprotected_report.md)
+and [evidence manifest](../../../experiments/load_capacity_protection/results/pr4_evidence_manifest.json).
+
+PR5 now owns experiment-only caller reactions to capacity refusal, stable logical
+request identities across attempts, explicit retry budgets/backoff/jitter, and
+attempt-amplification evidence. Its machinery is ready for review; no live retry
+matrix is selected or executed. Production retry and arrival mechanisms remain
+separately evidence-gated.
 
 ## Research Direction
 
@@ -43,7 +51,8 @@ measurement
 → capacity interpretation
 → protection mechanism if justified
 → protected/unprotected comparison
-→ candidate retry/refusal amplification characterization
+→ retry/refusal amplification characterization (PR5 ACTIVE)
+→ later decision/ADR on occupancy versus retry/arrival protection
 → further mechanisms only if separately justified
 ```
 
@@ -61,7 +70,8 @@ establish a production capacity limit or reopen that completed stage.
 | [PR2 Capacity Interpretation and Operating Headroom](pr2_capacity_interpretation.md) | Verified N=8 vs N=10 comparison, experimental headroom selection, capacity responsibility, PR3 entry criteria, and PR4 validation contract. |
 | [PR3 Bounded In-Flight PostgreSQL Writer Admission](pr3_bounded_inflight_admission.md) | Source-grounded placement/ownership audit, fail-fast configuration and lifecycle, A2 coverage, deterministic characterization, and PR4 observation handoff. |
 | [PR4 Protected vs Unprotected Method](pr4_protected_vs_unprotected_method.md) | Pre-run method: same-source pairing, offered/admitted/refused/accepted evidence, shared gate observation, durable verification, metrics, and live-run approval boundary. |
-| [PR4 Protected vs Unprotected Report](pr4_protected_vs_unprotected_report.md) | Accepted 70-cell A/B evidence, 60 recorded comparisons, exact manifest/archive identity, local writer protection and refusal displacement, limitations, and PR4 closeout; PR5 remains NOT STARTED. |
+| [PR4 Protected vs Unprotected Report](pr4_protected_vs_unprotected_report.md) | Accepted 70-cell A/B evidence, 60 recorded comparisons, exact manifest/archive identity, local writer protection and refusal displacement, limitations, and historical PR4 closeout. |
+| [PR5 Retry / Refusal Amplification Method](pr5_retry_refusal_amplification_method.md) | Experiment-only policies, stable logical requests and repeated attempts, bounded retry scheduling, raw amplification/timing evidence, durable verification and the separate live-run approval boundary. |
 
 ## Important Boundary
 
