@@ -1,0 +1,569 @@
+{
+  "accounting_by_cohort_and_mode": {
+    "recorded|protected": {
+      "acknowledged_accepted": 3264,
+      "capacity_refused": 12096,
+      "cells": 30,
+      "offered": 15360
+    },
+    "recorded|unprotected": {
+      "acknowledged_accepted": 15360,
+      "capacity_refused": 0,
+      "cells": 30,
+      "offered": 15360
+    },
+    "warmup|protected": {
+      "acknowledged_accepted": 544,
+      "capacity_refused": 2016,
+      "cells": 5,
+      "offered": 2560
+    },
+    "warmup|unprotected": {
+      "acknowledged_accepted": 2560,
+      "capacity_refused": 0,
+      "cells": 5,
+      "offered": 2560
+    }
+  },
+  "archive": {
+    "byte_size": 9997962,
+    "directory_members": 1,
+    "filename": "pr4-protected-vs-unprotected-20260910T114905838802Z-e08b79801f9f.zip",
+    "handling": "pre-existing requested archive reused unchanged after full verification",
+    "json_members": 70,
+    "local_path": "/tmp/pr4-protected-vs-unprotected-20260910T114905838802Z-e08b79801f9f.zip",
+    "member_prefix": "experiments/load_capacity_protection/evidence/pr4-protected-vs-unprotected-20260910T114905838802Z-e08b79801f9f/",
+    "sha256": "930816e2c35f0e039513a85a69588daf46a0910f37b5dadce0c981d07f67c1c2",
+    "validation": "ZIP testzip CRC passed; all 70 archived JSON files byte-identical and SHA-256 matched to source"
+  },
+  "compact_csv": {
+    "boolean_representation": "true/false",
+    "byte_size": 29832,
+    "columns": [
+      "raw_filename",
+      "run_id",
+      "source_commit",
+      "schema_version",
+      "method_identity",
+      "cohort",
+      "execution_index",
+      "configured_concurrency",
+      "repetition",
+      "pair_index",
+      "position_in_pair",
+      "cell_id",
+      "protection_mode",
+      "protection_bound",
+      "planned",
+      "offered",
+      "dispatched",
+      "capacity_attempted",
+      "capacity_admitted",
+      "capacity_refused",
+      "protected_writer_entered",
+      "writer_terminal",
+      "terminal",
+      "acknowledged_accepted",
+      "acceptance_proportion",
+      "refusal_proportion",
+      "acknowledged_accepted_throughput_per_second",
+      "observed_elapsed_ns",
+      "public_call_p50_ms",
+      "public_call_p95_ms",
+      "accepted_public_call_p50_ms",
+      "protected_body_p50_ms",
+      "protected_body_p95_ms",
+      "public_call_sample_count",
+      "admitted_latency_sample_count",
+      "public_call_max_overlap",
+      "protected_body_max_overlap",
+      "native_writer_failures",
+      "problems_count",
+      "harness_failures_count",
+      "residual_count",
+      "incomplete",
+      "cleanup_completed",
+      "last_capacity_refusal_ns",
+      "first_protected_body_completion_ns",
+      "last_refusal_before_first_completion",
+      "refusal_to_first_completion_gap_ms",
+      "business_uow_p50_ms",
+      "append_admission_p50_ms",
+      "commit_finalization_p50_ms",
+      "validation_runtime_p50_us",
+      "preliminary_idempotency_p50_ms",
+      "accepted_history_load_p50_ms",
+      "preliminary_read_cleanup_p50_ms",
+      "authoritative_idempotency_p50_ms",
+      "idempotency_record_p50_ms",
+      "producer_write_invocation_p50_ms"
+    ],
+    "filename": "pr4_recorded_comparisons.csv",
+    "float_representation": "unrounded Python float decimal representation",
+    "latency_cohorts": {
+      "accepted_public_call": "acknowledged accepted calls",
+      "production_phases": "MEASURED phases of acknowledged accepted calls only",
+      "protected_body": "acknowledged accepted protected bodies only; 512 at N=8, 8 above bound",
+      "public_call": "all 512 public calls, including refusals"
+    },
+    "null_representation": "empty CSV field; not applicable or absent, never measured zero",
+    "ordering": "execution_index ascending (10 through 69)",
+    "percentile_estimator": "Hyndman-Fan type 7 linear interpolation within each cell",
+    "recorded_row_count": 60,
+    "report_aggregation": "median of six per-cell statistics for each N/mode; no pooled requests",
+    "repository_path": "experiments/load_capacity_protection/results/pr4_recorded_comparisons.csv",
+    "sha256": "5532c79b5702eca4cce2bca1bfe3e5a02a15bfaa5505fefa4ec92bbe1a67139f",
+    "warmups_included": false
+  },
+  "experiment_method_identity": "pr4-protected-vs-unprotected-v1",
+  "interpretation_limits": [
+    "Unprotected capacity counts/proportions are not applicable, not fabricated admission.",
+    "No retry was performed; refusals are terminal logical work observations.",
+    "Protected overload cells do not measure sustained throughput under queued demand.",
+    "No server-internal CPU, I/O, WAL, lock, GIL or scheduler causality established.",
+    "Archive publication remains a separate final action."
+  ],
+  "local_provenance": {
+    "clock_identity": "time.monotonic_ns",
+    "logical_cpus": 12,
+    "machine": "arm64",
+    "platform_system": "Darwin",
+    "psycopg_version": "3.3.4",
+    "python_version": "3.12.7",
+    "source_commit": "e08b79801f9f2c28ad050902700287df5c4968bf",
+    "working_tree": "tracked_clean;untracked_not_inspected"
+  },
+  "manifest_version": 1,
+  "plan": {
+    "amount": "10.00",
+    "cleanup_policy": "delete_verified_cell_rows",
+    "concurrency_levels": [
+      8,
+      10,
+      12,
+      16,
+      32
+    ],
+    "connect_timeout_seconds": 10,
+    "connection_budget": 33,
+    "control_connections": 1,
+    "first_mode": "unprotected",
+    "k": 512,
+    "ordering_seed": 0,
+    "pairing_order": "alternating_adjacent_pairs",
+    "protection_bound": 8,
+    "repetitions": 6,
+    "run_id": "pr4-20260910T114905838802Z-e08b79801f9f",
+    "stop_policy": "stop_claims_and_drain_without_deadline",
+    "test_database": "compass_test",
+    "warmups": 1
+  },
+  "pr4_evidence_schema_version": 1,
+  "protection_bound": 8,
+  "protection_modes": [
+    "unprotected",
+    "protected"
+  ],
+  "raw_archive_publication_status": "not_published",
+  "raw_evidence_generated_path": "experiments/load_capacity_protection/evidence/pr4-protected-vs-unprotected-20260910T114905838802Z-e08b79801f9f/",
+  "raw_file_bytes": 443193992,
+  "raw_files": [
+    {
+      "byte_size": 8920371,
+      "filename": "000-warmup-n8-unprotected-r00.json",
+      "sha256": "b591871c2dbde885cae6d3d3c6d256f63423fb51224c24aaeee07929d867c5cc"
+    },
+    {
+      "byte_size": 8936307,
+      "filename": "001-warmup-n8-protected-r00.json",
+      "sha256": "2d7e0496f79837ddcf4717ae9b35476fe472c2cf968467e22ee1c15f5bca359b"
+    },
+    {
+      "byte_size": 2415886,
+      "filename": "002-warmup-n10-protected-r00.json",
+      "sha256": "2bb82914e7a188a19927964566f8b4543f7f782c600c6aa2b531ae1794d48668"
+    },
+    {
+      "byte_size": 8921706,
+      "filename": "003-warmup-n10-unprotected-r00.json",
+      "sha256": "af9a48d8c3d700249a5963ac71ea0d45427ca8b7319dd28ee28d0d0ebdecddce"
+    },
+    {
+      "byte_size": 8923318,
+      "filename": "004-warmup-n12-unprotected-r00.json",
+      "sha256": "e8b4a0037ceef4ef5bc5d0a3357d35b00c80168db1b03452947a9fbf6f45712d"
+    },
+    {
+      "byte_size": 2416644,
+      "filename": "005-warmup-n12-protected-r00.json",
+      "sha256": "aa1deb7e8bf7d6fd2e57d3ff85c6fd9a426f1b1a9ca9255e9cda98d6f075e6a9"
+    },
+    {
+      "byte_size": 2418414,
+      "filename": "006-warmup-n16-protected-r00.json",
+      "sha256": "24cedd69ba8e11b6ec83b4af9eaeb90051df8e95dfd1fc8bf2689162efe85b3d"
+    },
+    {
+      "byte_size": 8925810,
+      "filename": "007-warmup-n16-unprotected-r00.json",
+      "sha256": "bfd40a91ac796e331f3ba2a294ffe63fe596a7f84813f8e2a901ce76293817a0"
+    },
+    {
+      "byte_size": 8932822,
+      "filename": "008-warmup-n32-unprotected-r00.json",
+      "sha256": "c3c8001690fb2aad96510474e5530c303e46284b1681e8e53bd9b823932c71a9"
+    },
+    {
+      "byte_size": 2424636,
+      "filename": "009-warmup-n32-protected-r00.json",
+      "sha256": "ff49c1f237a482003b4272a7c42e8583aed850d21128af0ef401f7cc4377813b"
+    },
+    {
+      "byte_size": 8932532,
+      "filename": "010-recorded-n8-unprotected-r00.json",
+      "sha256": "88d55b66c7d1df6d3576d02b1e4c469b8649678eb31e306cfb11be3e16bf6ad5"
+    },
+    {
+      "byte_size": 8948409,
+      "filename": "011-recorded-n8-protected-r00.json",
+      "sha256": "8a0e1f28554c71df5502fc710696c155e10ac60069643c382e68503967c1a313"
+    },
+    {
+      "byte_size": 2420110,
+      "filename": "012-recorded-n10-protected-r00.json",
+      "sha256": "b4975f09230cbcf1abf54f242efb9fd22af6d62cd521a23e0ee38bf78529c8c4"
+    },
+    {
+      "byte_size": 8933972,
+      "filename": "013-recorded-n10-unprotected-r00.json",
+      "sha256": "b79aaed07137ff125bd78f452c002473bfe03a15466293ca68d67e19dae61cc2"
+    },
+    {
+      "byte_size": 8935701,
+      "filename": "014-recorded-n12-unprotected-r00.json",
+      "sha256": "3641156c568ea8d5f81b865b1db6690573cf67719fa666b7c8c63f19811fe931"
+    },
+    {
+      "byte_size": 2420862,
+      "filename": "015-recorded-n12-protected-r00.json",
+      "sha256": "c11854007fd4efec8627ce48f4d493bf6c5e9044d24f152c07cddd9d91f2360b"
+    },
+    {
+      "byte_size": 2422630,
+      "filename": "016-recorded-n16-protected-r00.json",
+      "sha256": "b303942ab7875276c26492504f3379fa26aae1603360d66aadd7457a6825cf06"
+    },
+    {
+      "byte_size": 8938094,
+      "filename": "017-recorded-n16-unprotected-r00.json",
+      "sha256": "54929d6cb52505c7437054322c82979f069648e4e0f16d99db77bcd2963345d6"
+    },
+    {
+      "byte_size": 8945073,
+      "filename": "018-recorded-n32-unprotected-r00.json",
+      "sha256": "91a8e09d022ecbcc3a16526b73e1b334beee8a400b7e95cf384e93b4b5d7bf52"
+    },
+    {
+      "byte_size": 2428874,
+      "filename": "019-recorded-n32-protected-r00.json",
+      "sha256": "6adcab9b3323a4351b9fbe2bb8d26674d924c42a347cb7c368becd53a0196851"
+    },
+    {
+      "byte_size": 8948638,
+      "filename": "020-recorded-n8-protected-r01.json",
+      "sha256": "51a074df020d4f1e3122464b924ca39d54172b56030fe32472acd0348b26936d"
+    },
+    {
+      "byte_size": 8932592,
+      "filename": "021-recorded-n8-unprotected-r01.json",
+      "sha256": "b2d9db64e2203c3aec78a834a190f5b572e6f2943c8de93662cc1d065d023781"
+    },
+    {
+      "byte_size": 8934051,
+      "filename": "022-recorded-n10-unprotected-r01.json",
+      "sha256": "38e8750bd0d5849919eac29622684fde79ed9150a2c3dcfc094df127b8d58f28"
+    },
+    {
+      "byte_size": 2420111,
+      "filename": "023-recorded-n10-protected-r01.json",
+      "sha256": "43facbbf94a453a5959b8382073df295afeaa0f10ecf690c097cbeae4908d567"
+    },
+    {
+      "byte_size": 2420864,
+      "filename": "024-recorded-n12-protected-r01.json",
+      "sha256": "0ef01294167de86ccd3ac24895baf86cad5006557bddd391c0e003379b6a1d1f"
+    },
+    {
+      "byte_size": 8935579,
+      "filename": "025-recorded-n12-unprotected-r01.json",
+      "sha256": "ee394c01a989a396854913dbef10a46a529f4b824e83b24e59e59985a68f1331"
+    },
+    {
+      "byte_size": 8938037,
+      "filename": "026-recorded-n16-unprotected-r01.json",
+      "sha256": "52c69962ff87cc31d0472020f1e92a07bbbdd3cef0f0c70e163519fe65f63f9e"
+    },
+    {
+      "byte_size": 2422364,
+      "filename": "027-recorded-n16-protected-r01.json",
+      "sha256": "c29f525a2fd40a41a26434f7e4523c8f8f90e35799ab4715e45803780d8e2a7f"
+    },
+    {
+      "byte_size": 2428648,
+      "filename": "028-recorded-n32-protected-r01.json",
+      "sha256": "f2bb8f2f4a0e9eb40ec3edf3dd45a4d3f62be2313484259d27bc739956681319"
+    },
+    {
+      "byte_size": 8945070,
+      "filename": "029-recorded-n32-unprotected-r01.json",
+      "sha256": "82b62952cf6a1ecd48116bbe662b89ae48f76260117d09e63c6d30d953e804bf"
+    },
+    {
+      "byte_size": 8932575,
+      "filename": "030-recorded-n8-unprotected-r02.json",
+      "sha256": "d6ffa672c9cfcdd19121cdce78862a6d64b1777e684326e12d460bd61511123a"
+    },
+    {
+      "byte_size": 8948550,
+      "filename": "031-recorded-n8-protected-r02.json",
+      "sha256": "1862a5b66ada0064e787c3c3298f4ad9c460787aea177d42e21253ddefe9b245"
+    },
+    {
+      "byte_size": 2420108,
+      "filename": "032-recorded-n10-protected-r02.json",
+      "sha256": "5fe814d293774f7007b159172db9deb99baa68c39b576e492c054f33432f1b95"
+    },
+    {
+      "byte_size": 8934007,
+      "filename": "033-recorded-n10-unprotected-r02.json",
+      "sha256": "473e14494d8ff4b0b6f9d3a3f9e5b88e66f8c8f5e93e4d0f20893f91e048ee18"
+    },
+    {
+      "byte_size": 8935691,
+      "filename": "034-recorded-n12-unprotected-r02.json",
+      "sha256": "929f512181194550c81a95c2a159eccfb36de0b2576c4d0c47671247a13505c5"
+    },
+    {
+      "byte_size": 2421370,
+      "filename": "035-recorded-n12-protected-r02.json",
+      "sha256": "4d20d600be1d474c0e0d0d719293a9cd9eae100a686ab208098feabcc14c397f"
+    },
+    {
+      "byte_size": 2422622,
+      "filename": "036-recorded-n16-protected-r02.json",
+      "sha256": "aed62bd33b8054c12220cd40f27e99a22b1b968082a35708539be5ac1dab43c9"
+    },
+    {
+      "byte_size": 8938133,
+      "filename": "037-recorded-n16-unprotected-r02.json",
+      "sha256": "adc1a7cb9ce12d18a995c45f907c81bfc5cd87b703d9dbcd015ebc396f5c53b5"
+    },
+    {
+      "byte_size": 8945059,
+      "filename": "038-recorded-n32-unprotected-r02.json",
+      "sha256": "05e2eb2468f5eab375267b3bdfc20aeadbd2810e69e03b9b1ffe738f4bd39071"
+    },
+    {
+      "byte_size": 2428610,
+      "filename": "039-recorded-n32-protected-r02.json",
+      "sha256": "40dabd3d31307986e4824c0c582248f7c89265e7996369356eb6626578396aac"
+    },
+    {
+      "byte_size": 8948560,
+      "filename": "040-recorded-n8-protected-r03.json",
+      "sha256": "b9aff231ba466086f5403bf13243f32d497b51def7bdebb6c90fef0cea657226"
+    },
+    {
+      "byte_size": 8932446,
+      "filename": "041-recorded-n8-unprotected-r03.json",
+      "sha256": "61c10fe98762dac181244c15f3a78f54bfa5c887541c263a98e118fd1a201aac"
+    },
+    {
+      "byte_size": 8933928,
+      "filename": "042-recorded-n10-unprotected-r03.json",
+      "sha256": "ac9740882885d5c9ac5eab0e8d11182ec7ddcce969467b5cc1044f0070a8eec3"
+    },
+    {
+      "byte_size": 2420115,
+      "filename": "043-recorded-n10-protected-r03.json",
+      "sha256": "d71b8b0081e56d243d75fad6121d0ef00989e3f421102202b5296318a37357f5"
+    },
+    {
+      "byte_size": 2421119,
+      "filename": "044-recorded-n12-protected-r03.json",
+      "sha256": "6cf73e4093ab38d5baa7faf56ec917a44af514576225cac27408b734f0e7df84"
+    },
+    {
+      "byte_size": 8935556,
+      "filename": "045-recorded-n12-unprotected-r03.json",
+      "sha256": "55d9af80fb0d5c805c5670f4d0d1aa5ec022e1f29c1af4e592a01cfcbd0508b0"
+    },
+    {
+      "byte_size": 8938016,
+      "filename": "046-recorded-n16-unprotected-r03.json",
+      "sha256": "b4a746f2b2bc5a28baed975a2e6ec86f765f5280a26f9bef7482469f4a6701d7"
+    },
+    {
+      "byte_size": 2422596,
+      "filename": "047-recorded-n16-protected-r03.json",
+      "sha256": "02707b4dd5f4accb481d58ab25eb38a9bbc5d5d953b77b9222ddb49be409638f"
+    },
+    {
+      "byte_size": 2428869,
+      "filename": "048-recorded-n32-protected-r03.json",
+      "sha256": "e80fbcd4f15f243a71f29839567cdb0fca1792e6a1d5d6dbed24ae6c44f2b48a"
+    },
+    {
+      "byte_size": 8945097,
+      "filename": "049-recorded-n32-unprotected-r03.json",
+      "sha256": "c9f30c80a3b8d476fddcc4cdcc69f78106ed9f039c067efa74d37395394a6e0a"
+    },
+    {
+      "byte_size": 8932562,
+      "filename": "050-recorded-n8-unprotected-r04.json",
+      "sha256": "6376fe02b159d132a69c0b46b23165e2a8239c4ab9e61c5b032e31d2de5652a6"
+    },
+    {
+      "byte_size": 8948538,
+      "filename": "051-recorded-n8-protected-r04.json",
+      "sha256": "e07b636bfe0dacb064449d2bc66e032d7042ba000be4bdf56a2491618b1f8679"
+    },
+    {
+      "byte_size": 2420120,
+      "filename": "052-recorded-n10-protected-r04.json",
+      "sha256": "edd83682ce9b2c61be352fe06d6f01f7f84f6997936ee3690a7946809a09b6e9"
+    },
+    {
+      "byte_size": 8934019,
+      "filename": "053-recorded-n10-unprotected-r04.json",
+      "sha256": "34458cd9107ca22908b90efc6c2bfede5a379bf1fd6c9f5f735188ce773dba11"
+    },
+    {
+      "byte_size": 8935661,
+      "filename": "054-recorded-n12-unprotected-r04.json",
+      "sha256": "0658f3bf3690dbdbd79b7082b9c52e0c86bf4fac07678db925c5b71690cd8a58"
+    },
+    {
+      "byte_size": 2420870,
+      "filename": "055-recorded-n12-protected-r04.json",
+      "sha256": "4c86cdf5c5c8e434c93586844376c4ade7d50a8ca5bb883ca09d18786ee58dda"
+    },
+    {
+      "byte_size": 2422634,
+      "filename": "056-recorded-n16-protected-r04.json",
+      "sha256": "5c37f08115fe6689f581ca5d3b4e655bbab89b8205e59f8ffe0baf64a0212ffa"
+    },
+    {
+      "byte_size": 8938288,
+      "filename": "057-recorded-n16-unprotected-r04.json",
+      "sha256": "7d22f7a75b386b27e1289363dbbbf56502e30b4ec744af9a5be0728b7af84010"
+    },
+    {
+      "byte_size": 8945146,
+      "filename": "058-recorded-n32-unprotected-r04.json",
+      "sha256": "3a79e8adb2fbc9f86a9be39622bd4b9269041ddad76a9d673f648eb7323fb721"
+    },
+    {
+      "byte_size": 2428873,
+      "filename": "059-recorded-n32-protected-r04.json",
+      "sha256": "26cd688e88046800734ee7ca8be1fe667dde72c00c5779fa478f5d6d9d4b83cd"
+    },
+    {
+      "byte_size": 8948545,
+      "filename": "060-recorded-n8-protected-r05.json",
+      "sha256": "21df8e354e1ed37062d88ecbaeb552df5b391f40ac72bc76753e5960b512f651"
+    },
+    {
+      "byte_size": 8932540,
+      "filename": "061-recorded-n8-unprotected-r05.json",
+      "sha256": "e5cada932868afad6feab077c1bca3b1f1e6789a7a821184abf6764b4cbe2816"
+    },
+    {
+      "byte_size": 8933933,
+      "filename": "062-recorded-n10-unprotected-r05.json",
+      "sha256": "00dd7a7787223e81cfef8513839700e8f4f66400daf666fbf656adeb1e2c95ee"
+    },
+    {
+      "byte_size": 2420118,
+      "filename": "063-recorded-n10-protected-r05.json",
+      "sha256": "3df81aab084e5b4a8112af7a5c2a329cf956bfafb9e34dfabeec2d0d48c3fd56"
+    },
+    {
+      "byte_size": 2420866,
+      "filename": "064-recorded-n12-protected-r05.json",
+      "sha256": "e6a8df6eccb3f322f1c7c85578e10dc5e8b5bf648ad43b69f760008616c07dce"
+    },
+    {
+      "byte_size": 8935778,
+      "filename": "065-recorded-n12-unprotected-r05.json",
+      "sha256": "894b54adbeffc7b3bf1acb18b27237b2df459a6871ad62efde6b15a5ef6598e5"
+    },
+    {
+      "byte_size": 8938032,
+      "filename": "066-recorded-n16-unprotected-r05.json",
+      "sha256": "5e3323c36110429b0933018a51d3cf8e035428df87d5543545ee5db7ac9a488a"
+    },
+    {
+      "byte_size": 2422366,
+      "filename": "067-recorded-n16-protected-r05.json",
+      "sha256": "2f639da7d45a9050e149db53d159ead69080fea74186a3f493dc40c49f7f6129"
+    },
+    {
+      "byte_size": 2428879,
+      "filename": "068-recorded-n32-protected-r05.json",
+      "sha256": "06af973272d24652b44c5fe40f06b6cd394f0721522a49ad36843b45f6c36c29"
+    },
+    {
+      "byte_size": 8945072,
+      "filename": "069-recorded-n32-unprotected-r05.json",
+      "sha256": "d3629b96d6a91fd959722e81469afa433a93f6bd0860a57b9c328d06aec30f80"
+    }
+  ],
+  "raw_json_file_count": 70,
+  "recorded_cell_count": 60,
+  "recorded_protected_overload_checks": {
+    "cells": 24,
+    "eight_accepted_504_refused": 24,
+    "last_refusal_before_first_completion": 24,
+    "public_overlap_above_8": 24
+  },
+  "run_id": "pr4-20260910T114905838802Z-e08b79801f9f",
+  "runtime_provenance": {
+    "composition": {
+      "gate_identity": "src.pipeline.transactional.postgres_admission.PostgresOptimisticAdmissionGate",
+      "placement": "PRE_TRANSACTION",
+      "runtime_identity": "src.compass.transition.runtime.ValidationRuntime",
+      "validation_mode": "strict",
+      "validator_identity": "src.compass.transition.validators.FullProofValidator"
+    },
+    "connection_environment": [
+      "compass_test",
+      160015,
+      "read committed",
+      false
+    ],
+    "observation_method": "measured public CREATE in both modes; protected super.run callback timing; post-release upper boundary",
+    "topology": "N distinct retained lane connections plus one control; writer-work protection only",
+    "validation_policy_identity": "src.compass.transition.runtime.ValidationPolicy"
+  },
+  "source_commit": "e08b79801f9f2c28ad050902700287df5c4968bf",
+  "total_acknowledged_accepted": 21728,
+  "total_capacity_admitted": 3808,
+  "total_capacity_attempted": 17920,
+  "total_capacity_refused": 14112,
+  "total_offered": 35840,
+  "validity": {
+    "accepted_durable_verifications": 21728,
+    "cleanup_completed_cells": 70,
+    "evidence_problems": 0,
+    "harness_failures": 0,
+    "incomplete_cells": 0,
+    "native_writer_failures": 0,
+    "refused_absence_verifications": 14112,
+    "residual_items": 0,
+    "unique_accepted_event_ids": 21728,
+    "unique_order_ids": 35840,
+    "unique_request_ids": 35840
+  },
+  "warmup_cell_count": 10
+}
