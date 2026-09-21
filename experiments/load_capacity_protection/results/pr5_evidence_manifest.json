@@ -438,7 +438,9 @@
     "test_database": "compass_test",
     "warmups": 1
   },
-  "publication_status": "not_published",
+  "publication_status": "published",
+  "raw_archive_publication_status": "published",
+  "release_url": "https://github.com/hikaru-212/streaming-system-compass/releases/tag/load-capacity-pr5-evidence-v1",
   "raw_evidence": {
     "byte_size": 97632272,
     "files": [

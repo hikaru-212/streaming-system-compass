@@ -6,7 +6,7 @@
 PR0–PR4 — COMPLETE
 PR5 — COMPLETE / EVIDENCE COLLECTION CLOSED
 Closeout package — internally verified; ready for human review
-Raw archive publication — not_published
+Raw archive publication — published
 Next — ADR / architecture interpretation, separately authorized
 ```
 
@@ -153,8 +153,10 @@ b05bef39410c305033f1b6691d2f3dd8f22ac04b46dd01a87401bda09dfca5fe
 
 The [manifest](../../../experiments/load_capacity_protection/results/pr5_evidence_manifest.json)
 records all raw file sizes/hashes, parameters, provenance, cohort/policy totals,
-the 53-column CSV/estimator/window contracts and archive identity. Publication
-status is `not_published`; no Release URL is assigned.
+the 53-column CSV/estimator/window contracts and the exact archive filename,
+byte size and SHA-256 identity corresponding to the published asset. The complete
+raw PR5 evidence archive is publicly available from the
+[PR5 Retry / Refusal Amplification Evidence GitHub Release](https://github.com/hikaru-212/streaming-system-compass/releases/tag/load-capacity-pr5-evidence-v1).
 
 Exact publication artifact:
 
@@ -171,7 +173,7 @@ ZIP size: **2,545,966 bytes**; SHA-256:
 It was created exclusively outside the repository. ZIP CRC integrity passed.
 Its one directory entry and 30 JSON members use the repository-relative raw
 directory prefix. Every archived JSON matches its raw source byte-for-byte,
-by length and SHA-256. Publication remains a separate authorized action.
+by length and SHA-256. The exact archive is now publicly published.
 
 ## 5. Policy Comparison
 
@@ -409,7 +411,7 @@ logical work succeeded or that the scheduler is fair.
   sequence allocation. No new cleanup or PostgreSQL command ran for closeout.
 - No native/ambiguous failures occurred; this run adds no frequency estimate for
   those failures or host-failure behavior. No hard writer deadline is inferred.
-- Raw archive is prepared and verified but not published. Compact results do not
+- Raw archive is publicly published. Compact results do not
   replace complete raw trajectories.
 
 ## 14. PR5 Conclusion
