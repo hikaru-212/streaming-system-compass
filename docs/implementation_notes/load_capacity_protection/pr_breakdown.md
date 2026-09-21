@@ -31,7 +31,7 @@ commitment to implement a production limiter.
 | PR2 | Capacity / degradation / operating-headroom interpretation | COMPLETE |
 | PR3 | First bounded in-flight capacity mechanism | COMPLETE |
 | PR4 | Protected vs unprotected characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
-| PR5 | Retry / Refusal Amplification Characterization | ACTIVE / MACHINERY FOR REVIEW |
+| PR5 | Retry / Refusal Amplification Characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 
 ## Branch / PR Workflow
 
@@ -59,7 +59,7 @@ future branch names are:
 | PR5 | `experiment/load-capacity-pr5-retry-amplification` |
 
 These names are recommendations only, not claims that the branches exist.
-PR5 is active on the named experiment branch. This document does not create
+PR5 closeout is on the named experiment branch. This document does not create
 branches or authorize Git mutations, PR creation, or merging.
 
 ## Commit Discipline
@@ -288,8 +288,9 @@ automatically establish a production SLO/SLA.
 ### Status
 
 ```text
-ACTIVE / CHARACTERIZATION MACHINERY FOR HUMAN REVIEW
-Live matrix — NOT SELECTED / NOT RUN
+COMPLETE / EVIDENCE COLLECTION CLOSED
+Closeout package internally verified; ready for human review
+Exact raw ZIP prepared; publication — not_published
 ```
 
 ### Goal and Entry Conditions
@@ -307,19 +308,31 @@ feeds the experiment-owned bounded policy. Raw trajectories, logical completion,
 amplification, real protected overlap and durable verification remain distinct.
 PR4 did not exercise retries and does not establish retry amplification.
 
+The [PR5 report](pr5_retry_refusal_amplification_report.md) closes the accepted
+30-cell run, including 25 recorded cells. Recorded immediate retry amplified
+attempts 7.5625× with the same 6.25% logical completion as NO_RETRY. All policies
+kept observed writer-body overlap at eight. Backoff increased completion while
+extending drain time and pacing later fresh work; successful retry recovery
+explains only part of the additional accepted work. Concentration comparisons
+remain explicitly qualified by analysis-window width.
+
 ### Scope and Non-Goals
 
 Retry budgets, backoff and jitter here are experiment stimuli with explicit
 parameters, not production mechanisms or Stage 4E reinvocation authority.
 Production retry, rate limiting and arrival shaping require later evidence and
-authorization. No live K/N, attempt budget, delay/cap/jitter values, warmups or
-recorded repetitions are selected. No live PostgreSQL retry experiment ran.
+authorization. The report and manifest record the completed run's exact K/N,
+attempt budgets, delays, jitter, warmups and repetitions. No additional
+PostgreSQL experiment was run for closeout; evidence collection is closed.
 
-After PR5 evidence, a later decision/ADR may consider:
+Next, a separately authorized ADR / architecture interpretation may establish,
+using PR1 degradation, PR4 occupancy/refusal-displacement and PR5 amplification
+evidence:
 
 ```text
-resource-occupancy protection != retry/arrival protection
+Resource Occupancy Protection != Retry / Arrival Protection
 ```
 
 Only a later explicitly approved PR may implement a justified production
-retry/rate/arrival mechanism. No ADR is created by this PR5 machinery task.
+retry/rate/arrival mechanism. No ADR or next mechanism PR is started by this
+closeout. A Rate Limiter is not selected; raw ZIP publication remains separate.

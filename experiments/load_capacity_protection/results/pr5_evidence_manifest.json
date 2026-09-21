@@ -1,0 +1,1348 @@
+{
+  "analysis_contract": {
+    "accepted_body": "protected_writer_exit_ns-protected_writer_entry_ns of acknowledged accepted attempts",
+    "attempts_quantiles": "one attempt-count sample per logical request, n=128 per cell",
+    "cell_elapsed": "max(logical final_terminal_ns)-common offer_ns; setup, verification, cleanup and serialization excluded",
+    "first_attempt_wait": "first attempt dispatch_ns-common offer_ns for all 128 logical requests",
+    "last_refusal_before_first_body_exit": "max(capacity_refused_ns)<min(protected_writer_exit_ns); signed gap column is first body exit minus last refusal, in ms",
+    "logical_completion_throughput": "acknowledged_accepted*1e9/cell_elapsed_ns; not attempt throughput or generic terminal throughput",
+    "logical_latency": "offer-to-final logical terminal; accepted latency fields select ACKNOWLEDGED_ACCEPTED only; generic logical latency includes budget exhaustion",
+    "overlap": "independent endpoint sweep of half-open [protected_writer_entry_ns,protected_writer_exit_ns); every interval closed",
+    "peak_capacity_attempts_sliding_10ms": {
+      "timestamp": "capacity_attempt_ns",
+      "width_ns": 10000000,
+      "window": "max count in [t,t+width) over starts t at each observed capacity-attempt timestamp; cell-local; no fixed-bin origin"
+    },
+    "peak_capacity_attempts_sliding_5ms": {
+      "timestamp": "capacity_attempt_ns",
+      "width_ns": 5000000,
+      "window": "max count in [t,t+width) over starts t at each observed capacity-attempt timestamp; cell-local; no fixed-bin origin"
+    },
+    "phase_quantiles": "acknowledged accepted admitted attempts, MEASURED phase values only; phase absence omitted; intervals overlap and must not be summed",
+    "policy_totals": "sum five recorded cells; amplification=total_attempts/640; completion=acknowledged_accepted/640",
+    "pooled_spacing": "explicitly labeled descriptive samples pooled over five recorded cells of one policy; not independent replicates",
+    "quantiles": "Hyndman-Fan type 7: h=(n-1)*p; linear interpolation between sorted samples at floor(h) and min(floor(h)+1,n-1)",
+    "report_timing_aggregation": "median of five recorded per-cell statistics; not pooled request quantiles",
+    "retry_spacing": "refusal_to_next_dispatch=next dispatch_ns-previous capacity_refused_ns; retry_dispatch_spacing=next dispatch_ns-previous dispatch_ns; retry_lateness=next dispatch_ns-previous next_retry_eligible_ns",
+    "success_trajectory": "accepted_first_attempt counts logical requests with one admitted attempt; accepted_after_refusal_retry counts logical requests with prior pre-body refusals",
+    "units": "_ms milliseconds; _us microseconds; _ns nanoseconds; proportions are fractions, not percentages"
+  },
+  "archive": {
+    "byte_size": 2545966,
+    "directory_members": 1,
+    "filename": "pr5-retry-amplification-20260910T235547117546Z-5084b12a177d.zip",
+    "handling": "created exclusively from untouched raw evidence",
+    "json_members": 30,
+    "local_path": "/tmp/pr5-retry-amplification-20260910T235547117546Z-5084b12a177d.zip",
+    "member_prefix": "experiments/load_capacity_protection/evidence/pr5-retry-amplification-20260910T235547117546Z-5084b12a177d/",
+    "sha256": "6e25b699475adeea394f38240b186a6cccde7a4d6f5c272bc22ea6e2024a39bd",
+    "validation": "ZIP CRC integrity passed; all 30 JSON members byte-identical and SHA-256 matched to raw source"
+  },
+  "compact_csv": {
+    "boolean_representation": "true/false",
+    "byte_size": 13019,
+    "columns": [
+      "raw_filename",
+      "run_id",
+      "source_commit",
+      "execution_index",
+      "repetition",
+      "policy",
+      "K",
+      "offered_concurrency",
+      "protection_bound",
+      "max_attempts_per_logical_request",
+      "logical_requests",
+      "total_attempts",
+      "total_retries",
+      "attempt_amplification_factor",
+      "acknowledged_accepted",
+      "retry_budget_exhausted",
+      "logical_completion_proportion",
+      "capacity_refused_attempts",
+      "admitted_attempts",
+      "accepted_first_attempt",
+      "accepted_after_refusal_retry",
+      "attempts_per_logical_request_p50",
+      "attempts_per_logical_request_p95",
+      "accepted_logical_completion_latency_p50_ms",
+      "accepted_logical_completion_latency_p95_ms",
+      "logical_completion_latency_p50_ms",
+      "first_attempt_wait_p50_ms",
+      "cell_elapsed_ns",
+      "cell_elapsed_ms",
+      "logical_completion_throughput_per_second",
+      "protected_writer_max_overlap",
+      "public_call_max_overlap",
+      "accepted_body_p50_ms",
+      "preliminary_idempotency_p50_ms",
+      "preliminary_read_cleanup_p50_ms",
+      "accepted_history_load_p50_ms",
+      "authoritative_idempotency_p50_ms",
+      "business_uow_p50_ms",
+      "append_admission_p50_ms",
+      "commit_finalization_p50_ms",
+      "validation_runtime_p50_us",
+      "peak_capacity_attempts_sliding_5ms",
+      "peak_capacity_attempts_sliding_10ms",
+      "refusal_to_next_dispatch_p50_us",
+      "refusal_to_next_dispatch_p95_us",
+      "retry_dispatch_spacing_p50_us",
+      "retry_lateness_p50_us",
+      "last_refusal_before_first_body_exit",
+      "first_body_exit_minus_last_refusal_ms",
+      "delivered_measurements",
+      "problems_count",
+      "incomplete",
+      "cleanup_completed"
+    ],
+    "filename": "pr5_recorded_policy_comparisons.csv",
+    "missing_values": "empty field means unavailable/not applicable, never measured zero",
+    "numeric_representation": "integer counts; Decimal arithmetic at precision 28 for derived values; no display rounding in CSV",
+    "order": "execution_index ascending; recorded cells only",
+    "path": "experiments/load_capacity_protection/results/pr5_recorded_policy_comparisons.csv",
+    "row_count": 25,
+    "sha256": "b05bef39410c305033f1b6691d2f3dd8f22ac04b46dd01a87401bda09dfca5fe"
+  },
+  "durable_validation": {
+    "accepted_contract": "exactly one sequence-1 CREATED event matching request/order/amount and returned event; exact signature/event idempotency REPLAY; one raw idempotency row matching request OR order",
+    "acknowledged_accepted_verified": 1626,
+    "exhaustion_contract": "no order/request events; idempotency MISS with no mapping; zero raw idempotency rows matching request OR order",
+    "qualification": "validation of recorded post-quiescence readback evidence, not a new live database inspection",
+    "refusal_only_exhaustion_absence_verified": 2214
+  },
+  "evidence_schema_version": 1,
+  "execution_order": [
+    {
+      "cohort": "warmup",
+      "execution_index": 0,
+      "policy": "no_retry",
+      "position_in_block": 0,
+      "raw_filename": "000-warmup-no_retry.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "warmup",
+      "execution_index": 1,
+      "policy": "immediate_retry",
+      "position_in_block": 1,
+      "raw_filename": "001-warmup-immediate_retry.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "warmup",
+      "execution_index": 2,
+      "policy": "fixed_backoff",
+      "position_in_block": 2,
+      "raw_filename": "002-warmup-fixed_backoff.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "warmup",
+      "execution_index": 3,
+      "policy": "exponential_backoff",
+      "position_in_block": 3,
+      "raw_filename": "003-warmup-exponential_backoff.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "warmup",
+      "execution_index": 4,
+      "policy": "exponential_backoff_with_jitter",
+      "position_in_block": 4,
+      "raw_filename": "004-warmup-exponential_backoff_with_jitter.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 5,
+      "policy": "no_retry",
+      "position_in_block": 0,
+      "raw_filename": "005-recorded-no_retry.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 6,
+      "policy": "immediate_retry",
+      "position_in_block": 1,
+      "raw_filename": "006-recorded-immediate_retry.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 7,
+      "policy": "fixed_backoff",
+      "position_in_block": 2,
+      "raw_filename": "007-recorded-fixed_backoff.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 8,
+      "policy": "exponential_backoff",
+      "position_in_block": 3,
+      "raw_filename": "008-recorded-exponential_backoff.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 9,
+      "policy": "exponential_backoff_with_jitter",
+      "position_in_block": 4,
+      "raw_filename": "009-recorded-exponential_backoff_with_jitter.json",
+      "repetition": 0
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 10,
+      "policy": "immediate_retry",
+      "position_in_block": 0,
+      "raw_filename": "010-recorded-immediate_retry.json",
+      "repetition": 1
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 11,
+      "policy": "fixed_backoff",
+      "position_in_block": 1,
+      "raw_filename": "011-recorded-fixed_backoff.json",
+      "repetition": 1
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 12,
+      "policy": "exponential_backoff",
+      "position_in_block": 2,
+      "raw_filename": "012-recorded-exponential_backoff.json",
+      "repetition": 1
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 13,
+      "policy": "exponential_backoff_with_jitter",
+      "position_in_block": 3,
+      "raw_filename": "013-recorded-exponential_backoff_with_jitter.json",
+      "repetition": 1
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 14,
+      "policy": "no_retry",
+      "position_in_block": 4,
+      "raw_filename": "014-recorded-no_retry.json",
+      "repetition": 1
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 15,
+      "policy": "fixed_backoff",
+      "position_in_block": 0,
+      "raw_filename": "015-recorded-fixed_backoff.json",
+      "repetition": 2
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 16,
+      "policy": "exponential_backoff",
+      "position_in_block": 1,
+      "raw_filename": "016-recorded-exponential_backoff.json",
+      "repetition": 2
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 17,
+      "policy": "exponential_backoff_with_jitter",
+      "position_in_block": 2,
+      "raw_filename": "017-recorded-exponential_backoff_with_jitter.json",
+      "repetition": 2
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 18,
+      "policy": "no_retry",
+      "position_in_block": 3,
+      "raw_filename": "018-recorded-no_retry.json",
+      "repetition": 2
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 19,
+      "policy": "immediate_retry",
+      "position_in_block": 4,
+      "raw_filename": "019-recorded-immediate_retry.json",
+      "repetition": 2
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 20,
+      "policy": "exponential_backoff",
+      "position_in_block": 0,
+      "raw_filename": "020-recorded-exponential_backoff.json",
+      "repetition": 3
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 21,
+      "policy": "exponential_backoff_with_jitter",
+      "position_in_block": 1,
+      "raw_filename": "021-recorded-exponential_backoff_with_jitter.json",
+      "repetition": 3
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 22,
+      "policy": "no_retry",
+      "position_in_block": 2,
+      "raw_filename": "022-recorded-no_retry.json",
+      "repetition": 3
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 23,
+      "policy": "immediate_retry",
+      "position_in_block": 3,
+      "raw_filename": "023-recorded-immediate_retry.json",
+      "repetition": 3
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 24,
+      "policy": "fixed_backoff",
+      "position_in_block": 4,
+      "raw_filename": "024-recorded-fixed_backoff.json",
+      "repetition": 3
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 25,
+      "policy": "exponential_backoff_with_jitter",
+      "position_in_block": 0,
+      "raw_filename": "025-recorded-exponential_backoff_with_jitter.json",
+      "repetition": 4
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 26,
+      "policy": "no_retry",
+      "position_in_block": 1,
+      "raw_filename": "026-recorded-no_retry.json",
+      "repetition": 4
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 27,
+      "policy": "immediate_retry",
+      "position_in_block": 2,
+      "raw_filename": "027-recorded-immediate_retry.json",
+      "repetition": 4
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 28,
+      "policy": "fixed_backoff",
+      "position_in_block": 3,
+      "raw_filename": "028-recorded-fixed_backoff.json",
+      "repetition": 4
+    },
+    {
+      "cohort": "recorded",
+      "execution_index": 29,
+      "policy": "exponential_backoff",
+      "position_in_block": 4,
+      "raw_filename": "029-recorded-exponential_backoff.json",
+      "repetition": 4
+    }
+  ],
+  "follow_up": "ADR / architecture interpretation of Resource Occupancy Protection != Retry / Arrival Protection; no production mechanism selected",
+  "local_provenance": {
+    "clock_identity": "time.monotonic_ns",
+    "logical_cpus": 12,
+    "machine": "arm64",
+    "platform_system": "Darwin",
+    "psycopg_version": "3.3.4",
+    "python_version": "3.12.7",
+    "source_commit": "5084b12a177db4bdebd9dfad5597fe229677ed15",
+    "working_tree": "tracked_clean;untracked_not_inspected"
+  },
+  "manifest_version": 1,
+  "method_identity": "pr5-retry-refusal-amplification-v1",
+  "plan": {
+    "amount": "10.00",
+    "cleanup_policy": "delete_verified_cell_rows",
+    "concurrency_levels": [
+      32
+    ],
+    "connect_timeout_seconds": 10,
+    "connection_budget": 33,
+    "control_connections": 1,
+    "k": 128,
+    "ordering_seed": 0,
+    "policies": [
+      {
+        "backoff_cap_ns": null,
+        "base_delay_ns": null,
+        "fixed_delay_ns": null,
+        "jitter_algorithm": null,
+        "jitter_max_ns": null,
+        "jitter_seed": null,
+        "max_attempts_per_logical_request": 1,
+        "policy": "no_retry"
+      },
+      {
+        "backoff_cap_ns": null,
+        "base_delay_ns": null,
+        "fixed_delay_ns": null,
+        "jitter_algorithm": null,
+        "jitter_max_ns": null,
+        "jitter_seed": null,
+        "max_attempts_per_logical_request": 8,
+        "policy": "immediate_retry"
+      },
+      {
+        "backoff_cap_ns": null,
+        "base_delay_ns": null,
+        "fixed_delay_ns": 5000000,
+        "jitter_algorithm": null,
+        "jitter_max_ns": null,
+        "jitter_seed": null,
+        "max_attempts_per_logical_request": 8,
+        "policy": "fixed_backoff"
+      },
+      {
+        "backoff_cap_ns": 8000000,
+        "base_delay_ns": 1000000,
+        "fixed_delay_ns": null,
+        "jitter_algorithm": null,
+        "jitter_max_ns": null,
+        "jitter_seed": null,
+        "max_attempts_per_logical_request": 8,
+        "policy": "exponential_backoff"
+      },
+      {
+        "backoff_cap_ns": 8000000,
+        "base_delay_ns": 1000000,
+        "fixed_delay_ns": null,
+        "jitter_algorithm": "sha256-ascii-seed:index:attempt-mod-span-plus-one-v1",
+        "jitter_max_ns": 4000000,
+        "jitter_seed": 0,
+        "max_attempts_per_logical_request": 8,
+        "policy": "exponential_backoff_with_jitter"
+      }
+    ],
+    "policy_order": "rotating_policy_blocks",
+    "protection_bound": 8,
+    "repetitions": 5,
+    "run_id": "pr5-retry-amplification-20260910T235547117546Z-5084b12a177d",
+    "stop_policy": "stop_claims_and_drain_without_deadline",
+    "test_database": "compass_test",
+    "warmups": 1
+  },
+  "publication_status": "not_published",
+  "raw_evidence": {
+    "byte_size": 97632272,
+    "files": [
+      {
+        "byte_size": 1127506,
+        "filename": "000-warmup-no_retry.json",
+        "sha256": "526ae3252f5a1a05f6565e4f60f56bdf3d439ba9f968bb0957281b366b4c389c"
+      },
+      {
+        "byte_size": 4067917,
+        "filename": "001-warmup-immediate_retry.json",
+        "sha256": "8e21dd26a6402ee15105a66749a51e2e002c7165abe07f2364fd9521761e0f17"
+      },
+      {
+        "byte_size": 3703099,
+        "filename": "002-warmup-fixed_backoff.json",
+        "sha256": "da817c2b18ac2e11affa1e1cbde095c179a36e608106bbd588b16ed6095f795b"
+      },
+      {
+        "byte_size": 3653396,
+        "filename": "003-warmup-exponential_backoff.json",
+        "sha256": "5cd31fdee9afc45e1c7343f0196e73e86cd6f2541124054a228a61563375df9d"
+      },
+      {
+        "byte_size": 3760037,
+        "filename": "004-warmup-exponential_backoff_with_jitter.json",
+        "sha256": "0b072a8cbc49612137ac92ca66a7200e4231a99ecec77a6a5c701156963543da"
+      },
+      {
+        "byte_size": 1129214,
+        "filename": "005-recorded-no_retry.json",
+        "sha256": "3230dbc8649f80ca79cd6669200403417763206dcd1f08fe26b2f1de3c417741"
+      },
+      {
+        "byte_size": 4072920,
+        "filename": "006-recorded-immediate_retry.json",
+        "sha256": "7efc93902a2dfeef818f76ef3c6d9df569f5b491b191c50300d4183ec822eadf"
+      },
+      {
+        "byte_size": 3802078,
+        "filename": "007-recorded-fixed_backoff.json",
+        "sha256": "dfd07ffbbc9e4c4193a856a6a9afe9dc9255aafd8e519a95ce84595bb5455515"
+      },
+      {
+        "byte_size": 3650429,
+        "filename": "008-recorded-exponential_backoff.json",
+        "sha256": "103fde509902300f581c33c57047affb01138ea8a19627aedfe477d8035498ff"
+      },
+      {
+        "byte_size": 3710403,
+        "filename": "009-recorded-exponential_backoff_with_jitter.json",
+        "sha256": "5d1e03a8a05832a78198637e727311c9ef613385c3e1a165fe0c9ea9dc6930d9"
+      },
+      {
+        "byte_size": 4072991,
+        "filename": "010-recorded-immediate_retry.json",
+        "sha256": "4a1790a9c1e4c22921e7a1c98a3102532930bd259ed5a6e5f53278cafc846142"
+      },
+      {
+        "byte_size": 3774079,
+        "filename": "011-recorded-fixed_backoff.json",
+        "sha256": "b35e1939f2ef1246d131b3b17f869c4237627e15544786486a3e0a7dda0a6949"
+      },
+      {
+        "byte_size": 3685873,
+        "filename": "012-recorded-exponential_backoff.json",
+        "sha256": "5519030865788331c303aab3270801559fefbe7190a23c869229ca5bb65c446f"
+      },
+      {
+        "byte_size": 3725881,
+        "filename": "013-recorded-exponential_backoff_with_jitter.json",
+        "sha256": "e3475e79ef611bde9ff796a86b38c2222be78696fcb7276576741d59399b9377"
+      },
+      {
+        "byte_size": 1129167,
+        "filename": "014-recorded-no_retry.json",
+        "sha256": "fb5ddf6373a5bbb7cd29f39341da35d1d7f01aade9d729fc8a926f3effab3d89"
+      },
+      {
+        "byte_size": 3690028,
+        "filename": "015-recorded-fixed_backoff.json",
+        "sha256": "bb218fe5c77592927b8ca133b96735a1f5045dc3e8be34eee06187c2ca16104d"
+      },
+      {
+        "byte_size": 3633205,
+        "filename": "016-recorded-exponential_backoff.json",
+        "sha256": "0f526ba6651a583846fa954fc7a9dd3c6a678c28f738af4a8df9aeb3eef1b898"
+      },
+      {
+        "byte_size": 3472358,
+        "filename": "017-recorded-exponential_backoff_with_jitter.json",
+        "sha256": "4661116562a1b3016070528b3dc4516277c2d25fc9e13faaa330ce8afbc3eae9"
+      },
+      {
+        "byte_size": 1129177,
+        "filename": "018-recorded-no_retry.json",
+        "sha256": "f8cd4425e5da09a0bae3fbff283b0fcfc4b0e368da53ad4e31035ad360005a7f"
+      },
+      {
+        "byte_size": 4073049,
+        "filename": "019-recorded-immediate_retry.json",
+        "sha256": "81dd933c2b642e821dfd8c834f56521bbe4880d945ce37dbbe486a5b4c2daaab"
+      },
+      {
+        "byte_size": 3601578,
+        "filename": "020-recorded-exponential_backoff.json",
+        "sha256": "2c0cae45bc21458c9ef27d0ea4e90757951a0adbdddb2774033f453c18d05421"
+      },
+      {
+        "byte_size": 3663202,
+        "filename": "021-recorded-exponential_backoff_with_jitter.json",
+        "sha256": "def29f0142e504c1f1bb0900a38d58af26591d02f24d13dd38eebf0be864f270"
+      },
+      {
+        "byte_size": 1129177,
+        "filename": "022-recorded-no_retry.json",
+        "sha256": "aa3eea8e7c0adaec21d6debb9d02acd721727fcb58c784a3cabb20db996a27e4"
+      },
+      {
+        "byte_size": 4072848,
+        "filename": "023-recorded-immediate_retry.json",
+        "sha256": "fbfbb1b4bcf64ec399c5efc215d62c86b1f2df9c2747db60186d034319bc1ecd"
+      },
+      {
+        "byte_size": 3732139,
+        "filename": "024-recorded-fixed_backoff.json",
+        "sha256": "f24b031d4420ddc4d425aeb5ddfac37d2731d497a32c247c6454a3da9b9c6f2d"
+      },
+      {
+        "byte_size": 3747070,
+        "filename": "025-recorded-exponential_backoff_with_jitter.json",
+        "sha256": "514a7ac8a1afa9e0b58bf8ddeb2974a9e24bc8ccbf6e82041a887230d20e1ebe"
+      },
+      {
+        "byte_size": 1129181,
+        "filename": "026-recorded-no_retry.json",
+        "sha256": "cd2e63302a35bf0d7dcc49c640dbcc3774f16a45eabe0a3bab4d4926e83c3544"
+      },
+      {
+        "byte_size": 4072826,
+        "filename": "027-recorded-immediate_retry.json",
+        "sha256": "368a04cb9081282127869f293d49c3e16ed8a7fc3ee713ccdfa460d183a8d3b4"
+      },
+      {
+        "byte_size": 3742512,
+        "filename": "028-recorded-fixed_backoff.json",
+        "sha256": "636c5814bd30d55d16c9d7fbf693bda1fe03e8bdb86276d08b60f207ece5909a"
+      },
+      {
+        "byte_size": 3678932,
+        "filename": "029-recorded-exponential_backoff.json",
+        "sha256": "fa6adb89241676b12879e1b492ee45212df66e9507953b30c2510532eaefb4c0"
+      }
+    ],
+    "json_file_count": 30,
+    "path": "experiments/load_capacity_protection/evidence/pr5-retry-amplification-20260910T235547117546Z-5084b12a177d",
+    "recorded_count": 25,
+    "warmup_count": 5
+  },
+  "recorded_policy_statistics": {
+    "exponential_backoff": {
+      "accepted_after_refusal_retry": 80,
+      "accepted_first_attempt": 322,
+      "acknowledged_accepted": 402,
+      "all_exhausted_before_first_body_exit": 0,
+      "all_refusals_before_first_body_exit": 0,
+      "amplification": "4.0625",
+      "capacity_refused_attempts": 2198,
+      "completion": "0.628125",
+      "exhaustion": "0.371875",
+      "logical_requests": 640,
+      "medians": {
+        "accepted_body_p50_ms": "10.9507290",
+        "accepted_history_load_p50_ms": "0.87343750",
+        "accepted_logical_completion_latency_p50_ms": "72.29547900",
+        "accepted_logical_completion_latency_p95_ms": "115.446989600",
+        "append_admission_p50_ms": "1.75604150",
+        "authoritative_idempotency_p50_ms": "1.6850000",
+        "business_uow_p50_ms": "6.37162550",
+        "cell_elapsed_ms": "118.8897920",
+        "commit_finalization_p50_ms": "1.1262710",
+        "first_attempt_wait_p50_ms": "47.63847950",
+        "first_body_exit_minus_last_refusal_ms": "-89.7054160",
+        "logical_completion_latency_p50_ms": "70.8532710",
+        "logical_completion_throughput_per_second": "672.8920847973222124907073603",
+        "peak_capacity_attempts_sliding_10ms": "95.0",
+        "peak_capacity_attempts_sliding_5ms": "57.0",
+        "preliminary_idempotency_p50_ms": "2.21645850",
+        "preliminary_read_cleanup_p50_ms": "0.7793120",
+        "refusal_to_next_dispatch_p50_us": "8077.3750",
+        "refusal_to_next_dispatch_p95_us": "9829.941200",
+        "retry_dispatch_spacing_p50_us": "8111.2500",
+        "retry_lateness_p50_us": "653.97950",
+        "validation_runtime_p50_us": "7.2500"
+      },
+      "pooled_dispatch_gap_us": {
+        "p50": "8114.2915",
+        "p95": "9908.74855"
+      },
+      "pooled_spacing_us": {
+        "count": 1960,
+        "max": "12184.292",
+        "min": "1058.541",
+        "p50": "8083.75",
+        "p95": "9872.00595"
+      },
+      "ranges": {
+        "accepted_body_p50_ms": [
+          "10.053562",
+          "11.073"
+        ],
+        "accepted_history_load_p50_ms": [
+          "0.7982085",
+          "1.0724795"
+        ],
+        "accepted_logical_completion_latency_p50_ms": [
+          "66.9017505",
+          "73.8404165"
+        ],
+        "accepted_logical_completion_latency_p95_ms": [
+          "109.8724923",
+          "116.3082809"
+        ],
+        "append_admission_p50_ms": [
+          "1.599042",
+          "1.8991875"
+        ],
+        "authoritative_idempotency_p50_ms": [
+          "1.4086045",
+          "2.006146"
+        ],
+        "business_uow_p50_ms": [
+          "5.4616045",
+          "6.4686665"
+        ],
+        "cell_elapsed_ms": [
+          "116.3375",
+          "124.117125"
+        ],
+        "commit_finalization_p50_ms": [
+          "1.00075",
+          "1.243479"
+        ],
+        "first_attempt_wait_p50_ms": [
+          "46.403646",
+          "47.8982705"
+        ],
+        "first_body_exit_minus_last_refusal_ms": [
+          "-93.033042",
+          "-84.325416"
+        ],
+        "logical_completion_latency_p50_ms": [
+          "66.9017505",
+          "73.8404165"
+        ],
+        "logical_completion_throughput_per_second": [
+          "644.5524741247430602344358202",
+          "703.2077421457269410034431452"
+        ],
+        "peak_capacity_attempts_sliding_10ms": [
+          90,
+          100
+        ],
+        "peak_capacity_attempts_sliding_5ms": [
+          54,
+          58
+        ],
+        "preliminary_idempotency_p50_ms": [
+          "1.9206245",
+          "2.252125"
+        ],
+        "preliminary_read_cleanup_p50_ms": [
+          "0.5461665",
+          "0.8267915"
+        ],
+        "refusal_to_next_dispatch_p50_us": [
+          "8075.9165",
+          "8103.437"
+        ],
+        "refusal_to_next_dispatch_p95_us": [
+          "9618.392",
+          "10082.78895"
+        ],
+        "retry_dispatch_spacing_p50_us": [
+          "8106.3125",
+          "8140.2705"
+        ],
+        "retry_lateness_p50_us": [
+          "641.209",
+          "685.938"
+        ],
+        "validation_runtime_p50_us": [
+          "6.771",
+          "7.833"
+        ]
+      },
+      "retry_budget_exhausted": 238,
+      "total_attempts": 2600,
+      "total_retries": 1960
+    },
+    "exponential_backoff_with_jitter": {
+      "accepted_after_refusal_retry": 67,
+      "accepted_first_attempt": 400,
+      "acknowledged_accepted": 467,
+      "all_exhausted_before_first_body_exit": 0,
+      "all_refusals_before_first_body_exit": 0,
+      "amplification": "3.58125",
+      "capacity_refused_attempts": 1825,
+      "completion": "0.7296875",
+      "exhaustion": "0.2703125",
+      "logical_requests": 640,
+      "medians": {
+        "accepted_body_p50_ms": "9.2936880",
+        "accepted_history_load_p50_ms": "0.8496250",
+        "accepted_logical_completion_latency_p50_ms": "74.0407910",
+        "accepted_logical_completion_latency_p95_ms": "127.17732850",
+        "append_admission_p50_ms": "1.7847500",
+        "authoritative_idempotency_p50_ms": "1.68281200",
+        "business_uow_p50_ms": "5.6087090",
+        "cell_elapsed_ms": "132.0455830",
+        "commit_finalization_p50_ms": "0.9820420",
+        "first_attempt_wait_p50_ms": "53.20141650",
+        "first_body_exit_minus_last_refusal_ms": "-106.4095420",
+        "logical_completion_latency_p50_ms": "68.76125000",
+        "logical_completion_throughput_per_second": "706.6366147854554811056631227",
+        "peak_capacity_attempts_sliding_10ms": "72.0",
+        "peak_capacity_attempts_sliding_5ms": "44.0",
+        "preliminary_idempotency_p50_ms": "1.9102500",
+        "preliminary_read_cleanup_p50_ms": "0.7138340",
+        "refusal_to_next_dispatch_p50_us": "9170.5420",
+        "refusal_to_next_dispatch_p95_us": "12701.45020",
+        "retry_dispatch_spacing_p50_us": "9200.7080",
+        "retry_lateness_p50_us": "562.0020",
+        "validation_runtime_p50_us": "7.72950"
+      },
+      "pooled_dispatch_gap_us": {
+        "p50": "9245.7085",
+        "p95": "12685.69375"
+      },
+      "pooled_spacing_us": {
+        "count": 1652,
+        "max": "20198.583",
+        "min": "1275.708",
+        "p50": "9210.2295",
+        "p95": "12652.25175"
+      },
+      "ranges": {
+        "accepted_body_p50_ms": [
+          "9.186",
+          "10.6492505"
+        ],
+        "accepted_history_load_p50_ms": [
+          "0.788542",
+          "0.970417"
+        ],
+        "accepted_logical_completion_latency_p50_ms": [
+          "69.182541",
+          "84.429375"
+        ],
+        "accepted_logical_completion_latency_p95_ms": [
+          "124.344758",
+          "129.6552815"
+        ],
+        "append_admission_p50_ms": [
+          "1.59325",
+          "2.199104"
+        ],
+        "authoritative_idempotency_p50_ms": [
+          "1.598125",
+          "2.088542"
+        ],
+        "business_uow_p50_ms": [
+          "5.253021",
+          "6.681167"
+        ],
+        "cell_elapsed_ms": [
+          "128.709208",
+          "135.854834"
+        ],
+        "commit_finalization_p50_ms": [
+          "0.9404995",
+          "1.3393545"
+        ],
+        "first_attempt_wait_p50_ms": [
+          "47.9725205",
+          "59.8872085"
+        ],
+        "first_body_exit_minus_last_refusal_ms": [
+          "-110.862667",
+          "-95.6945"
+        ],
+        "logical_completion_latency_p50_ms": [
+          "64.359333",
+          "75.207792"
+        ],
+        "logical_completion_throughput_per_second": [
+          "616.2521087376845867644453346",
+          "769.1757376053467751895419945"
+        ],
+        "peak_capacity_attempts_sliding_10ms": [
+          71,
+          74
+        ],
+        "peak_capacity_attempts_sliding_5ms": [
+          41,
+          45
+        ],
+        "preliminary_idempotency_p50_ms": [
+          "1.7844375",
+          "2.242833"
+        ],
+        "preliminary_read_cleanup_p50_ms": [
+          "0.681916",
+          "0.8185625"
+        ],
+        "refusal_to_next_dispatch_p50_us": [
+          "8968.958",
+          "9644.9165"
+        ],
+        "refusal_to_next_dispatch_p95_us": [
+          "12313.7958",
+          "13292.333"
+        ],
+        "retry_dispatch_spacing_p50_us": [
+          "9000.666",
+          "9680.021"
+        ],
+        "retry_lateness_p50_us": [
+          "466.433",
+          "618.716"
+        ],
+        "validation_runtime_p50_us": [
+          "6.917",
+          "7.875"
+        ]
+      },
+      "retry_budget_exhausted": 173,
+      "total_attempts": 2292,
+      "total_retries": 1652
+    },
+    "fixed_backoff": {
+      "accepted_after_refusal_retry": 120,
+      "accepted_first_attempt": 280,
+      "acknowledged_accepted": 400,
+      "all_exhausted_before_first_body_exit": 0,
+      "all_refusals_before_first_body_exit": 0,
+      "amplification": "4.325",
+      "capacity_refused_attempts": 2368,
+      "completion": "0.625",
+      "exhaustion": "0.375",
+      "logical_requests": 640,
+      "medians": {
+        "accepted_body_p50_ms": "11.5670830",
+        "accepted_history_load_p50_ms": "0.90585400",
+        "accepted_logical_completion_latency_p50_ms": "73.81810400",
+        "accepted_logical_completion_latency_p95_ms": "116.641406550",
+        "append_admission_p50_ms": "2.05129150",
+        "authoritative_idempotency_p50_ms": "1.8350420",
+        "business_uow_p50_ms": "6.53175050",
+        "cell_elapsed_ms": "123.2267500",
+        "commit_finalization_p50_ms": "1.1274580",
+        "first_attempt_wait_p50_ms": "42.93739550",
+        "first_body_exit_minus_last_refusal_ms": "-97.1903750",
+        "logical_completion_latency_p50_ms": "73.81810400",
+        "logical_completion_throughput_per_second": "649.2096886430908873276297557",
+        "peak_capacity_attempts_sliding_10ms": "75.0",
+        "peak_capacity_attempts_sliding_5ms": "45.0",
+        "preliminary_idempotency_p50_ms": "2.30804150",
+        "preliminary_read_cleanup_p50_ms": "0.8667710",
+        "refusal_to_next_dispatch_p50_us": "5533.0000",
+        "refusal_to_next_dispatch_p95_us": "6429.5000",
+        "retry_dispatch_spacing_p50_us": "5563.58300",
+        "retry_lateness_p50_us": "533.0000",
+        "validation_runtime_p50_us": "7.37500"
+      },
+      "pooled_dispatch_gap_us": {
+        "p50": "5573.9165",
+        "p95": "6489.23115"
+      },
+      "pooled_spacing_us": {
+        "count": 2128,
+        "max": "8555.083",
+        "min": "5009.75",
+        "p50": "5546.2085",
+        "p95": "6457.375"
+      },
+      "ranges": {
+        "accepted_body_p50_ms": [
+          "10.7732295",
+          "12.0659375"
+        ],
+        "accepted_history_load_p50_ms": [
+          "0.8742915",
+          "0.973167"
+        ],
+        "accepted_logical_completion_latency_p50_ms": [
+          "72.4123125",
+          "75.602125"
+        ],
+        "accepted_logical_completion_latency_p95_ms": [
+          "112.41669935",
+          "122.2318354"
+        ],
+        "append_admission_p50_ms": [
+          "1.818396",
+          "2.110771"
+        ],
+        "authoritative_idempotency_p50_ms": [
+          "1.717229",
+          "1.9614585"
+        ],
+        "business_uow_p50_ms": [
+          "6.422292",
+          "7.0042295"
+        ],
+        "cell_elapsed_ms": [
+          "113.404666",
+          "124.692208"
+        ],
+        "commit_finalization_p50_ms": [
+          "1.066979",
+          "1.312354"
+        ],
+        "first_attempt_wait_p50_ms": [
+          "42.1878125",
+          "44.370542"
+        ],
+        "first_body_exit_minus_last_refusal_ms": [
+          "-101.559875",
+          "-88.527"
+        ],
+        "logical_completion_latency_p50_ms": [
+          "72.4123125",
+          "75.602125"
+        ],
+        "logical_completion_throughput_per_second": [
+          "641.5797850014814077235684206",
+          "705.4383458966318017285108886"
+        ],
+        "peak_capacity_attempts_sliding_10ms": [
+          73,
+          75
+        ],
+        "peak_capacity_attempts_sliding_5ms": [
+          45,
+          48
+        ],
+        "preliminary_idempotency_p50_ms": [
+          "2.096479",
+          "2.4516455"
+        ],
+        "preliminary_read_cleanup_p50_ms": [
+          "0.8013125",
+          "0.9074375"
+        ],
+        "refusal_to_next_dispatch_p50_us": [
+          "5518.25",
+          "5582.5"
+        ],
+        "refusal_to_next_dispatch_p95_us": [
+          "6410.90",
+          "6536.95365"
+        ],
+        "retry_dispatch_spacing_p50_us": [
+          "5543.5",
+          "5611.834"
+        ],
+        "retry_lateness_p50_us": [
+          "518.25",
+          "582.5"
+        ],
+        "validation_runtime_p50_us": [
+          "6.959",
+          "8.2085"
+        ]
+      },
+      "retry_budget_exhausted": 240,
+      "total_attempts": 2768,
+      "total_retries": 2128
+    },
+    "immediate_retry": {
+      "accepted_after_refusal_retry": 0,
+      "accepted_first_attempt": 40,
+      "acknowledged_accepted": 40,
+      "all_exhausted_before_first_body_exit": 5,
+      "all_refusals_before_first_body_exit": 5,
+      "amplification": "7.5625",
+      "capacity_refused_attempts": 4800,
+      "completion": "0.0625",
+      "exhaustion": "0.9375",
+      "logical_requests": 640,
+      "medians": {
+        "accepted_body_p50_ms": "85.08925000",
+        "accepted_history_load_p50_ms": "0.73466650",
+        "accepted_logical_completion_latency_p50_ms": "85.68531250",
+        "accepted_logical_completion_latency_p95_ms": "86.071722250",
+        "append_admission_p50_ms": "1.87968750",
+        "authoritative_idempotency_p50_ms": "1.5354370",
+        "business_uow_p50_ms": "5.77035450",
+        "cell_elapsed_ms": "86.1081660",
+        "commit_finalization_p50_ms": "1.1381250",
+        "first_attempt_wait_p50_ms": "37.94666600",
+        "first_body_exit_minus_last_refusal_ms": "8.8659170",
+        "logical_completion_latency_p50_ms": "45.84824950",
+        "logical_completion_throughput_per_second": "92.90640332532456910068204217",
+        "peak_capacity_attempts_sliding_10ms": "148.0",
+        "peak_capacity_attempts_sliding_5ms": "76.0",
+        "preliminary_idempotency_p50_ms": "78.19712500",
+        "preliminary_read_cleanup_p50_ms": "0.72568750",
+        "refusal_to_next_dispatch_p50_us": "55.3540",
+        "refusal_to_next_dispatch_p95_us": "85.76250",
+        "retry_dispatch_spacing_p50_us": "73.64550",
+        "retry_lateness_p50_us": "55.3540",
+        "validation_runtime_p50_us": "7.49950"
+      },
+      "pooled_dispatch_gap_us": {
+        "p50": "72.25",
+        "p95": "113.7931"
+      },
+      "pooled_spacing_us": {
+        "count": 4200,
+        "max": "66260.291",
+        "min": "26.958",
+        "p50": "54.292",
+        "p95": "85.2173"
+      },
+      "ranges": {
+        "accepted_body_p50_ms": [
+          "83.589375",
+          "92.2749375"
+        ],
+        "accepted_history_load_p50_ms": [
+          "0.6011875",
+          "1.457021"
+        ],
+        "accepted_logical_completion_latency_p50_ms": [
+          "84.108625",
+          "93.0641455"
+        ],
+        "accepted_logical_completion_latency_p95_ms": [
+          "84.4247376",
+          "93.4130807"
+        ],
+        "append_admission_p50_ms": [
+          "1.649187",
+          "3.135229"
+        ],
+        "authoritative_idempotency_p50_ms": [
+          "1.4511665",
+          "1.9975625"
+        ],
+        "business_uow_p50_ms": [
+          "4.789458",
+          "7.8867295"
+        ],
+        "cell_elapsed_ms": [
+          "84.457667",
+          "93.458041"
+        ],
+        "commit_finalization_p50_ms": [
+          "0.670354",
+          "2.0964585"
+        ],
+        "first_attempt_wait_p50_ms": [
+          "33.1391455",
+          "40.2258745"
+        ],
+        "first_body_exit_minus_last_refusal_ms": [
+          "6.80125",
+          "12.384958"
+        ],
+        "logical_completion_latency_p50_ms": [
+          "42.2440625",
+          "48.789104"
+        ],
+        "logical_completion_throughput_per_second": [
+          "85.59991108737235354633637142",
+          "94.72201025870155755071946280"
+        ],
+        "peak_capacity_attempts_sliding_10ms": [
+          138,
+          149
+        ],
+        "peak_capacity_attempts_sliding_5ms": [
+          71,
+          76
+        ],
+        "preliminary_idempotency_p50_ms": [
+          "75.2850625",
+          "81.770729"
+        ],
+        "preliminary_read_cleanup_p50_ms": [
+          "0.516625",
+          "0.8795205"
+        ],
+        "refusal_to_next_dispatch_p50_us": [
+          "52.1045",
+          "57.4795"
+        ],
+        "refusal_to_next_dispatch_p95_us": [
+          "77.46315",
+          "91.0268"
+        ],
+        "retry_dispatch_spacing_p50_us": [
+          "69.792",
+          "76.417"
+        ],
+        "retry_lateness_p50_us": [
+          "52.1045",
+          "57.4795"
+        ],
+        "validation_runtime_p50_us": [
+          "6.0625",
+          "10.312"
+        ]
+      },
+      "retry_budget_exhausted": 600,
+      "total_attempts": 4840,
+      "total_retries": 4200
+    },
+    "no_retry": {
+      "accepted_after_refusal_retry": 0,
+      "accepted_first_attempt": 40,
+      "acknowledged_accepted": 40,
+      "all_exhausted_before_first_body_exit": 5,
+      "all_refusals_before_first_body_exit": 5,
+      "amplification": "1",
+      "capacity_refused_attempts": 600,
+      "completion": "0.0625",
+      "exhaustion": "0.9375",
+      "logical_requests": 640,
+      "medians": {
+        "accepted_body_p50_ms": "18.25868750",
+        "accepted_history_load_p50_ms": "1.00208350",
+        "accepted_logical_completion_latency_p50_ms": "18.81910450",
+        "accepted_logical_completion_latency_p95_ms": "19.173792100",
+        "append_admission_p50_ms": "1.9859790",
+        "authoritative_idempotency_p50_ms": "1.74091650",
+        "business_uow_p50_ms": "6.10070850",
+        "cell_elapsed_ms": "19.2143340",
+        "commit_finalization_p50_ms": "1.29206250",
+        "first_attempt_wait_p50_ms": "4.16920800",
+        "first_body_exit_minus_last_refusal_ms": "11.1726670",
+        "logical_completion_latency_p50_ms": "4.66539600",
+        "logical_completion_throughput_per_second": "416.3558310165733561204879649",
+        "peak_capacity_attempts_sliding_10ms": "128.0",
+        "peak_capacity_attempts_sliding_5ms": "90.0",
+        "preliminary_idempotency_p50_ms": "9.70149950",
+        "preliminary_read_cleanup_p50_ms": "0.75504150",
+        "refusal_to_next_dispatch_p50_us": null,
+        "refusal_to_next_dispatch_p95_us": null,
+        "retry_dispatch_spacing_p50_us": null,
+        "retry_lateness_p50_us": null,
+        "validation_runtime_p50_us": "8.70800"
+      },
+      "pooled_dispatch_gap_us": {
+        "p50": null,
+        "p95": null
+      },
+      "pooled_spacing_us": {
+        "count": 0,
+        "max": null,
+        "min": null,
+        "p50": null,
+        "p95": null
+      },
+      "ranges": {
+        "accepted_body_p50_ms": [
+          "17.4174165",
+          "24.2698755"
+        ],
+        "accepted_history_load_p50_ms": [
+          "0.8213125",
+          "1.5620415"
+        ],
+        "accepted_logical_completion_latency_p50_ms": [
+          "17.972104",
+          "24.8893125"
+        ],
+        "accepted_logical_completion_latency_p95_ms": [
+          "18.3609329",
+          "25.20795405"
+        ],
+        "append_admission_p50_ms": [
+          "1.049",
+          "2.449542"
+        ],
+        "authoritative_idempotency_p50_ms": [
+          "0.9039585",
+          "2.089958"
+        ],
+        "business_uow_p50_ms": [
+          "3.8645415",
+          "7.3131875"
+        ],
+        "cell_elapsed_ms": [
+          "18.399666",
+          "25.243625"
+        ],
+        "commit_finalization_p50_ms": [
+          "0.947354",
+          "1.937666"
+        ],
+        "first_attempt_wait_p50_ms": [
+          "2.899687",
+          "9.980854"
+        ],
+        "first_body_exit_minus_last_refusal_ms": [
+          "9.182833",
+          "11.815708"
+        ],
+        "logical_completion_latency_p50_ms": [
+          "3.2523955",
+          "10.993646"
+        ],
+        "logical_completion_throughput_per_second": [
+          "316.9116955270885223497021525",
+          "434.7905010884436706622826740"
+        ],
+        "peak_capacity_attempts_sliding_10ms": [
+          101,
+          128
+        ],
+        "peak_capacity_attempts_sliding_5ms": [
+          63,
+          116
+        ],
+        "preliminary_idempotency_p50_ms": [
+          "9.3884375",
+          "18.3776045"
+        ],
+        "preliminary_read_cleanup_p50_ms": [
+          "0.599688",
+          "1.1859165"
+        ],
+        "validation_runtime_p50_us": [
+          "7.8535",
+          "10.9375"
+        ]
+      },
+      "retry_budget_exhausted": 600,
+      "total_attempts": 640,
+      "total_retries": 0
+    }
+  },
+  "run_id": "pr5-retry-amplification-20260910T235547117546Z-5084b12a177d",
+  "runtime_common": {
+    "autocommit": false,
+    "connection_topology": "32 distinct retained lane connections plus one distinct control connection per cell; same lane/connection across attempts",
+    "database": "compass_test",
+    "gate_identity": "src.pipeline.transactional.postgres_admission.PostgresOptimisticAdmissionGate",
+    "isolation": "read committed",
+    "placement": "PRE_TRANSACTION",
+    "postgres_version": 160015,
+    "runtime_identity": "src.compass.transition.runtime.ValidationRuntime",
+    "validation_mode": "strict",
+    "validation_policy_identity": "src.compass.transition.runtime.ValidationPolicy",
+    "validator_identity": "src.compass.transition.validators.FullProofValidator"
+  },
+  "source_commit": "5084b12a177db4bdebd9dfad5597fe229677ed15",
+  "totals_by_cohort": {
+    "all": {
+      "accepted_after_refusal_retry": 328,
+      "accepted_first_attempt": 1298,
+      "acknowledged_accepted": 1626,
+      "capacity_refused_attempts": 14129,
+      "cells": 30,
+      "logical_requests": 3840,
+      "retry_budget_exhausted": 2214,
+      "total_attempts": 15755,
+      "total_retries": 11915
+    },
+    "recorded": {
+      "accepted_after_refusal_retry": 267,
+      "accepted_first_attempt": 1082,
+      "acknowledged_accepted": 1349,
+      "capacity_refused_attempts": 11791,
+      "cells": 25,
+      "logical_requests": 3200,
+      "retry_budget_exhausted": 1851,
+      "total_attempts": 13140,
+      "total_retries": 9940
+    },
+    "warmup": {
+      "accepted_after_refusal_retry": 61,
+      "accepted_first_attempt": 216,
+      "acknowledged_accepted": 277,
+      "capacity_refused_attempts": 2338,
+      "cells": 5,
+      "logical_requests": 640,
+      "retry_budget_exhausted": 363,
+      "total_attempts": 2615,
+      "total_retries": 1975
+    }
+  },
+  "validation": {
+    "all_raw_json_decoded": 30,
+    "cleanup_completed_cells": 30,
+    "evidence_problems": 0,
+    "harness_failures": 0,
+    "incomplete_cells": 0,
+    "native_failures": 0,
+    "no_database_execution_in_closeout": true,
+    "no_raw_files_modified": true,
+    "protected_overlap_max": 8
+  }
+}
