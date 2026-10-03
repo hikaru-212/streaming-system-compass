@@ -21,6 +21,8 @@ PR2 — capacity / degradation / operating-headroom interpretation — COMPLETE
 PR3 — bounded in-flight writer admission — COMPLETE
 PR4 — COMPLETE / EVIDENCE COLLECTION CLOSED
 PR5 — COMPLETE / EVIDENCE COLLECTION CLOSED
+PR6 — ADR COMPLETE
+Next production mechanism — NOT STARTED
 ```
 
 PR2 selects N=8 as a candidate protected experimental point and bounded
@@ -41,10 +43,18 @@ PR5 completed the accepted five-policy retry/refusal characterization. Writer-bo
 overlap remained bounded at eight in every cell. Immediate retry amplified recorded
 attempts 7.5625× without improving logical completion over NO_RETRY. Backoff improved
 completion while extending drain time and pacing later fresh logical requests under
-retained-lane scheduling. The closeout package is ready for human review; the exact
-raw ZIP is prepared but not published. The next separately authorized step is
-ADR / architecture interpretation of occupancy versus retry/arrival protection.
-No production retry or Rate Limiter is selected.
+retained-lane scheduling. The closeout package is ready for human review.
+The exact PR5 raw evidence archive has been published via the GitHub Release
+referenced by the [PR5 report](pr5_retry_refusal_amplification_report.md)
+and [evidence manifest](../../../experiments/load_capacity_protection/results/pr5_evidence_manifest.json).
+
+PR6's accepted [ADR 0031](../../adr/0031_separate_resource_occupancy_retry_and_arrival_protection.md)
+decides that resource-occupancy protection, retry-pressure protection and
+arrival-rate protection have separate responsibilities. `BoundedWriterAdmission`
+retains only writer occupancy; `WriterCapacityRefused` remains capacity-specific
+and authority-neutral. Acceptance selects no production retry or Rate Limiter.
+The next separately authorized question is which explicit retry / attempt-pressure
+mechanism should be promoted into production, if any; that work is NOT STARTED.
 
 ## Research Direction
 
@@ -55,8 +65,9 @@ measurement
 → protection mechanism if justified
 → protected/unprotected comparison
 → retry/refusal amplification characterization (PR5 COMPLETE)
-→ next: ADR / architecture interpretation on occupancy versus retry/arrival protection
-→ further mechanisms only if separately justified
+→ occupancy / retry / arrival separation (PR6 ADR COMPLETE)
+→ next: compare/select explicit retry / attempt-pressure mechanisms, if any (NOT STARTED)
+→ production implementation only if separately justified and authorized
 ```
 
 Completed Stage 4B.2 evidence supplies a measured starting point. It does not
@@ -76,6 +87,7 @@ establish a production capacity limit or reopen that completed stage.
 | [PR4 Protected vs Unprotected Report](pr4_protected_vs_unprotected_report.md) | Accepted 70-cell A/B evidence, 60 recorded comparisons, exact manifest/archive identity, local writer protection and refusal displacement, limitations, and historical PR4 closeout. |
 | [PR5 Retry / Refusal Amplification Method](pr5_retry_refusal_amplification_method.md) | Experiment-only policies, stable logical requests and repeated attempts, bounded retry scheduling, raw amplification/timing evidence, durable verification and the separate live-run approval boundary. |
 | [PR5 Retry / Refusal Amplification Report](pr5_retry_refusal_amplification_report.md) | Accepted 30-cell evidence, 25 recorded policy comparisons, bounded occupancy with retry amplification, retained-lane pacing, durable verification, exact archive identity and PR5 closeout. |
+| [PR6 — ADR 0031: Separate Resource Occupancy, Retry, and Arrival Protection](../../adr/0031_separate_resource_occupancy_retry_and_arrival_protection.md) | Accepted architectural separation grounded in PR1–PR5; authority-neutral capacity refusal, explicit retry-policy ownership and evidence-gated next work without production mechanism selection. |
 
 ## Important Boundary
 

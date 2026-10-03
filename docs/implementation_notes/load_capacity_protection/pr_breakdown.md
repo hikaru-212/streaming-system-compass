@@ -32,6 +32,8 @@ commitment to implement a production limiter.
 | PR3 | First bounded in-flight capacity mechanism | COMPLETE |
 | PR4 | Protected vs unprotected characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 | PR5 | Retry / Refusal Amplification Characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
+| PR6 | ADR: separate resource occupancy, retry and arrival protection | ADR COMPLETE |
+| Next production mechanism | Compare/select explicit retry / attempt-pressure mechanisms, if any | NOT STARTED |
 
 ## Branch / PR Workflow
 
@@ -41,10 +43,16 @@ The umbrella integration branch is:
 feat/load-capacity-protection
 ```
 
-The current PR0 branch is:
+The PR0 branch at workstream start was:
 
 ```text
 docs/load-capacity-pr0-boundary
+```
+
+The current PR6 branch is:
+
+```text
+docs/load-capacity-pr6-occupancy-retry-adr
 ```
 
 Workstream PR branches target the umbrella integration branch. Recommended
@@ -57,6 +65,7 @@ future branch names are:
 | PR3 | `feat/load-capacity-pr3-inflight-protection` |
 | PR4 | `experiment/load-capacity-pr4-protected-comparison` |
 | PR5 | `experiment/load-capacity-pr5-retry-amplification` |
+| PR6 | `docs/load-capacity-pr6-occupancy-retry-adr` |
 
 These names are recommendations only, not claims that the branches exist.
 PR5 closeout is on the named experiment branch. This document does not create
@@ -290,7 +299,7 @@ automatically establish a production SLO/SLA.
 ```text
 COMPLETE / EVIDENCE COLLECTION CLOSED
 Closeout package internally verified; ready for human review
-Exact raw ZIP prepared; publication — not_published
+Exact PR5 raw evidence archive — PUBLISHED via the GitHub Release referenced by the PR5 report/manifest
 ```
 
 ### Goal and Entry Conditions
@@ -325,14 +334,56 @@ authorization. The report and manifest record the completed run's exact K/N,
 attempt budgets, delays, jitter, warmups and repetitions. No additional
 PostgreSQL experiment was run for closeout; evidence collection is closed.
 
-Next, a separately authorized ADR / architecture interpretation may establish,
-using PR1 degradation, PR4 occupancy/refusal-displacement and PR5 amplification
-evidence:
+PR5 supplied the evidence for the separately authorized PR6 decision below.
+Its experiment policies remain historical stimuli, not production selections.
+
+## PR6 — ADR: Separate Resource Occupancy, Retry, and Arrival Protection
+
+### Status
 
 ```text
-Resource Occupancy Protection != Retry / Arrival Protection
+ADR COMPLETE
+Architectural separation — Accepted in ADR 0031
+Next production mechanism — NOT STARTED
 ```
 
-Only a later explicitly approved PR may implement a justified production
-retry/rate/arrival mechanism. No ADR or next mechanism PR is started by this
-closeout. A Rate Limiter is not selected; raw ZIP publication remains separate.
+### Goal and Responsibility
+
+[ADR 0031](../../adr/0031_separate_resource_occupancy_retry_and_arrival_protection.md)
+uses PR1 degradation, PR2 experimental headroom, PR3 shared occupancy admission,
+PR4 refusal displacement and PR5 retry amplification to decide:
+
+```text
+Resource Occupancy Protection
+!= Retry Pressure Protection
+!= Arrival-Rate Protection
+```
+
+`BoundedWriterAdmission` retains simultaneous admitted writer occupancy only.
+`WriterCapacityRefused` remains capacity-specific and authority-neutral; it is
+neither a semantic outcome nor automatic retry, Stage 4E or replanning authority.
+Retry budget/timing belongs to a separate explicit policy layer. Arrival/attempt
+rate and burst protection remain separately evidence-gated responsibilities.
+
+### Scope and Non-Goals
+
+Documentation and architecture interpretation only. Acceptance decides
+responsibility boundaries, not a production Rate Limiter, Token Bucket, queue
+or retry algorithm. No production code, experiments, evidence or dependencies
+change, and no PostgreSQL workload or test suite is run for PR6.
+
+### Next Allowed Work
+
+The next separately authorized implementation/research PR should answer:
+
+> Which explicit retry / attempt-pressure mechanism should be promoted into
+> production, if any?
+
+Candidates include retry budgets, bounded retry with backoff, jitter,
+retry-attempt rate limiting, burst shaping and bounded queueing/backpressure.
+Compare/select their responsibilities, concrete owner and evidence requirements
+before broad production implementation. Preserve the ADR's refusal and authority
+boundaries and qualify retained-lane pacing when interpreting PR5.
+
+No next PR is automatically named “Rate Limiter”. The next production mechanism
+is NOT STARTED; implementation and any new experiments require separate approval.
