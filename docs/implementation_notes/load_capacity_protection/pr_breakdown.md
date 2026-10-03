@@ -33,7 +33,8 @@ commitment to implement a production limiter.
 | PR4 | Protected vs unprotected characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 | PR5 | Retry / Refusal Amplification Characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 | PR6 | ADR: separate resource occupancy, retry and arrival protection | ADR COMPLETE |
-| Next production mechanism | Compare/select explicit retry / attempt-pressure mechanisms, if any | NOT STARTED |
+| PR7 | Production Retry / Attempt-Pressure Policy Selection | COMPLETE / ready for human review |
+| PR8 | Production implementation of the selected bounded retry with backoff class | NOT STARTED |
 
 ## Branch / PR Workflow
 
@@ -49,10 +50,10 @@ The PR0 branch at workstream start was:
 docs/load-capacity-pr0-boundary
 ```
 
-The current PR6 branch is:
+The current PR7 branch is:
 
 ```text
-docs/load-capacity-pr6-occupancy-retry-adr
+docs/load-capacity-pr7-retry-policy-selection
 ```
 
 Workstream PR branches target the umbrella integration branch. Recommended
@@ -66,6 +67,7 @@ future branch names are:
 | PR4 | `experiment/load-capacity-pr4-protected-comparison` |
 | PR5 | `experiment/load-capacity-pr5-retry-amplification` |
 | PR6 | `docs/load-capacity-pr6-occupancy-retry-adr` |
+| PR7 | `docs/load-capacity-pr7-retry-policy-selection` |
 
 These names are recommendations only, not claims that the branches exist.
 PR5 closeout is on the named experiment branch. This document does not create
@@ -372,18 +374,82 @@ responsibility boundaries, not a production Rate Limiter, Token Bucket, queue
 or retry algorithm. No production code, experiments, evidence or dependencies
 change, and no PostgreSQL workload or test suite is run for PR6.
 
-### Next Allowed Work
+### Policy-Selection Handoff
 
-The next separately authorized implementation/research PR should answer:
+ADR 0031 handed the following question to separately authorized policy selection:
 
 > Which explicit retry / attempt-pressure mechanism should be promoted into
 > production, if any?
 
-Candidates include retry budgets, bounded retry with backoff, jitter,
-retry-attempt rate limiting, burst shaping and bounded queueing/backpressure.
-Compare/select their responsibilities, concrete owner and evidence requirements
-before broad production implementation. Preserve the ADR's refusal and authority
-boundaries and qualify retained-lane pacing when interpreting PR5.
+The [PR7 policy selection](pr7_retry_attempt_policy_selection.md) below now answers
+that question. ADR 0031 remains the accepted responsibility-separation decision;
+PR7 does not rewrite its historical non-selection into a PR6 implementation.
 
-No next PR is automatically named “Rate Limiter”. The next production mechanism
-is NOT STARTED; implementation and any new experiments require separate approval.
+## PR7 — Production Retry / Attempt-Pressure Policy Selection
+
+### Status
+
+```text
+COMPLETE / policy selection internally resolved; ready for human review
+Production numerical policy — NOT SELECTED
+PR8 production implementation — NOT STARTED
+```
+
+### Goal and Responsibility
+
+The [PR7 selection](pr7_retry_attempt_policy_selection.md) verifies tracked PR5
+counts/timing and the PR4 shedding evidence, compares eight concrete alternatives,
+and selects the smallest supported enabled class: **explicit finite retry budget
+plus delayed backoff**. Budget limits additional attempts; timing decides when
+eligible attempts may occur. No retry remains the disabled baseline. Immediate
+retry is rejected for the first enabled mechanism. Fixed versus exponential
+shape remains an explicit PR8 design/configuration choice; jitter is deferred
+pending a more isolated comparison. No Rate Limiter, Token Bucket or bounded
+queue/backpressure mechanism is selected.
+
+The future owner is a caller/orchestration policy layer outside the protected
+writer, capacity primitive and Stage 4E invocation/runtime owners. Explicit
+configuration supplies narrow authority to react to verified pre-body capacity
+refusal; the refusal itself does not authorize retry. PR5's retained-lane pacing
+continues to qualify completion and jitter interpretation.
+
+### Scope and Non-Goals
+
+Evidence-backed policy selection and current navigation only. No production
+code, experiment, evidence, numerical default, dependency or environment change.
+PR5's attempt count, delays, cap and jitter values remain characterization probes.
+No PostgreSQL run, experiment rerun or test suite is part of PR7. The entry
+contract defines later work without starting it.
+
+## PR8 — Production Bounded Retry with Backoff
+
+### Status
+
+```text
+NOT STARTED
+Separate implementation authorization and source-grounded entry audit required
+```
+
+### Goal and Entry Conditions
+
+PR8 may implement the selected opt-in caller-owned class, narrow interfaces and
+focused validation only under the full
+[PR7 entry contract](pr7_retry_attempt_policy_selection.md#12-pr8-entry-contract).
+It must name a concrete direct-writer consumer, verify pre-body refusal provenance,
+define explicit configuration and finite budget spend, preserve logical identity
+across distinct serial attempts, terminate on acceptance or other ineligible
+outcomes, expose logical-versus-attempt observations, and retain disabled behavior.
+
+Waiting must occur outside capacity ownership, with no permit, business
+transaction or invocation-owner lifecycle lock held. PR8 must review cancellation,
+expiry and retained-resource lifetime; a finite attempt budget does not provide
+a hard writer deadline. Concrete schedule and numerical configuration require
+explicit justification and must not copy experimental constants as defaults.
+
+### Scope and Non-Goals
+
+No retry inside `BoundedWriterAdmission`, `PostgresTransactionalWriteSide` or
+Stage 4E owners. No native/ambiguous/semantic-failure retry, hidden Rate Limiter,
+Token Bucket, queue, jitter or Stage 4E integration. Production numerical
+qualification and any new experiment/database execution remain separately scoped.
+This plan does not authorize implementation, Git mutations or further experiments.

@@ -23,7 +23,7 @@ For project-wide sequencing, see:
 - [Stage 4C — Runtime Decision Authority — complete / closed](./stage_4c/)
 - [Stage 4E — Same-Request Re-Invocation Authority — complete / closed](./stage_4e/)
 - [Stage 4E closeout](./stage_4e/stage_4e_closeout.md)
-- [Load / Capacity Protection](./load_capacity_protection/README.md) — PR0–PR5 complete; evidence collection closed. PR5 shows retry amplification can coexist with bounded writer occupancy; backoff also paces later fresh work. Next is separately authorized ADR / architecture interpretation, with no production retry or Rate Limiter selected.
+- [Load / Capacity Protection](./load_capacity_protection/README.md) — PR0–PR6 complete; ADR 0031 accepts separate occupancy, retry and arrival responsibilities. PR7 policy selection is complete for human review: opt-in finite-budget retry with delayed backoff, without production numerical settings. Jitter, rate limiting and queueing remain deferred; PR8 implementation is NOT STARTED.
 
 ## Current Position
 

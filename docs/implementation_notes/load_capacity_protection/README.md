@@ -22,7 +22,8 @@ PR3 — bounded in-flight writer admission — COMPLETE
 PR4 — COMPLETE / EVIDENCE COLLECTION CLOSED
 PR5 — COMPLETE / EVIDENCE COLLECTION CLOSED
 PR6 — ADR COMPLETE
-Next production mechanism — NOT STARTED
+PR7 — retry / attempt-pressure policy selection — COMPLETE
+PR8 — production implementation — NOT STARTED
 ```
 
 PR2 selects N=8 as a candidate protected experimental point and bounded
@@ -52,9 +53,18 @@ PR6's accepted [ADR 0031](../../adr/0031_separate_resource_occupancy_retry_and_a
 decides that resource-occupancy protection, retry-pressure protection and
 arrival-rate protection have separate responsibilities. `BoundedWriterAdmission`
 retains only writer occupancy; `WriterCapacityRefused` remains capacity-specific
-and authority-neutral. Acceptance selects no production retry or Rate Limiter.
-The next separately authorized question is which explicit retry / attempt-pressure
-mechanism should be promoted into production, if any; that work is NOT STARTED.
+and authority-neutral. ADR acceptance itself selected no production retry or
+Rate Limiter; its historical decision boundary remains unchanged.
+
+[PR7 policy selection](pr7_retry_attempt_policy_selection.md) is internally
+resolved and ready for human review: select an explicit finite retry budget plus
+delayed backoff in an opt-in caller/orchestration layer outside the protected
+writer and Stage 4E owners. Keep no retry as the disabled baseline; reject
+immediate retry for the enabled first policy. Fixed versus exponential shape
+and production numerical settings remain unselected. Jitter, retry-attempt rate
+limiting, general Rate Limiter / Token Bucket and bounded queueing are deferred.
+PR8 implementation is NOT STARTED and requires separate authorization under
+PR7's entry contract. No production behavior changes in PR7.
 
 ## Research Direction
 
@@ -66,8 +76,9 @@ measurement
 → protected/unprotected comparison
 → retry/refusal amplification characterization (PR5 COMPLETE)
 → occupancy / retry / arrival separation (PR6 ADR COMPLETE)
-→ next: compare/select explicit retry / attempt-pressure mechanisms, if any (NOT STARTED)
-→ production implementation only if separately justified and authorized
+→ bounded retry with backoff policy-class selection (PR7 COMPLETE)
+→ production implementation under PR7 entry contract (PR8 NOT STARTED)
+→ deployment numerical policy / other mechanisms only if separately justified and authorized
 ```
 
 Completed Stage 4B.2 evidence supplies a measured starting point. It does not
@@ -88,6 +99,7 @@ establish a production capacity limit or reopen that completed stage.
 | [PR5 Retry / Refusal Amplification Method](pr5_retry_refusal_amplification_method.md) | Experiment-only policies, stable logical requests and repeated attempts, bounded retry scheduling, raw amplification/timing evidence, durable verification and the separate live-run approval boundary. |
 | [PR5 Retry / Refusal Amplification Report](pr5_retry_refusal_amplification_report.md) | Accepted 30-cell evidence, 25 recorded policy comparisons, bounded occupancy with retry amplification, retained-lane pacing, durable verification, exact archive identity and PR5 closeout. |
 | [PR6 — ADR 0031: Separate Resource Occupancy, Retry, and Arrival Protection](../../adr/0031_separate_resource_occupancy_retry_and_arrival_protection.md) | Accepted architectural separation grounded in PR1–PR5; authority-neutral capacity refusal, explicit retry-policy ownership and evidence-gated next work without production mechanism selection. |
+| [PR7 Retry / Attempt-Pressure Policy Selection](pr7_retry_attempt_policy_selection.md) | Evidence-backed selection of opt-in finite-budget retry with delayed backoff; candidate dispositions, separate budget/timing responsibility, deferred jitter/rate/queue mechanisms, authority and ownership boundary, and PR8 entry contract without numerical policy or implementation. |
 
 ## Important Boundary
 
