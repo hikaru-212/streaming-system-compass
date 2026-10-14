@@ -34,7 +34,7 @@ commitment to implement a production limiter.
 | PR5 | Retry / Refusal Amplification Characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 | PR6 | ADR: separate resource occupancy, retry and arrival protection | ADR COMPLETE |
 | PR7 | Production Retry / Attempt-Pressure Policy Selection | COMPLETE / ready for human review |
-| PR8 | Production implementation of the selected bounded retry with backoff class | NOT STARTED |
+| PR8 | Production implementation of the selected bounded retry with backoff class | COMPLETE / ready for human review |
 
 ## Branch / PR Workflow
 
@@ -50,10 +50,10 @@ The PR0 branch at workstream start was:
 docs/load-capacity-pr0-boundary
 ```
 
-The current PR7 branch is:
+The current PR8 branch is:
 
 ```text
-docs/load-capacity-pr7-retry-policy-selection
+feat/load-capacity-pr8-bounded-retry-backoff
 ```
 
 Workstream PR branches target the umbrella integration branch. Recommended
@@ -68,6 +68,7 @@ future branch names are:
 | PR5 | `experiment/load-capacity-pr5-retry-amplification` |
 | PR6 | `docs/load-capacity-pr6-occupancy-retry-adr` |
 | PR7 | `docs/load-capacity-pr7-retry-policy-selection` |
+| PR8 | `feat/load-capacity-pr8-bounded-retry-backoff` |
 
 These names are recommendations only, not claims that the branches exist.
 PR5 closeout is on the named experiment branch. This document does not create
@@ -392,7 +393,7 @@ PR7 does not rewrite its historical non-selection into a PR6 implementation.
 ```text
 COMPLETE / policy selection internally resolved; ready for human review
 Production numerical policy — NOT SELECTED
-PR8 production implementation — NOT STARTED
+PR8 entry contract — handed off to the separately authorized implementation below
 ```
 
 ### Goal and Responsibility
@@ -426,8 +427,8 @@ contract defines later work without starting it.
 ### Status
 
 ```text
-NOT STARTED
-Separate implementation authorization and source-grounded entry audit required
+COMPLETE / mechanism checked; ready for human review
+Production numerical policy and performance qualification remain open
 ```
 
 ### Goal and Entry Conditions
@@ -446,10 +447,24 @@ expiry and retained-resource lifetime; a finite attempt budget does not provide
 a hard writer deadline. Concrete schedule and numerical configuration require
 explicit justification and must not copy experimental constants as defaults.
 
+The separately authorized [PR8 implementation](pr8_bounded_retry_backoff.md)
+adds `build_postgres_writer_request` and `PostgresWriterRequest` as a direct-writer
+composition outside the existing Stage 4E runtime. No existing safe direct-writer
+production caller was found; the existing DecisionReceipt runtime holds a lock
+across delegation and its one-shot invocation methods cannot be retried.
+The new owner uses an explicit finite `max_attempts` including the first and an
+immutable sequence of positive delays, with no enabled numerical defaults.
+Only adapter-verified pre-body refusal can continue; waiting checks caller
+transaction idleness and retains no writer permit or lifecycle lock. Exhaustion
+preserves the final refusal in a capacity-specific exception. Focused mechanism,
+capacity and Stage 4E regressions passed (298 tests).
+
 ### Scope and Non-Goals
 
 No retry inside `BoundedWriterAdmission`, `PostgresTransactionalWriteSide` or
 Stage 4E owners. No native/ambiguous/semantic-failure retry, hidden Rate Limiter,
 Token Bucket, queue, jitter or Stage 4E integration. Production numerical
 qualification and any new experiment/database execution remain separately scoped.
-This plan does not authorize implementation, Git mutations or further experiments.
+PR8 implements mechanism correctness only. No live PostgreSQL, load experiment,
+Git mutation or deployment qualification was performed. Later characterization
+and numerical policy require separate scope and authorization.
