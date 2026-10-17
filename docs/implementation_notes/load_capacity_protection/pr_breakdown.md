@@ -479,7 +479,7 @@ and numerical policy require separate scope and authorization.
 COMPLETE / EVIDENCE COLLECTION CLOSED
 Canonical live matrix — reconciled offline; no rerun
 Closeout package — ready for human review
-Canonical raw archive — PREPARED LOCALLY / NOT PUBLISHED
+Canonical raw archive — PUBLISHED via the GitHub Release referenced by the PR9 report/manifest
 Production numerical defaults / deployment acceptance — NOT SELECTED
 ```
 
@@ -518,8 +518,10 @@ The unchanged method retains its pre-run chronology. The
 and [manifest](../../../experiments/load_capacity_protection/results/pr9_evidence_manifest.json)
 preserve repetition-level scalars, paired summaries and canonical evidence/archive
 identity. Only the original complete `final.json` is archived; cumulative
-snapshots are checkpoint artifacts, not additional observations. Publication has
-not occurred and requires explicit authorization.
+snapshots are checkpoint artifacts, not additional observations. The canonical
+archive is published via the GitHub Release linked in the
+[PR9 report](pr9_production_retry_validation_report.md#raw-evidence-publication)
+and manifest.
 
 ### Scope and Non-Goals
 

@@ -30,7 +30,7 @@
     "sha256": "cc654c6f0c240d44767f3df27efc63fd6410c8c9178a622bf1a8f0c8d576268c",
     "member": "final.json",
     "member_sha256": "ce0179f8090b3cb0a6307ffc7edd9b4a4608c02bbde634589f078e8c41f18cb0",
-    "published": false
+    "published": true
   },
   "cohorts": {
     "total_cells": 36,
@@ -2064,11 +2064,17 @@
     "One source, fixture, topology and fixed schedule; no PAY/hot-key/open-loop/deployment generalization.",
     "No new live native/semantic-failure injection, Stage 4E authority, hard deadline or fairness guarantee.",
     "Rate Limiter, jitter, queue, pool and async scheduling are not selected or ruled out permanently.",
-    "Archive is local and unpublished; publication requires explicit authorization."
+    "Raw evidence is published; publication does not select deployment numerical policy or an operating SLO."
   ],
   "next_architecture_question": "Is retained synchronous thread/connection pressure acceptable for the intended caller, or is a separately authorized architecture/policy decision needed?",
   "publication": {
-    "status": "prepared_locally_not_published",
+    "status": "published",
+    "release_tag": "load-capacity-pr9-evidence-v1",
+    "release_url": "https://github.com/hikaru-212/streaming-system-compass/releases/tag/load-capacity-pr9-evidence-v1",
+    "asset_filename": "pr9-matrix-8164f5d8-e1e2-4c4b-9232-44fb899a7c56-canonical-final.tar.gz",
+    "archive_bytes": 3464235,
+    "archive_sha256": "cc654c6f0c240d44767f3df27efc63fd6410c8c9178a622bf1a8f0c8d576268c",
+    "canonical_final_json_sha256": "ce0179f8090b3cb0a6307ffc7edd9b4a4608c02bbde634589f078e8c41f18cb0",
     "prior_releases_modified": false
   },
   "closeout_scope": {

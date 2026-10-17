@@ -80,8 +80,10 @@ while paired throughput remains broadly similar and drain time increases.
 Synchronous backoff retains existing threads and idle connections, and paces later
 fresh work; completion gains cannot be attributed solely to retry recovery.
 The [method](pr9_production_retry_validation_method.md) remains the unchanged
-pre-run record. Compact results and an unpublished canonical archive are identified
+pre-run record. Compact results and the published canonical archive are identified
 by the [manifest](../../../experiments/load_capacity_protection/results/pr9_evidence_manifest.json).
+The exact PR9 raw evidence archive is published via the GitHub Release referenced
+by the [PR9 report](pr9_production_retry_validation_report.md#raw-evidence-publication).
 The closeout is ready for human review. Experimental eight-attempt/5 ms settings
 are not deployment defaults. The next decision is whether retained synchronous
 resource pressure is acceptable; no later implementation is automatically started.
@@ -124,7 +126,7 @@ establish a production capacity limit or reopen that completed stage.
 | [PR7 Retry / Attempt-Pressure Policy Selection](pr7_retry_attempt_policy_selection.md) | Evidence-backed selection of opt-in finite-budget retry with delayed backoff; candidate dispositions, separate budget/timing responsibility, deferred jitter/rate/queue mechanisms, authority and ownership boundary, and PR8 entry contract without numerical policy or implementation. |
 | [PR8 Production Bounded Retry with Delayed Backoff](pr8_bounded_retry_backoff.md) | Direct-writer placement audit, explicit immutable attempt/delay configuration, verified refusal provenance, resource-free waiting and caller preconditions, capacity-specific exhaustion, bounded observations, Stage 4E separation and deterministic mechanism validation. |
 | [PR9 Production Retry Validation Method](pr9_production_retry_validation_method.md) | Unchanged pre-run method: production-owner A/B machinery, approved observation seams, logical/attempt and retained-resource evidence, durable verification, deterministic tests and the original live-run approval boundary. |
-| [PR9 Production Retry Validation Report](pr9_production_retry_validation_report.md) | Reconciled 30-cell recorded comparison, completion versus drain/throughput, bounded occupancy, retained idle-resource cost and lane-pacing qualification; compact results, unpublished archive identity and PR9 closeout. |
+| [PR9 Production Retry Validation Report](pr9_production_retry_validation_report.md) | Reconciled 30-cell recorded comparison, completion versus drain/throughput, bounded occupancy, retained idle-resource cost and lane-pacing qualification; compact results, published archive identity and PR9 closeout. |
 
 ## Important Boundary
 

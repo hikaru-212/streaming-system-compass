@@ -6,7 +6,7 @@
 PR9 — COMPLETE / EVIDENCE COLLECTION CLOSED
 Canonical live matrix — reconciled offline; no rerun
 Closeout package — ready for human review
-Canonical raw archive — PREPARED LOCALLY / NOT PUBLISHED
+Canonical raw archive — PUBLISHED via GitHub Release load-capacity-pr9-evidence-v1
 Production numerical defaults / deployment acceptance — NOT SELECTED
 ```
 
@@ -53,15 +53,20 @@ contains exactly 30 recorded-cell rows. The
 identifies the source, raw file, archive, parameters, reconciliation and descriptive
 aggregates. Neither includes raw request/attempt/wait arrays.
 
-Archive prepared locally, not published:
+### Raw Evidence Publication
 
+The canonical archive is published in the
+[PR9 Production Retry Validation Evidence GitHub Release](https://github.com/hikaru-212/streaming-system-compass/releases/tag/load-capacity-pr9-evidence-v1)
+under tag `load-capacity-pr9-evidence-v1`.
+
+- Published asset: `pr9-matrix-8164f5d8-e1e2-4c4b-9232-44fb899a7c56-canonical-final.tar.gz`.
 - Filename: `experiments/load_capacity_protection/evidence/pr9/pr9-matrix-8164f5d8-e1e2-4c4b-9232-44fb899a7c56-canonical-final.tar.gz`.
 - Compressed size: **3,464,235 bytes**.
 - SHA-256: `cc654c6f0c240d44767f3df27efc63fd6410c8c9178a622bf1a8f0c8d576268c`.
 - Sole member: `final.json`, containing the original canonical bytes. Its
   decompressed hash was verified against the canonical SHA-256.
 - The complete raw matrix includes warmup for provenance; analysis excludes it.
-  Smoke and cumulative snapshots are not archived. No existing Release changed.
+  Smoke and cumulative snapshots are not archived. Earlier Releases remain unchanged.
 
 The approximately 2.3 GB cumulative snapshot directory is checkpoint persistence,
 not independent samples. Snapshot files were neither read for this analysis nor
@@ -408,8 +413,8 @@ for every recorded cell, not merely in pooled totals.
   termination or latency guarantee.
 - Live outcomes contain acceptance and pre-body capacity refusal/exhaustion.
   PR8's other terminal/failure classes were not newly injected in this matrix.
-- Raw evidence publication is pending explicit authorization. No Release URL,
-  deployment numerical policy or operating SLO is implied by this closeout.
+- Raw evidence publication does not select deployment numerical policy or an
+  operating SLO.
 
 ## 18. What PR9 Establishes
 
@@ -435,7 +440,8 @@ and the A1/A2 lifecycle remain outside this composition and unchanged.
 
 **PR9 is COMPLETE / EVIDENCE COLLECTION CLOSED**, with the compact closeout ready
 for human review. Production/experiment source and raw evidence are unchanged.
-Only results, report/navigation and the ignored unpublished archive are prepared.
+The closeout comprises results, report/navigation and the canonical archive,
+now published at the Release above.
 
 Offline validation checked the canonical hash/strict decode, recorded cohort and
 pair identity, logical/attempt accounting, occupancy, wait resource/status evidence,
