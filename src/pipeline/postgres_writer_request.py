@@ -1,6 +1,7 @@
 """Caller-owned capacity retry outside transactional and Stage 4E owners."""
 
 from collections.abc import Callable
+from contextlib import nullcontext
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum
@@ -22,8 +23,11 @@ from src.pipeline.transactional.postgres_write_side import (
     PostgresWriteSideResult,
 )
 from src.pipeline.transactional.postgres_write_side_config import PostgresWriteSideConfig
+from src.pipeline.transactional.postgres_write_side_measurement import PostgresWriteSideMeasurementDelivery
 from src.pipeline.transactional.writer_capacity import (
     BoundedWriterAdmission,
+    WriterAttemptIdentity,
+    WriterCapacityObserver,
     WriterCapacityRefused,
 )
 from src.pipeline.writer_retry_policy import WriterRetryPolicy
@@ -88,6 +92,19 @@ class WriterCapacityRetryExhausted(Exception):
         super().__init__("writer capacity retry budget exhausted")
         self.attempts_spent = attempts_spent
         self.final_refusal = final_refusal
+
+
+@dataclass(frozen=True)
+class WriterAttemptMeasurement:
+    """Separate measured delivery after a normally returning public writer call.
+
+    Refused/exceptional attempts have no delivery. UNAVAILABLE and individual
+    NOT_COLLECTED phases retain the existing measurement contract, never zero.
+    The delivery's producer_value is the same object returned by invoke().
+    """
+
+    identity: WriterAttemptIdentity
+    delivery: PostgresWriteSideMeasurementDelivery
 
 
 class WriterRetryCancelled(Exception):
@@ -171,6 +188,8 @@ class PostgresWriterRequest:
         clock: Callable[[], float] = monotonic,
         cancelled: Callable[[], bool] | None = None,
         expires_at: float | None = None,
+        capacity_observer: WriterCapacityObserver | None = None,
+        measure_writer: bool = False,
     ) -> None:
         """Validate configuration and retain caller-owned synchronous resources.
 
@@ -185,6 +204,11 @@ class PostgresWriterRequest:
         caps waiting and dispatch, not a running writer. Neither can turn a
         returned writer result into a retry. Lifetime controls require a policy.
         Callback/wait failures propagate terminally and never authorize retry.
+
+        Optional capacity observation uses the concrete gate's context-local
+        identity binding. Optional measured calls reuse the existing writer
+        instrumentation; measurements are delivered through a separate snapshot.
+        Neither option changes eligibility, the primary result, or Stage 4E.
         """
         if type(request_signature) is not RequestSignature:
             raise TypeError("request_signature must be RequestSignature")
@@ -198,6 +222,13 @@ class PostgresWriterRequest:
             raise TypeError("retry_policy must be WriterRetryPolicy or None")
         if retry_policy is not None and type(capacity_admission) is not BoundedWriterAdmission:
             raise TypeError("enabled retry requires concrete BoundedWriterAdmission")
+        if capacity_observer is not None:
+            if type(capacity_observer) is not WriterCapacityObserver:
+                raise TypeError("capacity_observer must be concrete WriterCapacityObserver")
+            if type(capacity_admission) is not BoundedWriterAdmission:
+                raise TypeError("observation requires concrete BoundedWriterAdmission")
+        if type(measure_writer) is not bool:
+            raise TypeError("measure_writer must be bool")
         if not callable(wait) or not callable(clock):
             raise TypeError("wait and clock must be callable")
         if cancelled is not None and not callable(cancelled):
@@ -211,6 +242,10 @@ class PostgresWriterRequest:
         self._signature = request_signature
         self._connection = business_connection
         self._policy = retry_policy
+        self._capacity = capacity_admission
+        self._capacity_observer = capacity_observer
+        self._measure_writer = measure_writer
+        self._measurements: list[WriterAttemptMeasurement] = []
         self._admission = (
             _AttemptAdmission(capacity_admission) if retry_policy is not None else None
         )
@@ -241,6 +276,17 @@ class PostgresWriterRequest:
         """
         with self._lock:
             return tuple(self._events)
+
+    @property
+    def measurements(self) -> tuple[WriterAttemptMeasurement, ...]:
+        """Return separate normal-return deliveries; absence is not zero timing.
+
+        A single-use request can deliver at most one normal terminal measurement.
+        Native exceptions and pre-body refusals provide no measured delivery.
+        Availability and phase completeness remain independently inspectable.
+        """
+        with self._lock:
+            return tuple(self._measurements)
 
     def invoke(self) -> PostgresWriteSideResult:
         """Execute this logical request once, returning the identical writer result.
@@ -282,16 +328,7 @@ class PostgresWriterRequest:
             self._attempts += 1
             self._record(WriterRetryEventKind.ATTEMPT_DISPATCHED, observed_at=timestamp)
             try:
-                signature = self._signature
-                method = (
-                    self._writer.create_order if signature.command_type is CommandType.CREATE
-                    else self._writer.pay_order
-                )
-                result = method(
-                    request_id=signature.request_id,
-                    order_id=signature.order_id,
-                    amount=signature.amount,
-                )
+                result = self._invoke_writer()
             except WriterCapacityRefused as error:
                 proven = self._admission is not None and self._admission.refusal is error
                 eligible = self._policy is not None and proven
@@ -310,6 +347,35 @@ class PostgresWriterRequest:
                 self._record(WriterRetryEventKind.TERMINAL_RESULT, outcome=result.outcome)
                 return result
         raise AssertionError("finite request loop exited without a terminal disposition")
+
+    def _invoke_writer(self) -> PostgresWriteSideResult:
+        identity = WriterAttemptIdentity(self._logical_id, self._signature.request_id, self._attempts)
+        binding = (
+            self._capacity.observe_attempt(identity, self._capacity_observer)
+            if self._capacity_observer is not None else nullcontext()
+        )
+        signature = self._signature
+        if self._measure_writer:
+            method = (
+                self._writer.create_order_with_measurement
+                if signature.command_type is CommandType.CREATE
+                else self._writer.pay_order_with_measurement
+            )
+        else:
+            method = (
+                self._writer.create_order if signature.command_type is CommandType.CREATE
+                else self._writer.pay_order
+            )
+        with binding:
+            value = method(request_id=signature.request_id, order_id=signature.order_id,
+                           amount=signature.amount)
+        if self._measure_writer:
+            # The existing measured API owns failure-safe artifact construction.
+            # No experiment callback or measurement interpretation runs here.
+            with self._lock:
+                self._measurements.append(WriterAttemptMeasurement(identity, value))
+            return value.producer_value
+        return value
 
     def _backoff(self, delay: float) -> None:
         started = self._check_lifetime()

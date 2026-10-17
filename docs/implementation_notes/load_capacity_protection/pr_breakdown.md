@@ -35,6 +35,7 @@ commitment to implement a production limiter.
 | PR6 | ADR: separate resource occupancy, retry and arrival protection | ADR COMPLETE |
 | PR7 | Production Retry / Attempt-Pressure Policy Selection | COMPLETE / ready for human review |
 | PR8 | Production implementation of the selected bounded retry with backoff class | COMPLETE / ready for human review |
+| PR9 | Live production-path retry characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 
 ## Branch / PR Workflow
 
@@ -50,10 +51,10 @@ The PR0 branch at workstream start was:
 docs/load-capacity-pr0-boundary
 ```
 
-The current PR8 branch is:
+The current PR9 branch is:
 
 ```text
-feat/load-capacity-pr8-bounded-retry-backoff
+experiment/load-capacity-pr9-production-retry-validation
 ```
 
 Workstream PR branches target the umbrella integration branch. Recommended
@@ -69,6 +70,7 @@ future branch names are:
 | PR6 | `docs/load-capacity-pr6-occupancy-retry-adr` |
 | PR7 | `docs/load-capacity-pr7-retry-policy-selection` |
 | PR8 | `feat/load-capacity-pr8-bounded-retry-backoff` |
+| PR9 | `experiment/load-capacity-pr9-production-retry-validation` |
 
 These names are recommendations only, not claims that the branches exist.
 PR5 closeout is on the named experiment branch. This document does not create
@@ -468,3 +470,71 @@ qualification and any new experiment/database execution remain separately scoped
 PR8 implements mechanism correctness only. No live PostgreSQL, load experiment,
 Git mutation or deployment qualification was performed. Later characterization
 and numerical policy require separate scope and authorization.
+
+## PR9 — Production-Path Retry Validation
+
+### Status
+
+```text
+COMPLETE / EVIDENCE COLLECTION CLOSED
+Canonical live matrix — reconciled offline; no rerun
+Closeout package — ready for human review
+Canonical raw archive — PUBLISHED via the GitHub Release referenced by the PR9 report/manifest
+Production numerical defaults / deployment acceptance — NOT SELECTED
+```
+
+### Goal and Responsibility
+
+The [PR9 method](pr9_production_retry_validation_method.md) implements
+contemporaneous disabled/enabled comparison through the real
+`build_postgres_writer_request` / `PostgresWriterRequest` composition. The
+fixture, logical workload, capacity bound, committed source, observation settings
+and retained-connection topology must match, with retry policy as the intended
+difference. Observe attempts, logical completion, body overlap, phase timing,
+synchronous waiting and retained idle resources; verify durable effects separately.
+
+The initial source audit found a supported-interface gap. The user approved
+optional observation in exactly the concrete capacity primitive, request owner
+and builder. Context-bound request/attempt observations retain failures
+separately; measured delivery remains separate from the primary result. The
+concrete-gate provenance restriction and retry policy remain unchanged.
+PR9 now supplies its own model/codec, real-builder adapter, paired runner,
+durable verification and retained-resource accounting with deterministic tests.
+
+The subsequently authorized live matrix and
+[PR9 report](pr9_production_retry_validation_report.md) establish a contemporaneous
+comparison at `41e33d3a855caa03afbf0b10fe4b2ee01c478a33`: 36 total cells,
+30 recorded cells and 3,840 recorded logical requests. N=8 retry is dormant.
+At N=16/32, enabled retry raises eventual completion with bounded writer overlap,
+more attempts and substantially longer drain; paired completion throughput remains
+broadly similar. All 2,854 acknowledgements match durable accepted effects and
+all 986 refusal-only terminal requests have verified absence, including 186
+exhaustions. All 2,080 wait calls sample IDLE → IDLE while retaining existing
+lane/thread/connection ownership. Completion improvement includes pacing of later
+fresh work, not only direct retry recovery.
+
+The unchanged method retains its pre-run chronology. The
+[compact CSV](../../../experiments/load_capacity_protection/results/pr9_recorded_repetitions.csv)
+and [manifest](../../../experiments/load_capacity_protection/results/pr9_evidence_manifest.json)
+preserve repetition-level scalars, paired summaries and canonical evidence/archive
+identity. Only the original complete `final.json` is archived; cumulative
+snapshots are checkpoint artifacts, not additional observations. The canonical
+archive is published via the GitHub Release linked in the
+[PR9 report](pr9_production_retry_validation_report.md#raw-evidence-publication)
+and manifest.
+
+### Scope and Non-Goals
+
+Closeout uses the existing canonical evidence only; no PostgreSQL rerun, added
+repetitions, parameter changes or production/experiment-code edits occurred.
+The approved K=128, N=8/16/32, bound=8 and eight-attempt fixed 5 ms schedule remain
+experimental parameters, not production defaults or optimality claims.
+No retry reimplementation, PR5 scheduler substitution, Rate Limiter, jitter,
+queue, async scheduler, pool or Stage 4E change belongs to this closeout.
+Historical evidence and Releases remain intact.
+
+PR9 is COMPLETE after evidence reconciliation, with human review of the closeout
+pending. The next decision is whether retained synchronous thread/connection
+pressure is acceptable for the intended caller, or whether a separately scoped
+architecture/policy decision is warranted. No PR10 implementation is invented or
+authorized, and neither Rate Limiter nor jitter is ruled out permanently.
