@@ -35,7 +35,7 @@ commitment to implement a production limiter.
 | PR6 | ADR: separate resource occupancy, retry and arrival protection | ADR COMPLETE |
 | PR7 | Production Retry / Attempt-Pressure Policy Selection | COMPLETE / ready for human review |
 | PR8 | Production implementation of the selected bounded retry with backoff class | COMPLETE / ready for human review |
-| PR9 | Live production-path retry characterization | ACTIVE / machinery ready for human review |
+| PR9 | Live production-path retry characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 
 ## Branch / PR Workflow
 
@@ -476,11 +476,11 @@ and numerical policy require separate scope and authorization.
 ### Status
 
 ```text
-ACTIVE
-Method / source audit / observation seams — ready for review
-Executable machinery — implemented with deterministic validation
-Live PostgreSQL matrix — NOT RUN
-Final live numerical configuration — NOT SELECTED
+COMPLETE / EVIDENCE COLLECTION CLOSED
+Canonical live matrix — reconciled offline; no rerun
+Closeout package — ready for human review
+Canonical raw archive — PREPARED LOCALLY / NOT PUBLISHED
+Production numerical defaults / deployment acceptance — NOT SELECTED
 ```
 
 ### Goal and Responsibility
@@ -501,14 +501,38 @@ concrete-gate provenance restriction and retry policy remain unchanged.
 PR9 now supplies its own model/codec, real-builder adapter, paired runner,
 durable verification and retained-resource accounting with deterministic tests.
 
+The subsequently authorized live matrix and
+[PR9 report](pr9_production_retry_validation_report.md) establish a contemporaneous
+comparison at `41e33d3a855caa03afbf0b10fe4b2ee01c478a33`: 36 total cells,
+30 recorded cells and 3,840 recorded logical requests. N=8 retry is dormant.
+At N=16/32, enabled retry raises eventual completion with bounded writer overlap,
+more attempts and substantially longer drain; paired completion throughput remains
+broadly similar. All 2,854 acknowledgements match durable accepted effects and
+all 986 refusal-only terminal requests have verified absence, including 186
+exhaustions. All 2,080 wait calls sample IDLE → IDLE while retaining existing
+lane/thread/connection ownership. Completion improvement includes pacing of later
+fresh work, not only direct retry recovery.
+
+The unchanged method retains its pre-run chronology. The
+[compact CSV](../../../experiments/load_capacity_protection/results/pr9_recorded_repetitions.csv)
+and [manifest](../../../experiments/load_capacity_protection/results/pr9_evidence_manifest.json)
+preserve repetition-level scalars, paired summaries and canonical evidence/archive
+identity. Only the original complete `final.json` is archived; cumulative
+snapshots are checkpoint artifacts, not additional observations. Publication has
+not occurred and requires explicit authorization.
+
 ### Scope and Non-Goals
 
-The current task implements and reviews the approved seams and measurement
-machinery. It does not authorize live PostgreSQL execution.
-Final K/concurrency/bound/budget/delay/cohort values require later human approval
-after machinery review. No retry reimplementation, PR5 scheduler substitution,
-Rate Limiter, jitter, queue, async scheduler, pool, Stage 4E change or production
-numerical default belongs to PR9. Historical evidence and Releases remain intact.
+Closeout uses the existing canonical evidence only; no PostgreSQL rerun, added
+repetitions, parameter changes or production/experiment-code edits occurred.
+The approved K=128, N=8/16/32, bound=8 and eight-attempt fixed 5 ms schedule remain
+experimental parameters, not production defaults or optimality claims.
+No retry reimplementation, PR5 scheduler substitution, Rate Limiter, jitter,
+queue, async scheduler, pool or Stage 4E change belongs to this closeout.
+Historical evidence and Releases remain intact.
 
-PR9 stays ACTIVE until its machinery and later live evidence have been reviewed;
-a method draft or deterministic tests alone cannot close it.
+PR9 is COMPLETE after evidence reconciliation, with human review of the closeout
+pending. The next decision is whether retained synchronous thread/connection
+pressure is acceptable for the intended caller, or whether a separately scoped
+architecture/policy decision is warranted. No PR10 implementation is invented or
+authorized, and neither Rate Limiter nor jitter is ruled out permanently.
