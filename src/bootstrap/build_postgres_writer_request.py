@@ -9,7 +9,7 @@ from src.compass.transition.runtime import ValidationRuntime
 from src.pipeline.postgres_writer_request import PostgresWriterRequest
 from src.pipeline.transactional.postgres_write_side import AdmissionGateFactory
 from src.pipeline.transactional.postgres_write_side_config import PostgresWriteSideConfig
-from src.pipeline.transactional.writer_capacity import BoundedWriterAdmission
+from src.pipeline.transactional.writer_capacity import BoundedWriterAdmission, WriterCapacityObserver
 from src.pipeline.writer_retry_policy import WriterRetryPolicy
 from src.storage.idempotency_store import RequestSignature
 
@@ -27,6 +27,8 @@ def build_postgres_writer_request(
     clock: Callable[[], float] = monotonic,
     cancelled: Callable[[], bool] | None = None,
     expires_at: float | None = None,
+    capacity_observer: WriterCapacityObserver | None = None,
+    measure_writer: bool = False,
 ) -> PostgresWriterRequest:
     """Build one single-use direct CREATE/PAY request without performing I/O.
 
@@ -46,6 +48,12 @@ def build_postgres_writer_request(
     or session advisory locks. They retain connection close/pool ownership.
     This root does not wrap existing Stage 4E owners, mint authority, auto-enable
     existing consumers, create connections, or read environment configuration.
+
+    capacity_observer optionally records concrete-gate boundaries correlated to
+    each attempt; its failures remain separate from business execution.
+    measure_writer opts into existing measured public writer variants and the
+    owner's separate measurements snapshot. Both default off and can be supplied
+    identically with retry disabled or enabled. Missing timings remain missing.
     """
     return PostgresWriterRequest(
         request_signature=request_signature,
@@ -59,4 +67,6 @@ def build_postgres_writer_request(
         clock=clock,
         cancelled=cancelled,
         expires_at=expires_at,
+        capacity_observer=capacity_observer,
+        measure_writer=measure_writer,
     )
