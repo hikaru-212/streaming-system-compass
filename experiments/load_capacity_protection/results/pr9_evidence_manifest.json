@@ -1,0 +1,2089 @@
+{
+  "manifest_schema": 1,
+  "closeout_status": "COMPLETE / EVIDENCE COLLECTION CLOSED",
+  "closeout_date": "2026-10-17",
+  "date_timezone": "Asia/Taipei",
+  "method": "pr9-production-retry-validation-v1",
+  "schema": 1,
+  "source_revision": "41e33d3a855caa03afbf0b10fe4b2ee01c478a33",
+  "source_runtime": {
+    "commit": "41e33d3a855caa03afbf0b10fe4b2ee01c478a33",
+    "tracked_clean": true,
+    "machinery_committed": true,
+    "python": "3.12.7",
+    "psycopg": "3.3.4",
+    "platform": "Darwin 25.5.0 arm64",
+    "clock": "monotonic_ns; production retry seconds=ns/1e9"
+  },
+  "matrix_run_id": "8164f5d8-e1e2-4c4b-9232-44fb899a7c56",
+  "composition": "real-builder/measured/PRE_TRANSACTION/OCC/STRICT/FullProof/retained-lanes-v1",
+  "canonical_raw_evidence": {
+    "filename": "experiments/load_capacity_protection/evidence/pr9/matrix-8164f5d8-e1e2-4c4b-9232-44fb899a7c56/final.json",
+    "bytes": 128632396,
+    "sha256": "ce0179f8090b3cb0a6307ffc7edd9b4a4608c02bbde634589f078e8c41f18cb0",
+    "complete_matrix": true,
+    "reserialized": false
+  },
+  "archive": {
+    "filename": "experiments/load_capacity_protection/evidence/pr9/pr9-matrix-8164f5d8-e1e2-4c4b-9232-44fb899a7c56-canonical-final.tar.gz",
+    "bytes": 3464235,
+    "sha256": "cc654c6f0c240d44767f3df27efc63fd6410c8c9178a622bf1a8f0c8d576268c",
+    "member": "final.json",
+    "member_sha256": "ce0179f8090b3cb0a6307ffc7edd9b4a4608c02bbde634589f078e8c41f18cb0",
+    "published": false
+  },
+  "cohorts": {
+    "total_cells": 36,
+    "total_logical_requests": 4608,
+    "warmup_cells": 6,
+    "warmup_logical_requests": 768,
+    "recorded_cells": 30,
+    "recorded_logical_requests": 3840,
+    "recorded_repetitions_per_N_mode": 5,
+    "selection": {
+      "run_id": "8164f5d8-e1e2-4c4b-9232-44fb899a7c56",
+      "cohort": "recorded"
+    },
+    "excluded_from_analysis": [
+      "warmup",
+      "smoke",
+      "cumulative snapshots"
+    ]
+  },
+  "experimental_parameters": {
+    "logical_requests": 128,
+    "concurrency_levels": [
+      8,
+      16,
+      32
+    ],
+    "capacity_bound": 8,
+    "max_attempts": 8,
+    "retry_delays_seconds": [
+      0.005,
+      0.005,
+      0.005,
+      0.005,
+      0.005,
+      0.005,
+      0.005
+    ],
+    "warmup_pairs": 1,
+    "recorded_pairs": 5,
+    "amount": "10",
+    "test_database": "compass_test",
+    "connection_budget": 33,
+    "connect_timeout_seconds": 5,
+    "stop_policy": "stop_claims_and_drain_without_deadline",
+    "retention_policy": "retain_rows",
+    "production_defaults_selected": false,
+    "disabled_retry_policy": null
+  },
+  "fixture_facts": [
+    {
+      "database": "compass_test",
+      "server_version": 160015,
+      "isolation": "read committed",
+      "autocommit": false
+    }
+  ],
+  "ordering": {
+    "N_order": [
+      8,
+      16,
+      32
+    ],
+    "recorded_pair_order": [
+      "disabled/enabled",
+      "enabled/disabled",
+      "disabled/enabled",
+      "enabled/disabled",
+      "disabled/enabled"
+    ],
+    "matching_key": [
+      "concurrency",
+      "pair_index"
+    ],
+    "randomized": false
+  },
+  "aggregation": {
+    "statistic_order": [
+      "median",
+      "minimum",
+      "maximum"
+    ],
+    "group_unit": "one recorded cell; five cells per N/mode",
+    "paired_difference": "enabled minus disabled for matching N and pair_index before aggregation",
+    "phase_summary": "median/min/max across five per-cell phase medians; samples not pooled",
+    "phase_sample_scope": "available measurements on accepted writer returns; refused pre-body attempts have no measurement",
+    "csv_phase_min_max": "minimum/maximum measured invocation sample within that cell",
+    "percentile": "Hyndman-Fan type 7 linear interpolation h=(n-1)*p",
+    "throughput": "acknowledged_accepted / ((last terminal_ns - common offer_ns) / 1e9)",
+    "waiting_connection_time": "sum of production RETRY_SCHEDULED to RETRY_READY durations; connection-ms",
+    "actual_wait_duration": "sum of observed waiter-call intervals; ms",
+    "missing_csv_timing": "empty field; not zero",
+    "missing_json": "null; not zero",
+    "rounding": "CSV/manifest retain numeric precision; report rounds to three decimals"
+  },
+  "integrity": {
+    "canonical_sha256_verified": true,
+    "strict_codec_verified": true,
+    "full_schedule_metadata_verified": true,
+    "recorded_cells_valid": 30,
+    "same_source_before_after_all_36_cells": true,
+    "unique_recorded_request_ids": 3840,
+    "unique_recorded_order_ids": 3840,
+    "recorded_attempts": 5920,
+    "acknowledged_accepted": 2854,
+    "durable_accepted_effects": 2854,
+    "verified_refusal_only_absences": 986,
+    "verified_disabled_refusal_absences": 800,
+    "verified_exhausted_absences": 186,
+    "all_recorded_max_body_overlaps": 8,
+    "observed_wait_calls": 2080,
+    "idle_to_idle_wait_calls": 2080,
+    "wait_connection_thread_identity_preserved": true,
+    "paired_topology_and_connection_closure_verified": true,
+    "observed_violations": 0,
+    "verification_scope": "offline reconciliation of stored live post-drain verification; no new database queries"
+  },
+  "phase_state_counts": {
+    "producer_write_invocation": {
+      "MEASURED": 2854
+    },
+    "business_uow": {
+      "MEASURED": 2854
+    },
+    "validation_runtime_call": {
+      "MEASURED": 2854
+    },
+    "preliminary_idempotency_check": {
+      "MEASURED": 2854
+    },
+    "preliminary_read_cleanup": {
+      "MEASURED": 2854
+    },
+    "authoritative_idempotency_check": {
+      "MEASURED": 2854
+    },
+    "accepted_history_load": {
+      "MEASURED": 2854
+    },
+    "concurrency_preparation_call": {
+      "MEASURED": 2854
+    },
+    "pessimistic_advisory_try_lock_call": {
+      "NOT_APPLICABLE": 2854
+    },
+    "append_admission_call": {
+      "MEASURED": 2854
+    },
+    "idempotency_record_call": {
+      "MEASURED": 2854
+    },
+    "commit_finalization": {
+      "MEASURED": 2854
+    },
+    "rollback_finalization": {
+      "NOT_REACHED": 2854
+    }
+  },
+  "group_summaries": [
+    {
+      "concurrency": 8,
+      "retry_enabled": false,
+      "statistics": {
+        "logical_requests": [
+          128,
+          128,
+          128
+        ],
+        "acknowledged_accepted": [
+          128,
+          128,
+          128
+        ],
+        "completion_proportion": [
+          1,
+          1,
+          1
+        ],
+        "attempts": [
+          128,
+          128,
+          128
+        ],
+        "attempt_amplification": [
+          1,
+          1,
+          1
+        ],
+        "capacity_refusals": [
+          0,
+          0,
+          0
+        ],
+        "retry_attempts": [
+          0,
+          0,
+          0
+        ],
+        "accepted_after_retry": [
+          0,
+          0,
+          0
+        ],
+        "budget_exhaustions": [
+          0,
+          0,
+          0
+        ],
+        "completion_throughput_per_second": [
+          1001.8602274584325,
+          969.3420289573664,
+          1074.857231038622
+        ],
+        "protected_writer_overlap": [
+          8,
+          8,
+          8
+        ],
+        "waiting_logical_peak": [
+          0,
+          0,
+          0
+        ],
+        "waiting_retained_connections_peak": [
+          0,
+          0,
+          0
+        ],
+        "retained_connections": [
+          9,
+          9,
+          9
+        ],
+        "time_to_drain_ms": [
+          127.762333,
+          119.085583,
+          132.048334
+        ],
+        "waiting_retained_connection_ms": [
+          0,
+          0,
+          0
+        ],
+        "actual_wait_duration_ms": [
+          0,
+          0,
+          0
+        ],
+        "wait_calls": [
+          0,
+          0,
+          0
+        ],
+        "waiting_lanes_seen": [
+          0,
+          0,
+          0
+        ],
+        "waiting_threads_seen": [
+          0,
+          0,
+          0
+        ],
+        "waiting_connections_seen": [
+          0,
+          0,
+          0
+        ],
+        "accepted_completion_latency_median_ms": [
+          70.239229,
+          63.916354,
+          73.863167
+        ],
+        "accepted_completion_latency_p95_ms": [
+          124.38728114999999,
+          115.85702849999998,
+          126.97228575
+        ],
+        "body_latency_median_ms": [
+          7.576979,
+          7.2355,
+          7.77475
+        ],
+        "body_latency_p95_ms": [
+          10.1334375,
+          8.9380147,
+          14.536879499999987
+        ],
+        "producer_write_invocation_median_ms": [
+          7.545521,
+          7.202646,
+          7.747771
+        ],
+        "business_uow_median_ms": [
+          4.5176665,
+          4.39775,
+          4.579146
+        ],
+        "append_admission_call_median_ms": [
+          1.358833,
+          1.313604,
+          1.383604
+        ],
+        "idempotency_record_call_median_ms": [
+          0.5864585,
+          0.540917,
+          0.6145835
+        ],
+        "commit_finalization_median_ms": [
+          0.923708,
+          0.8497705,
+          0.962354
+        ]
+      },
+      "totals": {
+        "logical_requests": 640,
+        "acknowledged_accepted": 640,
+        "attempts": 640,
+        "capacity_refusals": 0,
+        "retry_attempts": 0,
+        "accepted_after_retry": 0,
+        "budget_exhaustions": 0,
+        "durable_accepted_effects": 640,
+        "verified_refusal_only_absences": 0,
+        "verified_exhausted_absences": 0,
+        "wait_calls": 0,
+        "idle_to_idle_wait_calls": 0,
+        "waiting_retained_connection_ms": 0,
+        "actual_wait_duration_ms": 0
+      },
+      "phase_counts": {
+        "producer_write_invocation": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        },
+        "business_uow": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        },
+        "append_admission_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        },
+        "idempotency_record_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        },
+        "commit_finalization": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        }
+      }
+    },
+    {
+      "concurrency": 8,
+      "retry_enabled": true,
+      "statistics": {
+        "logical_requests": [
+          128,
+          128,
+          128
+        ],
+        "acknowledged_accepted": [
+          128,
+          128,
+          128
+        ],
+        "completion_proportion": [
+          1,
+          1,
+          1
+        ],
+        "attempts": [
+          128,
+          128,
+          128
+        ],
+        "attempt_amplification": [
+          1,
+          1,
+          1
+        ],
+        "capacity_refusals": [
+          0,
+          0,
+          0
+        ],
+        "retry_attempts": [
+          0,
+          0,
+          0
+        ],
+        "accepted_after_retry": [
+          0,
+          0,
+          0
+        ],
+        "budget_exhaustions": [
+          0,
+          0,
+          0
+        ],
+        "completion_throughput_per_second": [
+          1064.5807537522833,
+          964.2081635934628,
+          1111.5453084972428
+        ],
+        "protected_writer_overlap": [
+          8,
+          8,
+          8
+        ],
+        "waiting_logical_peak": [
+          0,
+          0,
+          0
+        ],
+        "waiting_retained_connections_peak": [
+          0,
+          0,
+          0
+        ],
+        "retained_connections": [
+          9,
+          9,
+          9
+        ],
+        "time_to_drain_ms": [
+          120.235125,
+          115.155,
+          132.751417
+        ],
+        "waiting_retained_connection_ms": [
+          0,
+          0,
+          0
+        ],
+        "actual_wait_duration_ms": [
+          0,
+          0,
+          0
+        ],
+        "wait_calls": [
+          0,
+          0,
+          0
+        ],
+        "waiting_lanes_seen": [
+          0,
+          0,
+          0
+        ],
+        "waiting_threads_seen": [
+          0,
+          0,
+          0
+        ],
+        "waiting_connections_seen": [
+          0,
+          0,
+          0
+        ],
+        "accepted_completion_latency_median_ms": [
+          65.850479,
+          62.7027505,
+          67.3534165
+        ],
+        "accepted_completion_latency_p95_ms": [
+          117.5071751,
+          111.56377775,
+          129.58374595
+        ],
+        "body_latency_median_ms": [
+          7.2438335,
+          7.0634585,
+          7.989708
+        ],
+        "body_latency_p95_ms": [
+          9.5099021,
+          8.96143345,
+          11.339414699999987
+        ],
+        "producer_write_invocation_median_ms": [
+          7.2172295,
+          7.037792,
+          7.964167
+        ],
+        "business_uow_median_ms": [
+          4.376833,
+          4.2100415,
+          4.858646
+        ],
+        "append_admission_call_median_ms": [
+          1.3484585,
+          1.3189375,
+          1.472521
+        ],
+        "idempotency_record_call_median_ms": [
+          0.616854,
+          0.57775,
+          0.700542
+        ],
+        "commit_finalization_median_ms": [
+          0.871542,
+          0.8084375,
+          0.952396
+        ]
+      },
+      "totals": {
+        "logical_requests": 640,
+        "acknowledged_accepted": 640,
+        "attempts": 640,
+        "capacity_refusals": 0,
+        "retry_attempts": 0,
+        "accepted_after_retry": 0,
+        "budget_exhaustions": 0,
+        "durable_accepted_effects": 640,
+        "verified_refusal_only_absences": 0,
+        "verified_exhausted_absences": 0,
+        "wait_calls": 0,
+        "idle_to_idle_wait_calls": 0,
+        "waiting_retained_connection_ms": 0,
+        "actual_wait_duration_ms": 0
+      },
+      "phase_counts": {
+        "producer_write_invocation": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        },
+        "business_uow": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        },
+        "append_admission_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        },
+        "idempotency_record_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        },
+        "commit_finalization": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 640,
+          "missing_delivery": 0
+        }
+      }
+    },
+    {
+      "concurrency": 16,
+      "retry_enabled": false,
+      "statistics": {
+        "logical_requests": [
+          128,
+          128,
+          128
+        ],
+        "acknowledged_accepted": [
+          64,
+          64,
+          64
+        ],
+        "completion_proportion": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "attempts": [
+          128,
+          128,
+          128
+        ],
+        "attempt_amplification": [
+          1,
+          1,
+          1
+        ],
+        "capacity_refusals": [
+          64,
+          64,
+          64
+        ],
+        "retry_attempts": [
+          0,
+          0,
+          0
+        ],
+        "accepted_after_retry": [
+          0,
+          0,
+          0
+        ],
+        "budget_exhaustions": [
+          0,
+          0,
+          0
+        ],
+        "completion_throughput_per_second": [
+          929.4754409496845,
+          914.791031783228,
+          1025.0927488702957
+        ],
+        "protected_writer_overlap": [
+          8,
+          8,
+          8
+        ],
+        "waiting_logical_peak": [
+          0,
+          0,
+          0
+        ],
+        "waiting_retained_connections_peak": [
+          0,
+          0,
+          0
+        ],
+        "retained_connections": [
+          17,
+          17,
+          17
+        ],
+        "time_to_drain_ms": [
+          68.856042,
+          62.433375,
+          69.961333
+        ],
+        "waiting_retained_connection_ms": [
+          0,
+          0,
+          0
+        ],
+        "actual_wait_duration_ms": [
+          0,
+          0,
+          0
+        ],
+        "wait_calls": [
+          0,
+          0,
+          0
+        ],
+        "waiting_lanes_seen": [
+          0,
+          0,
+          0
+        ],
+        "waiting_threads_seen": [
+          0,
+          0,
+          0
+        ],
+        "waiting_connections_seen": [
+          0,
+          0,
+          0
+        ],
+        "accepted_completion_latency_median_ms": [
+          38.430375,
+          36.8613335,
+          41.0203125
+        ],
+        "accepted_completion_latency_p95_ms": [
+          68.1107277,
+          62.0665562,
+          68.8418045
+        ],
+        "body_latency_median_ms": [
+          8.072375,
+          7.3516455,
+          8.177146
+        ],
+        "body_latency_p95_ms": [
+          11.134533049999996,
+          10.741223199999999,
+          12.307162499999999
+        ],
+        "producer_write_invocation_median_ms": [
+          8.044563,
+          7.3248955,
+          8.149125
+        ],
+        "business_uow_median_ms": [
+          4.937979,
+          4.4109585,
+          5.027938
+        ],
+        "append_admission_call_median_ms": [
+          1.482646,
+          1.187333,
+          1.708021
+        ],
+        "idempotency_record_call_median_ms": [
+          0.62275,
+          0.5296665,
+          0.711937
+        ],
+        "commit_finalization_median_ms": [
+          0.9327295,
+          0.8014995,
+          1.125021
+        ]
+      },
+      "totals": {
+        "logical_requests": 640,
+        "acknowledged_accepted": 320,
+        "attempts": 640,
+        "capacity_refusals": 320,
+        "retry_attempts": 0,
+        "accepted_after_retry": 0,
+        "budget_exhaustions": 0,
+        "durable_accepted_effects": 320,
+        "verified_refusal_only_absences": 320,
+        "verified_exhausted_absences": 0,
+        "wait_calls": 0,
+        "idle_to_idle_wait_calls": 0,
+        "waiting_retained_connection_ms": 0,
+        "actual_wait_duration_ms": 0
+      },
+      "phase_counts": {
+        "producer_write_invocation": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 320,
+          "missing_delivery": 0
+        },
+        "business_uow": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 320,
+          "missing_delivery": 0
+        },
+        "append_admission_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 320,
+          "missing_delivery": 0
+        },
+        "idempotency_record_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 320,
+          "missing_delivery": 0
+        },
+        "commit_finalization": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 320,
+          "missing_delivery": 0
+        }
+      }
+    },
+    {
+      "concurrency": 16,
+      "retry_enabled": true,
+      "statistics": {
+        "logical_requests": [
+          128,
+          128,
+          128
+        ],
+        "acknowledged_accepted": [
+          119,
+          118,
+          120
+        ],
+        "completion_proportion": [
+          0.9296875,
+          0.921875,
+          0.9375
+        ],
+        "attempts": [
+          237,
+          227,
+          244
+        ],
+        "attempt_amplification": [
+          1.8515625,
+          1.7734375,
+          1.90625
+        ],
+        "capacity_refusals": [
+          118,
+          108,
+          126
+        ],
+        "retry_attempts": [
+          109,
+          99,
+          116
+        ],
+        "accepted_after_retry": [
+          10,
+          9,
+          11
+        ],
+        "budget_exhaustions": [
+          9,
+          8,
+          10
+        ],
+        "completion_throughput_per_second": [
+          938.8304913780712,
+          888.5744447109753,
+          967.0220375139703
+        ],
+        "protected_writer_overlap": [
+          8,
+          8,
+          8
+        ],
+        "waiting_logical_peak": [
+          8,
+          8,
+          8
+        ],
+        "waiting_retained_connections_peak": [
+          8,
+          8,
+          8
+        ],
+        "retained_connections": [
+          17,
+          17,
+          17
+        ],
+        "time_to_drain_ms": [
+          125.688291,
+          123.058209,
+          133.922375
+        ],
+        "waiting_retained_connection_ms": [
+          586.997245,
+          535.415791,
+          631.235783
+        ],
+        "actual_wait_duration_ms": [
+          585.585299,
+          534.147623,
+          629.885043
+        ],
+        "wait_calls": [
+          109,
+          99,
+          116
+        ],
+        "waiting_lanes_seen": [
+          10,
+          9,
+          11
+        ],
+        "waiting_threads_seen": [
+          10,
+          9,
+          11
+        ],
+        "waiting_connections_seen": [
+          10,
+          9,
+          11
+        ],
+        "accepted_completion_latency_median_ms": [
+          68.7686035,
+          64.160959,
+          70.710542
+        ],
+        "accepted_completion_latency_p95_ms": [
+          120.8548497,
+          115.46265614999997,
+          126.7088087
+        ],
+        "body_latency_median_ms": [
+          7.685646,
+          7.3429585,
+          8.063167
+        ],
+        "body_latency_p95_ms": [
+          9.9795339,
+          9.3374703,
+          11.3028875
+        ],
+        "producer_write_invocation_median_ms": [
+          7.661792,
+          7.3161665,
+          8.036625
+        ],
+        "business_uow_median_ms": [
+          4.544896,
+          4.4023125,
+          4.898875
+        ],
+        "append_admission_call_median_ms": [
+          1.455166,
+          1.3083755,
+          1.554583
+        ],
+        "idempotency_record_call_median_ms": [
+          0.627917,
+          0.5984165,
+          0.686459
+        ],
+        "commit_finalization_median_ms": [
+          0.94225,
+          0.821541,
+          0.9544165
+        ]
+      },
+      "totals": {
+        "logical_requests": 640,
+        "acknowledged_accepted": 595,
+        "attempts": 1173,
+        "capacity_refusals": 578,
+        "retry_attempts": 533,
+        "accepted_after_retry": 50,
+        "budget_exhaustions": 45,
+        "durable_accepted_effects": 595,
+        "verified_refusal_only_absences": 45,
+        "verified_exhausted_absences": 45,
+        "wait_calls": 533,
+        "idle_to_idle_wait_calls": 533,
+        "waiting_retained_connection_ms": 2903.574653,
+        "actual_wait_duration_ms": 2896.869925
+      },
+      "phase_counts": {
+        "producer_write_invocation": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 595,
+          "missing_delivery": 0
+        },
+        "business_uow": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 595,
+          "missing_delivery": 0
+        },
+        "append_admission_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 595,
+          "missing_delivery": 0
+        },
+        "idempotency_record_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 595,
+          "missing_delivery": 0
+        },
+        "commit_finalization": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 595,
+          "missing_delivery": 0
+        }
+      }
+    },
+    {
+      "concurrency": 32,
+      "retry_enabled": false,
+      "statistics": {
+        "logical_requests": [
+          128,
+          128,
+          128
+        ],
+        "acknowledged_accepted": [
+          32,
+          32,
+          32
+        ],
+        "completion_proportion": [
+          0.25,
+          0.25,
+          0.25
+        ],
+        "attempts": [
+          128,
+          128,
+          128
+        ],
+        "attempt_amplification": [
+          1,
+          1,
+          1
+        ],
+        "capacity_refusals": [
+          96,
+          96,
+          96
+        ],
+        "retry_attempts": [
+          0,
+          0,
+          0
+        ],
+        "accepted_after_retry": [
+          0,
+          0,
+          0
+        ],
+        "budget_exhaustions": [
+          0,
+          0,
+          0
+        ],
+        "completion_throughput_per_second": [
+          841.3321895772771,
+          817.0742995024145,
+          903.3041170907961
+        ],
+        "protected_writer_overlap": [
+          8,
+          8,
+          8
+        ],
+        "waiting_logical_peak": [
+          0,
+          0,
+          0
+        ],
+        "waiting_retained_connections_peak": [
+          0,
+          0,
+          0
+        ],
+        "retained_connections": [
+          33,
+          33,
+          33
+        ],
+        "time_to_drain_ms": [
+          38.034917,
+          35.4255,
+          39.164125
+        ],
+        "waiting_retained_connection_ms": [
+          0,
+          0,
+          0
+        ],
+        "actual_wait_duration_ms": [
+          0,
+          0,
+          0
+        ],
+        "wait_calls": [
+          0,
+          0,
+          0
+        ],
+        "waiting_lanes_seen": [
+          0,
+          0,
+          0
+        ],
+        "waiting_threads_seen": [
+          0,
+          0,
+          0
+        ],
+        "waiting_connections_seen": [
+          0,
+          0,
+          0
+        ],
+        "accepted_completion_latency_median_ms": [
+          24.252375,
+          22.1309165,
+          26.230333
+        ],
+        "accepted_completion_latency_p95_ms": [
+          37.869167,
+          35.2769106,
+          38.63012485
+        ],
+        "body_latency_median_ms": [
+          8.5365835,
+          7.2272085,
+          8.9491455
+        ],
+        "body_latency_p95_ms": [
+          12.3851564,
+          12.18962325,
+          12.89127515
+        ],
+        "producer_write_invocation_median_ms": [
+          8.508042,
+          7.199542,
+          8.8264995
+        ],
+        "business_uow_median_ms": [
+          5.1234585,
+          4.350042,
+          5.3888755
+        ],
+        "append_admission_call_median_ms": [
+          1.5450625,
+          1.1855415,
+          1.6100835
+        ],
+        "idempotency_record_call_median_ms": [
+          0.665083,
+          0.602458,
+          0.6910835
+        ],
+        "commit_finalization_median_ms": [
+          1.020125,
+          0.818979,
+          1.199437
+        ]
+      },
+      "totals": {
+        "logical_requests": 640,
+        "acknowledged_accepted": 160,
+        "attempts": 640,
+        "capacity_refusals": 480,
+        "retry_attempts": 0,
+        "accepted_after_retry": 0,
+        "budget_exhaustions": 0,
+        "durable_accepted_effects": 160,
+        "verified_refusal_only_absences": 480,
+        "verified_exhausted_absences": 0,
+        "wait_calls": 0,
+        "idle_to_idle_wait_calls": 0,
+        "waiting_retained_connection_ms": 0,
+        "actual_wait_duration_ms": 0
+      },
+      "phase_counts": {
+        "producer_write_invocation": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 160,
+          "missing_delivery": 0
+        },
+        "business_uow": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 160,
+          "missing_delivery": 0
+        },
+        "append_admission_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 160,
+          "missing_delivery": 0
+        },
+        "idempotency_record_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 160,
+          "missing_delivery": 0
+        },
+        "commit_finalization": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 160,
+          "missing_delivery": 0
+        }
+      }
+    },
+    {
+      "concurrency": 32,
+      "retry_enabled": true,
+      "statistics": {
+        "logical_requests": [
+          128,
+          128,
+          128
+        ],
+        "acknowledged_accepted": [
+          100,
+          98,
+          103
+        ],
+        "completion_proportion": [
+          0.78125,
+          0.765625,
+          0.8046875
+        ],
+        "attempts": [
+          438,
+          430,
+          443
+        ],
+        "attempt_amplification": [
+          3.421875,
+          3.359375,
+          3.4609375
+        ],
+        "capacity_refusals": [
+          340,
+          330,
+          343
+        ],
+        "retry_attempts": [
+          310,
+          302,
+          315
+        ],
+        "accepted_after_retry": [
+          25,
+          24,
+          28
+        ],
+        "budget_exhaustions": [
+          28,
+          25,
+          30
+        ],
+        "completion_throughput_per_second": [
+          855.0808906522557,
+          829.481288531469,
+          872.8012209455278
+        ],
+        "protected_writer_overlap": [
+          8,
+          8,
+          8
+        ],
+        "waiting_logical_peak": [
+          24,
+          24,
+          24
+        ],
+        "waiting_retained_connections_peak": [
+          24,
+          24,
+          24
+        ],
+        "retained_connections": [
+          33,
+          33,
+          33
+        ],
+        "time_to_drain_ms": [
+          118.010834,
+          113.834625,
+          118.972792
+        ],
+        "waiting_retained_connection_ms": [
+          1713.309834,
+          1667.034789,
+          1746.073955
+        ],
+        "actual_wait_duration_ms": [
+          1709.792293,
+          1663.582037,
+          1742.015506
+        ],
+        "wait_calls": [
+          310,
+          302,
+          315
+        ],
+        "waiting_lanes_seen": [
+          25,
+          24,
+          26
+        ],
+        "waiting_threads_seen": [
+          25,
+          24,
+          26
+        ],
+        "waiting_connections_seen": [
+          25,
+          24,
+          26
+        ],
+        "accepted_completion_latency_median_ms": [
+          67.1370625,
+          62.122125,
+          69.0296245
+        ],
+        "accepted_completion_latency_p95_ms": [
+          111.6540249,
+          111.30675349999999,
+          114.29745029999997
+        ],
+        "body_latency_median_ms": [
+          8.486354,
+          8.289646,
+          9.124667
+        ],
+        "body_latency_p95_ms": [
+          11.964995599999998,
+          10.832028900000001,
+          12.665951699999997
+        ],
+        "producer_write_invocation_median_ms": [
+          8.460229,
+          8.26475,
+          9.0944375
+        ],
+        "business_uow_median_ms": [
+          5.063812,
+          4.5755,
+          5.441125
+        ],
+        "append_admission_call_median_ms": [
+          1.6048125,
+          1.404292,
+          1.7125
+        ],
+        "idempotency_record_call_median_ms": [
+          0.74175,
+          0.601083,
+          0.8279795
+        ],
+        "commit_finalization_median_ms": [
+          0.933146,
+          0.9001455,
+          0.9964585
+        ]
+      },
+      "totals": {
+        "logical_requests": 640,
+        "acknowledged_accepted": 499,
+        "attempts": 2187,
+        "capacity_refusals": 1688,
+        "retry_attempts": 1547,
+        "accepted_after_retry": 127,
+        "budget_exhaustions": 141,
+        "durable_accepted_effects": 499,
+        "verified_refusal_only_absences": 141,
+        "verified_exhausted_absences": 141,
+        "wait_calls": 1547,
+        "idle_to_idle_wait_calls": 1547,
+        "waiting_retained_connection_ms": 8565.198615,
+        "actual_wait_duration_ms": 8547.36038
+      },
+      "phase_counts": {
+        "producer_write_invocation": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 499,
+          "missing_delivery": 0
+        },
+        "business_uow": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 499,
+          "missing_delivery": 0
+        },
+        "append_admission_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 499,
+          "missing_delivery": 0
+        },
+        "idempotency_record_call": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 499,
+          "missing_delivery": 0
+        },
+        "commit_finalization": {
+          "NOT_APPLICABLE": 0,
+          "NOT_REACHED": 0,
+          "NOT_COLLECTED": 0,
+          "MEASURED": 499,
+          "missing_delivery": 0
+        }
+      }
+    }
+  ],
+  "paired_comparisons": [
+    {
+      "concurrency": 8,
+      "statistics": {
+        "acknowledged_accepted": [
+          0,
+          0,
+          0
+        ],
+        "completion_proportion": [
+          0,
+          0,
+          0
+        ],
+        "attempts": [
+          0,
+          0,
+          0
+        ],
+        "attempt_amplification": [
+          0,
+          0,
+          0
+        ],
+        "capacity_refusals": [
+          0,
+          0,
+          0
+        ],
+        "retry_attempts": [
+          0,
+          0,
+          0
+        ],
+        "accepted_after_retry": [
+          0,
+          0,
+          0
+        ],
+        "budget_exhaustions": [
+          0,
+          0,
+          0
+        ],
+        "completion_throughput_per_second": [
+          44.97794586849386,
+          -8.001277454390674,
+          85.13460642077553
+        ],
+        "time_to_drain_ms": [
+          -5.4893749999999955,
+          -9.918125000000018,
+          0.8931259999999952
+        ],
+        "protected_writer_overlap": [
+          0,
+          0,
+          0
+        ],
+        "waiting_logical_peak": [
+          0,
+          0,
+          0
+        ],
+        "waiting_retained_connections_peak": [
+          0,
+          0,
+          0
+        ],
+        "waiting_retained_connection_ms": [
+          0,
+          0,
+          0
+        ],
+        "actual_wait_duration_ms": [
+          0,
+          0,
+          0
+        ],
+        "drain_ratio": [
+          0.9570344805773076,
+          0.9234087843563719,
+          1.0074998667135047
+        ],
+        "throughput_change_percent": [
+          4.489443201333199,
+          -0.7444037425006766,
+          8.294399722113678
+        ],
+        "accepted_gain_beyond_accepted_after_retry": [
+          0,
+          0,
+          0
+        ]
+      },
+      "repetitions": [
+        {
+          "pair_index": 0,
+          "acknowledged_accepted": 0,
+          "completion_proportion": 0,
+          "attempts": 0,
+          "attempt_amplification": 0,
+          "capacity_refusals": 0,
+          "retry_attempts": 0,
+          "accepted_after_retry": 0,
+          "budget_exhaustions": 0,
+          "completion_throughput_per_second": -5.133865363903624,
+          "time_to_drain_ms": 0.7030829999999924,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 0,
+          "waiting_retained_connections_peak": 0,
+          "waiting_retained_connection_ms": 0,
+          "actual_wait_duration_ms": 0,
+          "drain_ratio": 1.0053244367323861,
+          "throughput_change_percent": -0.5296237252217062,
+          "accepted_gain_beyond_accepted_after_retry": 0
+        },
+        {
+          "pair_index": 1,
+          "acknowledged_accepted": 0,
+          "completion_proportion": 0,
+          "attempts": 0,
+          "attempt_amplification": 0,
+          "capacity_refusals": 0,
+          "retry_attempts": 0,
+          "accepted_after_retry": 0,
+          "budget_exhaustions": 0,
+          "completion_throughput_per_second": -8.001277454390674,
+          "time_to_drain_ms": 0.8931259999999952,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 0,
+          "waiting_retained_connections_peak": 0,
+          "waiting_retained_connection_ms": 0,
+          "actual_wait_duration_ms": 0,
+          "drain_ratio": 1.0074998667135047,
+          "throughput_change_percent": -0.7444037425006766,
+          "accepted_gain_beyond_accepted_after_retry": 0
+        },
+        {
+          "pair_index": 2,
+          "acknowledged_accepted": 0,
+          "completion_proportion": 0,
+          "attempts": 0,
+          "attempt_amplification": 0,
+          "capacity_refusals": 0,
+          "retry_attempts": 0,
+          "accepted_after_retry": 0,
+          "budget_exhaustions": 0,
+          "completion_throughput_per_second": 44.97794586849386,
+          "time_to_drain_ms": -5.4893749999999955,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 0,
+          "waiting_retained_connections_peak": 0,
+          "waiting_retained_connection_ms": 0,
+          "actual_wait_duration_ms": 0,
+          "drain_ratio": 0.9570344805773076,
+          "throughput_change_percent": 4.489443201333199,
+          "accepted_gain_beyond_accepted_after_retry": 0
+        },
+        {
+          "pair_index": 3,
+          "acknowledged_accepted": 0,
+          "completion_proportion": 0,
+          "attempts": 0,
+          "attempt_amplification": 0,
+          "capacity_refusals": 0,
+          "retry_attempts": 0,
+          "accepted_after_retry": 0,
+          "budget_exhaustions": 0,
+          "completion_throughput_per_second": 81.12471250859551,
+          "time_to_drain_ms": -9.918125000000018,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 0,
+          "waiting_retained_connections_peak": 0,
+          "waiting_retained_connection_ms": 0,
+          "actual_wait_duration_ms": 0,
+          "drain_ratio": 0.9237965628979682,
+          "throughput_change_percent": 8.248941397116694,
+          "accepted_gain_beyond_accepted_after_retry": 0
+        },
+        {
+          "pair_index": 4,
+          "acknowledged_accepted": 0,
+          "completion_proportion": 0,
+          "attempts": 0,
+          "attempt_amplification": 0,
+          "capacity_refusals": 0,
+          "retry_attempts": 0,
+          "accepted_after_retry": 0,
+          "budget_exhaustions": 0,
+          "completion_throughput_per_second": 85.13460642077553,
+          "time_to_drain_ms": -9.551416000000003,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 0,
+          "waiting_retained_connections_peak": 0,
+          "waiting_retained_connection_ms": 0,
+          "actual_wait_duration_ms": 0,
+          "drain_ratio": 0.9234087843563719,
+          "throughput_change_percent": 8.294399722113678,
+          "accepted_gain_beyond_accepted_after_retry": 0
+        }
+      ]
+    },
+    {
+      "concurrency": 16,
+      "statistics": {
+        "acknowledged_accepted": [
+          55,
+          54,
+          56
+        ],
+        "completion_proportion": [
+          0.4296875,
+          0.421875,
+          0.4375
+        ],
+        "attempts": [
+          109,
+          99,
+          116
+        ],
+        "attempt_amplification": [
+          0.8515625,
+          0.7734375,
+          0.90625
+        ],
+        "capacity_refusals": [
+          54,
+          44,
+          62
+        ],
+        "retry_attempts": [
+          109,
+          99,
+          116
+        ],
+        "accepted_after_retry": [
+          10,
+          9,
+          11
+        ],
+        "budget_exhaustions": [
+          9,
+          8,
+          10
+        ],
+        "completion_throughput_per_second": [
+          -9.874294127440407,
+          -63.13779254854762,
+          51.59477235106556
+        ],
+        "time_to_drain_ms": [
+          61.273041000000006,
+          53.1455,
+          63.96104199999999
+        ],
+        "protected_writer_overlap": [
+          0,
+          0,
+          0
+        ],
+        "waiting_logical_peak": [
+          8,
+          8,
+          8
+        ],
+        "waiting_retained_connections_peak": [
+          8,
+          8,
+          8
+        ],
+        "waiting_retained_connection_ms": [
+          586.997245,
+          535.415791,
+          631.235783
+        ],
+        "actual_wait_duration_ms": [
+          585.585299,
+          534.147623,
+          629.885043
+        ],
+        "drain_ratio": [
+          1.895037000032044,
+          1.7601693706361743,
+          1.9814148442239428
+        ],
+        "throughput_change_percent": [
+          -1.0573408345960988,
+          -6.1592273107120015,
+          5.636141102033276
+        ],
+        "accepted_gain_beyond_accepted_after_retry": [
+          45,
+          43,
+          47
+        ]
+      },
+      "repetitions": [
+        {
+          "pair_index": 0,
+          "acknowledged_accepted": 55,
+          "completion_proportion": 0.4296875,
+          "attempts": 99,
+          "attempt_amplification": 0.7734375,
+          "capacity_refusals": 44,
+          "retry_attempts": 99,
+          "accepted_after_retry": 9,
+          "budget_exhaustions": 9,
+          "completion_throughput_per_second": 51.59477235106556,
+          "time_to_drain_ms": 53.1455,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 8,
+          "waiting_retained_connections_peak": 8,
+          "waiting_retained_connection_ms": 535.415791,
+          "actual_wait_duration_ms": 534.147623,
+          "drain_ratio": 1.7601693706361743,
+          "throughput_change_percent": 5.636141102033276,
+          "accepted_gain_beyond_accepted_after_retry": 46
+        },
+        {
+          "pair_index": 1,
+          "acknowledged_accepted": 56,
+          "completion_proportion": 0.4375,
+          "attempts": 100,
+          "attempt_amplification": 0.78125,
+          "capacity_refusals": 44,
+          "retry_attempts": 100,
+          "accepted_after_retry": 9,
+          "budget_exhaustions": 8,
+          "completion_throughput_per_second": -9.874294127440407,
+          "time_to_drain_ms": 61.338042000000016,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 8,
+          "waiting_retained_connections_peak": 8,
+          "waiting_retained_connection_ms": 542.688832,
+          "actual_wait_duration_ms": 541.484501,
+          "drain_ratio": 1.895037000032044,
+          "throughput_change_percent": -1.0573408345960988,
+          "accepted_gain_beyond_accepted_after_retry": 47
+        },
+        {
+          "pair_index": 2,
+          "acknowledged_accepted": 55,
+          "completion_proportion": 0.4296875,
+          "attempts": 109,
+          "attempt_amplification": 0.8515625,
+          "capacity_refusals": 54,
+          "retry_attempts": 109,
+          "accepted_after_retry": 10,
+          "budget_exhaustions": 9,
+          "completion_throughput_per_second": -63.13779254854762,
+          "time_to_drain_ms": 61.273041000000006,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 8,
+          "waiting_retained_connections_peak": 8,
+          "waiting_retained_connection_ms": 586.997245,
+          "actual_wait_duration_ms": 585.585299,
+          "drain_ratio": 1.9814148442239428,
+          "throughput_change_percent": -6.1592273107120015,
+          "accepted_gain_beyond_accepted_after_retry": 45
+        },
+        {
+          "pair_index": 3,
+          "acknowledged_accepted": 54,
+          "completion_proportion": 0.421875,
+          "attempts": 116,
+          "attempt_amplification": 0.90625,
+          "capacity_refusals": 62,
+          "retry_attempts": 116,
+          "accepted_after_retry": 11,
+          "budget_exhaustions": 10,
+          "completion_throughput_per_second": 9.355050428386676,
+          "time_to_drain_ms": 56.832249000000004,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 8,
+          "waiting_retained_connections_peak": 8,
+          "waiting_retained_connection_ms": 631.235783,
+          "actual_wait_duration_ms": 629.885043,
+          "drain_ratio": 1.8253778078037073,
+          "throughput_change_percent": 1.0064871018892418,
+          "accepted_gain_beyond_accepted_after_retry": 43
+        },
+        {
+          "pair_index": 4,
+          "acknowledged_accepted": 55,
+          "completion_proportion": 0.4296875,
+          "attempts": 109,
+          "attempt_amplification": 0.8515625,
+          "capacity_refusals": 54,
+          "retry_attempts": 109,
+          "accepted_after_retry": 11,
+          "budget_exhaustions": 9,
+          "completion_throughput_per_second": -26.216587072252764,
+          "time_to_drain_ms": 63.96104199999999,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 8,
+          "waiting_retained_connections_peak": 8,
+          "waiting_retained_connection_ms": 607.237002,
+          "actual_wait_duration_ms": 605.767459,
+          "drain_ratio": 1.9142341813298496,
+          "throughput_change_percent": -2.8658552785708946,
+          "accepted_gain_beyond_accepted_after_retry": 44
+        }
+      ]
+    },
+    {
+      "concurrency": 32,
+      "statistics": {
+        "acknowledged_accepted": [
+          68,
+          66,
+          71
+        ],
+        "completion_proportion": [
+          0.53125,
+          0.515625,
+          0.5546875
+        ],
+        "attempts": [
+          310,
+          302,
+          315
+        ],
+        "attempt_amplification": [
+          2.421875,
+          2.359375,
+          2.4609375
+        ],
+        "capacity_refusals": [
+          244,
+          234,
+          247
+        ],
+        "retry_attempts": [
+          310,
+          302,
+          315
+        ],
+        "accepted_after_retry": [
+          25,
+          24,
+          28
+        ],
+        "budget_exhaustions": [
+          28,
+          25,
+          30
+        ],
+        "completion_throughput_per_second": [
+          -11.850901045808087,
+          -33.58034364948401,
+          38.00659114984114
+        ],
+        "time_to_drain_ms": [
+          80.111208,
+          77.783875,
+          82.585334
+        ],
+        "protected_writer_overlap": [
+          0,
+          0,
+          0
+        ],
+        "waiting_logical_peak": [
+          24,
+          24,
+          24
+        ],
+        "waiting_retained_connections_peak": [
+          24,
+          24,
+          24
+        ],
+        "waiting_retained_connection_ms": [
+          1713.309834,
+          1667.034789,
+          1746.073955
+        ],
+        "actual_wait_duration_ms": [
+          1709.792293,
+          1663.582037,
+          1742.015506
+        ],
+        "drain_ratio": [
+          3.1062543136350214,
+          2.9861001618190115,
+          3.3312397566724536
+        ],
+        "throughput_change_percent": [
+          -1.4085876176641365,
+          -3.75418188885851,
+          4.651546520675853
+        ],
+        "accepted_gain_beyond_accepted_after_retry": [
+          42,
+          38,
+          46
+        ]
+      },
+      "repetitions": [
+        {
+          "pair_index": 0,
+          "acknowledged_accepted": 66,
+          "completion_proportion": 0.515625,
+          "attempts": 302,
+          "attempt_amplification": 2.359375,
+          "capacity_refusals": 236,
+          "retry_attempts": 302,
+          "accepted_after_retry": 24,
+          "budget_exhaustions": 30,
+          "completion_throughput_per_second": -11.850901045808087,
+          "time_to_drain_ms": 80.111208,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 24,
+          "waiting_retained_connections_peak": 24,
+          "waiting_retained_connection_ms": 1667.034789,
+          "actual_wait_duration_ms": 1663.582037,
+          "drain_ratio": 3.1062543136350214,
+          "throughput_change_percent": -1.4085876176641365,
+          "accepted_gain_beyond_accepted_after_retry": 42
+        },
+        {
+          "pair_index": 1,
+          "acknowledged_accepted": 68,
+          "completion_proportion": 0.53125,
+          "attempts": 315,
+          "attempt_amplification": 2.4609375,
+          "capacity_refusals": 247,
+          "retry_attempts": 315,
+          "accepted_after_retry": 24,
+          "budget_exhaustions": 28,
+          "completion_throughput_per_second": 5.263602757529611,
+          "time_to_drain_ms": 80.661584,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 24,
+          "waiting_retained_connections_peak": 24,
+          "waiting_retained_connection_ms": 1746.073955,
+          "actual_wait_duration_ms": 1742.015506,
+          "drain_ratio": 3.1054304526236813,
+          "throughput_change_percent": 0.6301718127283973,
+          "accepted_gain_beyond_accepted_after_retry": 44
+        },
+        {
+          "pair_index": 2,
+          "acknowledged_accepted": 68,
+          "completion_proportion": 0.53125,
+          "attempts": 315,
+          "attempt_amplification": 2.4609375,
+          "capacity_refusals": 247,
+          "retry_attempts": 315,
+          "accepted_after_retry": 26,
+          "budget_exhaustions": 28,
+          "completion_throughput_per_second": 38.00659114984114,
+          "time_to_drain_ms": 77.783875,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 24,
+          "waiting_retained_connections_peak": 24,
+          "waiting_retained_connection_ms": 1741.810166,
+          "actual_wait_duration_ms": 1738.201921,
+          "drain_ratio": 2.9861001618190115,
+          "throughput_change_percent": 4.651546520675853,
+          "accepted_gain_beyond_accepted_after_retry": 42
+        },
+        {
+          "pair_index": 3,
+          "acknowledged_accepted": 66,
+          "completion_proportion": 0.515625,
+          "attempts": 310,
+          "attempt_amplification": 2.421875,
+          "capacity_refusals": 244,
+          "retry_attempts": 310,
+          "accepted_after_retry": 28,
+          "budget_exhaustions": 30,
+          "completion_throughput_per_second": -33.58034364948401,
+          "time_to_drain_ms": 78.059583,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 24,
+          "waiting_retained_connections_peak": 24,
+          "waiting_retained_connection_ms": 1713.309834,
+          "actual_wait_duration_ms": 1709.792293,
+          "drain_ratio": 3.181956432084692,
+          "throughput_change_percent": -3.75418188885851,
+          "accepted_gain_beyond_accepted_after_retry": 38
+        },
+        {
+          "pair_index": 4,
+          "acknowledged_accepted": 71,
+          "completion_proportion": 0.5546875,
+          "attempts": 305,
+          "attempt_amplification": 2.3828125,
+          "capacity_refusals": 234,
+          "retry_attempts": 305,
+          "accepted_after_retry": 25,
+          "budget_exhaustions": 25,
+          "completion_throughput_per_second": -30.502896145268323,
+          "time_to_drain_ms": 82.585334,
+          "protected_writer_overlap": 0,
+          "waiting_logical_peak": 24,
+          "waiting_retained_connections_peak": 24,
+          "waiting_retained_connection_ms": 1696.969871,
+          "actual_wait_duration_ms": 1693.768623,
+          "drain_ratio": 3.3312397566724536,
+          "throughput_change_percent": -3.376813585606886,
+          "accepted_gain_beyond_accepted_after_retry": 46
+        }
+      ]
+    }
+  ],
+  "claim_limitations": [
+    "Experimental bound 8, max_attempts 8 and fixed 0.005-second delays are not production defaults or optimality selections.",
+    "Five recorded repetitions per N/mode support descriptive summaries only; no statistical significance or equivalence.",
+    "Only this matrix UUID and recorded cohort contribute to aggregates; smoke, warmup and cumulative snapshots are excluded.",
+    "Finite retained-lane CREATE work combines retry recovery with pacing of later fresh requests.",
+    "Higher eventual completion is not higher protected writer or database capacity.",
+    "Retry retains existing synchronous threads/connections; it does not increase configured connection count.",
+    "IDLE evidence is sampled at wait boundaries; no continuous server, CPU, scheduler or pool claim.",
+    "Measured phases overlap; missing and non-measured phase values are not zero.",
+    "One source, fixture, topology and fixed schedule; no PAY/hot-key/open-loop/deployment generalization.",
+    "No new live native/semantic-failure injection, Stage 4E authority, hard deadline or fairness guarantee.",
+    "Rate Limiter, jitter, queue, pool and async scheduling are not selected or ruled out permanently.",
+    "Archive is local and unpublished; publication requires explicit authorization."
+  ],
+  "next_architecture_question": "Is retained synchronous thread/connection pressure acceptable for the intended caller, or is a separately authorized architecture/policy decision needed?",
+  "publication": {
+    "status": "prepared_locally_not_published",
+    "prior_releases_modified": false
+  },
+  "closeout_scope": {
+    "production_source_changed": false,
+    "experiment_machinery_changed": false,
+    "method_document_changed": false,
+    "postgresql_executed": false,
+    "dependencies_changed": false
+  },
+  "compact_results": {
+    "filename": "experiments/load_capacity_protection/results/pr9_recorded_repetitions.csv",
+    "rows": 30,
+    "columns": 83,
+    "bytes": 17479,
+    "sha256": "f612166acd18339081ff813eff856a78fb59aeff184e235d8b5c249abda88f57",
+    "content": "one scalar-only row per recorded cell; no request/attempt/wait arrays"
+  }
+}
