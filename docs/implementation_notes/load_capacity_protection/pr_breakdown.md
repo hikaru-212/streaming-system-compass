@@ -35,6 +35,7 @@ commitment to implement a production limiter.
 | PR6 | ADR: separate resource occupancy, retry and arrival protection | ADR COMPLETE |
 | PR7 | Production Retry / Attempt-Pressure Policy Selection | COMPLETE / ready for human review |
 | PR8 | Production implementation of the selected bounded retry with backoff class | COMPLETE / ready for human review |
+| PR9 | Live production-path retry characterization | ACTIVE / machinery ready for human review |
 
 ## Branch / PR Workflow
 
@@ -50,10 +51,10 @@ The PR0 branch at workstream start was:
 docs/load-capacity-pr0-boundary
 ```
 
-The current PR8 branch is:
+The current PR9 branch is:
 
 ```text
-feat/load-capacity-pr8-bounded-retry-backoff
+experiment/load-capacity-pr9-production-retry-validation
 ```
 
 Workstream PR branches target the umbrella integration branch. Recommended
@@ -69,6 +70,7 @@ future branch names are:
 | PR6 | `docs/load-capacity-pr6-occupancy-retry-adr` |
 | PR7 | `docs/load-capacity-pr7-retry-policy-selection` |
 | PR8 | `feat/load-capacity-pr8-bounded-retry-backoff` |
+| PR9 | `experiment/load-capacity-pr9-production-retry-validation` |
 
 These names are recommendations only, not claims that the branches exist.
 PR5 closeout is on the named experiment branch. This document does not create
@@ -468,3 +470,45 @@ qualification and any new experiment/database execution remain separately scoped
 PR8 implements mechanism correctness only. No live PostgreSQL, load experiment,
 Git mutation or deployment qualification was performed. Later characterization
 and numerical policy require separate scope and authorization.
+
+## PR9 — Production-Path Retry Validation
+
+### Status
+
+```text
+ACTIVE
+Method / source audit / observation seams — ready for review
+Executable machinery — implemented with deterministic validation
+Live PostgreSQL matrix — NOT RUN
+Final live numerical configuration — NOT SELECTED
+```
+
+### Goal and Responsibility
+
+The [PR9 method](pr9_production_retry_validation_method.md) implements
+contemporaneous disabled/enabled comparison through the real
+`build_postgres_writer_request` / `PostgresWriterRequest` composition. The
+fixture, logical workload, capacity bound, committed source, observation settings
+and retained-connection topology must match, with retry policy as the intended
+difference. Observe attempts, logical completion, body overlap, phase timing,
+synchronous waiting and retained idle resources; verify durable effects separately.
+
+The initial source audit found a supported-interface gap. The user approved
+optional observation in exactly the concrete capacity primitive, request owner
+and builder. Context-bound request/attempt observations retain failures
+separately; measured delivery remains separate from the primary result. The
+concrete-gate provenance restriction and retry policy remain unchanged.
+PR9 now supplies its own model/codec, real-builder adapter, paired runner,
+durable verification and retained-resource accounting with deterministic tests.
+
+### Scope and Non-Goals
+
+The current task implements and reviews the approved seams and measurement
+machinery. It does not authorize live PostgreSQL execution.
+Final K/concurrency/bound/budget/delay/cohort values require later human approval
+after machinery review. No retry reimplementation, PR5 scheduler substitution,
+Rate Limiter, jitter, queue, async scheduler, pool, Stage 4E change or production
+numerical default belongs to PR9. Historical evidence and Releases remain intact.
+
+PR9 stays ACTIVE until its machinery and later live evidence have been reviewed;
+a method draft or deterministic tests alone cannot close it.

@@ -24,6 +24,7 @@ PR5 — COMPLETE / EVIDENCE COLLECTION CLOSED
 PR6 — ADR COMPLETE
 PR7 — retry / attempt-pressure policy selection — COMPLETE
 PR8 — bounded retry with delayed backoff — COMPLETE / ready for human review
+PR9 — production retry validation — ACTIVE / machinery ready for human review
 ```
 
 PR2 selects N=8 as a candidate protected experimental point and bounded
@@ -71,6 +72,13 @@ disabled mode retains one attempt. Deterministic mechanism/regression tests pass
 Production numerical policy and performance qualification remain unselected and
 unestablished respectively; existing callers are not automatically enabled.
 
+[PR9's method](pr9_production_retry_validation_method.md) specifies a same-source
+disabled/enabled comparison through the real PR8 owner. The approved optional
+concrete-gate observer and separate measured delivery now support PR9's paired
+runner, logical/attempt evidence, retained-resource accounting and durable
+verification. Deterministic tests pass; the seams and machinery are ready for
+human review. No live PostgreSQL run or final matrix values are selected.
+
 ## Research Direction
 
 ```text
@@ -83,6 +91,7 @@ measurement
 → occupancy / retry / arrival separation (PR6 ADR COMPLETE)
 → bounded retry with backoff policy-class selection (PR7 COMPLETE)
 → direct-writer bounded retry mechanism (PR8 COMPLETE / ready for human review)
+→ production-path characterization (PR9 ACTIVE / machinery ready for human review)
 → deployment numerical policy / other mechanisms only if separately justified and authorized
 ```
 
@@ -106,6 +115,7 @@ establish a production capacity limit or reopen that completed stage.
 | [PR6 — ADR 0031: Separate Resource Occupancy, Retry, and Arrival Protection](../../adr/0031_separate_resource_occupancy_retry_and_arrival_protection.md) | Accepted architectural separation grounded in PR1–PR5; authority-neutral capacity refusal, explicit retry-policy ownership and evidence-gated next work without production mechanism selection. |
 | [PR7 Retry / Attempt-Pressure Policy Selection](pr7_retry_attempt_policy_selection.md) | Evidence-backed selection of opt-in finite-budget retry with delayed backoff; candidate dispositions, separate budget/timing responsibility, deferred jitter/rate/queue mechanisms, authority and ownership boundary, and PR8 entry contract without numerical policy or implementation. |
 | [PR8 Production Bounded Retry with Delayed Backoff](pr8_bounded_retry_backoff.md) | Direct-writer placement audit, explicit immutable attempt/delay configuration, verified refusal provenance, resource-free waiting and caller preconditions, capacity-specific exhaustion, bounded observations, Stage 4E separation and deterministic mechanism validation. |
+| [PR9 Production Retry Validation Method](pr9_production_retry_validation_method.md) | Same-source production-owner A/B machinery, approved optional observation seams, logical/attempt and retained-resource evidence, durable verification and deterministic tests; separate live-run approval remains required. |
 
 ## Important Boundary
 
