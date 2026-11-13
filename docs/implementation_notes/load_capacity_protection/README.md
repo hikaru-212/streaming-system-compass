@@ -14,6 +14,18 @@ Stage 4E Re-invocation Authority.
 
 ## Current Status
 
+| Responsibility | Final status |
+|---|---|
+| Research and characterization | COMPLETE |
+| Production-capable opt-in mechanism | IMPLEMENTED AND VALIDATED |
+| Actual production deployment | NOT QUALIFIED |
+
+The [workstream closeout](workstream_closeout.md) owns the final status,
+evidence/Release index, remaining deployment obligations and conditions for
+reopening work. No PR12 implementation or umbrella-to-main merge is authorized.
+Historical notes retain their original stage-specific status labels; accepted
+ADRs and evidence reports retain their respective decision and measurement roles.
+
 ```text
 PR0 — responsibility / research boundary — COMPLETE
 PR1 — COMPLETE / EVIDENCE COLLECTION CLOSED
@@ -26,10 +38,10 @@ PR7 — retry / attempt-pressure policy selection — COMPLETE
 PR8 — bounded retry with delayed backoff — COMPLETE / MERGED
 PR9 — production retry validation — COMPLETE / MERGED / EVIDENCE COLLECTION CLOSED
 PR10 — retry waiting ownership decision — COMPLETE / MERGED / Accepted in ADR 0032
-PR11 — caller resource envelope audit — COMPLETE / deployment NOT QUALIFIED
+PR11 — caller resource envelope audit — COMPLETE / MERGED / deployment NOT QUALIFIED
 ```
 
-PR8, PR9 and PR10 are merged into `feat/load-capacity-protection`.
+PR8–PR11 are merged into `feat/load-capacity-protection`.
 
 PR2 selects N=8 as a candidate protected experimental point and bounded
 in-flight writer admission as the first mechanism class to evaluate. This is
@@ -40,16 +52,15 @@ The gate bounded writer overlap and reduced later UOW/append elapsed amplificati
 but every recorded protected overload cell accepted eight and terminally refused
 504 of 512 items before the first admitted body completed. This establishes local
 writer-resource protection, not end-to-end overload resolution or retry-storm
-evidence. The closeout package passed internal checks and is ready for human
-review. The exact PR4 raw evidence archive has been published via the GitHub
-Release referenced by the [PR4 report](pr4_protected_vs_unprotected_report.md)
+evidence. Evidence collection is closed. The exact PR4 raw evidence archive
+has been published via the GitHub Release referenced by the [PR4 report](pr4_protected_vs_unprotected_report.md)
 and [evidence manifest](../../../experiments/load_capacity_protection/results/pr4_evidence_manifest.json).
 
 PR5 completed the accepted five-policy retry/refusal characterization. Writer-body
 overlap remained bounded at eight in every cell. Immediate retry amplified recorded
 attempts 7.5625× without improving logical completion over NO_RETRY. Backoff improved
 completion while extending drain time and pacing later fresh logical requests under
-retained-lane scheduling. The closeout package is ready for human review.
+retained-lane scheduling. Evidence collection is closed.
 The exact PR5 raw evidence archive has been published via the GitHub Release
 referenced by the [PR5 report](pr5_retry_refusal_amplification_report.md)
 and [evidence manifest](../../../experiments/load_capacity_protection/results/pr5_evidence_manifest.json).
@@ -61,9 +72,9 @@ retains only writer occupancy; `WriterCapacityRefused` remains capacity-specific
 and authority-neutral. ADR acceptance itself selected no production retry or
 Rate Limiter; its historical decision boundary remains unchanged.
 
-[PR7 policy selection](pr7_retry_attempt_policy_selection.md) is internally
-resolved and ready for human review: select an explicit finite retry budget plus
-delayed backoff in an opt-in caller/orchestration layer outside the protected
+[PR7 policy selection](pr7_retry_attempt_policy_selection.md) is complete: it
+selected an explicit finite retry budget plus delayed backoff in an opt-in
+caller/orchestration layer outside the protected
 writer and Stage 4E owners. Keep no retry as the disabled baseline; reject
 immediate retry for the enabled first policy. Fixed versus exponential shape
 and production numerical settings remain unselected. Jitter, retry-attempt rate
@@ -104,8 +115,8 @@ or select numerical policy, a Rate Limiter, pool, queue or Stage 4E change.
 The investigation note retains its pre-acceptance chronology; ADR 0032 owns the
 accepted decision. No new production implementation is authorized.
 
-[PR11's caller audit](pr11_caller_resource_envelope_audit.md) is complete as an
-investigation: no tracked production caller enables the retry composition.
+[PR11's caller audit](pr11_caller_resource_envelope_audit.md) is complete and merged:
+its investigation finds no tracked production caller enabling the retry composition.
 The shared gate bounds protected bodies, but no production caller concurrency,
 connection/thread envelope or overall lifetime/shutdown contract is established.
 IDLE checks and finite attempts do not supply these guarantees. Deployment is
@@ -113,7 +124,7 @@ IDLE checks and finite attempts do not supply these guarantees. Deployment is
 responsibility is to name an intended caller and establish its resource/lifecycle
 contract before separately authorizing enablement or any missing enforcement.
 
-## Research Direction
+## Completed Research Sequence
 
 ```text
 measurement
@@ -127,9 +138,12 @@ measurement
 → direct-writer bounded retry mechanism (PR8 COMPLETE / merged)
 → production-path characterization (PR9 COMPLETE / merged / evidence collection closed)
 → conditional retained synchronous ownership (PR10 COMPLETE / merged / ADR 0032 Accepted)
-→ caller resource envelope audit (PR11 COMPLETE / deployment NOT QUALIFIED)
-→ deployment numerical policy / other mechanisms only if separately justified and authorized
+→ caller resource envelope audit (PR11 COMPLETE / merged / deployment NOT QUALIFIED)
+→ workstream closeout (research COMPLETE; opt-in mechanism IMPLEMENTED AND VALIDATED)
 ```
+
+Further work requires the [closeout re-entry conditions](workstream_closeout.md#conditions-for-reopening-work)
+and separate authorization; no implementation follows automatically.
 
 Completed Stage 4B.2 evidence supplies a measured starting point. It does not
 establish a production capacity limit or reopen that completed stage.
@@ -138,6 +152,7 @@ establish a production capacity limit or reopen that completed stage.
 
 | Document | Responsibility |
 |---|---|
+| [Workstream Closeout](workstream_closeout.md) | Final research/mechanism/deployment statuses, evidence and Release links, unresolved caller obligations and explicit re-entry conditions. |
 | [PR Breakdown](pr_breakdown.md) | Delivery sequence, PR-level responsibilities, branch recommendations, and documentation placement. |
 | [PR0 Research and Responsibility Boundary](pr0_research_and_responsibility_boundary.md) | Source-grounded capacity responsibility, inherited evidence, observation gaps, first experiment question, and non-goals. |
 | [PR1 Unprotected Characterization Method](pr1_unprotected_characterization_method.md) | Fixed-work experiment method, outer evidence, validity requirements, and separate live-run approval gate. |
@@ -150,7 +165,7 @@ establish a production capacity limit or reopen that completed stage.
 | [PR5 Retry / Refusal Amplification Report](pr5_retry_refusal_amplification_report.md) | Accepted 30-cell evidence, 25 recorded policy comparisons, bounded occupancy with retry amplification, retained-lane pacing, durable verification, exact archive identity and PR5 closeout. |
 | [PR6 — ADR 0031: Separate Resource Occupancy, Retry, and Arrival Protection](../../adr/0031_separate_resource_occupancy_retry_and_arrival_protection.md) | Accepted architectural separation grounded in PR1–PR5; authority-neutral capacity refusal, explicit retry-policy ownership and evidence-gated next work without production mechanism selection. |
 | [PR7 Retry / Attempt-Pressure Policy Selection](pr7_retry_attempt_policy_selection.md) | Evidence-backed selection of opt-in finite-budget retry with delayed backoff; candidate dispositions, separate budget/timing responsibility, deferred jitter/rate/queue mechanisms, authority and ownership boundary, and PR8 entry contract without numerical policy or implementation. |
-| [PR8 Production Bounded Retry with Delayed Backoff](pr8_bounded_retry_backoff.md) | Direct-writer placement audit, explicit immutable attempt/delay configuration, verified refusal provenance, resource-free waiting and caller preconditions, capacity-specific exhaustion, bounded observations, Stage 4E separation and deterministic mechanism validation. |
+| [PR8 Production Bounded Retry with Delayed Backoff](pr8_bounded_retry_backoff.md) | Direct-writer placement audit, explicit immutable attempt/delay configuration, verified refusal provenance, waiting outside permit/transaction ownership and caller preconditions, capacity-specific exhaustion, bounded observations, Stage 4E separation and deterministic mechanism validation. |
 | [PR9 Production Retry Validation Method](pr9_production_retry_validation_method.md) | Unchanged pre-run method: production-owner A/B machinery, approved observation seams, logical/attempt and retained-resource evidence, durable verification, deterministic tests and the original live-run approval boundary. |
 | [PR9 Production Retry Validation Report](pr9_production_retry_validation_report.md) | Reconciled 30-cell recorded comparison, completion versus drain/throughput, bounded occupancy, retained idle-resource cost and lane-pacing qualification; compact results, published archive identity and PR9 closeout. |
 | [PR10 Retry Waiting Ownership Decision](pr10_retry_waiting_ownership_decision.md) | Connection/thread lifetime and session-state audit; retain current synchronous ownership under explicit caller preconditions; compare reacquisition and deferred scheduler alternatives, failure/resource bounds and the separate implementation boundary. |
