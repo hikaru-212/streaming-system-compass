@@ -19,27 +19,40 @@ evidence
 → validation of protection
 ```
 
-This is a conditional research plan, not authorization to begin later PRs or a
-commitment to implement a production limiter.
+This is the completed PR0–PR11 delivery record. PR-specific responsibilities
+below retain their chronology; current statuses and the final closeout do not
+authorize later implementation or select a production limiter.
 
 ## Current Status
+
+| Responsibility | Final status |
+|---|---|
+| Research and characterization | COMPLETE |
+| Production-capable opt-in mechanism | IMPLEMENTED AND VALIDATED |
+| Actual production deployment | NOT QUALIFIED |
+
+The [workstream closeout](workstream_closeout.md) owns the final status,
+evidence/Release index, remaining deployment obligations and conditions for
+reopening work. No PR12 implementation or umbrella-to-main merge is authorized.
+Historical notes retain their original stage-specific status labels; accepted
+ADRs and evidence reports retain their respective decision and measurement roles.
 
 | PR | Responsibility | Status |
 |---|---|---|
 | PR0 | Research / responsibility boundary | COMPLETE |
-| PR1 | Unprotected load characterization | COMPLETE |
+| PR1 | Unprotected load characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 | PR2 | Capacity / degradation / operating-headroom interpretation | COMPLETE |
 | PR3 | First bounded in-flight capacity mechanism | COMPLETE |
 | PR4 | Protected vs unprotected characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 | PR5 | Retry / Refusal Amplification Characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 | PR6 | ADR: separate resource occupancy, retry and arrival protection | ADR COMPLETE |
-| PR7 | Production Retry / Attempt-Pressure Policy Selection | COMPLETE / ready for human review |
+| PR7 | Production Retry / Attempt-Pressure Policy Selection | COMPLETE |
 | PR8 | Production implementation of the selected bounded retry with backoff class | COMPLETE / MERGED |
 | PR9 | Live production-path retry characterization | COMPLETE / MERGED / EVIDENCE COLLECTION CLOSED |
 | PR10 | Retry Waiting Ownership Architecture Decision | COMPLETE / MERGED / Accepted in ADR 0032 |
-| PR11 | Caller Resource Envelope and Deployment Qualification Audit | COMPLETE / deployment NOT QUALIFIED |
+| PR11 | Caller Resource Envelope and Deployment Qualification Audit | COMPLETE / MERGED / deployment NOT QUALIFIED |
 
-PR8, PR9 and PR10 are merged into `feat/load-capacity-protection`. PR10's conditional
+PR8–PR11 are merged into `feat/load-capacity-protection`. PR10's conditional
 Option A recommendation is human-approved and recorded in
 [ADR 0032](../../adr/0032_keep_capacity_retry_synchronous_under_explicit_caller_resource_budgets.md).
 
@@ -57,14 +70,14 @@ The PR0 branch at workstream start was:
 docs/load-capacity-pr0-boundary
 ```
 
-The current PR11 branch is:
+The current documentation closeout branch is:
 
 ```text
-docs/load-capacity-pr11-caller-resource-envelope
+docs/load-capacity-workstream-closeout
 ```
 
-Workstream PR branches target the umbrella integration branch. Recommended
-future branch names are:
+Workstream PR branches target the umbrella integration branch. The recorded
+PR branch recommendations were:
 
 | PR | Recommended branch |
 |---|---|
@@ -80,8 +93,8 @@ future branch names are:
 | PR10 | `docs/load-capacity-pr10-retry-waiting-ownership` |
 | PR11 | `docs/load-capacity-pr11-caller-resource-envelope` |
 
-These names are recommendations only, not claims that the branches exist.
-PR5 closeout is on the named experiment branch. This document does not create
+These names retain planning chronology, not claims that every branch still
+exists. The current closeout branch is named above. This document does not create
 branches or authorize Git mutations, PR creation, or merging.
 
 ## Commit Discipline
@@ -258,7 +271,7 @@ separately evidence-gated. PR3 tests mechanics, not protected load performance.
 
 ```text
 COMPLETE / EVIDENCE COLLECTION CLOSED
-Closeout package internally checked; ready for human review
+Closeout complete; evidence collection closed
 Exact PR4 raw evidence archive — PUBLISHED via the GitHub Release referenced by the PR4 report/manifest
 ```
 
@@ -311,7 +324,7 @@ automatically establish a production SLO/SLA.
 
 ```text
 COMPLETE / EVIDENCE COLLECTION CLOSED
-Closeout package internally verified; ready for human review
+Closeout complete; evidence collection closed
 Exact PR5 raw evidence archive — PUBLISHED via the GitHub Release referenced by the PR5 report/manifest
 ```
 
@@ -342,9 +355,9 @@ remain explicitly qualified by analysis-window width.
 
 Retry budgets, backoff and jitter here are experiment stimuli with explicit
 parameters, not production mechanisms or Stage 4E reinvocation authority.
-Production retry, rate limiting and arrival shaping require later evidence and
-authorization. The report and manifest record the completed run's exact K/N,
-attempt budgets, delays, jitter, warmups and repetitions. No additional
+PR7/PR8 separately selected and implemented opt-in production retry; rate limiting
+and arrival shaping remain deferred. The report and manifest record the completed
+run's exact K/N, attempt budgets, delays, jitter, warmups and repetitions. No additional
 PostgreSQL experiment was run for closeout; evidence collection is closed.
 
 PR5 supplied the evidence for the separately authorized PR6 decision below.
@@ -401,7 +414,7 @@ PR7 does not rewrite its historical non-selection into a PR6 implementation.
 ### Status
 
 ```text
-COMPLETE / policy selection internally resolved; ready for human review
+COMPLETE / selected class implemented by PR8
 Production numerical policy — NOT SELECTED
 PR8 entry contract — handed off to the separately authorized implementation below
 ```
@@ -591,7 +604,7 @@ no implementation PR is automatically started.
 ### Status
 
 ```text
-COMPLETE / investigation; ready for human review
+COMPLETE / MERGED into feat/load-capacity-protection / investigation closed
 Production retry-enabled consumer — NONE FOUND in the audited repository
 Caller envelope / deployment qualification — NOT ESTABLISHED / NOT QUALIFIED
 Production implementation / new live execution — NOT AUTHORIZED
@@ -624,3 +637,19 @@ automatically selected.
 Documentation and current navigation only. No production code, tests,
 experiments, historical evidence, numerical defaults, Rate Limiter, Token Bucket,
 pool, queue, async scheduler or Stage 4E change; no PostgreSQL or evidence replay.
+
+## Final Workstream Disposition
+
+PR0–PR11 are complete within their declared responsibilities. The
+[workstream closeout](workstream_closeout.md) consolidates evidence publication,
+accepted architectural boundaries and unresolved deployment obligations.
+Research and characterization are COMPLETE; the production-capable opt-in
+mechanism is IMPLEMENTED AND VALIDATED; actual production deployment is
+NOT QUALIFIED. No tracked production caller enables retry.
+
+Only the [explicit re-entry conditions](workstream_closeout.md#conditions-for-reopening-work)
+can justify a separately authorized follow-up: a named caller/integration and its
+resource/lifecycle contract, a concrete unmet requirement, or a reproducible defect.
+New evidence may be needed before any mechanism change. This record starts no
+PR12 implementation, selects no Rate Limiter/pool/queue/async scheduler or
+production numerical defaults, and authorizes no umbrella-to-main merge.
