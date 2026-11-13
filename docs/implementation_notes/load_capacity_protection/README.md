@@ -23,9 +23,12 @@ PR4 — COMPLETE / EVIDENCE COLLECTION CLOSED
 PR5 — COMPLETE / EVIDENCE COLLECTION CLOSED
 PR6 — ADR COMPLETE
 PR7 — retry / attempt-pressure policy selection — COMPLETE
-PR8 — bounded retry with delayed backoff — COMPLETE / ready for human review
-PR9 — production retry validation — COMPLETE / EVIDENCE COLLECTION CLOSED
+PR8 — bounded retry with delayed backoff — COMPLETE / MERGED
+PR9 — production retry validation — COMPLETE / MERGED / EVIDENCE COLLECTION CLOSED
+PR10 — retry waiting ownership decision — COMPLETE / Accepted in ADR 0032
 ```
+
+PR8 and PR9 are merged into `feat/load-capacity-protection`.
 
 PR2 selects N=8 as a candidate protected experimental point and bounded
 in-flight writer admission as the first mechanism class to evaluate. This is
@@ -69,7 +72,7 @@ No production behavior changed in PR7. The separately authorized
 composition outside the existing Stage 4E graph. Explicit per-request attempt
 ceilings and delay sequences govern only verified pre-body capacity refusals;
 disabled mode retains one attempt. Deterministic mechanism/regression tests pass.
-Production numerical policy and performance qualification remain unselected and
+Production numerical policy and deployment qualification remain unselected and
 unestablished respectively; existing callers are not automatically enabled.
 
 [PR9's report](pr9_production_retry_validation_report.md) closes the same-source
@@ -84,9 +87,21 @@ pre-run record. Compact results and the published canonical archive are identifi
 by the [manifest](../../../experiments/load_capacity_protection/results/pr9_evidence_manifest.json).
 The exact PR9 raw evidence archive is published via the GitHub Release referenced
 by the [PR9 report](pr9_production_retry_validation_report.md#raw-evidence-publication).
-The closeout is ready for human review. Experimental eight-attempt/5 ms settings
-are not deployment defaults. The next decision is whether retained synchronous
-resource pressure is acceptable; no later implementation is automatically started.
+PR9 is complete and merged. Experimental eight-attempt/5 ms settings are not
+deployment defaults.
+
+[PR10's investigation](pr10_retry_waiting_ownership_decision.md) supports the
+human-approved [ADR 0032](../../adr/0032_keep_capacity_retry_synchronous_under_explicit_caller_resource_budgets.md):
+retaining the current synchronous thread/caller-owned connection contract only
+under explicit caller concurrency, resource, finite lifetime, custody and
+shutdown/cancellation preconditions.
+Connection identity is not a business requirement; if connection-free waiting
+becomes necessary, retry above per-attempt resource acquisition is the preferred
+candidate for separate design. Option B is not selected; scheduler/queue/async
+ownership remains deferred. Conditional acceptance does not qualify a deployment
+or select numerical policy, a Rate Limiter, pool, queue or Stage 4E change.
+The investigation note retains its pre-acceptance chronology; ADR 0032 owns the
+accepted decision. No new production implementation is authorized.
 
 ## Research Direction
 
@@ -99,9 +114,9 @@ measurement
 → retry/refusal amplification characterization (PR5 COMPLETE)
 → occupancy / retry / arrival separation (PR6 ADR COMPLETE)
 → bounded retry with backoff policy-class selection (PR7 COMPLETE)
-→ direct-writer bounded retry mechanism (PR8 COMPLETE / ready for human review)
-→ production-path characterization (PR9 COMPLETE / evidence collection closed)
-→ retained synchronous resource acceptability / separate architecture decision
+→ direct-writer bounded retry mechanism (PR8 COMPLETE / merged)
+→ production-path characterization (PR9 COMPLETE / merged / evidence collection closed)
+→ conditional retained synchronous ownership (PR10 COMPLETE / ADR 0032 Accepted)
 → deployment numerical policy / other mechanisms only if separately justified and authorized
 ```
 
@@ -127,6 +142,8 @@ establish a production capacity limit or reopen that completed stage.
 | [PR8 Production Bounded Retry with Delayed Backoff](pr8_bounded_retry_backoff.md) | Direct-writer placement audit, explicit immutable attempt/delay configuration, verified refusal provenance, resource-free waiting and caller preconditions, capacity-specific exhaustion, bounded observations, Stage 4E separation and deterministic mechanism validation. |
 | [PR9 Production Retry Validation Method](pr9_production_retry_validation_method.md) | Unchanged pre-run method: production-owner A/B machinery, approved observation seams, logical/attempt and retained-resource evidence, durable verification, deterministic tests and the original live-run approval boundary. |
 | [PR9 Production Retry Validation Report](pr9_production_retry_validation_report.md) | Reconciled 30-cell recorded comparison, completion versus drain/throughput, bounded occupancy, retained idle-resource cost and lane-pacing qualification; compact results, published archive identity and PR9 closeout. |
+| [PR10 Retry Waiting Ownership Decision](pr10_retry_waiting_ownership_decision.md) | Connection/thread lifetime and session-state audit; retain current synchronous ownership under explicit caller preconditions; compare reacquisition and deferred scheduler alternatives, failure/resource bounds and the separate implementation boundary. |
+| [PR10 — ADR 0032: Keep Capacity Retry Synchronous Under Explicit Caller Resource Budgets](../../adr/0032_keep_capacity_retry_synchronous_under_explicit_caller_resource_budgets.md) | Accepted conditional ownership decision; separate writer, caller and connection/thread bounds, preserve logical identity independently of connection identity, and require separate design if connection-free waiting becomes necessary. |
 
 ## Important Boundary
 

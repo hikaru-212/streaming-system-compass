@@ -34,8 +34,13 @@ commitment to implement a production limiter.
 | PR5 | Retry / Refusal Amplification Characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
 | PR6 | ADR: separate resource occupancy, retry and arrival protection | ADR COMPLETE |
 | PR7 | Production Retry / Attempt-Pressure Policy Selection | COMPLETE / ready for human review |
-| PR8 | Production implementation of the selected bounded retry with backoff class | COMPLETE / ready for human review |
-| PR9 | Live production-path retry characterization | COMPLETE / EVIDENCE COLLECTION CLOSED |
+| PR8 | Production implementation of the selected bounded retry with backoff class | COMPLETE / MERGED |
+| PR9 | Live production-path retry characterization | COMPLETE / MERGED / EVIDENCE COLLECTION CLOSED |
+| PR10 | Retry Waiting Ownership Architecture Decision | COMPLETE / Accepted in ADR 0032 |
+
+PR8 and PR9 are merged into `feat/load-capacity-protection`. PR10's conditional
+Option A recommendation is human-approved and recorded in
+[ADR 0032](../../adr/0032_keep_capacity_retry_synchronous_under_explicit_caller_resource_budgets.md).
 
 ## Branch / PR Workflow
 
@@ -51,10 +56,10 @@ The PR0 branch at workstream start was:
 docs/load-capacity-pr0-boundary
 ```
 
-The current PR9 branch is:
+The current PR10 branch is:
 
 ```text
-experiment/load-capacity-pr9-production-retry-validation
+docs/load-capacity-pr10-retry-waiting-ownership
 ```
 
 Workstream PR branches target the umbrella integration branch. Recommended
@@ -71,6 +76,7 @@ future branch names are:
 | PR7 | `docs/load-capacity-pr7-retry-policy-selection` |
 | PR8 | `feat/load-capacity-pr8-bounded-retry-backoff` |
 | PR9 | `experiment/load-capacity-pr9-production-retry-validation` |
+| PR10 | `docs/load-capacity-pr10-retry-waiting-ownership` |
 
 These names are recommendations only, not claims that the branches exist.
 PR5 closeout is on the named experiment branch. This document does not create
@@ -349,7 +355,7 @@ Its experiment policies remain historical stimuli, not production selections.
 ```text
 ADR COMPLETE
 Architectural separation — Accepted in ADR 0031
-Next production mechanism — NOT STARTED
+Subsequent retry implementation — PR8 COMPLETE / MERGED
 ```
 
 ### Goal and Responsibility
@@ -410,10 +416,11 @@ shape remains an explicit PR8 design/configuration choice; jitter is deferred
 pending a more isolated comparison. No Rate Limiter, Token Bucket or bounded
 queue/backpressure mechanism is selected.
 
-The future owner is a caller/orchestration policy layer outside the protected
-writer, capacity primitive and Stage 4E invocation/runtime owners. Explicit
-configuration supplies narrow authority to react to verified pre-body capacity
-refusal; the refusal itself does not authorize retry. PR5's retained-lane pacing
+PR7 selected a caller/orchestration policy layer outside the protected
+writer, capacity primitive and Stage 4E invocation/runtime owners, implemented
+by PR8 below. Explicit configuration supplies narrow authority to react to
+verified pre-body capacity refusal; the refusal itself does not authorize retry.
+PR5's retained-lane pacing
 continues to qualify completion and jitter interpretation.
 
 ### Scope and Non-Goals
@@ -429,25 +436,26 @@ contract defines later work without starting it.
 ### Status
 
 ```text
-COMPLETE / mechanism checked; ready for human review
-Production numerical policy and performance qualification remain open
+COMPLETE / MERGED into feat/load-capacity-protection
+Production numerical policy and deployment qualification remain open
 ```
 
 ### Goal and Entry Conditions
 
-PR8 may implement the selected opt-in caller-owned class, narrow interfaces and
-focused validation only under the full
+PR8 implements the selected opt-in caller-owned class, narrow interfaces and
+focused validation under the full
 [PR7 entry contract](pr7_retry_attempt_policy_selection.md#12-pr8-entry-contract).
-It must name a concrete direct-writer consumer, verify pre-body refusal provenance,
-define explicit configuration and finite budget spend, preserve logical identity
-across distinct serial attempts, terminate on acceptance or other ineligible
-outcomes, expose logical-versus-attempt observations, and retain disabled behavior.
+It supplies a direct-writer API, verifies pre-body refusal provenance, defines
+explicit configuration and finite budget spend, preserves logical identity
+across distinct serial attempts, terminates on acceptance or other ineligible
+outcomes, exposes logical-versus-attempt observations, and retains disabled behavior.
 
-Waiting must occur outside capacity ownership, with no permit, business
-transaction or invocation-owner lifecycle lock held. PR8 must review cancellation,
-expiry and retained-resource lifetime; a finite attempt budget does not provide
-a hard writer deadline. Concrete schedule and numerical configuration require
-explicit justification and must not copy experimental constants as defaults.
+Waiting occurs outside capacity ownership, with no permit, business
+transaction or invocation-owner lifecycle lock held. PR8 defines cooperative
+cancellation/expiry and retained-resource ownership; a finite attempt budget
+does not provide a hard writer deadline. Concrete schedule and numerical
+configuration require explicit justification and must not copy experimental
+constants as defaults.
 
 The separately authorized [PR8 implementation](pr8_bounded_retry_backoff.md)
 adds `build_postgres_writer_request` and `PostgresWriterRequest` as a direct-writer
@@ -467,18 +475,18 @@ No retry inside `BoundedWriterAdmission`, `PostgresTransactionalWriteSide` or
 Stage 4E owners. No native/ambiguous/semantic-failure retry, hidden Rate Limiter,
 Token Bucket, queue, jitter or Stage 4E integration. Production numerical
 qualification and any new experiment/database execution remain separately scoped.
-PR8 implements mechanism correctness only. No live PostgreSQL, load experiment,
-Git mutation or deployment qualification was performed. Later characterization
-and numerical policy require separate scope and authorization.
+PR8 established mechanism correctness. PR9 subsequently completed live
+characterization through that production composition. Deployment qualification,
+numerical policy and any further characterization require separate scope and
+authorization.
 
 ## PR9 — Production-Path Retry Validation
 
 ### Status
 
 ```text
-COMPLETE / EVIDENCE COLLECTION CLOSED
+COMPLETE / MERGED into feat/load-capacity-protection / EVIDENCE COLLECTION CLOSED
 Canonical live matrix — reconciled offline; no rerun
-Closeout package — ready for human review
 Canonical raw archive — PUBLISHED via the GitHub Release referenced by the PR9 report/manifest
 Production numerical defaults / deployment acceptance — NOT SELECTED
 ```
@@ -533,8 +541,45 @@ No retry reimplementation, PR5 scheduler substitution, Rate Limiter, jitter,
 queue, async scheduler, pool or Stage 4E change belongs to this closeout.
 Historical evidence and Releases remain intact.
 
-PR9 is COMPLETE after evidence reconciliation, with human review of the closeout
-pending. The next decision is whether retained synchronous thread/connection
-pressure is acceptable for the intended caller, or whether a separately scoped
-architecture/policy decision is warranted. No PR10 implementation is invented or
+PR9 is COMPLETE and merged after evidence reconciliation. Its retained-resource
+ownership question is addressed by PR10 and accepted ADR 0032 below. Deployment
+acceptance remains caller-specific; no ownership redesign is automatically
 authorized, and neither Rate Limiter nor jitter is ruled out permanently.
+
+## PR10 — Retry Waiting Ownership Architecture Decision
+
+### Status
+
+```text
+COMPLETE / conditional Option A accepted in ADR 0032
+Deployment acceptance / numerical policy — NOT ESTABLISHED
+Production implementation / new live execution — NOT AUTHORIZED
+```
+
+### Goal and Responsibility
+
+The [PR10 decision](pr10_retry_waiting_ownership_decision.md) audits connection
+acquisition/custody, synchronous thread lifetime, session/transaction state and
+durable identity against current source and tracked PR9 results. It compares
+retention, release/reacquisition inside the current owner, retry above per-attempt
+resource acquisition, and a deferred scheduler/queue/async alternative.
+
+[ADR 0032](../../adr/0032_keep_capacity_retry_synchronous_under_explicit_caller_resource_budgets.md)
+accepts retaining the current synchronous borrowed-connection
+contract only for callers with explicit concurrency, connection/thread headroom,
+finite retry lifetime, custody and shutdown/cancellation preconditions.
+Connection identity is not semantic identity. If a caller needs connection-free
+waiting, Option C is the preferred candidate for separate design; neither implementation nor equal
+performance is inferred. The writer bound still does not bound connections or
+waiting callers. Option B is not selected; scheduler/queue/async ownership remains
+deferred. PR9's retained-lane pacing qualification remains essential.
+
+### Scope and Non-Goals
+
+Documentation-only investigation, accepted ADR and navigation. The PR10 note
+preserves its pre-acceptance chronology; ADR 0032 records the human-approved
+decision. No source, tests, experiment machinery/results, historical evidence,
+production numerical defaults, Rate Limiter, pool, queue, async scheduler or Stage 4E change. No
+PostgreSQL or additional characterization is authorized. The next decision is
+whether the intended caller meets the accepted resource/lifetime preconditions;
+no implementation PR is automatically started.
