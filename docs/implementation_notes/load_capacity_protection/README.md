@@ -25,10 +25,11 @@ PR6 — ADR COMPLETE
 PR7 — retry / attempt-pressure policy selection — COMPLETE
 PR8 — bounded retry with delayed backoff — COMPLETE / MERGED
 PR9 — production retry validation — COMPLETE / MERGED / EVIDENCE COLLECTION CLOSED
-PR10 — retry waiting ownership decision — COMPLETE / Accepted in ADR 0032
+PR10 — retry waiting ownership decision — COMPLETE / MERGED / Accepted in ADR 0032
+PR11 — caller resource envelope audit — COMPLETE / deployment NOT QUALIFIED
 ```
 
-PR8 and PR9 are merged into `feat/load-capacity-protection`.
+PR8, PR9 and PR10 are merged into `feat/load-capacity-protection`.
 
 PR2 selects N=8 as a candidate protected experimental point and bounded
 in-flight writer admission as the first mechanism class to evaluate. This is
@@ -103,6 +104,15 @@ or select numerical policy, a Rate Limiter, pool, queue or Stage 4E change.
 The investigation note retains its pre-acceptance chronology; ADR 0032 owns the
 accepted decision. No new production implementation is authorized.
 
+[PR11's caller audit](pr11_caller_resource_envelope_audit.md) is complete as an
+investigation: no tracked production caller enables the retry composition.
+The shared gate bounds protected bodies, but no production caller concurrency,
+connection/thread envelope or overall lifetime/shutdown contract is established.
+IDLE checks and finite attempts do not supply these guarantees. Deployment is
+**NOT QUALIFIED**; ADR 0032's conditional acceptance remains unchanged. The next
+responsibility is to name an intended caller and establish its resource/lifecycle
+contract before separately authorizing enablement or any missing enforcement.
+
 ## Research Direction
 
 ```text
@@ -116,7 +126,8 @@ measurement
 → bounded retry with backoff policy-class selection (PR7 COMPLETE)
 → direct-writer bounded retry mechanism (PR8 COMPLETE / merged)
 → production-path characterization (PR9 COMPLETE / merged / evidence collection closed)
-→ conditional retained synchronous ownership (PR10 COMPLETE / ADR 0032 Accepted)
+→ conditional retained synchronous ownership (PR10 COMPLETE / merged / ADR 0032 Accepted)
+→ caller resource envelope audit (PR11 COMPLETE / deployment NOT QUALIFIED)
 → deployment numerical policy / other mechanisms only if separately justified and authorized
 ```
 
@@ -144,6 +155,7 @@ establish a production capacity limit or reopen that completed stage.
 | [PR9 Production Retry Validation Report](pr9_production_retry_validation_report.md) | Reconciled 30-cell recorded comparison, completion versus drain/throughput, bounded occupancy, retained idle-resource cost and lane-pacing qualification; compact results, published archive identity and PR9 closeout. |
 | [PR10 Retry Waiting Ownership Decision](pr10_retry_waiting_ownership_decision.md) | Connection/thread lifetime and session-state audit; retain current synchronous ownership under explicit caller preconditions; compare reacquisition and deferred scheduler alternatives, failure/resource bounds and the separate implementation boundary. |
 | [PR10 — ADR 0032: Keep Capacity Retry Synchronous Under Explicit Caller Resource Budgets](../../adr/0032_keep_capacity_retry_synchronous_under_explicit_caller_resource_budgets.md) | Accepted conditional ownership decision; separate writer, caller and connection/thread bounds, preserve logical identity independently of connection identity, and require separate design if connection-free waiting becomes necessary. |
+| [PR11 Caller Resource Envelope Audit](pr11_caller_resource_envelope_audit.md) | Production consumer inventory, source-qualified resource/lifetime/custody matrix and deployment NOT QUALIFIED verdict; requires a named caller contract without selecting a new mechanism. |
 
 ## Important Boundary
 

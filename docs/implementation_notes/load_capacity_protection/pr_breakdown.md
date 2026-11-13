@@ -36,9 +36,10 @@ commitment to implement a production limiter.
 | PR7 | Production Retry / Attempt-Pressure Policy Selection | COMPLETE / ready for human review |
 | PR8 | Production implementation of the selected bounded retry with backoff class | COMPLETE / MERGED |
 | PR9 | Live production-path retry characterization | COMPLETE / MERGED / EVIDENCE COLLECTION CLOSED |
-| PR10 | Retry Waiting Ownership Architecture Decision | COMPLETE / Accepted in ADR 0032 |
+| PR10 | Retry Waiting Ownership Architecture Decision | COMPLETE / MERGED / Accepted in ADR 0032 |
+| PR11 | Caller Resource Envelope and Deployment Qualification Audit | COMPLETE / deployment NOT QUALIFIED |
 
-PR8 and PR9 are merged into `feat/load-capacity-protection`. PR10's conditional
+PR8, PR9 and PR10 are merged into `feat/load-capacity-protection`. PR10's conditional
 Option A recommendation is human-approved and recorded in
 [ADR 0032](../../adr/0032_keep_capacity_retry_synchronous_under_explicit_caller_resource_budgets.md).
 
@@ -56,10 +57,10 @@ The PR0 branch at workstream start was:
 docs/load-capacity-pr0-boundary
 ```
 
-The current PR10 branch is:
+The current PR11 branch is:
 
 ```text
-docs/load-capacity-pr10-retry-waiting-ownership
+docs/load-capacity-pr11-caller-resource-envelope
 ```
 
 Workstream PR branches target the umbrella integration branch. Recommended
@@ -77,6 +78,7 @@ future branch names are:
 | PR8 | `feat/load-capacity-pr8-bounded-retry-backoff` |
 | PR9 | `experiment/load-capacity-pr9-production-retry-validation` |
 | PR10 | `docs/load-capacity-pr10-retry-waiting-ownership` |
+| PR11 | `docs/load-capacity-pr11-caller-resource-envelope` |
 
 These names are recommendations only, not claims that the branches exist.
 PR5 closeout is on the named experiment branch. This document does not create
@@ -551,7 +553,7 @@ authorized, and neither Rate Limiter nor jitter is ruled out permanently.
 ### Status
 
 ```text
-COMPLETE / conditional Option A accepted in ADR 0032
+COMPLETE / MERGED / conditional Option A accepted in ADR 0032
 Deployment acceptance / numerical policy — NOT ESTABLISHED
 Production implementation / new live execution — NOT AUTHORIZED
 ```
@@ -580,6 +582,45 @@ Documentation-only investigation, accepted ADR and navigation. The PR10 note
 preserves its pre-acceptance chronology; ADR 0032 records the human-approved
 decision. No source, tests, experiment machinery/results, historical evidence,
 production numerical defaults, Rate Limiter, pool, queue, async scheduler or Stage 4E change. No
-PostgreSQL or additional characterization is authorized. The next decision is
-whether the intended caller meets the accepted resource/lifetime preconditions;
+PostgreSQL or additional characterization is authorized. PR11 below audits
+whether a current caller meets the accepted resource/lifetime preconditions;
 no implementation PR is automatically started.
+
+## PR11 — Caller Resource Envelope and Deployment Qualification Audit
+
+### Status
+
+```text
+COMPLETE / investigation; ready for human review
+Production retry-enabled consumer — NONE FOUND in the audited repository
+Caller envelope / deployment qualification — NOT ESTABLISHED / NOT QUALIFIED
+Production implementation / new live execution — NOT AUTHORIZED
+```
+
+### Goal and Responsibility
+
+The [PR11 audit](pr11_caller_resource_envelope_audit.md) traces all tracked uses
+of the retry owner, policy, builder and capacity primitive, separating production
+composition from tests and experiments. No production application routes requests
+through the opt-in retry composition. Stage 4E and DecisionReceipt still use the
+transactional writer directly; PR9's bounded retained lanes are experiment-owned.
+
+The qualification matrix distinguishes source-enforced per-gate occupancy,
+per-owner finite attempts, IDLE checks and cooperative cancellation from absent
+caller concurrency, aggregate connection/thread budgets, overall lifetime and
+shutdown/cleanup ownership. Finite attempt count does not bound total invocation
+lifetime; IDLE does not prove exclusive custody or absence of session locks.
+
+### Disposition and Follow-up Boundary
+
+Disposition D: production-capable composition without a qualified production
+consumer. ADR 0032's conditional Option A remains accepted (disposition B's
+architectural context). The smallest follow-up is an explicit resource and
+lifecycle contract for one named intended caller, followed by qualification of
+that actual integration. Only a concrete unmet requirement could justify separate
+implementation; no new ownership mechanism or subsequent implementation PR is
+automatically selected.
+
+Documentation and current navigation only. No production code, tests,
+experiments, historical evidence, numerical defaults, Rate Limiter, Token Bucket,
+pool, queue, async scheduler or Stage 4E change; no PostgreSQL or evidence replay.
